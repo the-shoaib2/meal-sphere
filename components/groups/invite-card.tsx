@@ -205,7 +205,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
           Invite Members
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invite to {name}</DialogTitle>
           <DialogDescription>
@@ -213,7 +213,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex border-b mb-4">
+        <div className="flex border-b mb-2">
           <button
             className={`flex-1 py-2 px-4 text-sm font-medium ${activeTab === 'link' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
             onClick={() => setActiveTab('link')}
@@ -229,7 +229,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
         </div>
 
         {activeTab === 'link' ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center space-x-2">
               <div className="grid flex-1 gap-1">
                 <Label htmlFor="invite-link" className="text-sm font-medium">
@@ -240,7 +240,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                     id="invite-link"
                     value={inviteLink}
                     readOnly
-                    className="h-9"
+                    className="h-8 text-xs"
                   />
                   <TooltipProvider>
                     <Tooltip>
@@ -250,7 +250,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                           size="icon"
                           variant="outline"
                           onClick={handleCopyLink}
-                          className="h-9 w-9"
+                          className="h-8 w-8"
                         >
                           {copied ? (
                             <Check className="h-4 w-4" />
@@ -268,7 +268,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
               </div>
             </div>
 
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 mt-2">
               <Button
                 type="button"
                 variant="outline"
@@ -294,9 +294,10 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
               <div className="p-4 border rounded-lg bg-white dark:bg-gray-800 flex flex-col items-center">
                 <QRCodeSVG 
                   value={inviteLink} 
-                  size={160} 
+                  size={120} 
                   level="H" 
-                  includeMargin={true}
+                  includeMargin={false}
+                  className="p-1 bg-white rounded"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   Scan to join {group.name}
@@ -321,7 +322,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
             )}
           </div>
         ) : (
-          <form onSubmit={handleGenerateInvite} className="space-y-4">
+          <form onSubmit={handleGenerateInvite} className="space-y-3">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
@@ -342,7 +343,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   id="role"
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value as Role)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isGenerating}
                 >
                   {ROLE_OPTIONS.map((option) => (
@@ -394,7 +395,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                 )}
               </Button>
               
-              <div className="w-full space-y-2.5 pt-4 border-t mt-4">
+              <div className="w-full space-y-2 pt-3 border-t mt-3">
                 <div>
                   <Label htmlFor="invite-link" className="block text-xs sm:text-sm font-medium mb-1.5">
                     Group Invite Link
@@ -404,14 +405,14 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                       id="invite-link" 
                       value={inviteLink} 
                       readOnly 
-                      className="flex-1 font-mono text-xs sm:text-sm h-9"
+                      className="flex-1 font-mono text-xs h-8"
                       onClick={(e) => (e.target as HTMLInputElement).select()}
                     />
                     <Button 
                       type="button" 
                       variant="outline" 
                       size="icon"
-                      className="h-9 w-9 flex-shrink-0"
+                      className="h-8 w-8 flex-shrink-0"
                       onClick={handleCopyLink}
                       disabled={!inviteLink}
                     >
@@ -424,7 +425,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   </div>
                 </div>
                 
-                <p className="text-xs text-muted-foreground pt-2">
+                <p className="text-xs text-muted-foreground pt-1">
                   {group?.isPrivate
                     ? 'Share this link with people you want to invite. They will need to enter the group password to join.'
                     : 'Share this link with others to invite them to your group.'}
@@ -434,6 +435,6 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
           </form>
         )}
       </DialogContent>
-      </Dialog>
+    </Dialog>
   );
-}
+};
