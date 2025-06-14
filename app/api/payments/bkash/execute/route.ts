@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "../../../auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/prisma"
 import { executeBkashPayment } from "@/lib/bkash-service"
 import { createCustomNotification } from "@/lib/notification-utils"
