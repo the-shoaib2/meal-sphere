@@ -53,57 +53,34 @@ export function GroupSettings({
   const [isLoading, setIsLoading] = useState(false);
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const { deleteGroup, useGroupDetails, updateGroup } = useGroups();
+  const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
+  const { toast } = useToast();
 
   const handleDeleteGroup = async () => {
     if (!groupId) return;
     
-    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      let errorMessage = 'Failed to delete group';
-      let data;
-
-      try {
-        // First try to parse as JSON
-        data = await response.json().catch(() => null);
-        
-        // If we have a JSON response, use its message if available
-        if (data?.message) {
-          errorMessage = data.message;
-        }
-      } catch (e) {
-        // If JSON parsing fails, try to get the response as text
-        const text = await response.text();
-        errorMessage = text || errorMessage;
-      }
-
-      if (!response.ok) {
-        throw new Error(errorMessage);
-      }
-
-      toast.success('Group deleted successfully');
-      router.push('/groups'); // Redirect to groups page after deletion
-      router.refresh(); // Refresh the page to update the UI
+      setIsDeleting(true);
+      await deleteGroup.mutateAsync(groupId);
+      // The onSuccess handler in useGroups will handle the navigation and toast
     } catch (error) {
       console.error('Error deleting group:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete group');
+      toast({
+        title: 'Error',
+        description: 'Failed to delete group. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
   };
 
-  const { data: group, isLoading: isLoadingGroup, refetch } = useGroups().useGroupDetails(groupId);
-  const { updateGroup } = useGroups();
+
 
   const defaultValues: Partial<GroupSettingsFormValues> = group ? {
     name: group.name,
@@ -148,7 +125,11 @@ export function GroupSettings({
 
       onUpdate();
     } catch (error) {
-      toast.error('Failed to update group');
+      toast({
+        title: 'Error',
+        description: 'Failed to update group. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +147,11 @@ export function GroupSettings({
       await onLeave();
       setIsLeaveDialogOpen(false);
     } catch (error) {
-      toast.error('Failed to leave group');
+      toast({
+        title: 'Error',
+        description: 'Failed to leave group. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLeaving(false);
     }
