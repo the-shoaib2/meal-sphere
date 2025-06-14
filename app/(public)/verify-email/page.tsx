@@ -3,17 +3,16 @@ import { verifyEmail } from "@/lib/email-utils"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
-interface VerifyEmailPageProps {
-  searchParams: {
-    token?: string
-    email?: string
-  }
-  params: {
-    [key: string]: string | string[] | undefined
-  }
+interface SearchParams {
+  token?: string
+  email?: string
 }
 
-export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
+export default async function VerifyEmailPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   const { token, email } = searchParams
 
   if (!token || !email) {
