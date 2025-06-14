@@ -69,7 +69,7 @@ interface UseGroupsReturn {
     error: Error | null;
   };
   useGroupDetails: (groupId: string, password?: string) => UseQueryResult<Group, Error>;
-  getGroupDetails: (groupId: string) => Promise<Group>;
+  getGroupDetails: (groupId: string, password?: string) => Promise<Group>;
   createGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, CreateGroupInput>>;
   updateGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>>;
   joinGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>>;
@@ -130,31 +130,93 @@ export function useGroups(): UseGroupsReturn {
   };
 
   // Get group details
-  const getGroupDetails = useCallback(async (groupId: string): Promise<Group> => {
-    if (!groupId) {
-      throw new Error('Group ID is required');
-    }
+  const getGroupDetails = useCallback(async (groupId: string, password?: string): Promise<Group> => {
     try {
-      const { data } = await axios.get<Group>(`/api/groups/${groupId}`);
-      return data;
-    } catch (error: unknown) {
-      const axiosError = error as AxiosError;
-      console.error('Error fetching group details:', error);
-      throw new Error(axiosError.response?.data?.message || 'Failed to fetch group details');
+      const params = new URLSearchParams();
+      if (password) {
+        params.append('password', password);
+      }
+      
+      const url = `/api/groups/${groupId}?${params.toString()}`;
+      
+      // Make the API request
+      const response = await axios.get<Group>(url, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        validateStatus: (status) => {
+          // Don't throw for 403 (password required) or 401 (wrong password)
+          return (status >= 200 && status < 300) || status === 401 || status === 403;
+        },
+      });
+      
+      const responseData = response.data as any;
+      
+      // Handle the case where the API returns requiresPassword in the success response
+      if (responseData.requiresPassword) {
+        const err = new Error(responseData.message || 'Password required');
+        (err as any).requiresPassword = true;
+        (err as any).group = responseData.group || {};
+        (err as any).status = 403;
+        throw err;
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      // Handle axios errors
+      if (error.response) {
+        const responseData = error.response.data || {};
+        
+        // Handle password required case (403)
+        if (error.response.status === 403 && responseData.requiresPassword) {
+          const err = new Error(responseData.message || 'Password required');
+          (err as any).requiresPassword = true;
+          (err as any).group = responseData.group || {};
+          (err as any).status = 403;
+          throw err;
+        }
+        
+        // Handle invalid password case (401)
+        if (error.response.status === 401) {
+          throw new Error(responseData.message || 'Invalid password');
+        }
+        
+        // Handle other API errors
+        throw new Error(
+          responseData.message ||
+          error.message ||
+          'Failed to fetch group details'
+        );
+      }
+      
+      // If it's our custom error with requiresPassword, just rethrow it
+      if (error.requiresPassword) {
+        throw error;
+      }
+      
+      // Handle non-axios errors
+      console.error('Unexpected error in getGroupDetails:', error);
+      throw new Error('An unexpected error occurred while fetching group details');
     }
   }, []);
 
   // Get group details with React Query
-  const useGroupDetails = (groupId: string) => {
+  const useGroupDetails = (groupId: string, password?: string) => {
     return useQuery<Group, Error>({
       queryKey: ['group', groupId],
       queryFn: () => {
         if (!groupId) throw new Error('Group ID is required');
-        return getGroupDetails(groupId);
+        return getGroupDetails(groupId, password);
       },
       enabled: !!groupId,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: false,
+      retry: (failureCount, error: any) => {
+        // Don't retry if it's a password required error
+        if (error?.requiresPassword) return false;
+        return failureCount < 3; // Retry up to 3 times for other errors
+      }
     });
   };
 

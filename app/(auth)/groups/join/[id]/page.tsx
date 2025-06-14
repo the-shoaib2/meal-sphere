@@ -29,10 +29,10 @@ type JoinRoomFormValues = z.infer<typeof joinRoomSchema>;
 import type { Group } from '@/hooks/use-groups';
 
 // Extend Group type with additional UI-specific properties
-interface ExtendedGroup extends Omit<Group, 'memberCount'> {
+interface ExtendedGroup extends Group {
   isMember?: boolean;
   hasPassword?: boolean;
-  memberCount?: number;
+  requiresPassword?: boolean;
   invitation?: {
     role: string;
     expiresAt: Date;
@@ -84,40 +84,134 @@ export default function JoinGroupPage() {
   };
 
   // Fetch group details
-  const fetchGroupDetails = useCallback(async () => {
-    if (!groupId || !session?.user?.id) return;
+  const fetchGroupDetails = useCallback(async (password?: string) => {
+    if (!groupId || !session?.user?.id) {
+      console.error('Missing groupId or user session');
+      return;
+    }
 
     try {
       setIsLoading(true);
       setError(null);
 
-      const groupData = await getGroupDetails(groupId);
-      // Check if members is an array before using .some()
-      const isMember = Array.isArray(groupData.members) 
-        ? groupData.members.some(m => m.userId === session.user.id)
-        : false;
+      // Use the password parameter if provided, otherwise use formValues.password
+      const passwordToUse = password ?? formValues.password;
+      
+      try {
+        // Get group details with the password
+        const groupData = await getGroupDetails(groupId, passwordToUse);
+        
+        // Check if members is an array before using .some()
+        const isMember = Array.isArray(groupData.members) 
+          ? groupData.members.some((m: any) => m.userId === session.user.id)
+          : false;
 
-      setGroup({
-        ...groupData,
-        isMember,
-        hasPassword: !!groupData.password,
-        memberCount: groupData.members?.length || 0,
-      });
-
-      if (isMember) {
-        router.push(`/groups/${groupId}`);
+        // Update group state with the fetched data
+        setGroup({
+          ...groupData,
+          isMember,
+          hasPassword: !!groupData.password,
+          memberCount: Array.isArray(groupData.members) ? groupData.members.length : 0,
+          requiresPassword: false, // Reset requiresPassword flag on success
+        });
+        
+        // Hide password field on successful fetch
+        setShowPasswordField(false);
+      } catch (error: any) {
+        console.error('Error in fetchGroupDetails:', error);
+        
+        // Handle password required case
+        if (error.requiresPassword || error.message?.includes('private group') || error.response?.data?.message?.includes('private group')) {
+          setGroup(prev => ({
+            ...prev,
+            ...(error.group || {}),
+            requiresPassword: true,
+            isMember: false,
+            hasPassword: true,
+            memberCount: error.group?.memberCount || 0,
+          }));
+          setShowPasswordField(true);
+          setError('This is a private group. Please enter the password to join.');
+          return;
+        }
+        
+        // Handle invalid password case
+        if (error.message?.includes('Invalid password') || 
+            error.response?.data?.message?.includes('Invalid password') || 
+            error.response?.status === 401) {
+          setError('Incorrect password. Please try again.');
+          setShowPasswordField(true);
+          return;
+        }
+        
+        // Handle other errors
+        setError(error.response?.data?.message || error.message || 'Failed to fetch group details');
+        return;
       }
-    } catch (err) {
+      
+      // Clear any previous password error if the request was successful
+      setFormValues(prev => ({
+        ...prev,
+        passwordError: undefined
+      }));
+      
+      setShowPasswordField(false); // Reset password field visibility on successful fetch
+
+      // If user is already a member, redirect to group page
+      if (group?.isMember) {
+        router.push(`/groups/${groupId}`);
+        return;
+      }
+    } catch (err: any) {
       console.error('Error fetching group details:', err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'An error occurred while loading group information.'
-      );
+      
+      // Handle password required case
+      if (err.requiresPassword) {
+        // If we have partial group data from the error, use it
+        if (err.group) {
+          setGroup({
+            ...err.group,
+            isMember: false,
+            hasPassword: true,
+            memberCount: err.group.memberCount || 0
+          });
+        }
+        setShowPasswordField(true);
+        
+        // Set a more specific error message for password requirement
+        setError(err.message || 'This is a private group. Please enter the password to join.');
+        return;
+      }
+      
+      // Handle invalid password case
+      if (err.message?.toLowerCase().includes('invalid password')) {
+        setFormValues(prev => ({
+          ...prev,
+          passwordError: 'Incorrect password. Please try again.'
+        }));
+        setError('Incorrect password. Please try again.');
+        return;
+      }
+      
+      // Handle other errors
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'An error occurred while loading group information.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   }, [groupId, session?.user?.id, getGroupDetails, router]);
+  
+  // Handle password submission
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formValues.password) {
+      fetchGroupDetails(formValues.password);
+    } else {
+      setError('Please enter a password');
+    }
+  };
 
   // Handle joining a group
   const handleJoinRoom = async (values: JoinRoomFormValues) => {
@@ -128,16 +222,21 @@ export default function JoinGroupPage() {
 
     try {
       setIsJoining(true);
+      setError(null);
 
       if (!joinGroup.mutateAsync) {
         throw new Error('Join group functionality is not available');
       }
 
+      // If there's a password in the form values, use it
+      const password = values.password || formValues.password;
+      
       await joinGroup.mutateAsync({
         groupId,
-        password: values.password || undefined,
+        password: password || undefined,
       });
 
+      // Update the group state to reflect the user is now a member
       setGroup(prev => prev ? { 
         ...prev, 
         isMember: true,
@@ -167,9 +266,16 @@ export default function JoinGroupPage() {
 
   // Handle join button click (shows password field if needed)
   const handleJoinClick = () => {
-    if (group?.isPrivate && group?.hasPassword) {
+    if (group?.isPrivate && group?.hasPassword && !showPasswordField) {
       setShowPasswordField(true);
+      return;
+    }
+    
+    // If we're showing password field, submit the password form
+    if (showPasswordField) {
+      handlePasswordSubmit(new Event('submit') as any);
     } else {
+      // Otherwise, proceed with normal join
       handleJoinRoom(formValues);
     }
   };
@@ -200,8 +306,17 @@ export default function JoinGroupPage() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Show loading state only if we're still loading and don't have any group data yet
+  if (isLoading && !group) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show error state only if we have an error and no group data
+  if (error && !group) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <Alert variant="destructive">
@@ -210,7 +325,7 @@ export default function JoinGroupPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button 
-          onClick={fetchGroupDetails} 
+          onClick={() => fetchGroupDetails(formValues.password)} 
           className="mt-4"
           variant="outline"
         >
@@ -220,7 +335,7 @@ export default function JoinGroupPage() {
     );
   }
 
-  // No group data
+  // If we have group data (either from successful fetch or error response), show the form
   if (!group) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -280,7 +395,7 @@ export default function JoinGroupPage() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={showPasswordField ? handlePasswordSubmit : handleSubmit} className="space-y-4">
             {group?.isPrivate && group?.hasPassword && !showPasswordField && (
               <div className="space-y-2">
                 <Label htmlFor="password">Group Password Required</Label>

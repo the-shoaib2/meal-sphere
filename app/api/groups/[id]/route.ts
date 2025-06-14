@@ -72,11 +72,18 @@ export async function GET(
 
     // For non-members, check if the group is private
     if (group.isPrivate) {
-      // If no password provided, return 403 with a message
+      // If no password provided, return 403 with group info
       if (!password) {
+        // Return basic group info needed for the UI
+        const { members, password: _, ...groupData } = group;
         return new NextResponse(JSON.stringify({
           requiresPassword: true,
-          message: 'This is a private group. A password is required.'
+          message: 'This is a private group. A password is required.',
+          group: {
+            ...groupData,
+            hasPassword: !!group.password,
+            memberCount: members?.length || 0
+          }
         }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
 
