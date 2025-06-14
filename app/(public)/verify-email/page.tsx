@@ -8,7 +8,9 @@ interface VerifyEmailPageProps {
     token?: string
     email?: string
   }
-  params: Record<string, string>
+  params: {
+    [key: string]: string | string[] | undefined
+  }
 }
 
 export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
