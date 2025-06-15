@@ -1,4 +1,4 @@
-import TextToSVG from 'text-to-svg';
+import * as svgCaptcha from 'svg-captcha';
 import { v4 as uuidv4 } from 'uuid';
 
 // In-memory store for CAPTCHA codes (use Redis in production)
@@ -14,53 +14,37 @@ function cleanupExpiredCaptchas() {
   }
 }
 
-// Generate a random string for CAPTCHA
-function generateRandomString(length: number): string {
-  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
 export function generateCaptcha() {
   try {
     // Clean up expired CAPTCHAs on each request
     cleanupExpiredCaptchas();
     
-    // Generate random text
-    const text = generateRandomString(4);
-    
-    // Create SVG
-    const textToSVG = TextToSVG.loadSync();
-    const options = {
-      x: 0,
-      y: 0,
+    // Generate CAPTCHA with simpler configuration
+    const captcha = svgCaptcha.create({
+      size: 4,
+      noise: 1,
+      color: true,
+      background: '#f0f0f0',
+      width: 120,
+      height: 40,
       fontSize: 35,
-      anchor: 'top',
-      attributes: {
-        fill: '#000',
-        stroke: '#000',
-        'stroke-width': 0.5
-      }
-    };
-    
-    const svg = textToSVG.getSVG(text, options);
+      charPreset: '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ', // Exclude similar-looking characters
+      ignoreChars: '0o1iIlL', // Exclude similar-looking characters
+    });
     
     // Create a session ID for this CAPTCHA
     const sessionId = uuidv4();
     
     // Store CAPTCHA code (case-insensitive) with 1-minute expiration
     captchaStore.set(sessionId, {
-      code: text.toLowerCase(),
+      code: captcha.text.toLowerCase(),
       expires: Date.now() + 60000, // 1 minute
     });
 
     return {
       success: true,
       sessionId,
-      captcha: svg,
+      captcha: captcha.data,
     };
   } catch (error) {
     console.error('CAPTCHA generation error:', error);
