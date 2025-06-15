@@ -14,7 +14,6 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000', 'https://www.meal-sphere.vercel.app'],
     },
     // Add experimental features for better build handling
-    optimizeCss: true,
     optimizePackageImports: ['@radix-ui/react-*'],
   },
   // Add output configuration
