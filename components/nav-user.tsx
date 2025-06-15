@@ -47,6 +47,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useProfileImage } from "@/hooks/use-profile-image"
 
 interface NavUserProps {
   user: {
@@ -63,6 +64,9 @@ export function NavUser({ user, className = '' }: NavUserProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const { image, getInitials } = useProfileImage({
+    initialImage: user?.image
+  });
   
   useEffect(() => {
     setMounted(true);
@@ -106,15 +110,9 @@ export function NavUser({ user, className = '' }: NavUserProps) {
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground bg-mute hover:bg-accent/80 hover:text-accent-foreground transition-colors duration-200"
               >
                 <Avatar className="h-8 w-8 rounded-full">
-                  <AvatarImage src={user.image || ""} alt={user.name || "User"} />
+                  <AvatarImage src={image || ""} alt={user.name || "User"} />
                   <AvatarFallback className="rounded-lg">
-                    {user.name
-                      ? user.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()
-                      : "U"}
+                    {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
@@ -134,15 +132,9 @@ export function NavUser({ user, className = '' }: NavUserProps) {
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
             <Avatar className="h-10 w-10 rounded-full">
-              <AvatarImage src={user.image || ""} alt={user.name || "User"} />
+              <AvatarImage src={image || ""} alt={user.name || "User"} />
               <AvatarFallback className="rounded-full">
-                {user.name
-                  ? user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                  : "U"}
+                {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">

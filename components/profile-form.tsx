@@ -12,6 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "react-hot-toast"
+import { useProfileImage } from "@/hooks/use-profile-image"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -32,6 +33,13 @@ interface ProfileFormProps {
 export function ProfileForm({ user }: ProfileFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const { image, updateImage, getInitials } = useProfileImage({
+    initialImage: user.image,
+    onImageUpdate: async (imageUrl) => {
+      // Update the form value when image changes
+      form.setValue("image", imageUrl)
+    }
+  })
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -77,8 +85,8 @@ export function ProfileForm({ user }: ProfileFormProps) {
       <CardContent>
         <div className="flex items-center space-x-4 mb-6">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={user.image || ""} alt={user.name || "User"} />
-            <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
+            <AvatarImage src={image || ""} alt={user.name || "User"} />
+            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
           </Avatar>
           <div>
             <h3 className="text-lg font-medium">{user.name}</h3>
@@ -121,7 +129,14 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>Profile Image URL</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/image.jpg" {...field} />
+                    <Input 
+                      placeholder="https://example.com/image.jpg" 
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e)
+                        updateImage(e.target.value)
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
