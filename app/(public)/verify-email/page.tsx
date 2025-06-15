@@ -2,18 +2,21 @@ import { redirect } from "next/navigation"
 import { verifyEmail } from "@/lib/email-utils"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { Metadata } from 'next'
 
-interface SearchParams {
-  token?: string
-  email?: string
+type Props = {
+  searchParams: { [key: string]: string | string[] | undefined }
+  params: { [key: string]: string }
 }
 
-export default async function VerifyEmailPage({
-  searchParams,
-}: {
-  searchParams: SearchParams
-}) {
-  const { token, email } = searchParams
+export const metadata: Metadata = {
+  title: 'Verify Email',
+  description: 'Verify your email address',
+}
+
+export default async function VerifyEmailPage({ searchParams }: Props) {
+  const token = searchParams.token as string
+  const email = searchParams.email as string
 
   if (!token || !email) {
     redirect("/login")
