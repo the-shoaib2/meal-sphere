@@ -366,27 +366,31 @@ export function GroupSettings({
                   Leave group
                 </h4>
                 <p className="text-sm text-muted-foreground">
-                  No longer want to be part of this group?
+                  {isCreator 
+                    ? "As the creator, you can't leave the group. You must transfer ownership or delete the group."
+                    : "No longer want to be part of this group?"}
                 </p>
               </div>
-              <Button
-                variant="outline"
-                className="border-amber-500 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600"
-                onClick={() => setIsLeaveDialogOpen(true)}
-                disabled={isLoading || isLeaving}
-              >
-                {isLeaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Leaving...
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Leave Group
-                  </>
-                )}
-              </Button>
+              {!isCreator && (
+                <Button
+                  variant="outline"
+                  className="border-amber-500 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600"
+                  onClick={() => setIsLeaveDialogOpen(true)}
+                  disabled={isLoading || isLeaving}
+                >
+                  {isLeaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Leaving...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Leave Group
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
 

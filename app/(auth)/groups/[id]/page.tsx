@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { GroupMembers } from '@/components/groups/group-members';
 import { GroupSettings } from '@/components/groups/group-settings';
+import { Role } from '@prisma/client';
 
 
 export default function GroupPage() {
@@ -65,27 +66,31 @@ export default function GroupPage() {
   const handleLeaveGroup = async () => {
     try {
       setIsLeaving(true);
-      await leaveGroup.mutateAsync(groupId, {
-        onSuccess: () => {
-          toast.success('You have left the group');
-          router.push('/groups');
+      const response = await fetch(`/api/groups/${groupId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        onError: (error) => {
-          console.error('Error leaving group:', error);
-          toast.error(error instanceof Error ? error.message : 'Failed to leave group');
-          // Force refresh the page to ensure clean state
-          if (typeof window !== 'undefined') {
-            window.location.href = '/groups';
-          }
-        },
-        onSettled: () => {
-          setIsLeaving(false);
-          setShowLeaveDialog(false);
-        }
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to leave group');
+      }
+
+      toast.success('You have left the group');
+      router.push('/groups');
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast.error('An unexpected error occurred');
+      console.error('Error leaving group:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to leave group';
+      
+      if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
+        toast.error('Group creator cannot leave. Please transfer ownership or delete the group.');
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
       setIsLeaving(false);
       setShowLeaveDialog(false);
     }
@@ -229,12 +234,14 @@ export default function GroupPage() {
             groupId={groupId} 
             isAdmin={isAdmin} 
             currentUserId={session?.user?.id}
+            isCreator={isCreator}
             members={(group.members || []).map(member => ({
               ...member,
               roomId: groupId,
               isCurrent: member.userId === session?.user?.id,
               isActive: true,
-              lastActive: new Date().toISOString()
+              lastActive: new Date().toISOString(),
+              role: member.role as Role
             }))}
             onMemberUpdate={() => {
               // Refresh the group data when members are updated
@@ -250,28 +257,66 @@ export default function GroupPage() {
             variant="destructive" 
             onClick={() => setShowLeaveDialog(true)}
             disabled={isLeaving}
+            className="w-full sm:w-auto"
           >
-            {isLeaving ? 'Leaving...' : 'Leave Group'}
+            {isLeaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Leaving...
+              </>
+            ) : (
+              <>
+                <Users className="h-4 w-4 mr-2" />
+                Leave Group
+              </>
+            )}
           </Button>
         </div>
       )}
 
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[425px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Leave Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to leave this group? You won't be able to access it again unless you're re-invited.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-destructive" />
+              Leave Group
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Are you sure you want to leave this group?</p>
+              <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                <p className="text-sm font-medium">This action will:</p>
+                <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Remove you from all group activities</li>
+                  <li>Revoke your access to group content</li>
+                  <li>Cancel any pending meal registrations</li>
+                  <li>Remove you from group notifications</li>
+                </ul>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                You won't be able to access this group again unless you're re-invited.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLeaving}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel 
+              disabled={isLeaving}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleLeaveGroup}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isLeaving}
             >
-              {isLeaving ? 'Leaving...' : 'Leave Group'}
+              {isLeaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Leaving...
+                </>
+              ) : (
+                'Leave Group'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

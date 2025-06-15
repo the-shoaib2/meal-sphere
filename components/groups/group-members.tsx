@@ -28,10 +28,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSession } from 'next-auth/react';
 import { InviteCard } from './invite-card';
+import { Role } from '@prisma/client';
+import { UserProfileDialog } from './user-profile-dialog';
 
 type Member = {
   id: string;
-  role: string;
+  role: Role;
   joinedAt: string;
   userId: string;
   roomId: string;
@@ -52,6 +54,7 @@ type GroupMembersProps = {
   currentUserId?: string;
   members: Member[];
   onMemberUpdate?: (updatedMembers: Member[]) => void;
+  isCreator?: boolean;
 };
 
 export function GroupMembers({ 
@@ -59,12 +62,14 @@ export function GroupMembers({
   isAdmin, 
   currentUserId, 
   members = [],
-  onMemberUpdate 
+  onMemberUpdate,
+  isCreator = false
 }: GroupMembersProps) {
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
   const [memberToUpdateRole, setMemberToUpdateRole] = useState<{id: string, role: string} | null>(null);
+  const [selectedUser, setSelectedUser] = useState<Member | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -157,10 +162,15 @@ export function GroupMembers({
     }
   }; 
 
-  const getRoleBadge = (role: string) => {
-    const roleMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  const getRoleBadge = (role: Role) => {
+    const roleMap: Partial<Record<Role, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
       ADMIN: { label: 'Admin', variant: 'default' },
       MODERATOR: { label: 'Moderator', variant: 'secondary' },
+      MANAGER: { label: 'Manager', variant: 'secondary' },
+      LEADER: { label: 'Leader', variant: 'secondary' },
+      MEAL_MANAGER: { label: 'Meal Manager', variant: 'secondary' },
+      ACCOUNTANT: { label: 'Accountant', variant: 'secondary' },
+      MARKET_MANAGER: { label: 'Market Manager', variant: 'secondary' },
       MEMBER: { label: 'Member', variant: 'outline' },
     };
 
@@ -174,8 +184,18 @@ export function GroupMembers({
   };
 
   const canManageMember = (member: Member) => {
-    if (!isAdmin) return false;
-    if (member.role === 'ADMIN' && member.user.id !== currentUserId) return false;
+    // Group creator can manage everyone except themselves
+    if (isCreator && member.user.id !== currentUserId) return true;
+    
+    // Only allow ADMIN and MEAL_MANAGER to manage members
+    if (!isAdmin || (member.role !== 'ADMIN' && member.role !== 'MEAL_MANAGER')) return false;
+    
+    // Don't allow removing yourself
+    if (member.user.id === currentUserId) return false;
+    
+    // Don't allow removing other admins unless you're the creator
+    if (member.role === 'ADMIN' && !isCreator) return false;
+    
     return true;
   };
 
@@ -242,6 +262,23 @@ export function GroupMembers({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User Profile Dialog */}
+      {selectedUser && (
+        <UserProfileDialog
+          user={{
+            id: selectedUser.user.id,
+            name: selectedUser.user.name,
+            email: selectedUser.user.email,
+            image: selectedUser.user.image,
+            role: selectedUser.role,
+            createdAt: selectedUser.joinedAt
+          }}
+          isOpen={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+        />
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg">Members</CardTitle>
@@ -294,38 +331,43 @@ export function GroupMembers({
                   </div>
                   <div className="flex items-center space-x-2">
                     {getRoleBadge(member.role)}
-                    {canManageMember(member) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {member.role === 'MEMBER' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setSelectedUser(member)}>
+                          View Profile
+                        </DropdownMenuItem>
+                        {canManageMember(member) && (
+                          <>
+                            {member.role !== 'ADMIN' && member.role !== 'MEAL_MANAGER' && (
+                              <DropdownMenuItem
+                                onClick={() => handleRoleChangeClick(member.id, member.role)}
+                              >
+                                Make Admin
+                              </DropdownMenuItem>
+                            )}
+                            {member.role === 'ADMIN' && member.user.id !== currentUserId && (
+                              <DropdownMenuItem
+                                onClick={() => handleRoleChangeClick(member.id, member.role)}
+                              >
+                                Remove Admin
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
-                              onClick={() => handleRoleChangeClick(member.id, member.role)}
+                              className="text-destructive"
+                              onClick={() => handleRemoveClick(member)}
                             >
-                              Make Admin
+                              <UserX className="mr-2 h-4 w-4" />
+                              Remove
                             </DropdownMenuItem>
-                          )}
-                          {member.role === 'ADMIN' && member.user.id !== currentUserId && (
-                            <DropdownMenuItem
-                              onClick={() => handleRoleChangeClick(member.id, member.role)}
-                            >
-                              Remove Admin
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleRemoveClick(member)}
-                          >
-                            <UserX className="mr-2 h-4 w-4" />
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}

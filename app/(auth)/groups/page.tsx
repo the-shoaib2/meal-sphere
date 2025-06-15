@@ -20,7 +20,7 @@ export default function GroupsPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('my-groups');
+  const [activeTab, setActiveTab] = useState('all-groups');
 
   const {
     data: groups = [],
@@ -34,7 +34,10 @@ export default function GroupsPage() {
     if (activeTab === 'my-groups') {
       return group.createdByUser?.id === session?.user?.id;
     }
-    return true; // For discover tab, show all groups
+    if (activeTab === 'discover') {
+      return !group.isPrivate; // Show only public groups in discover
+    }
+    return true; // For all-groups tab, show all groups
   });
   const filterError = error;
 
@@ -108,6 +111,7 @@ export default function GroupsPage() {
       >
         <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
           <TabsList>
+            <TabsTrigger value="all-groups">All Groups</TabsTrigger>
             <TabsTrigger value="my-groups">My Groups</TabsTrigger>
             <TabsTrigger value="discover">Discover</TabsTrigger>
           </TabsList>
@@ -157,6 +161,36 @@ export default function GroupsPage() {
               {filteredGroups.map((group: Group, index) => (
                 <GroupCard
                   key={`${group.id}-${index}`}
+                  group={group}
+                  isOwner={group.createdByUser?.id === session?.user?.id}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="all-groups">
+          {searchedGroups.length === 0 ? (
+            <EmptyState
+              icon={<Users />}
+              title="No groups found"
+              description={searchQuery
+                ? "No groups match your search. Try a different term or create a new group."
+                : "There are no groups available at the moment. Be the first to create one!"}
+              action={
+                <Button asChild>
+                  <Link href="/groups/create">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Group
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredGroups.map((group: Group, index) => (
+                <GroupCard
+                  key={`all-${group.id}-${index}`}
                   group={group}
                   isOwner={group.createdByUser?.id === session?.user?.id}
                 />

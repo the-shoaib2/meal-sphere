@@ -28,7 +28,6 @@ enum Role {
   ACCOUNTANT
   MARKET_MANAGER
   MEMBER
-  GUEST
 }
 
 enum MealType {
