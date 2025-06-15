@@ -31,6 +31,14 @@ import { InviteCard } from './invite-card';
 import { Role } from '@prisma/client';
 import { UserProfileDialog } from './user-profile-dialog';
 
+type User = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  createdAt?: string;
+};
+
 type Member = {
   id: string;
   role: Role;
@@ -40,12 +48,11 @@ type Member = {
   isCurrent: boolean;
   isActive: boolean;
   lastActive: string;
-  user: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    image: string | null;
-  };
+  user: User;
+  totalMeals?: number;
+  totalPayments?: number;
+  totalShopping?: number;
+  totalExpenses?: number;
 };
 
 type GroupMembersProps = {
@@ -272,7 +279,14 @@ export function GroupMembers({
             email: selectedUser.user.email,
             image: selectedUser.user.image,
             role: selectedUser.role,
-            createdAt: selectedUser.joinedAt
+            createdAt: selectedUser.user.createdAt || new Date().toISOString(),
+            joinedAt: selectedUser.joinedAt,
+            isActive: selectedUser.isActive,
+            lastActive: selectedUser.lastActive,
+            totalMeals: selectedUser.totalMeals,
+            totalPayments: selectedUser.totalPayments,
+            totalShopping: selectedUser.totalShopping,
+            totalExpenses: selectedUser.totalExpenses
           }}
           isOpen={!!selectedUser}
           onClose={() => setSelectedUser(null)}

@@ -6,7 +6,7 @@ import { Role } from "@prisma/client";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +14,7 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { id: groupId } = await Promise.resolve(params);
+    const groupId = context.params.id;
     const userId = session.user.id;
 
     // Get the group and check if user is the creator

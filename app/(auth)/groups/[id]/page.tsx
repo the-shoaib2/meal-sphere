@@ -241,7 +241,14 @@ export default function GroupPage() {
               isCurrent: member.userId === session?.user?.id,
               isActive: true,
               lastActive: new Date().toISOString(),
-              role: member.role as Role
+              role: member.role as Role,
+              user: {
+                id: member.user.id,
+                name: member.user.name,
+                email: member.user.email,
+                image: member.user.image,
+                createdAt: (member.user as any).createdAt || new Date().toISOString()
+              }
             }))}
             onMemberUpdate={() => {
               // Refresh the group data when members are updated
