@@ -14,6 +14,8 @@ const nextConfig = {
       allowedOrigins: ['localhost:3000', 'https://www.meal-sphere.vercel.app'],
     },
   },
+  // Add output configuration
+  output: 'standalone',
   // Configure webpack to handle font files
   webpack: (config, { isServer }) => {
     // Add rule for font files
