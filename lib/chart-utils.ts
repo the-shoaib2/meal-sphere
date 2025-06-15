@@ -1,5 +1,11 @@
 import type { MealType } from "@prisma/client"
 
+interface Expense {
+  name: string
+  value: number
+  date: Date
+}
+
 // Function to generate meal count data for charts
 export function generateMealCountData(meals: any[]) {
   const mealTypes = {
@@ -44,7 +50,7 @@ export function generateExpenseData(expenses: any[], shoppingItems: any[]) {
     if (!expensesByType[expense.name]) {
       expensesByType[expense.name] = 0
     }
-    expensesByType[expense.name] += expense.amount
+    expensesByType[expense.name] += expense.value
   })
 
   // Convert to array format for charts
@@ -121,4 +127,22 @@ export function generateMonthlyExpenseData(expenses: any[], shoppingItems: any[]
       if (aYear !== bYear) return aYear - bYear
       return aMonth - bMonth
     })
+}
+
+export function processExpenseData(expenses: Expense[]) {
+  const expensesByType: { [key: string]: number } = {}
+
+  // Calculate total expenses by type
+  expenses.forEach((expense) => {
+    if (!expensesByType[expense.name]) {
+      expensesByType[expense.name] = 0
+    }
+    expensesByType[expense.name] += expense.value
+  })
+
+  // Convert to array format for charts
+  return Object.entries(expensesByType).map(([name, value]) => ({
+    name,
+    value,
+  }))
 }

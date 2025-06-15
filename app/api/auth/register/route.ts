@@ -1,115 +1,88 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient, Role } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod';
-import { validateCaptcha } from '@/app/api/captcha/route';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from "@/lib/prisma"
+import { createVerificationToken } from "@/lib/email-utils"
+import { sendVerificationEmail } from "@/lib/email-utils"
+import * as bcrypt from "bcryptjs"
+import { z } from "zod"
+import { validateCaptcha } from '@/lib/auth/captcha'
 
-const prisma = new PrismaClient();
-
-// Define the request schema
 const registerSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  name: z.string().min(2).max(50),
+  email: z.string().email(),
+  password: z.string().min(6),
   confirmPassword: z.string(),
   captchaSessionId: z.string().min(1, 'CAPTCHA session ID is required'),
   captchaText: z.string().min(1, 'CAPTCHA text is required')
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
-}).refine((data) => {
-  const validation = validateCaptcha(data.captchaSessionId, data.captchaText);
-  return validation.isValid;
-}, {
-  message: 'Invalid or expired CAPTCHA',
-  path: ['captchaText']
-});
+})
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     
     // Validate request body
-    const validation = registerSchema.safeParse(body);
-    if (!validation.success) {
+    const validatedData = registerSchema.parse(body);
+
+    // Validate CAPTCHA
+    const isValidCaptcha = await validateCaptcha(
+      validatedData.captchaSessionId,
+      validatedData.captchaText
+    );
+    if (!isValidCaptcha) {
       return NextResponse.json(
-        { 
-          success: false,
-          error: 'Validation failed', 
-          details: validation.error.format() 
-        },
+        { message: "Invalid CAPTCHA" },
         { status: 400 }
       );
     }
 
-    const { name, email, password } = validation.data;
-    
-    // CAPTCHA is already validated by the schema, but we'll clean up the session
-    // The validation in the schema ensures we only proceed if CAPTCHA is valid
-
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: validatedData.email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { 
-          success: false,
-          error: 'Registration failed',
-          message: 'Email already in use' 
-        },
+        { message: "User already exists" },
         { status: 400 }
       );
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
-    // Hash the password with a higher salt round for better security
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Create the user with explicit undefined resetToken
+    // Create user
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: validatedData.name,
+        email: validatedData.email,
         password: hashedPassword,
-        role: Role.MEMBER,
-        resetToken: undefined // Explicitly set to undefined
+        role: "MEMBER",
       },
     });
 
-    // Don't send back the password hash
-    const { password: _, ...userWithoutPassword } = user;
+    // Create verification token
+    const token = await createVerificationToken(validatedData.email);
 
-    // Create session token (you might want to use a proper auth library for production)
-    const sessionToken = {
-      token: 'auth_token_' + Math.random().toString(36).substring(2, 15),
-      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    };
+    // Send verification email
+    await sendVerificationEmail(validatedData.email, validatedData.name, token);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Registration successful',
-      user: userWithoutPassword,
-      session: sessionToken,
-      isTest: false
-    }, { status: 201 });
-
-  } catch (error) {
-    console.error('Registration error:', error);
     return NextResponse.json(
-      { 
-        success: false,
-        error: 'Registration failed',
-        message: 'Failed to create user',
-        ...(process.env.NODE_ENV === 'development' && { 
-          details: error instanceof Error ? error.message : 'Unknown error' 
-        })
-      },
+      { message: "User registered successfully" },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Registration error:", error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { message: "Invalid input data", errors: error.errors },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { message: "Failed to register user" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

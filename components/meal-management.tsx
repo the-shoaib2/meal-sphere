@@ -47,6 +47,7 @@ export default function MealManagement() {
 
   // Get the roomId from URL if available
   useEffect(() => {
+    if (!searchParams) return;
     const roomId = searchParams.get("roomId")
     if (roomId) {
       setSelectedRoom(roomId)
@@ -55,6 +56,8 @@ export default function MealManagement() {
 
   // Fetch rooms
   useEffect(() => {
+    if (!searchParams) return;
+    
     const fetchRooms = async () => {
       try {
         const response = await fetch("/api/rooms")

@@ -19,6 +19,7 @@ interface MarketDateWithUser extends MarketDate {
     email: string
     image: string | null
   }
+  fined?: boolean
 }
 
 interface MarketDateListProps {
@@ -66,7 +67,7 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ completed }),
+        body: JSON.stringify({ status: completed ? 'COMPLETED' : 'UPCOMING' }),
       })
 
       if (!response.ok) {
@@ -124,20 +125,22 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
       ),
     },
     {
-      key: "completed",
-      title: "Completed",
-      render: (value: boolean) =>
-        value ? (
+      key: "status",
+      title: "Status",
+      render: (value: string) => {
+        const isCompleted = value === 'COMPLETED'
+        return isCompleted ? (
           <span className="flex items-center text-green-600">
             <CheckCircle className="h-4 w-4 mr-1" />
-            Yes
+            Completed
           </span>
         ) : (
           <span className="flex items-center text-red-600">
             <XCircle className="h-4 w-4 mr-1" />
-            No
+            {value.charAt(0) + value.slice(1).toLowerCase().replace('_', ' ')}
           </span>
-        ),
+        )
+      },
     },
     {
       key: "fined",
@@ -158,18 +161,19 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
     {
       key: "actions",
       title: "Actions",
-      render: (value: any, row: MarketDateWithUser) => {
+      render: (_: any, row: MarketDateWithUser) => {
         const isPastDate = new Date(row.date) < new Date()
         const isCurrentUser = row.userId === user.id
+        const isCompleted = row.status === 'COMPLETED'
 
         return (
           <div className="flex flex-col sm:flex-row gap-2">
-            {isManager && isPastDate && !row.completed && !row.fined && (
+            {isManager && isPastDate && !isCompleted && !row.fined && (
               <Button size="sm" variant="destructive" onClick={() => applyFine(row.id)}>
                 Fine
               </Button>
             )}
-            {(isCurrentUser || isManager) && !row.completed && (
+            {(isCurrentUser || isManager) && !isCompleted && (
               <Button size="sm" variant="outline" onClick={() => updateMarketDateStatus(row.id, true)}>
                 Complete
               </Button>

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
@@ -9,7 +9,10 @@ const fineSettingsSchema = z.object({
   fineEnabled: z.boolean(),
 })
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -17,7 +20,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await context.params
     const body = await request.json()
     const validatedData = fineSettingsSchema.parse(body)
 

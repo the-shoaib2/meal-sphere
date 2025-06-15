@@ -25,6 +25,8 @@ export default function BkashPaymentPage() {
   ]
 
   useEffect(() => {
+    if (!searchParams) return;
+    
     // Check for success or error in URL params
     const successParam = searchParams.get("success")
     const errorParam = searchParams.get("error")

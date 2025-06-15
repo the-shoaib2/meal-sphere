@@ -5,8 +5,8 @@ import Link from "next/link"
 import { Metadata } from 'next'
 
 type Props = {
-  searchParams: { [key: string]: string | string[] | undefined }
-  params: { [key: string]: string }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  params: Promise<{ [key: string]: string }>
 }
 
 export const metadata: Metadata = {
@@ -15,8 +15,9 @@ export const metadata: Metadata = {
 }
 
 export default async function VerifyEmailPage({ searchParams }: Props) {
-  const token = searchParams.token as string
-  const email = searchParams.email as string
+  const resolvedParams = await searchParams
+  const token = resolvedParams.token as string
+  const email = resolvedParams.email as string
 
   if (!token || !email) {
     redirect("/login")

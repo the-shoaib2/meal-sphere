@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
@@ -8,12 +8,19 @@ function logDebugInfo(label: string, data: any) {
   console.log(`[DEBUG] ${label}:`, JSON.stringify(data, null, 2));
 }
 
+type RouteParams = {
+  params: Promise<{ id: string; memberId: string }>;
+};
+
 // DELETE /api/groups/[id]/members/[memberId] - Remove a member from the group
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string; memberId: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
+    const resolvedParams = await params;
+    const { id: groupId, memberId } = resolvedParams;
+    
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({
@@ -22,7 +29,6 @@ export async function DELETE(
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const { id: groupId, memberId } = params;
     const currentUserId = session.user.id;
 
     logDebugInfo('Request params', { groupId, memberId, currentUserId });

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
@@ -20,7 +20,10 @@ const updateRoleSchema = z.object({
   role: z.enum(Object.values(Role) as [string, ...string[]]),
 });
 
-// PATCH /api/groups/[id]/members/[memberId]/role - Update member role
+type RouteParams = {
+  params: Promise<{ id: string; memberId: string }>;
+};
+
 // Helper to log debug info
 function logDebugInfo(label: string, data: unknown) {
   if (process.env.NODE_ENV === 'development') {
@@ -34,18 +37,16 @@ function isValidId(id: string): boolean {
 }
 
 export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string; memberId: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
-  // Log the raw params for debugging
-  logDebugInfo('Raw params', params);
-  
-  // In Next.js 15.2.4, we need to handle params directly without awaiting
-  const { id: groupId, memberId } = params;
-  
-  // Log the parsed values
-  logDebugInfo('Parsed params', { groupId, memberId });
   try {
+    const resolvedParams = await params;
+    const { id: groupId, memberId } = resolvedParams;
+    
+    // Log the parsed values
+    logDebugInfo('Parsed params', { groupId, memberId });
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ 
@@ -62,11 +63,10 @@ export async function PATCH(
       }), { status: 400 });
     }
 
-    // Already parsed params at the start of the function
     const currentUserId = session.user.id;
 
     // Validate request body
-    const body = await req.json();
+    const body = await request.json();
     const { role: newRole } = updateRoleSchema.parse(body);
 
     // Get the current user's membership
@@ -132,7 +132,7 @@ export async function PATCH(
         id: targetMember.id,
       },
       data: {
-        role: newRole as Role, // Explicitly type cast to Role
+        role: newRole as Role,
       },
       include: {
         user: {

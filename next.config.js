@@ -4,9 +4,31 @@ const nextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com'], // For Google OAuth profile pictures
   },
-  // experimental: {
-  //   serverActions: true,
-  // },
+  // Add pageExtensions to ensure Next.js recognizes all page files
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  // Add trailingSlash to ensure consistent URL handling
+  trailingSlash: false,
+  // Configure experimental features
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'https://www.meal-sphere.vercel.app'],
+    },
+  },
+  // Configure webpack to handle font files
+  webpack: (config, { isServer }) => {
+    // Add rule for font files
+    config.module.rules.push({
+      test: /\.(woff|woff2|eot|ttf|otf)$/i,
+      issuer: { and: [/\.(js|ts|md)x?$/] },
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/fonts/[name][ext]',
+        publicPath: '/_next/static/fonts/',
+        outputPath: 'static/fonts/'
+      }
+    });
+    return config;
+  },
   async headers() {
     return [
       {

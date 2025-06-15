@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     // Create notification for the assigned user
     await createNotification({
       userId: validatedData.userId,
-      type: "MARKET_DATE_REMINDER",
+      type: "MARKET_DATE_UPDATED",
       message: `You have been assigned market duty for ${room?.name} on ${validatedData.date.toLocaleDateString()}.`,
     })
 

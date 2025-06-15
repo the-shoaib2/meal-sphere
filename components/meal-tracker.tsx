@@ -8,9 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
+import { format, subDays, addDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns"
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
+
+type MealType = 'Breakfast' | 'Lunch' | 'Dinner'
+type DayMeals = Record<MealType, boolean>
+type MealData = Record<string, DayMeals>
 
 export default function MealTracker() {
   const [date, setDate] = useState<Date>(new Date())
@@ -27,7 +31,7 @@ export default function MealTracker() {
   const mealTypes = ["Breakfast", "Lunch", "Dinner"]
 
   // Sample meal data - would come from API
-  const [mealData, setMealData] = useState({
+  const [mealData, setMealData] = useState<MealData>({
     "2024-05-21": { Breakfast: true, Lunch: true, Dinner: false },
     "2024-05-20": { Breakfast: true, Lunch: true, Dinner: true },
     "2024-05-19": { Breakfast: false, Lunch: true, Dinner: true },
@@ -37,7 +41,7 @@ export default function MealTracker() {
     "2024-05-15": { Breakfast: false, Lunch: true, Dinner: true },
   })
 
-  const handleMealToggle = (date: string, mealType: string) => {
+  const handleMealToggle = (date: string, mealType: MealType) => {
     setMealData((prev) => {
       const dateData = prev[date] || { Breakfast: false, Lunch: false, Dinner: false }
       return {
@@ -54,7 +58,7 @@ export default function MealTracker() {
     return format(date, "yyyy-MM-dd")
   }
 
-  const getMealStatus = (date: Date, mealType: string) => {
+  const getMealStatus = (date: Date, mealType: MealType): boolean => {
     const dateKey = formatDateKey(date)
     return mealData[dateKey]?.[mealType] || false
   }
@@ -84,8 +88,8 @@ export default function MealTracker() {
                   <div key={mealType} className="flex items-center justify-between border rounded-md p-2">
                     <span className="text-sm">{mealType}</span>
                     <Checkbox
-                      checked={getMealStatus(day, mealType)}
-                      onCheckedChange={() => handleMealToggle(formatDateKey(day), mealType)}
+                      checked={getMealStatus(day, mealType as MealType)}
+                      onCheckedChange={() => handleMealToggle(formatDateKey(day), mealType as MealType)}
                     />
                   </div>
                 ))}
@@ -168,8 +172,8 @@ export default function MealTracker() {
                     {days.map((day) => (
                       <TableCell key={day.toISOString()} className="text-center">
                         <Checkbox
-                          checked={getMealStatus(day, mealType)}
-                          onCheckedChange={() => handleMealToggle(formatDateKey(day), mealType)}
+                          checked={getMealStatus(day, mealType as MealType)}
+                          onCheckedChange={() => handleMealToggle(formatDateKey(day), mealType as MealType)}
                           className="mx-auto"
                         />
                       </TableCell>

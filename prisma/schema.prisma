@@ -86,6 +86,13 @@ enum NotificationType {
   GENERAL
 }
 
+enum ExpenseType {
+  FOOD
+  UTILITY
+  RENT
+  OTHER
+}
+
 /// USER MODEL
 model User {
   id               String           @id @default(auto()) @map("_id") @db.ObjectId
@@ -347,18 +354,19 @@ model MarketDate {
 
 /// EXTRA EXPENSE MODEL
 model ExtraExpense {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
   description String
   amount      Float
   date        DateTime
+  type        ExpenseType @default(OTHER)
   receiptUrl  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String   @db.ObjectId
-  roomId      String   @db.ObjectId
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userId      String      @db.ObjectId
+  roomId      String      @db.ObjectId
 
-  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room        Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Invitation {

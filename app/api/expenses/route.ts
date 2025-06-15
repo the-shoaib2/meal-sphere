@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
-import { createNotification } from "@/lib/notification-utils"
+import { createCustomNotification } from "@/lib/notification-utils"
 import { uploadReceipt } from "@/lib/upload-utils"
+import { ExpenseType, NotificationType } from '@prisma/client'
 
 export async function POST(request: Request) {
   try {
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
         description,
         amount,
         date,
-        type: type as any,
+        type: type as ExpenseType,
         receiptUrl,
         userId: user.id,
         roomId,
@@ -83,11 +84,10 @@ export async function POST(request: Request) {
     })
 
     for (const member of roomMembers) {
-      await createNotification({
-        userId: member.user.id,
-        type: "CUSTOM",
-        message: `${user.name} added a new ${type.toLowerCase()} expense of ${amount} for ${description} in ${room?.name}.`,
-      })
+      await createCustomNotification(
+        member.user.id,
+        `${user.name} added a new ${type.toLowerCase()} expense of ${amount} for ${description} in ${room?.name}.`
+      )
     }
 
     return NextResponse.json({

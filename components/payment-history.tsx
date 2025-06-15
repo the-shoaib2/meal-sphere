@@ -20,6 +20,7 @@ import { CreditCard, Download, Plus } from "lucide-react"
 import BkashPayment from "./bkash-payment"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { ResponsiveTable } from "./ui/responsive-table"
+import { format } from "date-fns"
 
 export default function PaymentHistory() {
   const [selectedRoom, setSelectedRoom] = useState("all")
@@ -88,15 +89,19 @@ export default function PaymentHistory() {
   }
 
   const columns = [
-    { key: "date", title: "Date" },
-    { key: "amount", title: "Amount", render: (value) => `৳${value}` },
-    { key: "method", title: "Method" },
-    { key: "room", title: "Room" },
-    { key: "description", title: "Description" },
+    { key: "date", title: "Date", render: (value: string) => format(new Date(value), "PPP") },
+    { key: "amount", title: "Amount", render: (value: number) => `৳${value}` },
+    { key: "method", title: "Method", render: (value: string) => value },
+    { key: "room", title: "Room", render: (value: string) => value },
+    { key: "description", title: "Description", render: (value: string) => value },
     {
       key: "status",
       title: "Status",
-      render: (value) => <Badge variant={value === "completed" ? "success" : "secondary"}>{value}</Badge>,
+      render: (value: string) => (
+        <Badge variant={value === "COMPLETED" ? "default" : "secondary"}>
+          {value}
+        </Badge>
+      ),
     },
   ]
 

@@ -34,6 +34,8 @@ const nextConfig = {
       },
     ]
   },
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  trailingSlash: false,
 }
 
 export default nextConfig

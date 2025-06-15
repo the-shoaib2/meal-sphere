@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createCanvas } from 'canvas';
 
@@ -262,149 +262,61 @@ function generateCaptchaImage(text: string): { buffer: Buffer; mimeType: string 
 }
 
 // Handle GET request - Generate new CAPTCHA
-export async function GET() {
-  try {
-    // Clean up expired CAPTCHAs on each request
-    cleanupExpiredCaptchas();
-    
-    // Generate a random CAPTCHA text (uppercase only for simplicity)
-    const captchaText = generateCaptchaText(6);
-    
-    // Create a session ID for this CAPTCHA
-    const sessionId = uuidv4();
-    
-    // Store CAPTCHA code (case-insensitive) with 5-minute expiration
-    captchaStore.set(sessionId, {
-      code: captchaText.toLowerCase(), // Store lowercase for case-insensitive comparison
-      expires: Date.now() + 300000, // 5 minutes
-    });
-
-    // Generate the CAPTCHA image
-    const { buffer, mimeType } = generateCaptchaImage(captchaText);
-
-    // Prepare response headers
-    const headers = new Headers();
-    headers.set('Content-Type', mimeType);
-    headers.set('Content-Length', buffer.length.toString());
-    headers.set('X-Session-Id', sessionId);
-    
-    // Only include x-captcha-text in development for testing
-    if (process.env.NODE_ENV === 'development') {
-      headers.set('X-Captcha-Text', captchaText);
-      console.log(`[CAPTCHA] Session: ${sessionId}, Text: ${captchaText}`);
-    }
-
-    // Return the image with headers
-    return new NextResponse(buffer, {
-      status: 200,
-      headers,
-    });
-  } catch (error) {
-    console.error('CAPTCHA generation error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate CAPTCHA' },
-      { status: 500 }
-    );
-  }
+export async function GET(request: NextRequest) {
+  cleanupExpiredCaptchas();
+  
+  const sessionId = uuidv4();
+  const code = generateCaptchaText();
+  const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
+  
+  captchaStore.set(sessionId, { code, expires });
+  
+  const { buffer, mimeType } = generateCaptchaImage(code);
+  
+  return new NextResponse(buffer, {
+    headers: {
+      'Content-Type': mimeType,
+      'X-Captcha-Session': sessionId,
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+  });
 }
 
 // Handle POST request - Verify CAPTCHA
-export async function POST(request: Request) {
-  try {
-    const { sessionId, captchaText } = await request.json();
-    
-    // Input validation
-    if (!sessionId || !captchaText) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Validation Error',
-          message: 'Session ID and CAPTCHA text are required',
-          code: 'MISSING_FIELDS'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Validate CAPTCHA
-    const result = validateCaptcha(sessionId, captchaText);
-    
-    if (!result.isValid) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'CAPTCHA Validation Failed',
-          message: result.message,
-          code: result.code || 'INVALID_CAPTCHA'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Successful validation
-    return NextResponse.json({
-      success: true,
-      message: result.message,
-    });
-
-  } catch (error) {
-    console.error('CAPTCHA verification error:', error);
+export async function POST(request: NextRequest) {
+  const { sessionId, userInput } = await request.json();
+  
+  if (!sessionId || !userInput) {
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Server Error',
-        message: 'Failed to process CAPTCHA verification',
-      },
-      { status: 500 }
+      { isValid: false, message: 'Missing session ID or user input' },
+      { status: 400 }
     );
   }
-}
-
-// Helper function to validate CAPTCHA
-function validateCaptcha(
-  sessionId: string, 
-  userInput: string
-): { 
-  isValid: boolean; 
-  message: string;
-  code?: string;
-} {
-  if (!sessionId || !userInput) {
-    return { 
-      isValid: false, 
-      message: 'Missing CAPTCHA session or input',
-    };
-  }
-
-  const captcha = captchaStore.get(sessionId);
   
-  // Remove the CAPTCHA after validation attempt (one-time use)
+  const captchaData = captchaStore.get(sessionId);
+  
+  if (!captchaData) {
+    return NextResponse.json(
+      { isValid: false, message: 'Invalid or expired session' },
+      { status: 400 }
+    );
+  }
+  
+  if (Date.now() > captchaData.expires) {
+    captchaStore.delete(sessionId);
+    return NextResponse.json(
+      { isValid: false, message: 'CAPTCHA expired' },
+      { status: 400 }
+    );
+  }
+  
+  const isValid = userInput.toUpperCase() === captchaData.code;
   captchaStore.delete(sessionId);
   
-  if (!captcha) {
-    return { 
-      isValid: false, 
-      message: 'Invalid or expired CAPTCHA session. Please request a new CAPTCHA.',
-    };
-  }
-  
-  if (captcha.expires < Date.now()) {
-    return { 
-      isValid: false, 
-      message: 'CAPTCHA has expired. Please request a new one.',
-    };
-  }
-  
-  // Compare case-insensitively and remove any spaces
-  const userCode = userInput.trim().toLowerCase().replace(/\s+/g, '');
-  const isValid = captcha.code === userCode;
-  
-  return {
+  return NextResponse.json({
     isValid,
-    message: isValid 
-      ? 'CAPTCHA validated successfully' 
-      : 'The CAPTCHA text you entered is incorrect. Please try again.',
-  };
+    message: isValid ? 'CAPTCHA verified successfully' : 'Invalid CAPTCHA',
+  });
 }
-
-export { validateCaptcha }

@@ -1,14 +1,17 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
 const marketDateUpdateSchema = z.object({
-  completed: z.boolean(),
+  status: z.enum(['UPCOMING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
 })
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -16,7 +19,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await params
     const body = await request.json()
     const validatedData = marketDateUpdateSchema.parse(body)
 
@@ -59,7 +62,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const updatedMarketDate = await prisma.marketDate.update({
       where: { id },
       data: {
-        completed: validatedData.completed,
+        status: validatedData.status,
       },
     })
 

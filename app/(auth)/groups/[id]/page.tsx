@@ -27,13 +27,14 @@ import { GroupSettings } from '@/components/groups/group-settings';
 
 
 export default function GroupPage() {
-  const { id: groupId } = useParams<{ id: string }>();
+  const params = useParams();
+  const groupId = typeof params?.id === 'string' ? params.id : '';
   const router = useRouter();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const { data: group, isLoading, error, refetch } = useGroups().useGroupDetails(
     groupId,
-    searchParams.get('password') || undefined
+    searchParams?.get('password') || undefined
   );
   
   const [isLeaving, setIsLeaving] = useState(false);

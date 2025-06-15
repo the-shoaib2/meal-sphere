@@ -38,10 +38,13 @@ export function NavMain({
 
   // Find the active item based on current path
   const getIsActive = (item: typeof items[0]) => {
+    if (!pathname) return false;
+    
+    const currentPath = pathname as string;
     if (item.exact) {
-      return pathname === item.url
+      return currentPath === item.url
     }
-    return pathname.startsWith(item.url)
+    return currentPath.startsWith(item.url)
   }
 
   return (

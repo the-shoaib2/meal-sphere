@@ -1,19 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
+    const resolvedParams = await params;
+    const groupId = resolvedParams.id;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
-
-    const groupId = params.id;
 
     // Check if the user is a member of the group
     const membership = await prisma.roomMember.findFirst({

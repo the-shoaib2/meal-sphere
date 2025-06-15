@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx"
 import prisma from "./prisma"
+import { MealType } from "@prisma/client"
 
 // Types for Excel data
 export type MealExcelRow = {
@@ -377,7 +378,7 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
               userId,
               roomId,
               date,
-              type: "BREAKFAST",
+              type: "BREAKFAST" as MealType,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -388,7 +389,7 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
               userId,
               roomId,
               date,
-              type: "LUNCH",
+              type: "LUNCH" as MealType,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -399,7 +400,7 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
               userId,
               roomId,
               date,
-              type: "DINNER",
+              type: "DINNER" as MealType,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -462,4 +463,22 @@ function getDateRange(startDate: Date, endDate: Date): Date[] {
 // Helper function to format date for filenames
 function formatDateForFilename(date: Date): string {
   return date.toISOString().split("T")[0]
+}
+
+// Function to process meal data
+async function processMealData(rows: any[], userId: string, roomId: string) {
+  const meals = rows.map((row) => ({
+    userId,
+    roomId,
+    date: new Date(row.date),
+    type: row.type.toUpperCase() as MealType,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }))
+
+  if (meals.length > 0) {
+    await prisma.meal.createMany({
+      data: meals,
+    })
+  }
 }

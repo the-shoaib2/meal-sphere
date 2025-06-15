@@ -5,6 +5,16 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { DataVisualization } from "@/components/data-visualization"
 
+interface CalculationResult {
+  id: string;
+  roomId: string;
+  startDate: Date;
+  endDate: Date;
+  totalMeals: number;
+  totalExpense: number;
+  mealRate: number;
+}
+
 export default async function AnalyticsPage() {
   const session = await getServerSession(authOptions)
 
@@ -83,36 +93,44 @@ export default async function AnalyticsPage() {
     },
   })
 
-  // Fetch calculations
-  interface CalculationResult {
-    id: string;
-    roomId: string;
-    startDate: Date;
-    endDate: Date;
-    totalMeals: number;
-    totalExpense: number;
-    mealRate: number;
-  }
-
-  const calculations = await prisma.$queryRaw<CalculationResult[]>`
-    SELECT 
-      c.id, 
-      c.room_id AS "roomId", 
-      c.start_date AS "startDate",
-      c.end_date AS "endDate", 
-      c.total_meals AS "totalMeals", 
-      c.total_expense AS "totalExpense", 
-      c.meal_rate AS "mealRate"
-  ` as Promise<Array<{
-    id: string;
-    roomId: string;
-    startDate: Date;
-    endDate: Date | null;
-    totalMeals: number;
-    totalExpense: number;
-    mealRate: number;
-  }>>
-
+  // Calculate meal rates for each room
+  const calculations: CalculationResult[] = await Promise.all(
+    roomIds.map(async (roomId) => {
+      // Get all meals for this room
+      const roomMeals = meals.filter(meal => meal.roomId === roomId)
+      
+      // Get all expenses for this room
+      const roomExpenses = expenses.filter(expense => expense.roomId === roomId)
+      
+      // Get all shopping items for this room
+      const roomShopping = shoppingItems.filter(item => item.roomId === roomId)
+      
+      // Calculate total meals
+      const totalMeals = roomMeals.length
+      
+      // Calculate total expenses
+      const totalExpense = roomExpenses.reduce((sum, expense) => sum + expense.amount, 0) +
+                          roomShopping.reduce((sum, item) => sum + item.amount, 0)
+      
+      // Calculate meal rate
+      const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0
+      
+      // Get date range
+      const dates = [...roomMeals, ...roomExpenses, ...roomShopping].map(item => item.date)
+      const startDate = new Date(Math.min(...dates.map(d => d.getTime())))
+      const endDate = new Date(Math.max(...dates.map(d => d.getTime())))
+      
+      return {
+        id: roomId,
+        roomId,
+        startDate,
+        endDate,
+        totalMeals,
+        totalExpense,
+        mealRate,
+      }
+    })
+  )
 
   return (
     <div className="container mx-auto py-6 space-y-8">

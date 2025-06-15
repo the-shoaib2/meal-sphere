@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
@@ -37,10 +37,14 @@ const createInvitationSchema = z.object({
   expiresAt: z.number().optional(),
 });
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // POST /api/groups/[id]/invite - Create an invitation link
 export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
@@ -50,8 +54,9 @@ export async function POST(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { id: groupId } = params;
-    const body = await req.json();
+    const resolvedParams = await params;
+    const { id: groupId } = resolvedParams;
+    const body = await request.json();
     const validation = createInvitationSchema.safeParse(body);
 
     if (!validation.success) {
@@ -106,7 +111,6 @@ export async function POST(
     let attempts = 0;
 
     while (codeExists && attempts < maxAttempts) {
-      // Generate a secure random string
       code = randomBytes(16).toString('hex');
       const existingCode = await prisma.invitation.findUnique({ 
         where: { code },
@@ -141,13 +145,12 @@ export async function POST(
       },
     });
 
-    // Construct the invitation URL with proper URL encoding
+    // Construct the invitation URL
     const baseUrl = process.env.NEXTAUTH_URL || '';
     const joinUrl = new URL(`/groups/join/${encodeURIComponent(groupId)}`, baseUrl);
     joinUrl.searchParams.append('code', invitation.code);
     joinUrl.searchParams.append('email', encodeURIComponent(email));
     
-    // Return the invitation URL
     return NextResponse.json({
       invitationUrl: joinUrl.toString(),
       invitation,
@@ -160,8 +163,8 @@ export async function POST(
 
 // GET /api/groups/[id]/invite - Get group's invitations
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
@@ -171,7 +174,8 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { id: groupId } = params;
+    const resolvedParams = await params;
+    const { id: groupId } = resolvedParams;
     
     // Verify group exists
     const group = await prisma.room.findUnique({
@@ -199,7 +203,6 @@ export async function GET(
     const invitations = await prisma.invitation.findMany({
       where: {
         groupId,
-        expiresAt: { gt: new Date() },
       },
       include: {
         creator: {
@@ -215,17 +218,21 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(invitations as InvitationResponse[]);
+    return NextResponse.json(invitations);
   } catch (error) {
     console.error('Error fetching invitations:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
-// DELETE /api/groups/[id]/invite/[code] - Revoke an invitation
+type DeleteRouteParams = {
+  params: Promise<{ id: string; code: string }>;
+};
+
+// DELETE /api/groups/[id]/invite - Delete an invitation
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string; code: string } }
+  request: NextRequest,
+  { params }: DeleteRouteParams
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
@@ -235,8 +242,9 @@ export async function DELETE(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { id: groupId, code } = params;
-
+    const resolvedParams = await params;
+    const { id: groupId, code } = resolvedParams;
+    
     // Verify group exists
     const group = await prisma.room.findUnique({
       where: { id: groupId },
@@ -247,7 +255,7 @@ export async function DELETE(
       return new NextResponse('Group not found', { status: 404 });
     }
 
-    // Verify user is an admin of the group
+    // Verify admin access
     const membership = await prisma.roomMember.findFirst({
       where: {
         roomId: groupId,
@@ -272,7 +280,7 @@ export async function DELETE(
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error revoking invitation:', error);
+    console.error('Error deleting invitation:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

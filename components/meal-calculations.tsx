@@ -228,7 +228,7 @@ export default function MealCalculations() {
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={user.balance >= 0 ? "success" : "destructive"}>
+                        <Badge variant={user.balance >= 0 ? "default" : "destructive"}>
                           {user.balance >= 0 ? "Paid" : "Due"}
                         </Badge>
                       </TableCell>
