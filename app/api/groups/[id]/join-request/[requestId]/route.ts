@@ -4,9 +4,16 @@ import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
 import { Role, NotificationType } from '@prisma/client';
 
+type RouteContext = {
+  params: {
+    id: string;
+    requestId: string;
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string; requestId: string } }
+  { params }: RouteContext
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +24,7 @@ export async function PATCH(
       );
     }
 
-    const { id: groupId, requestId } = context.params;
+    const { id: groupId, requestId } = params;
     const { action } = await request.json();
 
     if (!['approve', 'reject'].includes(action)) {
