@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
+import { Role } from "@prisma/client";
 
 // Helper to log detailed debug info
 function logDebugInfo(label: string, data: any) {
@@ -81,7 +82,7 @@ export async function DELETE(
     const isRemovingSelf = targetMember.userId === currentUserId;
 
     // If not removing self, check admin privileges
-    if (!isRemovingSelf && currentUserMembership.role !== 'ADMIN') {
+    if (!isRemovingSelf && currentUserMembership.role !== Role.ADMIN) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Only group admins can remove other members',
@@ -89,7 +90,7 @@ export async function DELETE(
     }
 
     // Prevent removing other admins (only the admin themselves can leave)
-    if (!isRemovingSelf && targetMember.role === 'ADMIN') {
+    if (!isRemovingSelf && targetMember.role === Role.ADMIN) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Cannot remove another admin. Please demote them first.',
@@ -111,6 +112,28 @@ export async function DELETE(
           decrement: 1,
         },
       },
+    });
+
+    // Log the activity
+    await prisma.groupActivityLog.create({
+      data: {
+        type: 'MEMBER_REMOVED',
+        roomId: groupId,
+        userId: session.user.id,
+        details: {
+          targetUserId: memberId,
+          targetUserName: targetMember.user.name
+        }
+      }
+    });
+
+    // Create notification for the member
+    await prisma.notification.create({
+      data: {
+        userId: memberId,
+        type: 'MEMBER_REMOVED',
+        message: 'You have been removed from the group'
+      }
     });
 
     return new NextResponse(JSON.stringify({
@@ -137,5 +160,96 @@ export async function DELETE(
       }),
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  context: { params: { id: string; memberId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { id: groupId, memberId } = context.params;
+    const { role } = await request.json();
+
+    // Check if user is admin
+    const adminMembership = await prisma.roomMember.findUnique({
+      where: {
+        userId_roomId: {
+          userId: session.user.id,
+          roomId: groupId
+        }
+      },
+      select: { role: true }
+    });
+
+    if (!adminMembership || adminMembership.role !== Role.ADMIN) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // Get target member
+    const targetMember = await prisma.roomMember.findUnique({
+      where: {
+        userId_roomId: {
+          userId: memberId,
+          roomId: groupId
+        }
+      },
+      include: { user: true }
+    });
+
+    if (!targetMember) {
+      return new NextResponse("Member not found", { status: 404 });
+    }
+
+    // Prevent modifying owner
+    if (targetMember.role === Role.ADMIN) {
+      return new NextResponse("Cannot modify group admin", { status: 400 });
+    }
+
+    // Update member
+    const updatedMember = await prisma.roomMember.update({
+      where: {
+        userId_roomId: {
+          userId: memberId,
+          roomId: groupId
+        }
+      },
+      data: {
+        role: role as Role
+      }
+    });
+
+    // Log the activity
+    await prisma.groupActivityLog.create({
+      data: {
+        type: 'ROLE_CHANGED',
+        roomId: groupId,
+        userId: session.user.id,
+        details: {
+          targetUserId: memberId,
+          targetUserName: targetMember.user.name,
+          newRole: role
+        }
+      }
+    });
+
+    // Create notification for the member
+    await prisma.notification.create({
+      data: {
+        userId: memberId,
+        type: 'ROLE_CHANGED',
+        message: `Your role has been changed to ${role}`
+      }
+    });
+
+    return NextResponse.json(updatedMember);
+  } catch (error) {
+    console.error("[MEMBER_UPDATE]", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

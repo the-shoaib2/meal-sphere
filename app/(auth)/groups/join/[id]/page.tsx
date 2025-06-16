@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { Role } from '@prisma/client';
 import { useGroups } from '@/hooks/use-groups';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,12 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useGroupAccess } from '@/hooks/use-group-access';
 
-// Define the join room form schema
+// Update the join room form schema
 const joinRoomSchema = z.object({
-  password: z.string().optional(),
-  code: z.string().optional(),
+  message: z.string().optional(),
 });
 
 type JoinRoomFormValues = z.infer<typeof joinRoomSchema>;
@@ -45,6 +46,32 @@ interface ExtendedGroup extends Group {
   } | null;
 }
 
+// Add skeleton components
+const GroupCardSkeleton = () => (
+  <Card>
+    <CardHeader>
+      <Skeleton className="h-6 w-48 mb-2" />
+      <Skeleton className="h-4 w-64" />
+    </CardHeader>
+    <CardContent>
+      <div className="flex items-start gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <div className="flex gap-3">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 // Component implementation
 export default function JoinGroupPage() {
   // Hooks must be called unconditionally at the top level
@@ -52,30 +79,32 @@ export default function JoinGroupPage() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const router = useRouter();
-  
+
   // Get the group ID from the URL
   const groupId = params?.id as string;
   const code = searchParams?.get('code');
-  
+
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState(false);
   const [group, setGroup] = useState<ExtendedGroup | null>(null);
-  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [showMessageField, setShowMessageField] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [role, setRole] = useState<Role | null>(null);
+  const [isInviteToken, setIsInviteToken] = useState(false);
+  const [actualGroupId, setActualGroupId] = useState<string | null>(null);
 
   // Initialize groups hook
   const { joinGroup, getGroupDetails } = useGroups();
 
-  // Form handling - using uncontrolled form for simplicity
+  // Form handling
   const [formValues, setFormValues] = useState<JoinRoomFormValues>({
-    password: '',
-    code: code || '',
+    message: '',
   });
 
   // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormValues(prev => ({
       ...prev,
@@ -83,10 +112,26 @@ export default function JoinGroupPage() {
     }));
   };
 
+  // Use the group access hook
+  const {
+    isLoading: isAccessLoading,
+    error: accessError,
+    isMember,
+    userRole,
+    canAccess,
+    isInviteToken: accessIsInviteToken,
+    actualGroupId: accessActualGroupId
+  } = useGroupAccess({
+    groupId,
+    onLoading: setIsLoading,
+    onError: setError
+  });
+
   // Fetch group details
-  const fetchGroupDetails = useCallback(async (password?: string) => {
-    if (!groupId || !session?.user?.id) {
-      console.error('Missing groupId or user session');
+  const fetchGroupDetails = useCallback(async () => {
+    if (!groupId) {
+      setError('Invalid group ID');
+      setIsLoading(false);
       return;
     }
 
@@ -94,128 +139,77 @@ export default function JoinGroupPage() {
       setIsLoading(true);
       setError(null);
 
-      // Use the password parameter if provided, otherwise use formValues.password
-      const passwordToUse = password ?? formValues.password;
-      
-      try {
-        // Get group details with the password
-        const groupData = await getGroupDetails(groupId, passwordToUse);
-        
-        // Check if members is an array before using .some()
-        const isMember = Array.isArray(groupData.members) 
-          ? groupData.members.some((m: any) => m.userId === session.user.id)
-          : false;
+      // Check if this is an invite token (64 characters)
+      if (groupId.length === 64) {
+        const response = await fetch(`/api/groups/join/${groupId}`);
+        const data = await response.json();
 
-        // Update group state with the fetched data
-        setGroup({
-          ...groupData,
-          isMember,
-          hasPassword: !!groupData.password,
-          memberCount: Array.isArray(groupData.members) ? groupData.members.length : 0,
-          requiresPassword: false, // Reset requiresPassword flag on success
-        });
-        
-        // Hide password field on successful fetch
-        setShowPasswordField(false);
-      } catch (error: any) {
-        console.error('Error in fetchGroupDetails:', error);
-        
-        // Handle password required case (PRIVATE_GROUP code or 403 status)
-        if (error.code === 'PRIVATE_GROUP' || error.status === 403 || error.message?.includes('private group')) {
-          setGroup(prev => ({
-            ...prev,
-            ...(error.group || {}),
-            requiresPassword: true,
-            isMember: false,
-            hasPassword: true,
-            memberCount: error.group?.memberCount || 0,
-          }));
-          setShowPasswordField(true);
-          setError(error.message || 'This is a private group. Please enter the password to join.');
-          return;
-        }
-        
-        // Handle invalid password case (INVALID_PASSWORD code or 401 status)
-        if (error.code === 'INVALID_PASSWORD' || error.status === 401) {
-          setError(error.message || 'Incorrect password. Please try again.');
-          setShowPasswordField(true);
-          return;
-        }
-        
-        // Handle other errors
-        console.error('Unexpected error:', error);
-        setError(error.message || 'Failed to fetch group details. Please try again.');
-        return;
-      }
-      
-      // Clear any previous password error if the request was successful
-      setFormValues(prev => ({
-        ...prev,
-        passwordError: undefined
-      }));
-      
-      setShowPasswordField(false); // Reset password field visibility on successful fetch
-
-      // If user is already a member, redirect to group page
-      if (group?.isMember) {
-        router.push(`/groups/${groupId}`);
-        return;
-      }
-    } catch (err: any) {
-      console.error('Error fetching group details:', err);
-      
-      // Handle password required case
-      if (err.requiresPassword) {
-        // If we have partial group data from the error, use it
-        if (err.group) {
-          setGroup({
-            ...err.group,
-            isMember: false,
-            hasPassword: true,
-            memberCount: err.group.memberCount || 0
+        // Handle already a member case
+        if (data.isMember) {
+          toast.success('You are already a member of this group', {
+            icon: <CheckCircle2 className="h-4 w-4" />,
           });
+          if (data.groupId) {
+            router.push(`/groups/${data.groupId}`);
+          }
+          return;
         }
-        setShowPasswordField(true);
-        
-        // Set a more specific error message for password requirement
-        setError(err.message || 'This is a private group. Please enter the password to join.');
+
+        // Handle used invitation
+        if (data.error === 'This invitation has already been used') {
+          setError('This invitation has already been used');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch group details');
+        }
+
+        setGroup(data.group);
+        setRole(data.role);
+        setIsInviteToken(true);
+        setActualGroupId(data.group.id);
         return;
       }
-      
-      // Handle invalid password case
-      if (err.message?.toLowerCase().includes('invalid password')) {
-        setFormValues(prev => ({
-          ...prev,
-          passwordError: 'Incorrect password. Please try again.'
-        }));
-        setError('Incorrect password. Please try again.');
+
+      // Regular group join
+      const response = await fetch(`/api/groups/${groupId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch group details');
+      }
+
+      // Handle already a member case
+      if (data.isMember) {
+        toast.success('You are already a member of this group', {
+          icon: <CheckCircle2 className="h-4 w-4" />,
+        });
+        if (groupId) {
+          router.push(`/groups/${groupId}`);
+        }
         return;
       }
-      
-      // Handle other errors
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : 'An error occurred while loading group information.';
-      setError(errorMessage);
+
+      setGroup(data);
+      setIsInviteToken(false);
+      setActualGroupId(data.id);
+    } catch (error: any) {
+      console.error('Error fetching group details:', error);
+      setError(error.message || 'Failed to fetch group details');
+      toast.error(error.message || 'Failed to fetch group details', {
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [groupId, session?.user?.id, getGroupDetails, router]);
-  
-  // Handle password submission
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formValues.password) {
-      fetchGroupDetails(formValues.password);
-    } else {
-      setError('Please enter a password');
-    }
-  };
+  }, [groupId, router]);
 
-  // Handle joining a group
-  const handleJoinRoom = async (values: JoinRoomFormValues) => {
-    if (!session?.user?.id || !groupId) {
-      toast.error('You must be logged in to join a group');
+  // Handle join request submission
+  const handleJoinRequest = async (values: JoinRoomFormValues) => {
+    if (!groupId) {
+      setError('Invalid group ID');
       return;
     }
 
@@ -223,35 +217,75 @@ export default function JoinGroupPage() {
       setIsJoining(true);
       setError(null);
 
-      if (!joinGroup.mutateAsync) {
-        throw new Error('Join group functionality is not available');
+      // Check if this is an invite token
+      if (isInviteToken) {
+        if (!actualGroupId) {
+          throw new Error('Invalid invite token');
+        }
+
+        const response = await fetch(`/api/groups/join/${groupId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to join group');
+        }
+
+        toast.success('Successfully joined the group!', {
+          icon: <CheckCircle2 className="h-4 w-4" />,
+        });
+        if (actualGroupId) {
+          router.push(`/groups/${actualGroupId}`);
+        } else {
+          toast.error('Group ID missing, cannot navigate.');
+        }
+        return;
       }
 
-      // If there's a password in the form values, use it
-      const password = values.password || formValues.password;
-      
-      await joinGroup.mutateAsync({
-        groupId,
-        password: password || undefined,
+      // Regular group join request
+      if (!group || !actualGroupId) {
+        throw new Error('Group not found');
+      }
+
+      const response = await fetch(`/api/groups/${actualGroupId}/join-request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: values.message
+        })
       });
 
-      // Update the group state to reflect the user is now a member
-      setGroup(prev => prev ? { 
-        ...prev, 
-        isMember: true,
-        memberCount: (prev.memberCount || 0) + 1 
-      } : null);
+      const data = await response.json();
 
-      setJoinSuccess(true);
-      toast.success('You have successfully joined the group!');
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send join request');
+      }
 
-      setTimeout(() => {
-        router.push(`/groups/${groupId}`);
-      }, 1500);
-    } catch (err) {
-      console.error('Error joining room:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to join room';
-      toast.error(errorMessage);
+      // Show success toast with icon
+      toast.success('Join request sent successfully!', {
+        icon: <CheckCircle2 className="h-4 w-4" />,
+      });
+
+      // Show additional toast for next steps
+      toast('Waiting for admin approval...', {
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+
+      router.push('/groups');
+    } catch (error: any) {
+      console.error('Error sending join request:', error);
+      setError(error.message || 'Failed to send join request');
+      // Show error toast with icon
+      toast.error(error.message || 'Failed to send join request', {
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
     } finally {
       setIsJoining(false);
     }
@@ -260,23 +294,17 @@ export default function JoinGroupPage() {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleJoinRoom(formValues);
+    handleJoinRequest(formValues);
   };
 
-  // Handle join button click (shows password field if needed)
+  // Handle join button click
   const handleJoinClick = () => {
-    if (group?.isPrivate && group?.hasPassword && !showPasswordField) {
-      setShowPasswordField(true);
+    if (group?.isPrivate && !showMessageField) {
+      setShowMessageField(true);
       return;
     }
     
-    // If we're showing password field, submit the password form
-    if (showPasswordField) {
-      handlePasswordSubmit(new Event('submit') as any);
-    } else {
-      // Otherwise, proceed with normal join
-      handleJoinRoom(formValues);
-    }
+    handleJoinRequest(formValues);
   };
 
   // Initial data fetch
@@ -296,179 +324,244 @@ export default function JoinGroupPage() {
     }
   }, [code]);
 
-  // Loading state
-  if (isLoading) {
+  // If access check is loading, show loading state
+  if (isAccessLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center ">
+        <div className="w-full max-w-2xl px-4">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link href="/groups">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Groups
+            </Link>
+          </Button>
+          <GroupCardSkeleton />
+        </div>
       </div>
     );
   }
 
-  // Show loading state only if we're still loading and don't have any group data yet
-  if (isLoading && !group) {
+  // If user is already a member, show success state
+  if (isMember) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center ]">
+        <div className="w-full max-w-2xl px-4">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link href="/groups">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Groups
+            </Link>
+          </Button>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <CheckCircle2 className="h-5 w-5" />
+                <CardTitle>Already a Member</CardTitle>
+              </div>
+              <CardDescription>
+                You are already a member of this group. Redirecting you to the group page...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => router.push(`/groups/${actualGroupId || groupId}`)} 
+                className="mt-4"
+              >
+                Go to Group
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  // Show error state only if we have an error and no group data
-  if (error && !group) {
+  // If there's an access error, show error state
+  if (accessError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button 
-          onClick={() => fetchGroupDetails(formValues.password)} 
-          className="mt-4"
-          variant="outline"
-        >
-          Retry
-        </Button>
+      <div className="flex items-center justify-center">
+        <div className="w-full max-w-2xl px-4">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link href="/groups">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Groups
+            </Link>
+          </Button>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <CardTitle>Error</CardTitle>
+              </div>
+              <CardDescription>{accessError}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted-foreground">
+                  {accessError === 'This invitation has already been used' 
+                    ? 'This invitation link has already been used by another user.'
+                    : 'You may not have access to this group or the invitation has expired.'}
+                </p>
+                <Button 
+                  onClick={() => router.push('/groups')} 
+                  className="mt-2"
+                  variant="outline"
+                >
+                  Back to Groups
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
-  // If we have group data (either from successful fetch or error response), show the form
+  // If no group data, show error state
   if (!group) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>Group not found</AlertDescription>
-        </Alert>
+      <div className="flex items-center justify-center ">
+        <div className="w-full max-w-2xl px-4">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link href="/groups">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Groups
+            </Link>
+          </Button>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <CardTitle>Error</CardTitle>
+              </div>
+              <CardDescription>Group not found</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => router.push('/groups')} 
+                className="mt-4"
+                variant="outline"
+              >
+                Back to Groups
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
+  // Now TypeScript knows group is not null
+  const { name, isPrivate } = group;
+
   return (
-    <div className="container max-w-2xl py-12">
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/groups">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Groups
-        </Link>
-      </Button>
+    <div className="flex items-center justify-center ">
+      <div className="w-full max-w-2xl px-4">
+        <Button variant="ghost" asChild className="mb-6">
+          <Link href="/groups">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Groups
+          </Link>
+        </Button>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Join Group</CardTitle>
-          <CardDescription>
-            {group.name ? `You're joining: ${group.name}` : 'Loading group details...'}
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
-          <div className="flex items-start gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
-            <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
-              {group.isPrivate ? (
-                <Lock className="h-5 w-5 text-primary" />
-              ) : (
-                <Users className="h-5 w-5 text-primary" />
-              )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Join Group</CardTitle>
+            <CardDescription>
+              {name ? `You're joining: ${name}` : <Skeleton className="h-4 w-48" />}
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="flex items-start gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
+              <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
+                {isPrivate ? (
+                  <Lock className="h-5 w-5 text-primary" />
+                ) : (
+                  <Users className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium">
+                  {isPrivate ? 'Private Group' : 'Public Group'}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {isPrivate
+                    ? 'This is a private group. Your join request will need to be approved by an admin.'
+                    : 'This is a public group. Anyone can join.'}
+                </p>
+
+                {isPrivate && !showMessageField && (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>This group requires admin approval to join</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium">
-                {group.isPrivate ? 'Private Group' : 'Public Group'}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {group.isPrivate
-                  ? group.hasPassword
-                    ? 'This is a private group that requires a password to join.'
-                    : 'This is a private group. You need approval to join.'
-                  : 'This is a public group. Anyone can join.'}
-              </p>
 
-              {group.isPrivate && group.hasPassword && !showPasswordField && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                  <ShieldAlert className="h-4 w-4" />
-                  <span>This group is password protected</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <form onSubmit={showPasswordField ? handlePasswordSubmit : handleSubmit} className="space-y-4">
-            {group?.isPrivate && group?.hasPassword && !showPasswordField && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Group Password Required</Label>
-                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md">
-                  <Lock className="h-4 w-4 text-amber-500" />
-                  <p className="text-sm text-muted-foreground">
-                    This is a private group. Please enter the password to join.
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {isPrivate && showMessageField && (
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message to Admins (Optional)</Label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    placeholder="Tell the admins why you want to join this group"
+                    disabled={isJoining}
+                    value={formValues.message}
+                    onChange={handleInputChange}
+                    className="w-full min-h-[100px] p-2 border rounded-md"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This message will be sent to the group admins along with your join request.
                   </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {showPasswordField && group?.isPrivate && group?.hasPassword && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Group Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Enter the group password"
+              <div className="flex items-center gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  asChild
                   disabled={isJoining}
-                  value={formValues.password}
-                  onChange={handleInputChange}
-                  autoComplete="current-password"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Ask the group admin for the password if you don't have it.
-                </p>
+                >
+                  <Link href="/groups">
+                    Cancel
+                  </Link>
+                </Button>
+
+                <Button
+                  type={showMessageField ? 'submit' : 'button'}
+                  onClick={!showMessageField ? handleJoinClick : undefined}
+                  disabled={isJoining}
+                >
+                  {isJoining ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isPrivate ? 'Sending Request...' : 'Joining...'}
+                    </>
+                  ) : (
+                    <>
+                      {isPrivate ? (
+                        <>
+                          <Lock className="h-4 w-4 mr-2" />
+                          {showMessageField ? 'Send Join Request' : 'Request to Join'}
+                        </>
+                      ) : (
+                        <>
+                          <Users className="h-4 w-4 mr-2" />
+                          Join Group
+                        </>
+                      )}
+                    </>
+                  )}
+                </Button>
               </div>
-            )}
-
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                asChild
-                disabled={isJoining}
-              >
-                <Link href="/groups">
-                  Cancel
-                </Link>
-              </Button>
-
-              <Button
-                type={showPasswordField ? 'submit' : 'button'}
-                onClick={!showPasswordField ? handleJoinClick : undefined}
-                disabled={isJoining || (showPasswordField && !formValues.password?.trim())}
-              >
-                {isJoining ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {group?.isPrivate ? 'Joining...' : 'Joining...'}
-                  </>
-                ) : (
-                  <>
-                    {group?.isPrivate ? (
-                      <>
-                        <Lock className="h-4 w-4 mr-2" />
-                        {showPasswordField ? 'Join with Password' : 'Join Private Group'}
-                      </>
-                    ) : (
-                      <>
-                        <Users className="h-4 w-4 mr-2" />
-                        Join Group
-                      </>
-                    )}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

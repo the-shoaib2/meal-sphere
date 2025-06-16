@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
 import { toast } from 'sonner';
-import { Loader2, Users, Settings, ArrowLeft, Lock } from 'lucide-react';
+import { Loader2, Users, Settings, ArrowLeft, Lock, MessageSquare, ShoppingCart, Utensils, CreditCard, Megaphone } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,11 @@ import {
 import { GroupMembers } from '@/components/groups/group-members';
 import { GroupSettings } from '@/components/groups/group-settings';
 import { Role } from '@prisma/client';
+import { JoinRequests } from '@/components/groups/join-requests';
+import { ActivityLog } from '@/components/groups/activity-log';
+import { isFeatureEnabled } from '@/lib/features';
+import { InviteCard } from '@/components/groups/invite-card';
+import { Badge } from '@/components/ui/badge';
 
 
 export default function GroupPage() {
@@ -182,6 +187,24 @@ export default function GroupPage() {
   console.log('isAdmin check:', isAdmin);
   const isCreator = group.createdByUser?.id === session?.user?.id;
 
+  type GroupWithExtras = typeof group & {
+    features?: Record<string, boolean>;
+    category?: string;
+    tags?: string[];
+  };
+  const groupWithExtras = group as GroupWithExtras;
+  const features = groupWithExtras.features ?? {};
+  const category = groupWithExtras.category ?? '';
+  const tags: string[] = groupWithExtras.tags ?? [];
+
+  const showJoinRequests = isFeatureEnabled(features, 'join_requests', isAdmin);
+  const showActivityLog = isFeatureEnabled(features, 'activity_log', isAdmin);
+  const showMessages = isFeatureEnabled(features, 'messages');
+  const showAnnouncements = isFeatureEnabled(features, 'announcements', isAdmin);
+  const showShopping = isFeatureEnabled(features, 'shopping');
+  const showMeals = isFeatureEnabled(features, 'meals');
+  const showPayments = isFeatureEnabled(features, 'payments');
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-start mb-6">
@@ -193,6 +216,20 @@ export default function GroupPage() {
             <h1 className="text-3xl font-bold tracking-tight">{group.name}</h1>
             {group.description && (
               <p className="text-muted-foreground">{group.description}</p>
+            )}
+            {category && (
+              <Badge variant="secondary" className="mt-2">
+                {category}
+              </Badge>
+            )}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag: string) => (
+                  <Badge key={tag} variant="outline">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -225,6 +262,70 @@ export default function GroupPage() {
           </div>
         )}
         
+        {isAdmin && (
+          <div className="mb-6">
+            <InviteCard groupId={groupId} />
+          </div>
+        )}
+
+        {showJoinRequests && (
+          <JoinRequests groupId={groupId} isAdmin={isAdmin} />
+        )}
+
+        {showActivityLog && (
+          <ActivityLog groupId={groupId} isAdmin={isAdmin} />
+        )}
+
+        {showAnnouncements && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Megaphone className="h-5 w-5 mr-2" />
+              Announcements
+            </h2>
+            {/* Add Announcements component here */}
+          </div>
+        )}
+
+        {showMessages && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <MessageSquare className="h-5 w-5 mr-2" />
+              Messages
+            </h2>
+            {/* Add Messages component here */}
+          </div>
+        )}
+
+        {showShopping && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <ShoppingCart className="h-5 w-5 mr-2" />
+              Shopping List
+            </h2>
+            {/* Add ShoppingList component here */}
+          </div>
+        )}
+
+        {showMeals && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Utensils className="h-5 w-5 mr-2" />
+              Meals
+            </h2>
+            {/* Add Meals component here */}
+          </div>
+        )}
+
+        {showPayments && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <CreditCard className="h-5 w-5 mr-2" />
+              Payments
+            </h2>
+            {/* Add Payments component here */}
+          </div>
+        )}
+
         <div>
           <h2 className="text-xl font-semibold mb-4 flex items-center">
             <Users className="h-5 w-5 mr-2" />
@@ -251,7 +352,6 @@ export default function GroupPage() {
               }
             }))}
             onMemberUpdate={() => {
-              // Refresh the group data when members are updated
               refetch();
             }}
           />

@@ -66,6 +66,9 @@ export function UserProfileDialog({ user, isOpen, onClose }: UserProfileDialogPr
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>User Profile - {user.name || 'Unknown User'}</DialogTitle>
+        </DialogHeader>
         <div className="relative">
           {/* Cover Image */}
           <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-lg" />
@@ -140,39 +143,39 @@ export function UserProfileDialog({ user, isOpen, onClose }: UserProfileDialogPr
               </TabsContent>
 
               <TabsContent value="stats" className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center space-y-2">
-                        <Utensils className="h-8 w-8 text-blue-500" />
-                        <div className="text-2xl font-bold">{user.totalMeals || 0}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <Card className="h-[120px]">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                      <div className="flex flex-col items-center space-y-1">
+                        <Utensils className="h-6 w-6 text-blue-500" />
+                        <div className="text-xl font-bold">{user.totalMeals || 0}</div>
                         <p className="text-xs text-muted-foreground">Total Meals</p>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center space-y-2">
-                        <Wallet className="h-8 w-8 text-green-500" />
-                        <div className="text-2xl font-bold">{user.totalPayments || 0}</div>
+                  <Card className="h-[120px]">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                      <div className="flex flex-col items-center space-y-1">
+                        <Wallet className="h-6 w-6 text-green-500" />
+                        <div className="text-xl font-bold">{user.totalPayments || 0}</div>
                         <p className="text-xs text-muted-foreground">Payments</p>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center space-y-2">
-                        <ShoppingBag className="h-8 w-8 text-purple-500" />
-                        <div className="text-2xl font-bold">{user.totalShopping || 0}</div>
+                  <Card className="h-[120px]">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                      <div className="flex flex-col items-center space-y-1">
+                        <ShoppingBag className="h-6 w-6 text-purple-500" />
+                        <div className="text-xl font-bold">{user.totalShopping || 0}</div>
                         <p className="text-xs text-muted-foreground">Shopping</p>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col items-center space-y-2">
-                        <Receipt className="h-8 w-8 text-orange-500" />
-                        <div className="text-2xl font-bold">{user.totalExpenses || 0}</div>
+                  <Card className="h-[120px]">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                      <div className="flex flex-col items-center space-y-1">
+                        <Receipt className="h-6 w-6 text-orange-500" />
+                        <div className="text-xl font-bold">{user.totalExpenses || 0}</div>
                         <p className="text-xs text-muted-foreground">Expenses</p>
                       </div>
                     </CardContent>

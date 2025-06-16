@@ -16,7 +16,8 @@ type AxiosError<T = any> = {
 };
 
 type JoinGroupInput = {
-  groupId: string;
+  groupId?: string;
+  inviteToken?: string;
   password?: string;
 };
 
@@ -155,7 +156,7 @@ export function useGroups(): UseGroupsReturn {
       
       // Handle the case where the API returns requiresPassword in the success response
       if (response.status === 403 || responseData.requiresPassword) {
-        const error = new Error(responseData.message || 'This is a private group. A password is required.');
+        const error = new Error('This is a private group. A password is required.');
         (error as any).requiresPassword = true;
         (error as any).group = responseData.group || {};
         (error as any).status = 403;
@@ -165,7 +166,7 @@ export function useGroups(): UseGroupsReturn {
       
       // Handle invalid password case
       if (response.status === 401) {
-        const error = new Error(responseData.message || 'Invalid password');
+        const error = new Error('Invalid password');
         (error as any).code = 'INVALID_PASSWORD';
         throw error;
       }
@@ -183,7 +184,7 @@ export function useGroups(): UseGroupsReturn {
         
         // Handle password required case (403)
         if (error.response.status === 403) {
-          const newError = new Error(responseData.message || 'This is a private group. A password is required.');
+          const newError = new Error('This is a private group. A password is required.');
           (newError as any).requiresPassword = true;
           (newError as any).group = responseData.group || {};
           (newError as any).code = 'PRIVATE_GROUP';
@@ -192,7 +193,7 @@ export function useGroups(): UseGroupsReturn {
         
         // Handle invalid password case (401)
         if (error.response.status === 401) {
-          const newError = new Error(responseData.message || 'Invalid password');
+          const newError = new Error('Invalid password');
           (newError as any).code = 'INVALID_PASSWORD';
           throw newError;
         }
@@ -240,8 +241,16 @@ export function useGroups(): UseGroupsReturn {
 
   // Join a group
   const joinGroup = useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>({
-    mutationFn: async ({ groupId, password }) => {
-      await axios.post(`/api/groups/${groupId}`, { 
+    mutationFn: async ({ groupId, inviteToken, password }) => {
+      if (!groupId && !inviteToken) {
+        throw new Error('Either groupId or inviteToken must be provided');
+      }
+
+      const endpoint = inviteToken 
+        ? `/api/groups/join/${inviteToken}`
+        : `/api/groups/${groupId}`;
+      
+      await axios.post(endpoint, { 
         join: true,
         password 
       });

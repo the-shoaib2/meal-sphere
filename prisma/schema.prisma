@@ -20,6 +20,7 @@ generator client {
 }
 
 enum Role {
+  OWNER
   ADMIN
   MODERATOR
   MANAGER
@@ -28,6 +29,7 @@ enum Role {
   ACCOUNTANT
   MARKET_MANAGER
   MEMBER
+  BANNED
 }
 
 enum MealType {
@@ -124,6 +126,10 @@ model User {
   votes            Vote[]
   createdInvitations Invitation[] @relation("CreatedInvitations")
   usedInvitations   Invitation[]  @relation("UsedInvitations")
+  joinRequests      GroupJoinRequest[]
+  messages          GroupMessage[]
+  activityLogs      GroupActivityLog[]
+  inviteTokens      InviteToken[]
 
   @@index([role, isActive])
   @@index([resetToken])
@@ -147,6 +153,9 @@ model Room {
   maxMembers    Int?           @default(20)
   memberCount   Int            @default(0)
   bannerUrl     String?
+  category      String?
+  tags          String[]       @default([])
+  features      Json?          // Store feature flags as JSON
   createdByUser User           @relation("RoomCreator", fields: [createdBy], references: [id], onDelete: Cascade)
 
   // RELATIONS
@@ -160,9 +169,14 @@ model Room {
   shopping      ShoppingItem[]
   votes         Vote[]
   invitations   Invitation[]
+  joinRequests  GroupJoinRequest[]
+  messages      GroupMessage[]
+  activityLogs  GroupActivityLog[]
+  inviteTokens  InviteToken[]
 
   @@index([isActive])
   @@index([createdAt])
+  @@index([category])
 }
 
 /// ROOM MEMBER MODEL
@@ -173,16 +187,19 @@ model RoomMember {
   userId     String   @db.ObjectId
   roomId     String   @db.ObjectId
   isCurrent  Boolean  @default(false)
-
+  isBanned   Boolean  @default(false)
   lastActive DateTime? @updatedAt
+  mutedUntil DateTime?
+  permissions Json?    // Store custom permissions as JSON
 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
- @@unique([userId, roomId])
+  @@unique([userId, roomId])
   @@index([roomId, role])
   @@index([joinedAt])
   @@index([isCurrent])
+  @@index([isBanned])
 }
 
 /// ACCOUNT MODEL
@@ -432,5 +449,73 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+  @@index([createdAt])
+}
+
+/// GROUP JOIN REQUEST MODEL
+model GroupJoinRequest {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  roomId    String   @db.ObjectId
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  message   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// GROUP MESSAGE MODEL
+model GroupMessage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  pinned    Boolean  @default(false)
+  roomId    String   @db.ObjectId
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, pinned])
+  @@index([createdAt])
+}
+
+/// GROUP ACTIVITY LOG MODEL
+model GroupActivityLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String   // e.g., MEMBER_JOINED, SETTINGS_CHANGED, etc.
+  details   Json?
+  roomId    String   @db.ObjectId
+  userId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, type])
+  @@index([createdAt])
+}
+
+model InviteToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  roomId    String   @db.ObjectId
+  createdBy String   @db.ObjectId
+  role      Role     @default(MEMBER)
+  expiresAt DateTime?
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdByUser User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([token, roomId])
+  @@index([roomId])
   @@index([createdAt])
 }

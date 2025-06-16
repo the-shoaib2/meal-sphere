@@ -19,6 +19,9 @@ import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from './invite-card';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog,DialogDescription, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { GroupFeatures } from './group-features';
+import { Badge } from '@/components/ui/badge';
 
 const groupSettingsSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
@@ -59,6 +62,11 @@ export function GroupSettings({
   const { deleteGroup, useGroupDetails, updateGroup } = useGroups();
   const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [password, setPassword] = useState('');
 
   const handleDeleteGroup = async () => {
     if (!groupId) return;
@@ -80,8 +88,6 @@ export function GroupSettings({
     }
   };
 
-
-
   const defaultValues: Partial<GroupSettingsFormValues> = group ? {
     name: group.name,
     description: group.description || '',
@@ -101,7 +107,7 @@ export function GroupSettings({
   });
 
   const { register, handleSubmit, watch, formState: { errors }, setValue } = form;
-  const isPrivate = watch('isPrivate');
+  const isPrivateForm = watch('isPrivate');
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
@@ -117,7 +123,12 @@ export function GroupSettings({
       // Call the update API
       await updateGroup.mutateAsync({
         groupId,
-        data: updateData
+        data: {
+          name,
+          description,
+          isPrivate,
+          password: isPrivate ? password : undefined
+        }
       });
 
       // Refresh the group data
@@ -134,8 +145,6 @@ export function GroupSettings({
       setIsLoading(false);
     }
   };
-
-
 
   const handleLeaveGroup = async () => {
     if (isLeaving || !onLeave) {
@@ -182,114 +191,110 @@ export function GroupSettings({
     );
   }
 
+  type GroupWithExtras = typeof group & {
+    features?: Record<string, boolean>;
+    category?: string;
+    tags?: string[];
+  };
+  const groupWithExtras = group as GroupWithExtras;
+  const features = groupWithExtras.features ?? {};
+  const category = groupWithExtras.category ?? '';
+  const tags: string[] = groupWithExtras.tags ?? [];
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Group Information</CardTitle>
+          <CardTitle>Basic Settings</CardTitle>
           <CardDescription>
-            Update your group's name, description, and privacy settings.
+            Update your group's basic information
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Group Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter group name"
-                  {...register('name')}
-                  disabled={isLoading || isLoadingGroup}
-                />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Tell us about this group"
-                  className="min-h-[100px]"
-                  {...register('description')}
-                  disabled={isLoading || isLoadingGroup}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxMembers">Maximum Members</Label>
-                <Input
-                  id="maxMembers"
-                  type="number"
-                  min={group.memberCount}
-                  max={100}
-                  placeholder="Leave empty for no limit"
-                  {...register('maxMembers', {
-                    valueAsNumber: true,
-                  })}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Current members: {group.memberCount}
-                  {group.maxMembers ? ` (Max: ${group.maxMembers})` : ''}
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between space-x-2">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="is-private">Private Group</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Only approved members can join
-                    </p>
-                  </div>
-                  <Switch
-                    id="is-private"
-                    checked={isPrivate}
-                    onCheckedChange={(checked) => setValue('isPrivate', checked)}
-                    disabled={isLoading || isLoadingGroup}
-                  />
-                </div>
-
-                {isPrivate && (
-                  <div className="space-y-2 pl-1">
-                    <Label htmlFor="password">Group Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Enter a new password (leave blank to keep current)"
-                        {...register('password')}
-                      />
-                      <Lock className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Members will need this password to join the group.
-                    </p>
-                  </div>
-                )}
-              </div>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Group Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={!isAdmin}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={!isAdmin}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="private">Private Group</Label>
+              <p className="text-sm text-muted-foreground">
+                Only members can see this group
+              </p>
             </div>
-          </CardContent>
-          <CardFooter className="flex justify-end border-t px-6 py-4">
-
-            <Button type="submit" disabled={isLoading || isLoadingGroup}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
+            <Switch
+              id="private"
+              checked={isPrivate}
+              onCheckedChange={setIsPrivate}
+              disabled={!isAdmin}
+            />
+          </div>
+          {isPrivate && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Group Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={!isAdmin}
+                placeholder="Enter password for private group"
+              />
+            </div>
+          )}
+          {isAdmin && (
+            <Button
+              onClick={() => {
+                updateGroup.mutate({
+                  groupId,
+                  data: {
+                    name,
+                    description,
+                    isPrivate,
+                    password: isPrivate ? password : undefined
+                  }
+                });
+              }}
+            >
+              Save Changes
             </Button>
-          </CardFooter>
-        </form>
+          )}
+        </CardContent>
       </Card>
+
+      {isAdmin && (
+        <GroupFeatures groupId={groupId} isAdmin={isAdmin} />
+      )}
+
+      {onLeave && !isCreator && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Leave Group</CardTitle>
+            <CardDescription>
+              Leave this group permanently
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={onLeave}>
+              Leave Group
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-destructive">
         <CardHeader>
