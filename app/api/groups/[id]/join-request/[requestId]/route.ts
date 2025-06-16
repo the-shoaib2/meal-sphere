@@ -93,11 +93,11 @@ export async function PATCH(
         }
       });
 
-      // Create notification for user
+      // Create notification for approved request
       await prisma.notification.create({
         data: {
           userId: joinRequest.userId,
-          type: 'JOIN_REQUEST_APPROVED',
+          type: NotificationType.JOIN_REQUEST_APPROVED,
           message: `Your join request for ${joinRequest.room.name} has been approved!`
         }
       });

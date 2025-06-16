@@ -167,7 +167,7 @@ export function MembersTab({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Members</h2>
@@ -178,71 +178,69 @@ export function MembersTab({
         <InviteCard groupId={groupId} />
       </div>
 
-      <div className="grid gap-4">
-        {members.map((member) => (
-          <Card key={member.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={member.user.image} alt={member.user.name} />
-                    <AvatarFallback>
-                      {member.user.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{member.user.name}</span>
-                      {getRoleBadge(member.role)}
-                      {member.isCurrent && (
-                        <Badge variant="outline">You</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Joined {formatDistanceToNow(new Date(member.joinedAt), { addSuffix: true })}
-                    </p>
+      <div className="divide-y">
+        {members.map((member, index) => (
+          <div key={member.id} className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={member.user.image} alt={member.user.name} />
+                  <AvatarFallback>
+                    {member.user.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{member.user.name}</span>
+                    {getRoleBadge(member.role)}
+                    {member.isCurrent && (
+                      <Badge variant="outline" className="text-xs">You</Badge>
+                    )}
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    Joined {formatDistanceToNow(new Date(member.joinedAt), { addSuffix: true })}
+                  </p>
                 </div>
-
-                {(isAdmin || isCreator) && !member.isCurrent && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {member.role !== 'OWNER' && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedMember(member);
-                              setShowRoleDialog(true);
-                            }}
-                          >
-                            <UserCog className="h-4 w-4 mr-2" />
-                            Change Role
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedMember(member);
-                              setShowRemoveDialog(true);
-                            }}
-                            className="text-destructive"
-                          >
-                            <UserX className="h-4 w-4 mr-2" />
-                            Remove Member
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
               </div>
-            </CardContent>
-          </Card>
+
+              {(isAdmin || isCreator) && !member.isCurrent && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {member.role !== 'OWNER' && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowRoleDialog(true);
+                          }}
+                        >
+                          <UserCog className="h-4 w-4 mr-2" />
+                          Change Role
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowRemoveDialog(true);
+                          }}
+                          className="text-destructive"
+                        >
+                          <UserX className="h-4 w-4 mr-2" />
+                          Remove Member
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          </div>
         ))}
       </div>
 
