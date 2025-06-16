@@ -46,7 +46,7 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
 
   useEffect(() => {
     if (selectedRoom) {
-      form.setValue("fineAmount", selectedRoom.fineAmount)
+      form.setValue("fineAmount", selectedRoom.fineAmount ?? 0)
       form.setValue("fineEnabled", selectedRoom.fineEnabled)
     }
   }, [selectedRoom, form])

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
 import { createNotification } from "@/lib/notification-utils"
 import { uploadReceipt } from "@/lib/upload-utils"
+import { NotificationType } from "@prisma/client"
 
 export async function POST(request: Request) {
   try {
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     for (const member of roomMembers) {
       await createNotification({
         userId: member.user.id,
-        type: "SHOPPING_ADDED",
+        type: NotificationType.PAYMENT_CREATED,
         message: `${user.name} added a new shopping item of ${amount} for ${description} in ${room?.name}.`,
       })
     }

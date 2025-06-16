@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { createNotification } from "@/lib/notification-utils"
+import { NotificationType } from "@prisma/client"
 
 const guestMealSchema = z.object({
   roomId: z.string(),
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     for (const manager of roomManagers) {
       await createNotification({
         userId: manager.user.id,
-        type: "GUEST_MEAL_ADDED",
+        type: NotificationType.MEAL_CREATED,
         message: `${user.name} has requested ${validatedData.count} guest meal(s) for ${validatedData.type.toLowerCase()} on ${validatedData.date.toLocaleDateString()} in ${room?.name}.`,
       })
     }

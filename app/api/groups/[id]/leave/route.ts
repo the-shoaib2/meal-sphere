@@ -4,9 +4,13 @@ import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
 import { Role, NotificationType } from "@prisma/client";
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +18,7 @@ export async function POST(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { id: groupId } = params;
+    const { id: groupId } = await params;
 
     // Get the group and membership
     const group = await prisma.room.findUnique({

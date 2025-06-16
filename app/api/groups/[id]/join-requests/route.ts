@@ -3,9 +3,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,7 +17,7 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const groupId = params.id;
+    const { id: groupId } = await params;
 
     // Check if user is admin or moderator of the group
     const membership = await prisma.roomMember.findFirst({

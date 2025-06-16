@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import { createNotification } from "@/lib/notification-utils"
+import { NotificationType } from "@prisma/client"
 
 const marketDateSchema = z.object({
   roomId: z.string(),
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
     // Create notification for the assigned user
     await createNotification({
       userId: validatedData.userId,
-      type: "MARKET_DATE_UPDATED",
+      type: NotificationType.MEMBER_ADDED,
       message: `You have been assigned market duty for ${room?.name} on ${validatedData.date.toLocaleDateString()}.`,
     })
 

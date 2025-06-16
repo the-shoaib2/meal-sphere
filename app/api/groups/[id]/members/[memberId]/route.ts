@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
-import { Role } from "@prisma/client";
+import { Role, NotificationType } from "@prisma/client";
 
 // Helper to log detailed debug info
 function logDebugInfo(label: string, data: any) {
@@ -165,7 +165,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: Request,
-  context: { params: { id: string; memberId: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -173,7 +173,7 @@ export async function PATCH(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { id: groupId, memberId } = context.params;
+    const { id: groupId, memberId } = await params;
     const { role } = await request.json();
 
     // Check if user is admin
@@ -242,7 +242,7 @@ export async function PATCH(
     await prisma.notification.create({
       data: {
         userId: memberId,
-        type: 'ROLE_CHANGED',
+        type: NotificationType.MEMBER_ADDED,
         message: `Your role has been changed to ${role}`
       }
     });

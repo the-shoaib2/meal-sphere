@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
 import { Role } from '@prisma/client';
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,7 +18,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { message } = await request.json();
 
     // Check if group exists
@@ -75,8 +79,8 @@ export async function POST(
 }
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -87,7 +91,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Get join request status
     const joinRequest = await prisma.joinRequest.findFirst({

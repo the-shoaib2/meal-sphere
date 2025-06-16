@@ -11,9 +11,13 @@ const inviteSchema = z.object({
   role: z.enum(["MEMBER", "ADMIN"]).default("MEMBER"),
 });
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 export async function POST(
   request: Request,
-  context: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,7 +28,7 @@ export async function POST(
       );
     }
 
-    const { id: groupId } = context.params;
+    const { id: groupId } = await params;
     
     // Validate request body
     const body = await request.json();

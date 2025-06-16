@@ -174,7 +174,7 @@ export async function DELETE(
 // POST /api/groups/[id]/join - Join a group
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -182,8 +182,10 @@ export async function POST(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const { id } = await context.params;
+
     const group = await prisma.room.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
