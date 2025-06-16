@@ -12,26 +12,49 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Trash2, Save, Lock, ShieldAlert, Loader2, Check, AlertCircle, UserPlus, Users ,LogOut,} from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,  } from '@/components/ui/alert-dialog';
+import { Trash2, Save, Lock, ShieldAlert, Loader2, Check, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from './invite-card';
 import { useToast } from '@/components/ui/use-toast';
-import { Dialog,DialogDescription, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { GroupFeatures } from './group-features';
 import { Badge } from '@/components/ui/badge';
+import { GROUP_FEATURES } from '@/lib/features';
 
 const groupSettingsSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   description: z.string().optional(),
   isPrivate: z.boolean(),
-  password: z.string().optional(),
-  maxMembers: z.number().min(2).max(100).optional().nullable(),
+  maxMembers: z.union([
+    z.string()
+      .transform(val => val === '' ? null : Number(val))
+      .refine(val => val === null || val >= 2, {
+        message: 'Must have at least 2 members',
+      })
+      .refine(val => val === null || val <= 100, {
+        message: 'Maximum 100 members allowed',
+      })
+      .refine(val => val === null || Number.isInteger(val), {
+        message: 'Must be a whole number',
+      }),
+    z.number()
+      .int('Must be a whole number')
+      .min(2, 'Must have at least 2 members')
+      .max(100, 'Maximum 100 members allowed')
+      .nullable()
+  ]).optional().transform(val => val === undefined ? null : val),
+  tags: z.array(z.string()).default([]),
+  features: z.record(z.boolean()).default({}),
 });
 
-type GroupSettingsFormValues = z.infer<typeof groupSettingsSchema>;
+type GroupSettingsFormValues = {
+  name: string;
+  description: string;
+  isPrivate: boolean;
+  maxMembers?: number;
+  tags: string[];
+  features: Record<string, boolean>;
+};
 
 interface GroupSettingsProps {
   /** The ID of the group */
@@ -62,72 +85,84 @@ export function GroupSettings({
   const { deleteGroup, useGroupDetails, updateGroup } = useGroups();
   const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [password, setPassword] = useState('');
-
-  const handleDeleteGroup = async () => {
-    if (!groupId) return;
-    
-    try {
-      setIsDeleting(true);
-      await deleteGroup.mutateAsync(groupId);
-      // The onSuccess handler in useGroups will handle the navigation and toast
-    } catch (error) {
-      console.error('Error deleting group:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete group. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
-    }
-  };
-
-  const defaultValues: Partial<GroupSettingsFormValues> = group ? {
-    name: group.name,
-    description: group.description || '',
-    isPrivate: group.isPrivate,
-    maxMembers: group.maxMembers,
-  } : {
-    name: '',
-    description: '',
-    isPrivate: false,
-    password: '',
-    maxMembers: null,
-  };
+  const [newTag, setNewTag] = useState('');
+  const [tagError, setTagError] = useState('');
 
   const form = useForm<GroupSettingsFormValues>({
     resolver: zodResolver(groupSettingsSchema),
-    defaultValues,
+    defaultValues: {
+      name: group?.name || '',
+      description: group?.description || '',
+      isPrivate: group?.isPrivate || false,
+      maxMembers: group?.maxMembers || undefined,
+      tags: group?.tags || [],
+      features: (group?.features as Record<string, boolean>) || {},
+    },
   });
 
   const { register, handleSubmit, watch, formState: { errors }, setValue } = form;
   const isPrivateForm = watch('isPrivate');
+  const formTags = watch('tags') || [];
+  const formFeatures = watch('features') || {};
+
+  // Update form values when group data changes
+  useEffect(() => {
+    if (group) {
+      setValue('name', group.name);
+      setValue('description', group.description || '');
+      setValue('isPrivate', group.isPrivate);
+      setValue('maxMembers', group.maxMembers || undefined);
+      setValue('tags', group.tags || []);
+      setValue('features', (group.features as Record<string, boolean>) || {});
+    }
+  }, [group, setValue]);
+
+  const handleAddTag = () => {
+    if (!newTag.trim()) {
+      setTagError('Tag cannot be empty');
+      return;
+    }
+
+    if (formTags.includes(newTag.trim())) {
+      setTagError('Tag already exists');
+      return;
+    }
+
+    if (formTags.length >= 5) {
+      setTagError('Maximum 5 tags allowed');
+      return;
+    }
+
+    setValue('tags', [...formTags, newTag.trim()]);
+    setNewTag('');
+    setTagError('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setValue('tags', formTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
       setIsLoading(true);
 
-      // Prepare the update data
-      const updateData = {
-        ...data,
-        // Only include password if it's provided
-        ...(data.password ? { password: data.password } : {})
-      };
-
       // Call the update API
       await updateGroup.mutateAsync({
         groupId,
         data: {
-          name,
-          description,
-          isPrivate,
-          password: isPrivate ? password : undefined
+          name: data.name,
+          description: data.description,
+          isPrivate: data.isPrivate,
+          maxMembers: data.maxMembers,
+          tags: data.tags,
+          features: data.features,
         }
       });
 
@@ -135,6 +170,10 @@ export function GroupSettings({
       await refetch();
 
       onUpdate();
+      toast({
+        title: 'Success',
+        description: 'Group settings updated successfully',
+      });
     } catch (error) {
       toast({
         title: 'Error',
@@ -173,6 +212,26 @@ export function GroupSettings({
     }
   };
 
+  const handleDeleteGroup = async () => {
+    if (!groupId) return;
+    
+    try {
+      setIsDeleting(true);
+      await deleteGroup.mutateAsync(groupId);
+      // The onSuccess handler in useGroups will handle the navigation and toast
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete group. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
   if (isLoadingGroup) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -197,186 +256,255 @@ export function GroupSettings({
     tags?: string[];
   };
   const groupWithExtras = group as GroupWithExtras;
-  const features = groupWithExtras.features ?? {};
   const category = groupWithExtras.category ?? '';
   const tags: string[] = groupWithExtras.tags ?? [];
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Settings</CardTitle>
-          <CardDescription>
-            Update your group's basic information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">Group Name</Label>
             <Input
               id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              {...register('name')}
               disabled={!isAdmin}
             />
+            {errors.name && (
+              <p className="text-sm text-destructive">{errors.name.message}</p>
+            )}
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="maxMembers">Maximum Members</Label>
             <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              type="number"
+              id="maxMembers"
+              min={2}
+              max={100}
+              placeholder="Leave empty for no limit"
+              {...register('maxMembers', {
+                setValueAs: (v) => v === '' ? null : Number(v)
+              })}
               disabled={!isAdmin}
             />
+            <p className="text-sm text-muted-foreground">
+              Set a limit on the number of members who can join this group.
+            </p>
+            {errors.maxMembers && (
+              <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
+            )}
           </div>
-          <div className="flex items-center justify-between">
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            {...register('description')}
+            disabled={!isAdmin}
+          />
+          {errors.description && (
+            <p className="text-sm text-destructive">{errors.description.message}</p>
+          )}
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
             <div className="space-y-0.5">
               <Label htmlFor="private">Private Group</Label>
               <p className="text-sm text-muted-foreground">
-                Only members can see this group
+                {isPrivateForm 
+                  ? 'New members will need admin approval to join this group.'
+                  : 'Anyone with the link can join this group.'}
               </p>
             </div>
             <Switch
               id="private"
-              checked={isPrivate}
-              onCheckedChange={setIsPrivate}
+              checked={isPrivateForm}
+              onCheckedChange={(checked) => setValue('isPrivate', checked)}
               disabled={!isAdmin}
             />
           </div>
-          {isPrivate && (
-            <div className="space-y-2">
-              <Label htmlFor="password">Group Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={!isAdmin}
-                placeholder="Enter password for private group"
-              />
+
+          <div className="space-y-2">
+            <Label htmlFor="tags">Group Tags</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {formTags.map((tag) => (
+                <Badge 
+                  key={tag} 
+                  variant="secondary"
+                  className="flex items-center gap-1"
+                >
+                  <Tag className="h-3 w-3" />
+                  {tag}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </Badge>
+              ))}
             </div>
-          )}
-          {isAdmin && (
-            <Button
-              onClick={() => {
-                updateGroup.mutate({
-                  groupId,
-                  data: {
-                    name,
-                    description,
-                    isPrivate,
-                    password: isPrivate ? password : undefined
-                  }
-                });
-              }}
-            >
-              Save Changes
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      {isAdmin && (
-        <GroupFeatures groupId={groupId} isAdmin={isAdmin} />
-      )}
-
-      {onLeave && !isCreator && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Leave Group</CardTitle>
-            <CardDescription>
-              Leave this group permanently
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="destructive" onClick={onLeave}>
-              Leave Group
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card className="border-destructive">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription>
-            These actions are irreversible. Proceed with caution.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Delete Group Button (only for admins) */}
-          {(isAdmin || isCreator) && (
-            <div className="flex flex-col space-y-2 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-destructive">
-                    Delete this group
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Once you delete a group, there is no going back. Please be certain.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        className="w-full sm:w-auto"
-                        disabled={isLoading || isDeleting}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Group
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the group and all of its data.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                        <Button
-                          variant="destructive"
-                          onClick={handleDeleteGroup}
-                          disabled={isDeleting}
-                          className="flex items-center gap-2 min-w-[120px]"
-                        >
-                          {isDeleting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Deleting...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4" />
-                              <span>Delete Group</span>
-                            </>
-                          )}
-                        </Button>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Input
+                  id="newTag"
+                  value={newTag}
+                  onChange={(e) => {
+                    setNewTag(e.target.value);
+                    setTagError('');
+                  }}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add a tag"
+                  disabled={formTags.length >= 5}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleAddTag}
+                  disabled={formTags.length >= 5}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-          )}
+            )}
+            {tagError && (
+              <p className="text-sm text-destructive">{tagError}</p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Add up to 5 tags to help others find your group
+            </p>
+          </div>
+        </div>
 
-          {/* Leave Group Button (for all members) */}
-          <div className="flex flex-col space-y-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+        {isAdmin && (
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-medium text-amber-500">
-                  Leave group
-                </h4>
+                <h3 className="font-medium">Group Features</h3>
                 <p className="text-sm text-muted-foreground">
-                  {isCreator 
-                    ? "As the creator, you can't leave the group. You must transfer ownership or delete the group."
-                    : "No longer want to be part of this group?"}
+                  Enable or disable group features
                 </p>
               </div>
-              {!isCreator && (
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {Object.entries(GROUP_FEATURES).map(([key, feature]) => (
+                <div key={key} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label htmlFor={feature.id}>{feature.name}</Label>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </div>
+                  <Switch
+                    id={feature.id}
+                    checked={formFeatures[feature.id] ?? feature.defaultValue}
+                    disabled={!isAdmin || (feature.requiresAdmin && !isAdmin)}
+                    onCheckedChange={(checked) => {
+                      setValue('features', {
+                        ...formFeatures,
+                        [feature.id]: checked
+                      });
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isAdmin && (
+          <Button type="submit" disabled={isLoading} className="w-full md:w-auto">
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        )}
+      </form>
+
+      <div className="border-t pt-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-destructive">Danger Zone</h3>
+              <p className="text-sm text-muted-foreground">
+                These actions are irreversible. Proceed with caution.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {(isAdmin || isCreator) && (
+              <div className="flex items-center justify-between p-4 bg-destructive/5 rounded-lg border border-destructive/20">
+                <div>
+                  <h4 className="font-medium text-destructive">Delete Group</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Once you delete a group, there is no going back.
+                  </p>
+                </div>
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      disabled={isLoading || isDeleting}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Group
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the group and all of its data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteGroup}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Group
+                          </>
+                        )}
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+
+            {!isCreator && (
+              <div className="flex items-center justify-between p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
+                <div>
+                  <h4 className="font-medium text-amber-500">Leave Group</h4>
+                  <p className="text-sm text-muted-foreground">
+                    You won't be able to access this group again unless you're re-invited.
+                  </p>
+                </div>
                 <Button
                   variant="outline"
                   className="border-amber-500 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600"
@@ -395,65 +523,42 @@ export function GroupSettings({
                     </>
                   )}
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-100 text-blue-600">
-              <UserPlus className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <h3 className="text-lg font-medium">Invite Members</h3>
-            <p className="text-sm text-muted-foreground">
-              Share this link with others to invite them to your group
-            </p>
-            <div className="flex items-center pt-4 gap-2">
-              <InviteCard groupId={groupId} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-purple-100 text-purple-600">
-              <Users className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <h3 className="font-medium">Member Permissions</h3>
-            <p className="text-sm text-muted-foreground">
-              Manage what members can do in this group.
-            </p>
-            <Button variant="outline" size="sm" className="mt-4 w-full">
-              Manage Permissions
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-amber-100 text-amber-600">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <h3 className="font-medium">Admin Settings</h3>
-            <p className="text-sm text-muted-foreground">
-              Advanced settings for group administrators.
-            </p>
-            <Button variant="outline" size="sm" className="mt-4 w-full">
-              Admin Dashboard
-            </Button>
-          </CardContent>
-        </Card>
+        </div>
       </div>
+
+      <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave Group</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave this group? You won't be able to access it again unless you're re-invited.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLeaving}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleLeaveGroup}
+              disabled={isLeaving}
+            >
+              {isLeaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Leaving...
+                </>
+              ) : (
+                <>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Leave Group
+                </>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

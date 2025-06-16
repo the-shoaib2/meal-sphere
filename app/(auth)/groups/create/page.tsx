@@ -23,16 +23,6 @@ const createGroupSchema = z.object({
     .max(500, 'Description must be less than 500 characters')
     .optional(),
   isPrivate: z.boolean().default(false),
-  password: z.string()
-    .min(6, 'Password must be at least 6 characters')
-    .max(50, 'Password must be less than 50 characters')
-    .optional()
-    .refine(
-      (val) => val ? val.length >= 6 : true,
-      {
-        message: 'Password must be at least 6 characters',
-      }
-    ),
   maxMembers: z.union([
     z.string()
       .transform(val => val === '' ? null : Number(val))
@@ -51,20 +41,13 @@ const createGroupSchema = z.object({
       .max(100, 'Maximum 100 members allowed')
       .nullable()
   ]).optional().transform(val => val === undefined ? null : val),
-}).refine(
-  (data) => !data.isPrivate || (data.isPrivate && data.password),
-  {
-    message: 'Password is required for private groups',
-    path: ['password'],
-  }
-);
+});
 
 type CreateGroupInput = z.infer<typeof createGroupSchema>;
 
 export default function CreateGroupPage() {
   const router = useRouter();
   const { createGroup } = useGroups();
-  const [showPassword, setShowPassword] = useState(false);
   const { mutateAsync: createGroupMutation, isPending } = createGroup;
   
   const form = useForm<CreateGroupInput>({
@@ -93,8 +76,6 @@ export default function CreateGroupPage() {
     try {
       await createGroupMutation({
         ...data,
-        // Only include password if the group is private
-        password: data.isPrivate ? data.password : undefined,
         // Convert empty string to null for maxMembers
         maxMembers: data.maxMembers || undefined,
       }, {
@@ -110,18 +91,11 @@ export default function CreateGroupPage() {
     } catch (error) {
       console.error('Unexpected error:', error);
       toast.error('An unexpected error occurred');
-      console.error('Error creating group:', error);
-      toast.error('Failed to create group. Please try again.');
     }
   };
 
   const handlePrivacyChange = (isPrivate: boolean) => {
     setValue('isPrivate', isPrivate);
-    
-    // If making the group private, ensure password is validated
-    if (isPrivate) {
-      trigger('password');
-    }
   };
 
   return (
@@ -236,7 +210,7 @@ export default function CreateGroupPage() {
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
                       {isPrivate 
-                        ? 'Only people with the password can join this group.'
+                        ? 'New members will need admin approval to join this group.'
                         : 'Anyone with the link can join this group.'}
                     </p>
                   </div>
@@ -246,42 +220,6 @@ export default function CreateGroupPage() {
                     onCheckedChange={handlePrivacyChange}
                   />
                 </div>
-
-                {isPrivate && (
-                  <div className="space-y-2 p-4 bg-muted/10 rounded-lg border border-muted">
-                    <Label htmlFor="password">Group Password *</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter a secure password"
-                        className="pl-10 pr-10"
-                        {...register('password')}
-                      />
-                      <LockKeyhole className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Members will need this password to join the group.
-                    </p>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">
-                        {errors.password.message}
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
             </CardContent>
 

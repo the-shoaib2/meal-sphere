@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2, Check, X, UserPlus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 
 interface JoinRequest {
   id: string;
-  status: string;
+  userId: string;
+  roomId: string;
   message?: string;
-  createdAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: Date;
+  updatedAt: Date;
   user: {
     id: string;
     name: string | null;
@@ -27,50 +32,61 @@ interface JoinRequestsProps {
 }
 
 export function JoinRequests({ groupId, isAdmin }: JoinRequestsProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
-  const [requests, setRequests] = useState<JoinRequest[]>([]);
 
-  const { data, isLoading, error } = useQuery<JoinRequest[]>({
+  // Fetch join requests
+  const { data: requests, isLoading: isLoadingRequests } = useQuery<JoinRequest[]>({
     queryKey: ['join-requests', groupId],
     queryFn: async () => {
-      const response = await fetch(`/api/groups/${groupId}/join-request`);
-      if (!response.ok) throw new Error('Failed to fetch join requests');
+      const response = await fetch(`/api/groups/${groupId}/join-requests`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch join requests');
+      }
       return response.json();
     },
     enabled: isAdmin
   });
 
-  const updateRequest = useMutation({
-    mutationFn: async ({ requestId, status }: { requestId: string; status: 'APPROVED' | 'REJECTED' }) => {
+  // Handle request approval/rejection
+  const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
+    try {
+      setIsLoading(true);
       const response = await fetch(`/api/groups/${groupId}/join-request/${requestId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action })
       });
-      if (!response.ok) throw new Error('Failed to update request');
-      return response.json();
-    },
-    onSuccess: () => {
+
+      if (!response.ok) {
+        throw new Error('Failed to process request');
+      }
+
+      toast.success(`Request ${action}d successfully`);
       queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+    } catch (error) {
+      console.error('Error processing request:', error);
+      toast.error('Failed to process request');
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
 
-  useEffect(() => {
-    if (data) setRequests(data);
-  }, [data]);
+  if (!isAdmin) {
+    return null;
+  }
 
-  if (!isAdmin) return null;
-  if (error) return null;
-  if (isLoading) {
+  if (isLoadingRequests) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Join Requests</CardTitle>
-          <CardDescription>Loading requests...</CardDescription>
+          <CardDescription>Loading join requests...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex justify-center p-4">
+          <div className="flex items-center justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         </CardContent>
@@ -78,89 +94,82 @@ export function JoinRequests({ groupId, isAdmin }: JoinRequestsProps) {
     );
   }
 
-  if (requests.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Join Requests</CardTitle>
-          <CardDescription>No pending requests</CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+  const pendingRequests = requests?.filter(r => r.status === 'PENDING') || [];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Join Requests</CardTitle>
-        <CardDescription>Manage requests to join your group</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Join Requests</CardTitle>
+            <CardDescription>
+              {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+            </CardDescription>
+          </div>
+          <Badge variant="secondary">
+            {pendingRequests.length}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {requests.map((request) => (
-            <div
-              key={request.id}
-              className="flex items-center justify-between p-4 border rounded-lg"
-            >
-              <div className="flex items-center gap-4">
-                <Avatar>
-                  <AvatarImage src={request.user.image || undefined} />
-                  <AvatarFallback>
-                    {request.user.name?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{request.user.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {request.user.email}
-                  </p>
-                  {request.message && (
-                    <p className="text-sm mt-1">{request.message}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
-                  </p>
+        {pendingRequests.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No pending join requests
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {pendingRequests.map((request) => (
+              <div
+                key={request.id}
+                className="flex items-start justify-between gap-4 p-4 rounded-lg border"
+              >
+                <div className="flex items-start gap-3">
+                  <Avatar>
+                    <AvatarImage src={request.user.image || undefined} />
+                    <AvatarFallback>
+                      {request.user.name?.[0] || request.user.email?.[0] || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">
+                      {request.user.name || request.user.email}
+                    </p>
+                    {request.message && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {request.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Requested {formatDistanceToNow(new Date(request.createdAt))} ago
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-green-600 hover:text-green-700"
+                    onClick={() => handleRequest(request.id, 'approve')}
+                    disabled={isLoading}
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => handleRequest(request.id, 'reject')}
+                    disabled={isLoading}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Reject
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    updateRequest.mutate(
-                      { requestId: request.id, status: 'APPROVED' },
-                      {
-                        onSuccess: () => toast.success('Request approved'),
-                        onError: () => toast.error('Failed to approve request')
-                      }
-                    );
-                  }}
-                  disabled={updateRequest.isPending}
-                >
-                  <Check className="h-4 w-4 mr-2" />
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    updateRequest.mutate(
-                      { requestId: request.id, status: 'REJECTED' },
-                      {
-                        onSuccess: () => toast.success('Request rejected'),
-                        onError: () => toast.error('Failed to reject request')
-                      }
-                    );
-                  }}
-                  disabled={updateRequest.isPending}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

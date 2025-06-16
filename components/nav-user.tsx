@@ -64,7 +64,7 @@ export function NavUser({ user, className = '' }: NavUserProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const { image, getInitials } = useProfileImage({
+  const { image, getInitials, isLoaded } = useProfileImage({
     initialImage: user?.image
   });
   
@@ -110,10 +110,13 @@ export function NavUser({ user, className = '' }: NavUserProps) {
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground bg-mute hover:bg-accent/80 hover:text-accent-foreground transition-colors duration-200"
               >
                 <Avatar className="h-8 w-8 rounded-full">
-                  <AvatarImage src={image || ""} alt={user.name || "User"} />
-                  <AvatarFallback className="rounded-lg">
-                    {getInitials(user.name)}
-                  </AvatarFallback>
+                  {isLoaded && image ? (
+                    <AvatarImage src={image} alt={user.name || "User"} />
+                  ) : (
+                    <AvatarFallback className="rounded-lg">
+                      {getInitials(user.name)}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.name}</span>
@@ -132,10 +135,13 @@ export function NavUser({ user, className = '' }: NavUserProps) {
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
             <Avatar className="h-10 w-10 rounded-full">
-              <AvatarImage src={image || ""} alt={user.name || "User"} />
-              <AvatarFallback className="rounded-full">
-                {getInitials(user.name)}
-              </AvatarFallback>
+              {isLoaded && image ? (
+                <AvatarImage src={image} alt={user.name || "User"} />
+              ) : (
+                <AvatarFallback className="rounded-full">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.name || "User"}</span>

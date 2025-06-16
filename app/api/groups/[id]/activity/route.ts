@@ -1,45 +1,48 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  request: Request,
-  context: { params: { id: string } }
+  req: Request,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const groupId = context.params.id;
+    const { id } = await context.params;
 
     // Check if user is admin
     const membership = await prisma.roomMember.findUnique({
       where: {
         userId_roomId: {
           userId: session.user.id,
-          roomId: groupId
+          roomId: id
+        },
+        role: {
+          in: ['ADMIN', 'MODERATOR']
         }
-      },
-      select: { role: true }
+      }
     });
 
-    if (!membership || !['OWNER', 'ADMIN'].includes(membership.role)) {
+    if (!membership) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     // Get activity logs
-    const logs = await prisma.groupActivityLog.findMany({
+    const activities = await prisma.groupActivityLog.findMany({
       where: {
-        roomId: groupId
+        roomId: id
       },
       include: {
         user: {
           select: {
             id: true,
             name: true,
+            email: true,
             image: true
           }
         }
@@ -50,9 +53,9 @@ export async function GET(
       take: 50 // Limit to last 50 activities
     });
 
-    return NextResponse.json(logs);
+    return NextResponse.json(activities);
   } catch (error) {
-    console.error("[ACTIVITY_LOGS]", error);
+    console.error("Error fetching activity logs:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 } 

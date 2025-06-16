@@ -30,7 +30,7 @@ export async function GET(
               name: true,
               description: true,
               isPrivate: true,
-              memberCount: true,
+              maxMembers: true,
               createdBy: true,
               createdAt: true,
               createdByUser: {
@@ -111,7 +111,7 @@ export async function GET(
               name: true,
               description: true,
               isPrivate: true,
-              memberCount: true,
+              maxMembers: true,
               createdBy: true,
               createdAt: true,
               createdByUser: {

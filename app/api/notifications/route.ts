@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
+import { NotificationType } from '@prisma/client'
 
 
 export async function GET(request: Request) {
@@ -16,11 +17,26 @@ export async function GET(request: Request) {
     // Find notifications for the user
     const notifications = await prisma.notification.findMany({
       where: {
-        userId: session.user.id
+        userId: session.user.id,
+        type: {
+          in: [
+            NotificationType.MEMBER_ADDED,
+            NotificationType.MEMBER_REMOVED,
+            NotificationType.MEAL_CREATED,
+            NotificationType.MEAL_UPDATED,
+            NotificationType.MEAL_DELETED,
+            NotificationType.PAYMENT_CREATED,
+            NotificationType.PAYMENT_UPDATED,
+            NotificationType.PAYMENT_DELETED,
+            NotificationType.JOIN_REQUEST_APPROVED,
+            NotificationType.JOIN_REQUEST_REJECTED
+          ]
+        }
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      take: 50
     })
     
     // Transform the data to match the expected format

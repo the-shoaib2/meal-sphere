@@ -1,22 +1,5 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
 import prisma from "./prisma";
-
-type NotificationType = 
-  | 'MEAL_ADDED'
-  | 'MEAL_UPDATED'
-  | 'PAYMENT_RECEIVED'
-  | 'PAYMENT_APPROVED'
-  | 'PAYMENT_REJECTED'
-  | 'SHOPPING_ADDED'
-  | 'GUEST_MEAL_ADDED'
-  | 'EXTRA_EXPENSE_ADDED'
-  | 'VOTE_STARTED'
-  | 'VOTE_ENDED'
-  | 'MARKET_DATE_UPDATED'
-  | 'ROLE_CHANGED'
-  | 'MEMBER_ADDED'
-  | 'MEMBER_REMOVED'
-  | 'GENERAL';
 
 type CreateNotificationInput = {
   userId: string;
@@ -55,7 +38,7 @@ export async function createMealReminder(userId: string) {
     validateUserId(userId);
     return await createNotification({
       userId,
-      type: 'MEAL_ADDED',
+      type: NotificationType.MEAL_CREATED,
       message: "Don't forget to mark your meals for today!",
     });
   } catch (error) {
@@ -72,7 +55,7 @@ export async function createPaymentDueNotification(userId: string, amount: numbe
 
     return await createNotification({
       userId,
-      type: 'PAYMENT_RECEIVED',
+      type: NotificationType.PAYMENT_CREATED,
       message: `You have a payment of ৳${amount} due on ${dueDate.toLocaleDateString()}.`,
     });
   } catch (error) {
@@ -89,7 +72,7 @@ export async function createVoteStartedNotification(userId: string, roomName: st
 
     return await createNotification({
       userId,
-      type: 'VOTE_STARTED',
+      type: NotificationType.MEMBER_ADDED,
       message: `A new ${voteType} vote has started in ${roomName}.`,
     });
   } catch (error) {
@@ -107,7 +90,7 @@ export async function createVoteEndedNotification(userId: string, roomName: stri
 
     return await createNotification({
       userId,
-      type: 'VOTE_ENDED',
+      type: NotificationType.MEMBER_REMOVED,
       message: `The ${voteType} vote in ${roomName} has ended. ${winner} has won.`,
     });
   } catch (error) {
@@ -124,7 +107,7 @@ export async function createManagerChangedNotification(userId: string, roomName:
 
     return await createNotification({
       userId,
-      type: 'ROLE_CHANGED',
+      type: NotificationType.MEMBER_ADDED,
       message: `${managerName} is now the manager of ${roomName}.`,
     });
   } catch (error) {
@@ -141,7 +124,7 @@ export async function createShoppingAddedNotification(userId: string, roomName: 
 
     return await createNotification({
       userId,
-      type: 'SHOPPING_ADDED',
+      type: NotificationType.MEMBER_ADDED,
       message: `New shopping items worth ৳${amount} have been added to ${roomName}.`,
     });
   } catch (error) {
@@ -157,7 +140,7 @@ export async function createCustomNotification(userId: string, message: string) 
 
     return await createNotification({
       userId,
-      type: 'GENERAL',
+      type: NotificationType.MEMBER_ADDED,
       message,
     });
   } catch (error) {

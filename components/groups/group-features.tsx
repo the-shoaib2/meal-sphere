@@ -128,32 +128,6 @@ export function GroupFeatures({ groupId, isAdmin }: GroupFeaturesProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Group Category</CardTitle>
-          <CardDescription>
-            Select a category that best describes your group
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select
-            value={category}
-            onValueChange={(value) => updateCategoryMutation.mutate(value as GroupCategory)}
-            disabled={!isAdmin}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-            <SelectContent>
-              {GROUP_CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

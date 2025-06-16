@@ -6,60 +6,66 @@ export type FeatureFlag = {
   requiresAdmin?: boolean;
 };
 
-export const GROUP_FEATURES: Record<string, FeatureFlag> = {
-  JOIN_REQUESTS: {
+export const GROUP_FEATURES = {
+  join_requests: {
     id: 'join_requests',
     name: 'Join Requests',
     description: 'Require approval for new members to join',
     defaultValue: false,
-    requiresAdmin: true
+    requiresAdmin: true,
   },
-  MESSAGES: {
+  messages: {
     id: 'messages',
     name: 'Group Messages',
     description: 'Enable group chat functionality',
-    defaultValue: true
+    defaultValue: true,
+    requiresAdmin: false,
   },
-  ANNOUNCEMENTS: {
+  announcements: {
     id: 'announcements',
     name: 'Announcements',
     description: 'Allow admins to post announcements',
     defaultValue: true,
-    requiresAdmin: true
+    requiresAdmin: true,
   },
-  MEMBER_ROLES: {
+  member_roles: {
     id: 'member_roles',
     name: 'Member Roles',
     description: 'Enable custom member roles and permissions',
-    defaultValue: false,
-    requiresAdmin: true
+    defaultValue: true,
+    requiresAdmin: true,
   },
-  ACTIVITY_LOG: {
+  activity_log: {
     id: 'activity_log',
     name: 'Activity Log',
     description: 'Track and display group activities',
     defaultValue: true,
-    requiresAdmin: true
+    requiresAdmin: true,
   },
-  SHOPPING: {
-    id: 'shopping',
+  shopping_list: {
+    id: 'shopping_list',
     name: 'Shopping List',
     description: 'Enable group shopping list functionality',
-    defaultValue: true
+    defaultValue: true,
+    requiresAdmin: false,
   },
-  MEALS: {
-    id: 'meals',
+  meal_planning: {
+    id: 'meal_planning',
     name: 'Meal Planning',
     description: 'Enable meal planning and tracking',
-    defaultValue: true
+    defaultValue: true,
+    requiresAdmin: false,
   },
-  PAYMENTS: {
+  payments: {
     id: 'payments',
     name: 'Payments',
     description: 'Enable payment tracking and management',
-    defaultValue: true
-  }
-};
+    defaultValue: true,
+    requiresAdmin: true,
+  },
+} as const;
+
+export type GroupFeature = keyof typeof GROUP_FEATURES;
 
 export const GROUP_CATEGORIES = [
   'Food & Cooking',
@@ -109,12 +115,11 @@ export function getEnabledFeatures(features: Record<string, boolean>): string[] 
 }
 
 export function isFeatureEnabled(
-  features: Record<string, boolean>,
-  featureId: string,
+  features: Record<string, boolean> | undefined,
+  featureId: GroupFeature,
   isAdmin: boolean = false
 ): boolean {
-  const feature = GROUP_FEATURES[featureId];
-  if (!feature) return false;
-  if (feature.requiresAdmin && !isAdmin) return false;
-  return features[featureId] ?? feature.defaultValue;
+  if (!features) return GROUP_FEATURES[featureId].defaultValue;
+  if (GROUP_FEATURES[featureId].requiresAdmin && !isAdmin) return false;
+  return features[featureId] ?? GROUP_FEATURES[featureId].defaultValue;
 } 

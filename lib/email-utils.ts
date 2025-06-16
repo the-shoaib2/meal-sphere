@@ -118,16 +118,31 @@ const emailTemplates = {
       </ul>
       ${buttonTemplate("Get Started", `${process.env.NEXTAUTH_URL}/dashboard`)}
     `)
+  }),
+
+  groupInvite: (name: string, groupName: string, inviteUrl: string, role: string): EmailTemplate => ({
+    subject: `You've been invited to join ${groupName} on MealSphere`,
+    text: `Hello ${name},\n\nYou've been invited to join ${groupName} on MealSphere as a ${role}.\n\nClick the link below to accept the invitation:\n\n${inviteUrl}\n\nThe link will expire in 7 days.\n\nRegards,\nMealSphere Team`,
+    html: baseTemplate(`
+      <h2 style="color: #333; margin-bottom: 20px;">You've been invited to join ${groupName}</h2>
+      <p>Hello ${name},</p>
+      <p>You've been invited to join <strong>${groupName}</strong> on MealSphere as a <strong>${role}</strong>.</p>
+      <p>Click the button below to accept the invitation:</p>
+      ${buttonTemplate("Join Group", inviteUrl)}
+      <p>Or copy and paste this link in your browser:</p>
+      <p style="word-break: break-all; color: #666; background: #f5f5f5; padding: 10px; border-radius: 4px;">${inviteUrl}</p>
+      <p>The link will expire in 7 days.</p>
+    `)
   })
 }
 
 // Get email configuration from environment variables
 export function getEmailConfig(): EmailConfig {
   const requiredVars = [
-    'SERVER_HOST',
-    'SERVER_PORT',
-    'SERVER_USER',
-    'SERVER_PASSWORD',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_PASS',
     'SMTP_FROM'
   ]
 
@@ -254,4 +269,16 @@ export async function verifyEmail(email: string, token: string): Promise<boolean
     console.error('Failed to verify email:', error)
     throw new Error('Failed to verify email. Please try again later.')
   }
+}
+
+// Send group invitation email
+export async function sendGroupInviteEmail(
+  email: string, 
+  name: string, 
+  groupName: string, 
+  inviteUrl: string,
+  role: string
+): Promise<void> {
+  const template = emailTemplates.groupInvite(name, groupName, inviteUrl, role)
+  await sendEmail(email, template)
 }

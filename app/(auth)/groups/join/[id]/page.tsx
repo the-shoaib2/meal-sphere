@@ -34,6 +34,11 @@ interface ExtendedGroup extends Group {
   isMember?: boolean;
   hasPassword?: boolean;
   requiresPassword?: boolean;
+  joinRequest?: {
+    status: 'pending' | 'approved' | 'rejected';
+    message?: string;
+    createdAt: Date;
+  } | null;
   invitation?: {
     role: string;
     expiresAt: Date;
@@ -94,6 +99,7 @@ export default function JoinGroupPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [isInviteToken, setIsInviteToken] = useState(false);
   const [actualGroupId, setActualGroupId] = useState<string | null>(null);
+  const [requestStatus, setRequestStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
 
   // Initialize groups hook
   const { joinGroup, getGroupDetails } = useGroups();
@@ -192,6 +198,18 @@ export default function JoinGroupPage() {
         return;
       }
 
+      // Check for existing join request
+      if (data.joinRequest) {
+        setRequestStatus(data.joinRequest.status);
+        if (data.joinRequest.status === 'approved') {
+          toast.success('Your join request has been approved!', {
+            icon: <CheckCircle2 className="h-4 w-4" />,
+          });
+          router.push(`/groups/${groupId}`);
+          return;
+        }
+      }
+
       setGroup(data);
       setIsInviteToken(false);
       setActualGroupId(data.id);
@@ -241,8 +259,6 @@ export default function JoinGroupPage() {
         });
         if (actualGroupId) {
           router.push(`/groups/${actualGroupId}`);
-        } else {
-          toast.error('Group ID missing, cannot navigate.');
         }
         return;
       }
@@ -268,6 +284,8 @@ export default function JoinGroupPage() {
         throw new Error(data.error || 'Failed to send join request');
       }
 
+      setRequestStatus('pending');
+      
       // Show success toast with icon
       toast.success('Join request sent successfully!', {
         icon: <CheckCircle2 className="h-4 w-4" />,
@@ -453,6 +471,88 @@ export default function JoinGroupPage() {
 
   // Now TypeScript knows group is not null
   const { name, isPrivate } = group;
+
+  // If request is pending, show pending state
+  if (requestStatus === 'pending') {
+    return (
+      <div className="flex items-center justify-center">
+        <div className="w-full max-w-2xl px-4">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link href="/groups">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Groups
+            </Link>
+          </Button>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-5 w-5" />
+                <CardTitle>Request Pending</CardTitle>
+              </div>
+              <CardDescription>
+                Your join request is pending approval from the group administrators.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted-foreground">
+                  You will be notified when your request is approved or rejected.
+                </p>
+                <Button 
+                  onClick={() => router.push('/groups')} 
+                  className="mt-2"
+                  variant="outline"
+                >
+                  Back to Groups
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // If request was rejected, show rejected state
+  if (requestStatus === 'rejected') {
+    return (
+      <div className="flex items-center justify-center">
+        <div className="w-full max-w-2xl px-4">
+          <Button variant="ghost" asChild className="mb-6">
+            <Link href="/groups">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Groups
+            </Link>
+          </Button>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <CardTitle>Request Rejected</CardTitle>
+              </div>
+              <CardDescription>
+                Your join request has been rejected by the group administrators.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-muted-foreground">
+                  You can try joining another group or contact the administrators for more information.
+                </p>
+                <Button 
+                  onClick={() => router.push('/groups')} 
+                  className="mt-2"
+                  variant="outline"
+                >
+                  Back to Groups
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center ">

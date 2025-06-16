@@ -13,7 +13,6 @@ const createGroupSchema = z.object({
   name: z.string().min(3).max(100),
   description: z.string().optional(),
   isPrivate: z.boolean().default(false),
-  password: z.string().optional(),
   maxMembers: z.number().int().positive().max(100).optional(),
 });
 
@@ -33,18 +32,7 @@ export async function POST(req: Request) {
       return new NextResponse(JSON.stringify(validation.error.format()), { status: 400 });
     }
 
-    const { name, description, isPrivate, password, maxMembers } = validation.data;
-
-    // If group is private, password is required
-    if (isPrivate && !password) {
-      return new NextResponse('Password is required for private groups', { status: 400 });
-    }
-
-    // Hash the password if provided
-    let hashedPassword = null;
-    if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
+    const { name, description, isPrivate, maxMembers } = validation.data;
 
     // Create the group with required fields
     const group = await prisma.room.create({
@@ -52,7 +40,6 @@ export async function POST(req: Request) {
         name,
         description: description || '',
         isPrivate: isPrivate || false,
-        password: hashedPassword || null,
         maxMembers: maxMembers || 20, // Default to 20 if not provided
         fineAmount: 0,
         fineEnabled: false,
@@ -60,6 +47,16 @@ export async function POST(req: Request) {
         createdBy: session.user.id,
         memberCount: 1,
         bannerUrl: '', // Provide default empty string for required field
+        features: {
+          join_requests: isPrivate, // Enable join requests for private groups
+          messages: true,
+          announcements: true,
+          member_roles: false,
+          activity_log: true,
+          shopping: true,
+          meals: true,
+          payments: true
+        },
         members: {
           create: {
             userId: session.user.id,
@@ -96,9 +93,7 @@ export async function POST(req: Request) {
       throw new Error('Failed to create group: No group was returned from database');
     }
     
-    // Remove password from the response
-    const { password: _, ...groupWithoutPassword } = group;
-    return NextResponse.json(groupWithoutPassword);
+    return NextResponse.json(group);
   } catch (error) {
     console.error('Error in group creation:', error);
     return new NextResponse(

@@ -22,6 +22,9 @@ import { Role } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { sendGroupInviteEmail } from "@/lib/email-utils";
 
 import { useGroups } from '@/hooks/use-groups';
 
@@ -30,7 +33,6 @@ interface GroupData {
   name: string;
   description: string | null;
   isPrivate: boolean;
-  password: string | null;
   maxMembers: number | null;
   memberCount: number;
   members?: Array<{
@@ -87,6 +89,8 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [invite, setInvite] = useState<InviteData | null>(null);
+  const [emails, setEmails] = useState<string[]>([]);
+  const [currentEmail, setCurrentEmail] = useState('');
 
   const { toast: uiToast } = useToast();
   const { useGroupDetails } = useGroups();
@@ -122,11 +126,11 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       }
 
       const data = await response.json();
-      setInvite(data);
+      setInvite(data.invitation);
       
-      // Generate the invite link with the token
+      // Generate the invite link with the code
       const baseUrl = window.location.origin;
-      const inviteUrl = `${baseUrl}/groups/join/${data.token}`;
+      const inviteUrl = `${baseUrl}/groups/join?code=${data.invitation.code}&groupId=${groupId}`;
       setInviteLink(inviteUrl);
     } catch (error) {
       uiToast({
@@ -172,22 +176,40 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
     }
   };
 
+  const handleAddEmail = () => {
+    if (!currentEmail || emails.length >= 10) return;
+    if (emails.includes(currentEmail)) {
+      uiToast({
+        title: "Error",
+        description: "This email is already in the list",
+        variant: "destructive",
+      });
+      return;
+    }
+    setEmails([...emails, currentEmail]);
+    setCurrentEmail('');
+  };
+
+  const handleRemoveEmail = (emailToRemove: string) => {
+    setEmails(emails.filter(email => email !== emailToRemove));
+  };
+
   const handleGenerateInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !group?.id) return;
+    if (emails.length === 0 || !group?.id) return;
 
     try {
       setIsGenerating(true);
       setInviteStatus(null);
 
-      const response = await fetch(`/api/groups/${group.id}/invite`, {
+      const response = await fetch(`/api/groups/${group.id}/send-invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email,
-          role: selectedRole,
+          emails,
+          role: 'MEMBER',
         }),
       });
 
@@ -197,20 +219,22 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       }
 
       const data = await response.json();
+      const inviteUrl = `${window.location.origin}/groups/join?code=${data.invitations[0].code}&groupId=${group.id}`;
       
       setInviteStatus({
         success: true,
-        message: `Invitation sent to ${email} with ${selectedRole} role.`,
-        invitationUrl: data.invitationUrl,
+        message: `Invitations sent to ${emails.length} email${emails.length > 1 ? 's' : ''}.`,
+        invitationUrl: inviteUrl,
       });
       
       uiToast({
-        title: 'Invitation sent!',
-        description: `Invitation sent to ${email} with ${selectedRole} role.`,
+        title: 'Invitations sent!',
+        description: `Invitations sent to ${emails.length} email${emails.length > 1 ? 's' : ''}.`,
       });
       
-      setEmail('');
-      setSelectedRole('MEMBER');
+      setEmails([]);
+      setCurrentEmail('');
+      setInviteLink(inviteUrl);
     } catch (err) {
       const error = err as Error;
       console.error('Error sending invitation:', error);
@@ -249,8 +273,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
     );
   }
 
-  const { name, isPrivate, password } = group;
-  const hasPassword = !!password;
+  const { name, isPrivate } = group;
   
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -260,7 +283,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
           Invite Members
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite to {name}</DialogTitle>
           <DialogDescription>
@@ -268,23 +291,12 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex border-b mb-2">
-          <button
-            className={`flex-1 py-2 px-4 text-sm font-medium ${activeTab === 'link' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('link')}
-          >
-            Invite Link
-          </button>
-          <button
-            className={`flex-1 py-2 px-4 text-sm font-medium ${activeTab === 'email' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('email')}
-          >
-            Email Invite
-          </button>
-        </div>
-
-        {activeTab === 'link' ? (
-          <div className="space-y-3">
+        <Tabs defaultValue="link" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="link">Invite Link</TabsTrigger>
+            <TabsTrigger value="email">Email Invite</TabsTrigger>
+          </TabsList>
+          <TabsContent value="link" className="space-y-3">
             <div className="flex items-center space-x-2">
               <div className="grid flex-1 gap-1">
                 <Label htmlFor="invite-link" className="text-sm font-medium">
@@ -301,54 +313,52 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                       className="h-8 text-xs"
                     />
                   )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="outline"
-                          onClick={handleCopyLink}
-                          className="h-8 w-8"
-                          disabled={loading}
-                        >
-                          {copied ? (
-                            <Check className="h-4 w-4" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{copied ? 'Copied!' : 'Copy link'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <div className="flex space-x-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            onClick={handleCopyLink}
+                            className="h-8 w-8"
+                            disabled={loading}
+                          >
+                            {copied ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{copied ? 'Copied!' : 'Copy link'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            onClick={handleShare}
+                            className="h-8 w-8"
+                            disabled={loading}
+                          >
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Share link</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="flex space-x-2 mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={handleShare}
-                disabled={loading}
-              >
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setActiveTab('email')}
-                disabled={loading}
-              >
-                <Mail className="mr-2 h-4 w-4" />
-                Email Invite
-              </Button>
             </div>
 
             <div className="pt-4 border-t">
@@ -384,57 +394,77 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   <div>
                     <p className="font-medium text-amber-800 dark:text-amber-200">Private Group</p>
                     <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                      {group.password 
-                        ? 'New members will need to enter the group password to join.'
-                        : 'New members will need approval to join.'}
+                      New members will need admin approval to join this group.
                     </p>
                   </div>
                 </div>
               </div>
             )}
-          </div>
-        ) : (
-          <form onSubmit={handleGenerateInvite} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter email address"
-                required
-                disabled={isGenerating}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <select
-                id="role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as Role)}
-                className="w-full p-2 border rounded-md"
-                disabled={isGenerating}
-              >
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button type="submit" className="w-full" disabled={isGenerating}>
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                'Send Invitation'
-              )}
-            </Button>
-          </form>
-        )}
+          </TabsContent>
+          <TabsContent value="email">
+            <form onSubmit={handleGenerateInvite} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Addresses (up to 10)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={currentEmail}
+                    onChange={(e) => setCurrentEmail(e.target.value)}
+                    placeholder="Enter email address"
+                    disabled={isGenerating}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddEmail}
+                    disabled={isGenerating || !currentEmail || emails.length >= 10}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {emails.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {emails.map((email) => (
+                      <Badge
+                        key={email}
+                        variant="secondary"
+                        className="flex items-center gap-1 px-3 py-1.5"
+                      >
+                        <Mail className="h-3 w-3" />
+                        <span className="text-xs">{email}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveEmail(email)}
+                          disabled={isGenerating}
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {emails.length >= 10 && (
+                  <p className="text-sm text-muted-foreground">
+                    Maximum 10 email addresses allowed
+                  </p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={isGenerating || emails.length === 0}>
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  `Send Invitations (${emails.length})`
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

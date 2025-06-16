@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { randomBytes } from 'crypto';
+import { nanoid } from 'nanoid';
 
 
 interface InvitationResponse {
@@ -37,86 +37,97 @@ type RouteParams = {
 // POST /api/groups/[id]/invite - Create an invitation link
 export async function POST(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { id: groupId } = await context.params;
-    const { role = Role.MEMBER } = await request.json();
+    const { id: groupId } = await params;
+    const { email = session.user.email, role = "MEMBER" } = await request.json();
 
-    const member = await prisma.roomMember.findFirst({
-      where: {
-        roomId: groupId,
-        userId: session.user.id,
-        OR: [
-          { role: Role.OWNER },
-          { role: Role.ADMIN }
-        ]
+    if (!email) {
+      return new NextResponse("Email is required", { status: 400 });
+    }
+
+    // Validate the group exists and user has permission
+    const group = await prisma.room.findUnique({
+      where: { id: groupId },
+      include: {
+        members: {
+          where: {
+            userId: session.user.id,
+            role: {
+              in: ["OWNER", "ADMIN", "MODERATOR"]
+            }
+          }
+        }
       }
     });
 
-    if (!member) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!group) {
+      return new NextResponse("Group not found", { status: 404 });
     }
 
-    const token = randomBytes(32).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    if (group.members.length === 0) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
 
-    try {
-      const invitation = await prisma.invitation.create({
-        data: {
-          code: token,
-          groupId,
-          createdBy: session.user.id,
-          role,
-          expiresAt,
-          email: '' // Optional field, can be empty for open invites
-        }
-      });
-
-      const admins = await prisma.roomMember.findMany({
-        where: {
-          roomId: groupId,
-          OR: [
-            { role: Role.OWNER },
-            { role: Role.ADMIN }
-          ]
-        },
-        select: {
-          userId: true
-        }
-      });
-
-      await Promise.all(
-        admins.map(admin =>
-          prisma.notification.create({
-            data: {
-              type: 'GENERAL',
-              message: `New invite token generated for group`,
-              userId: admin.userId
-            }
-          })
-        )
-      );
-
-      return NextResponse.json({
-        token: invitation.code,
+    // Check if user already has an invitation
+    const existingInvitation = await prisma.invitation.findFirst({
+      where: {
         groupId,
-        expiresAt: invitation.expiresAt
-      });
-    } catch (error) {
-      throw error;
+        email,
+        usedAt: null,
+        expiresAt: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (existingInvitation) {
+      return new NextResponse("Invitation already exists", { status: 400 });
     }
+
+    // Create invitation
+    const invitation = await prisma.invitation.create({
+      data: {
+        code: nanoid(10),
+        email: email,
+        role: role as Role,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        groupId,
+        createdBy: session.user.id
+      }
+    });
+
+    // Create activity log
+    await prisma.groupActivityLog.create({
+      data: {
+        type: "INVITATION_CREATED",
+        details: {
+          email,
+          role,
+          invitationId: invitation.id
+        },
+        roomId: groupId,
+        userId: session.user.id
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      invitation: {
+        code: invitation.code,
+        email: invitation.email,
+        expiresAt: invitation.expiresAt
+      }
+    });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to generate invite' },
-      { status: 500 }
-    );
+    console.error("[GROUP_INVITE]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
 

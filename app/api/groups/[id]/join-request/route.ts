@@ -14,12 +14,12 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = params;
     const { message } = await request.json();
-    const groupId = params.id;
 
     // Check if group exists
     const group = await prisma.room.findUnique({
-      where: { id: groupId },
+      where: { id },
       include: {
         members: {
           where: {
@@ -39,12 +39,11 @@ export async function POST(
     }
 
     // Check if user already has a pending request
-    const existingRequest = await prisma.groupJoinRequest.findUnique({
+    const existingRequest = await prisma.joinRequest.findFirst({
       where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: groupId
-        }
+        roomId: id,
+        userId: session.user.id,
+        status: 'pending'
       }
     });
 
@@ -53,49 +52,23 @@ export async function POST(
     }
 
     // Create join request
-    const joinRequest = await prisma.groupJoinRequest.create({
+    const joinRequest = await prisma.joinRequest.create({
       data: {
+        roomId: id,
         userId: session.user.id,
-        roomId: groupId,
-        message: message || undefined,
-        status: 'PENDING'
+        message,
+        status: 'pending'
       }
     });
 
-    // Notify group admins
-    const admins = await prisma.roomMember.findMany({
-      where: {
-        roomId: groupId,
-        role: {
-          in: [Role.ADMIN, Role.MODERATOR, Role.MEAL_MANAGER]
-        }
-      },
-      include: {
-        user: true
-      }
-    });
-
-    // Create notifications for admins
-    await Promise.all(
-      admins.map(admin =>
-        prisma.notification.create({
-          data: {
-            userId: admin.userId,
-            type: 'MEMBER_ADDED',
-            message: `New join request from ${session.user.name || 'A user'} for group ${group.name}`
-          }
-        })
-      )
-    );
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Join request sent successfully',
-      request: joinRequest
+      joinRequest
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating join request:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create join request' },
+      { error: 'Failed to create join request' },
       { status: 500 }
     );
   }
@@ -103,55 +76,38 @@ export async function POST(
 
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const groupId = context.params.id;
+    const { id } = params;
 
-    // Check if user is admin
-    const membership = await prisma.roomMember.findUnique({
+    // Get join request status
+    const joinRequest = await prisma.joinRequest.findFirst({
       where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: groupId
-        }
-      },
-      select: { role: true }
-    });
-
-    if (!membership || membership.role !== Role.ADMIN) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    // Get all pending requests
-    const requests = await prisma.groupJoinRequest.findMany({
-      where: {
-        roomId: groupId,
-        status: 'PENDING'
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
+        roomId: id,
+        userId: session.user.id
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
-    return NextResponse.json(requests);
+    return NextResponse.json({
+      joinRequest
+    });
   } catch (error) {
-    console.error("[JOIN_REQUESTS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error('Error fetching join request:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch join request' },
+      { status: 500 }
+    );
   }
 } 

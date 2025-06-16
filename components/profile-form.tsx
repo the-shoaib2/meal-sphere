@@ -33,7 +33,7 @@ interface ProfileFormProps {
 export function ProfileForm({ user }: ProfileFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const { image, updateImage, getInitials } = useProfileImage({
+  const { image, updateImage, getInitials, isLoaded } = useProfileImage({
     initialImage: user.image,
     onImageUpdate: async (imageUrl) => {
       // Update the form value when image changes
@@ -85,8 +85,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
       <CardContent>
         <div className="flex items-center space-x-4 mb-6">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={image || ""} alt={user.name || "User"} />
-            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            {isLoaded && image ? (
+              <AvatarImage src={image} alt={user.name || "User"} />
+            ) : (
+              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            )}
           </Avatar>
           <div>
             <h3 className="text-lg font-medium">{user.name}</h3>

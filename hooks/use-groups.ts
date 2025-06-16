@@ -58,6 +58,8 @@ interface UpdateGroupInput {
   isPrivate?: boolean;
   password?: string;
   maxMembers?: number | null;
+  tags?: string[];
+  features?: Record<string, boolean>;
 }
 
 interface UseGroupsReturn {

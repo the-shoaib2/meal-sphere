@@ -70,21 +70,16 @@ enum VoteType {
 }
 
 enum NotificationType {
-  MEAL_ADDED
-  MEAL_UPDATED
-  PAYMENT_RECEIVED
-  PAYMENT_APPROVED
-  PAYMENT_REJECTED
-  SHOPPING_ADDED
-  GUEST_MEAL_ADDED
-  EXTRA_EXPENSE_ADDED
-  VOTE_STARTED
-  VOTE_ENDED
-  MARKET_DATE_UPDATED
-  ROLE_CHANGED
   MEMBER_ADDED
   MEMBER_REMOVED
-  GENERAL
+  MEAL_CREATED
+  MEAL_UPDATED
+  MEAL_DELETED
+  PAYMENT_CREATED
+  PAYMENT_UPDATED
+  PAYMENT_DELETED
+  JOIN_REQUEST_APPROVED
+  JOIN_REQUEST_REJECTED
 }
 
 enum ExpenseType {
@@ -126,10 +121,11 @@ model User {
   votes            Vote[]
   createdInvitations Invitation[] @relation("CreatedInvitations")
   usedInvitations   Invitation[]  @relation("UsedInvitations")
-  joinRequests      GroupJoinRequest[]
+  joinRequests      JoinRequest[]
   messages          GroupMessage[]
   activityLogs      GroupActivityLog[]
   inviteTokens      InviteToken[]
+  announcements     Announcement[] @relation("CreatedAnnouncements")
 
   @@index([role, isActive])
   @@index([resetToken])
@@ -139,39 +135,37 @@ model User {
 
 /// ROOM MODEL
 model Room {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   description   String?
-  password      String?        @db.String
-  isPrivate     Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  isActive      Boolean        @default(true)
-  fineAmount    Float          @default(0)
-  fineEnabled   Boolean        @default(false)
-  createdBy     String         @db.ObjectId
-  maxMembers    Int?           @default(20)
-  memberCount   Int            @default(0)
+  isPrivate     Boolean  @default(false)
+  memberCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  createdBy     String   @db.ObjectId
+  isActive      Boolean  @default(true)
+  fineAmount    Float?
+  fineEnabled   Boolean  @default(false)
+  maxMembers    Int?
   bannerUrl     String?
   category      String?
-  tags          String[]       @default([])
-  features      Json?          // Store feature flags as JSON
-  createdByUser User           @relation("RoomCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-
-  // RELATIONS
+  tags          String[]
+  features      Json?    // Store features as JSON
+  createdByUser User     @relation("RoomCreator", fields: [createdBy], references: [id])
+  members       RoomMember[]
+  joinRequests  JoinRequest[]
+  messages      GroupMessage[]
+  announcements Announcement[]
+  activityLogs  GroupActivityLog[]
+  shoppingItems ShoppingItem[]
+  meals         Meal[]
+  payments      Payment[]
+  votes         Vote[]
+  invitations   Invitation[]
   bkashPayments BkashPayment[]
   extraExpenses ExtraExpense[]
   guestMeals    GuestMeal[]
   marketDates   MarketDate[]
-  meals         Meal[]
-  payments      Payment[]
-  members       RoomMember[]
-  shopping      ShoppingItem[]
-  votes         Vote[]
-  invitations   Invitation[]
-  joinRequests  GroupJoinRequest[]
-  messages      GroupMessage[]
-  activityLogs  GroupActivityLog[]
   inviteTokens  InviteToken[]
 
   @@index([isActive])
@@ -453,7 +447,7 @@ model Notification {
 }
 
 /// GROUP JOIN REQUEST MODEL
-model GroupJoinRequest {
+model JoinRequest {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   roomId    String   @db.ObjectId
@@ -519,3 +513,16 @@ model InviteToken {
   @@index([roomId])
   @@index([createdAt])
 }
+
+model Announcement {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  roomId    String   @db.ObjectId
+  createdBy String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  room      Room     @relation(fields: [roomId], references: [id])
+  user      User     @relation("CreatedAnnouncements", fields: [createdBy], references: [id])
+}
+
