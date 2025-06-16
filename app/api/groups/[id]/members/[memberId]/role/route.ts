@@ -69,34 +69,29 @@ export async function PATCH(
     const body = await request.json();
     const { role: newRole } = updateRoleSchema.parse(body);
 
-    // Get the current user's membership
-    const currentUserMembership = await prisma.roomMember.findFirst({
+    // Check if user is admin or owner
+    const currentMember = await prisma.roomMember.findFirst({
       where: {
         roomId: groupId,
         userId: currentUserId,
-      },
+        role: {
+          in: [Role.ADMIN, Role.OWNER]
+        }
+      }
     });
 
-    // Only group admins can update member roles
-    if (currentUserMembership?.role !== 'ADMIN') {
+    if (!currentMember) {
       return new NextResponse(JSON.stringify({
         success: false,
-        message: 'Forbidden: Only group admins can update member roles',
-      }), { status: 403 });
+        message: 'Unauthorized'
+      }), { status: 401 });
     }
 
-    // Prevent changing your own role (admins should have another admin demote them)
-    if (memberId === currentUserId) {
-      return new NextResponse('Cannot change your own role. Ask another admin to do it for you.', { 
-        status: 400 
-      });
-    }
-
-    // Get the target member using the roomMember's ID (memberId)
-    const targetMember = await prisma.roomMember.findUnique({
+    // Find the target member
+    const targetMember = await prisma.roomMember.findFirst({
       where: {
-        id: memberId,
         roomId: groupId,
+        userId: memberId
       },
       include: {
         user: {
@@ -104,35 +99,34 @@ export async function PATCH(
             id: true,
             name: true,
             email: true,
-          },
-        },
-      },
+            image: true
+          }
+        }
+      }
     });
-
-    logDebugInfo('Target member query', {
-      where: { id: memberId, roomId: groupId },
-    });
-    logDebugInfo('Target member result', targetMember);
 
     if (!targetMember) {
-      return new NextResponse('Member not found in this group', { status: 404 });
-    }
-
-    // Prevent changing the role of another admin
-    if (targetMember.role === 'ADMIN' && currentUserId !== targetMember.userId) {
       return new NextResponse(JSON.stringify({
         success: false,
-        message: 'Cannot change the role of another admin',
+        message: 'Member not found'
+      }), { status: 404 });
+    }
+
+    // Prevent changing owner's role
+    if (targetMember.role === Role.OWNER) {
+      return new NextResponse(JSON.stringify({
+        success: false,
+        message: 'Cannot change owner\'s role'
       }), { status: 400 });
     }
 
-    // Update the member's role
+    // Update member role
     const updatedMember = await prisma.roomMember.update({
       where: {
-        id: targetMember.id,
+        id: targetMember.id
       },
       data: {
-        role: newRole as Role,
+        role: newRole as Role
       },
       include: {
         user: {
@@ -140,28 +134,16 @@ export async function PATCH(
             id: true,
             name: true,
             email: true,
-            image: true,
-          },
-        },
-      },
+            image: true
+          }
+        }
+      }
     }) as MemberWithUser;
 
     return new NextResponse(JSON.stringify({
       success: true,
       message: 'Member role updated successfully',
-      member: {
-        id: updatedMember.id,
-        role: updatedMember.role,
-        joinedAt: updatedMember.joinedAt.toISOString(),
-        userId: updatedMember.userId,
-        roomId: updatedMember.roomId,
-        user: {
-          id: updatedMember.user.id,
-          name: updatedMember.user.name,
-          email: updatedMember.user.email,
-          image: updatedMember.user.image,
-        },
-      },
+      member: updatedMember,
     }), { 
       status: 200,
       headers: {
