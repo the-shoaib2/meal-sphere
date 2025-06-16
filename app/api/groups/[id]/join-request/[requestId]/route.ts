@@ -1,19 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
 import { Role, NotificationType } from '@prisma/client';
 
-type RouteContext = {
-  params: {
-    id: string;
-    requestId: string;
-  }
-}
-
 export async function PATCH(
-  request: Request,
-  context: RouteContext
+  request: NextRequest,
+  { params }: { params: { id: string; requestId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -24,7 +17,7 @@ export async function PATCH(
       );
     }
 
-    const { id: groupId, requestId } = context.params;
+    const { id: groupId, requestId } = params;
     const { action } = await request.json();
 
     if (!['approve', 'reject'].includes(action)) {
