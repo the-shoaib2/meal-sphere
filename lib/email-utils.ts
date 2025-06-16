@@ -120,18 +120,89 @@ const emailTemplates = {
     `)
   }),
 
-  groupInvite: (name: string, groupName: string, inviteUrl: string, role: string): EmailTemplate => ({
+  groupInvite: (
+    name: string, 
+    groupName: string, 
+    inviteUrl: string, 
+    role: string,
+    sender: { name: string; email: string; image: string | null }
+  ): EmailTemplate => ({
     subject: `You've been invited to join ${groupName} on MealSphere`,
-    text: `Hello ${name},\n\nYou've been invited to join ${groupName} on MealSphere as a ${role}.\n\nClick the link below to accept the invitation:\n\n${inviteUrl}\n\nThe link will expire in 7 days.\n\nRegards,\nMealSphere Team`,
+    text: `Hello ${name},\n\nYou've been invited to join ${groupName} on MealSphere as a ${role} by ${sender.name}.\n\nClick the link below to accept the invitation:\n\n${inviteUrl}\n\nThe link will expire in 7 days.\n\nRegards,\nMealSphere Team`,
     html: baseTemplate(`
-      <h2 style="color: #333; margin-bottom: 20px;">You've been invited to join ${groupName}</h2>
-      <p>Hello ${name},</p>
-      <p>You've been invited to join <strong>${groupName}</strong> on MealSphere as a <strong>${role}</strong>.</p>
-      <p>Click the button below to accept the invitation:</p>
-      ${buttonTemplate("Join Group", inviteUrl)}
-      <p>Or copy and paste this link in your browser:</p>
-      <p style="word-break: break-all; color: #666; background: #f5f5f5; padding: 10px; border-radius: 4px;">${inviteUrl}</p>
-      <p>The link will expire in 7 days.</p>
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #333; margin: 0; font-size: 24px;">MealSphere</h1>
+        <p style="color: #666; margin-top: 8px;">Group Invitation</p>
+      </div>
+
+      <div style="
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        border: 1px solid #e9ecef;
+      ">
+        <h2 style="color: #333; margin-bottom: 16px; font-size: 20px;">You've been invited to join ${groupName}</h2>
+        
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 20px;
+          padding: 16px;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
+        ">
+          <img 
+            src="${sender.image }" 
+            alt="${sender.name}"
+            style="
+              width: 48px;
+              height: 48px;
+              border-radius: 50%;
+              object-fit: cover;
+              border: 2px solid #e9ecef;
+            "
+          />
+          <div>
+            <p style="margin: 0; font-weight: 600; color: #333;">${sender.name}</p>
+            <p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">${sender.email}</p>
+            <p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">Invited you as a <strong>${role}</strong></p>
+          </div>
+        </div>
+
+        <p style="margin-bottom: 20px; color: #495057;">Hello ${name},</p>
+        <p style="margin-bottom: 20px; color: #495057;">You've been invited to join <strong>${groupName}</strong> on MealSphere. This group is a place to collaborate and share meals together.</p>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          ${buttonTemplate("Accept Invitation", inviteUrl)}
+        </div>
+
+        <p style="margin: 0; color: #666; font-size: 14px; text-align: center;">Or copy and paste this link in your browser:</p>
+        <p style="
+          word-break: break-all;
+          color: #495057;
+          background: white;
+          padding: 12px;
+          border-radius: 6px;
+          border: 1px solid #e9ecef;
+          font-size: 14px;
+          margin: 8px 0 0 0;
+        ">${inviteUrl}</p>
+      </div>
+
+      <div style="
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 24px;
+        border: 1px solid #e9ecef;
+      ">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          <strong>Note:</strong> This invitation link will expire in 7 days. If you have any questions, please contact the group administrator.
+        </p>
+      </div>
     `)
   })
 }
@@ -277,8 +348,9 @@ export async function sendGroupInviteEmail(
   name: string, 
   groupName: string, 
   inviteUrl: string,
-  role: string
+  role: string,
+  sender: { name: string; email: string; image: string | null }
 ): Promise<void> {
-  const template = emailTemplates.groupInvite(name, groupName, inviteUrl, role)
+  const template = emailTemplates.groupInvite(name, groupName, inviteUrl, role, sender)
   await sendEmail(email, template)
 }

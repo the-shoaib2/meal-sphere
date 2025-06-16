@@ -63,6 +63,15 @@ interface InviteCardProps {
   className?: string;
 }
 
+interface InviteStatus {
+  success: boolean;
+  message: string;
+  details?: {
+    existingMembers: string[];
+    pendingInvitations: string[];
+  };
+}
+
 const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
   { value: Role.MEMBER, label: 'Member', description: 'Can view and participate in group activities' },
   { value: Role.ADMIN, label: 'Admin', description: 'Full access to group settings and management' },
@@ -82,11 +91,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'link' | 'email'>('link');
-  const [inviteStatus, setInviteStatus] = useState<{
-    success: boolean;
-    message: string;
-    invitationUrl?: string;
-  } | null>(null);
+  const [inviteStatus, setInviteStatus] = useState<InviteStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [invite, setInvite] = useState<InviteData | null>(null);
   const [emails, setEmails] = useState<string[]>([]);
@@ -213,28 +218,31 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send invitation');
+        throw new Error(data.error || 'Failed to send invitation');
       }
 
-      const data = await response.json();
-      const inviteUrl = `${window.location.origin}/groups/join?code=${data.invitations[0].code}&groupId=${group.id}`;
-      
       setInviteStatus({
         success: true,
-        message: `Invitations sent to ${emails.length} email${emails.length > 1 ? 's' : ''}.`,
-        invitationUrl: inviteUrl,
+        message: data.message,
+        details: data.details || data.skipped
       });
       
       uiToast({
-        title: 'Invitations sent!',
-        description: `Invitations sent to ${emails.length} email${emails.length > 1 ? 's' : ''}.`,
+        title: 'Success',
+        description: data.message,
       });
       
-      setEmails([]);
+      // Only clear emails that were successfully sent
+      if (data.invitations?.length > 0) {
+        setEmails(emails.filter(email => 
+          data.skipped?.existingMembers.includes(email) || 
+          data.skipped?.pendingInvitations.includes(email)
+        ));
+      }
       setCurrentEmail('');
-      setInviteLink(inviteUrl);
     } catch (err) {
       const error = err as Error;
       console.error('Error sending invitation:', error);
@@ -424,26 +432,42 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                 </div>
                 {emails.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {emails.map((email) => (
-                      <Badge
-                        key={email}
-                        variant="secondary"
-                        className="flex items-center gap-1 px-3 py-1.5"
-                      >
-                        <Mail className="h-3 w-3" />
-                        <span className="text-xs">{email}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveEmail(email)}
-                          disabled={isGenerating}
-                          className="h-4 w-4 p-0 hover:bg-transparent"
+                    {emails.map((email) => {
+                      const isPending = inviteStatus?.details?.pendingInvitations.includes(email);
+                      const isMember = inviteStatus?.details?.existingMembers.includes(email);
+                      
+                      return (
+                        <Badge
+                          key={email}
+                          variant={isPending || isMember ? "outline" : "secondary"}
+                          className={`flex items-center gap-1 px-3 py-1.5 ${
+                            isPending ? "border-amber-500 text-amber-500" :
+                            isMember ? "border-green-500 text-green-500" : ""
+                          }`}
                         >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
-                    ))}
+                          {isPending ? (
+                            <AlertCircle className="h-3 w-3" />
+                          ) : isMember ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            <Mail className="h-3 w-3" />
+                          )}
+                          <span className="text-xs">{email}</span>
+                          {!isPending && !isMember && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveEmail(email)}
+                              disabled={isGenerating}
+                              className="h-4 w-4 p-0 hover:bg-transparent"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
                 {emails.length >= 10 && (
@@ -452,7 +476,51 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   </p>
                 )}
               </div>
-              <Button type="submit" className="w-full" disabled={isGenerating || emails.length === 0}>
+
+              {inviteStatus && (
+                <div className={`p-3 rounded-md text-sm ${
+                  inviteStatus.success 
+                    ? "bg-green-50 dark:bg-green-900/20" 
+                    : "bg-amber-50 dark:bg-amber-900/20"
+                }`}>
+                  <div className="flex items-start">
+                    {inviteStatus.success ? (
+                      <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div>
+                      <p className={`font-medium ${
+                        inviteStatus.success 
+                          ? "text-green-800 dark:text-green-200" 
+                          : "text-amber-800 dark:text-amber-200"
+                      }`}>
+                        {inviteStatus.message}
+                      </p>
+                      {inviteStatus.details && (
+                        <div className="mt-1 text-xs">
+                          {inviteStatus.details.pendingInvitations.length > 0 && (
+                            <p className="text-amber-700 dark:text-amber-300">
+                              {inviteStatus.details.pendingInvitations.length} email(s) already have pending invitations
+                            </p>
+                          )}
+                          {inviteStatus.details.existingMembers.length > 0 && (
+                            <p className="text-green-700 dark:text-green-300">
+                              {inviteStatus.details.existingMembers.length} email(s) are already members
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isGenerating || emails.length === 0}
+              >
                 {isGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
