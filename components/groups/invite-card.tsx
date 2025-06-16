@@ -223,7 +223,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send invitation');
       }
-
+      
       setInviteStatus({
         success: true,
         message: data.message,
@@ -322,29 +322,29 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                     />
                   )}
                   <div className="flex space-x-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            onClick={handleCopyLink}
-                            className="h-8 w-8"
-                            disabled={loading}
-                          >
-                            {copied ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{copied ? 'Copied!' : 'Copy link'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="outline"
+                          onClick={handleCopyLink}
+                          className="h-8 w-8"
+                          disabled={loading}
+                        >
+                          {copied ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{copied ? 'Copied!' : 'Copy link'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -410,18 +410,18 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
             )}
           </TabsContent>
           <TabsContent value="email">
-            <form onSubmit={handleGenerateInvite} className="space-y-4">
-              <div className="space-y-2">
+          <form onSubmit={handleGenerateInvite} className="space-y-4">
+            <div className="space-y-2">
                 <Label htmlFor="email">Email Addresses (up to 10)</Label>
                 <div className="flex gap-2">
-                  <Input
-                    id="email"
-                    type="email"
+              <Input
+                id="email"
+                type="email"
                     value={currentEmail}
                     onChange={(e) => setCurrentEmail(e.target.value)}
-                    placeholder="Enter email address"
-                    disabled={isGenerating}
-                  />
+                placeholder="Enter email address"
+                disabled={isGenerating}
+              />
                   <Button
                     type="button"
                     onClick={handleAddEmail}
@@ -429,7 +429,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   >
                     Add
                   </Button>
-                </div>
+            </div>
                 {emails.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {emails.map((email) => {
@@ -459,7 +459,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveEmail(email)}
-                              disabled={isGenerating}
+                disabled={isGenerating}
                               className="h-4 w-4 p-0 hover:bg-transparent"
                             >
                               <X className="h-3 w-3" />
@@ -521,16 +521,16 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                 className="w-full" 
                 disabled={isGenerating || emails.length === 0}
               >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
                   `Send Invitations (${emails.length})`
-                )}
-              </Button>
-            </form>
+              )}
+            </Button>
+          </form>
           </TabsContent>
         </Tabs>
       </DialogContent>

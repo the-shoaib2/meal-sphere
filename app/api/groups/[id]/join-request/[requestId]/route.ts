@@ -4,9 +4,16 @@ import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
 import { Role, NotificationType } from '@prisma/client';
 
+interface RouteSegmentProps {
+  params: {
+    id: string;
+    requestId: string;
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; requestId: string } }
+  props: RouteSegmentProps
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +24,7 @@ export async function PATCH(
       );
     }
 
-    const { id: groupId, requestId } = params;
+    const { id: groupId, requestId } = props.params;
     const { action } = await request.json();
 
     if (!['approve', 'reject'].includes(action)) {
