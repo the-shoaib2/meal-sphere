@@ -67,8 +67,29 @@ export default function GroupPage() {
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [activeTab, setActiveTab] = useState('members');
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   const { leaveGroup } = useGroups();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY) {
+        // Scrolling down
+        setIsHeaderVisible(true);
+      } else {
+        // Scrolling up
+        setIsHeaderVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   useEffect(() => {
     if (error) {
@@ -165,7 +186,7 @@ export default function GroupPage() {
                   isCreator={false}
                   currentUserId={session?.user?.id}
                   members={[]}
-                  onMemberUpdate={() => {}}
+                  onMemberUpdate={() => { }}
                 />
               </TabsContent>
 
@@ -188,7 +209,7 @@ export default function GroupPage() {
                   groupId={groupId}
                   isAdmin={false}
                   isCreator={false}
-                  onUpdate={() => {}}
+                  onUpdate={() => { }}
                 />
               </TabsContent>
             </div>
@@ -254,127 +275,177 @@ export default function GroupPage() {
     : [];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="container mx-auto px-0 sm:px-4 py-2 sm:py-4 flex-1 flex flex-col">
-        <div className="flex flex-col gap-2 sm:gap-4 flex-1">
-          <div className="flex items-center gap-3 px-4 sm:px-0">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-              <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
-            {group.description && (
-                <p className="text-sm text-muted-foreground">{group.description}</p>
-            )}
-              <div className="flex flex-wrap gap-1 mt-1">
+    <div className="flex flex-col gap-4">
+      <div 
+        className={`sticky top-0 z-30 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${
+          isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
+          {group.description && (
+            <p className="text-sm text-muted-foreground">{group.description}</p>
+          )}
+          <div className="flex flex-wrap gap-1 mt-1">
             {category && (
-                  <Badge variant="secondary">
+              <Badge variant="secondary">
                 {category}
               </Badge>
             )}
-                {tags.length > 0 && tags.map((tag: string) => (
-                  <Badge key={tag} variant="outline">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            {tags.length > 0 && tags.map((tag: string) => (
+              <Badge key={tag} variant="outline">
+                {tag}
+              </Badge>
+            ))}
+          </div>
         </div>
+      </div>
 
-          <Tabs 
-            defaultValue="members" 
-            value={activeTab} 
-            onValueChange={setActiveTab} 
-            className="w-full flex-1 flex flex-col"
-          >
-          <TabsList className="grid grid-cols-4 sm:rounded-md">
-            <TabsTrigger value="members" className="flex items-center gap-2">
-              <Users className="h-4 w-4 hidden sm:block" />
-              Members
+      <Tabs
+        defaultValue="members"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-4 sm:rounded-md">
+          <TabsTrigger value="members" className="flex items-center gap-2">
+            <Users className="h-4 w-4 hidden sm:block" />
+            Members
+          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="join-requests" className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4 hidden sm:block" />
+              Requests
+              {pendingRequests > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {pendingRequests}
+                </Badge>
+              )}
             </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="join-requests" className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4 hidden sm:block" />
-                Requests
-                {pendingRequests > 0 && (
-                  <Badge variant="destructive" className="ml-2">
-                    {pendingRequests}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
-            {showActivityLog && (
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Activity className="h-4 w-4 hidden sm:block" />
-                Activity
-              </TabsTrigger>
-            )}
-            {isAdmin && (
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4 hidden sm:block" />
-                Settings
-              </TabsTrigger>
-            )}
-          </TabsList>
+          )}
+          {showActivityLog && (
+            <TabsTrigger value="activity" className="flex items-center gap-2">
+              <Activity className="h-4 w-4 hidden sm:block" />
+              Activity
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4 hidden sm:block" />
+              Settings
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-            <div className="mt-3 flex-1 relative" style={{ height: 'calc(100vh - 250px)', minHeight: '400px' }}>
-              <div className="absolute inset-0 overflow-y-auto">
-                <TabsContent value="members" className="m-0 h-full">
-              <MembersTab
+        <div className="mt-3">
+          <TabsContent value="members" className="m-0">
+            <MembersTab
+              groupId={groupId}
+              isAdmin={isAdmin}
+              isCreator={isCreator}
+              currentUserId={session?.user?.id}
+              members={mappedMembers}
+              onMemberUpdate={() => {
+                refetch();
+              }}
+            />
+          </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="settings" className="m-0">
+              <SettingsTab
                 groupId={groupId}
                 isAdmin={isAdmin}
                 isCreator={isCreator}
-                currentUserId={session?.user?.id}
-                members={mappedMembers}
-                onMemberUpdate={() => {
+                onUpdate={() => {
                   refetch();
+                  toast.success('Group updated successfully');
                 }}
+                onLeave={!isCreator ? handleLeaveGroup : undefined}
               />
             </TabsContent>
+          )}
 
-            {isAdmin && (
-                  <TabsContent value="settings" className="m-0 h-full">
-                <SettingsTab
-                  groupId={groupId}
-                  isAdmin={isAdmin}
-                  isCreator={isCreator}
-                  onUpdate={() => {
-                    refetch();
-                    toast.success('Group updated successfully');
-                  }}
-                  onLeave={!isCreator ? handleLeaveGroup : undefined}
-                />
-              </TabsContent>
-            )}
+          {showActivityLog && (
+            <TabsContent value="activity" className="m-0">
+              <ActivityTab
+                groupId={groupId}
+                isAdmin={isAdmin}
+              />
+            </TabsContent>
+          )}
 
-            {showActivityLog && (
-                  <TabsContent value="activity" className="m-0 h-full">
-                <ActivityTab
-                  groupId={groupId}
-                  isAdmin={isAdmin}
-                />
-              </TabsContent>
-            )}
+          {isAdmin && (
+            <TabsContent value="join-requests" className="m-0">
+              <JoinRequestsTab
+                groupId={groupId}
+                isAdmin={isAdmin}
+              />
+            </TabsContent>
+          )}
+        </div>
+      </Tabs>
 
-            {isAdmin && (
-                  <TabsContent value="join-requests" className="m-0 h-full">
-                <JoinRequestsTab
-                  groupId={groupId}
-                  isAdmin={isAdmin}
-                />
-              </TabsContent>
+      {!isAdmin && (
+        <div className="mt-4 pt-4 border-t">
+          <Button
+            variant="destructive"
+            onClick={() => setShowLeaveDialog(true)}
+            disabled={isLeaving}
+            className="w-full sm:w-auto"
+          >
+            {isLeaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Leaving...
+              </>
+            ) : (
+              <>
+                <LogOut className="h-4 w-4 mr-2" />
+                Leave Group
+              </>
             )}
+          </Button>
+        </div>
+      )}
+
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              <LogOut className="h-5 w-5 text-destructive" />
+              Leave Group
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Are you sure you want to leave this group?</p>
+              <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                <p className="text-sm font-medium">This action will:</p>
+                <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Remove you from all group activities</li>
+                  <li>Revoke your access to group content</li>
+                  <li>Cancel any pending meal registrations</li>
+                  <li>Remove you from group notifications</li>
+                </ul>
               </div>
-          </div>
-        </Tabs>
-
-        {!isAdmin && (
-            <div className="mt-4 pt-4 border-t">
-            <Button
-              variant="destructive"
-              onClick={() => setShowLeaveDialog(true)}
+              <p className="text-sm text-muted-foreground mt-2">
+                You won't be able to access this group again unless you're re-invited.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel
               disabled={isLeaving}
               className="w-full sm:w-auto"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLeaveGroup}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isLeaving}
             >
               {isLeaving ? (
                 <>
@@ -382,64 +453,12 @@ export default function GroupPage() {
                   Leaving...
                 </>
               ) : (
-                <>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Leave Group
-                </>
+                'Leave Group'
               )}
-            </Button>
-          </div>
-        )}
-        </div>
-      </div>
-
-        <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
-          <AlertDialogContent className="sm:max-w-[425px]">
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                <LogOut className="h-5 w-5 text-destructive" />
-                Leave Group
-              </AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                <p>Are you sure you want to leave this group?</p>
-                <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                  <p className="text-sm font-medium">This action will:</p>
-                  <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                    <li>Remove you from all group activities</li>
-                    <li>Revoke your access to group content</li>
-                    <li>Cancel any pending meal registrations</li>
-                    <li>Remove you from group notifications</li>
-                  </ul>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  You won't be able to access this group again unless you're re-invited.
-                </p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel
-                disabled={isLeaving}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleLeaveGroup}
-                className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={isLeaving}
-              >
-                {isLeaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Leaving...
-                  </>
-                ) : (
-                  'Leave Group'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

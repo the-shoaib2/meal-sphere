@@ -38,9 +38,9 @@ export default async function RootLayout({
                 <div className="flex h-screen w-full overflow-hidden">
                   <SidebarProvider>
                     <AppSidebar />
-                    <div className="flex-1 flex flex-col">
+                    <div className="flex-1 flex flex-col overflow-hidden">
                       <Header />
-                      <SidebarInset className="flex-1 flex flex-col">
+                      <SidebarInset className="flex-1 flex flex-col overflow-hidden">
                         <main className="flex-1 overflow-y-auto">
                           <div className="p-4">
                             {children}

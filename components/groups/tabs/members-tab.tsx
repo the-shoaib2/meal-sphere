@@ -183,7 +183,7 @@ export function MembersTab({
 
   if (isLoading) {
     return (
-        <Card className="h-full max-h-[400px] overflow-y-auto">
+        <Card >
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -217,135 +217,86 @@ export function MembersTab({
   }
 
   return (
-    <div className="h-full max-h-[400px] overflow-y-auto">
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold">Members</h2>
-                <p className="text-sm text-muted-foreground">
-                  {members.length} {members.length === 1 ? 'member' : 'members'} in this group
-                </p>
-              </div>
-              <InviteCard groupId={groupId} />
+    <Card>
+      <CardContent className="pt-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Members</h2>
+              <p className="text-sm text-muted-foreground">
+                {members.length} {members.length === 1 ? 'member' : 'members'} in this group
+              </p>
             </div>
-
-            <div className="divide-y">
-              {members.map((member, index) => (
-                <div key={member.id} className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={member.user.image} alt={member.user.name} />
-                        <AvatarFallback>
-                          {member.user.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{member.user.name}</span>
-                          {getRoleBadge(member.role)}
-                          {member.isCurrent && (
-                            <Badge variant="outline" className="text-xs">You</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Joined {formatDistanceToNow(new Date(member.joinedAt), { addSuffix: true })}
-                        </p>
-                      </div>
-                    </div>
-
-                    {(isAdmin || isCreator) && !member.isCurrent && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {member.role !== Role.OWNER && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedMember(member);
-                                  setShowRoleDialog(true);
-                                }}
-                              >
-                                <UserCog className="h-4 w-4 mr-2" />
-                                Change Role
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedMember(member);
-                                  setShowRemoveDialog(true);
-                                }}
-                                className="text-destructive"
-                              >
-                                <UserX className="h-4 w-4 mr-2" />
-                                Remove Member
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <InviteCard groupId={groupId} />
           </div>
-        </CardContent>
-      </Card>
 
-      <AlertDialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Change Member Role</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a new role for {selectedMember?.user.name}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-2 py-4">
-            {['ADMIN', 'MODERATOR', 'MEMBER'].map((role) => (
-              <Button
-                key={role}
-                variant={selectedMember?.role === role ? 'default' : 'outline'}
-                onClick={() => handleRoleChange(role as Role)}
-                className="justify-start"
-              >
-                {getRoleBadge(role as Role)}
-              </Button>
+          <div className="divide-y">
+            {members.map((member, index) => (
+              <div key={member.id} className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={member.user.image} alt={member.user.name} />
+                      <AvatarFallback>
+                        {member.user.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{member.user.name}</span>
+                        {getRoleBadge(member.role)}
+                        {member.isCurrent && (
+                          <Badge variant="outline" className="text-xs">You</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Joined {formatDistanceToNow(new Date(member.joinedAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {(isAdmin || isCreator) && !member.isCurrent && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {member.role !== Role.OWNER && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowRoleDialog(true);
+                              }}
+                            >
+                              <UserCog className="h-4 w-4 mr-2" />
+                              Change Role
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowRemoveDialog(true);
+                              }}
+                              className="text-destructive"
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Remove Member
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Member</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove {selectedMember?.user.name} from this group?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemoveMember}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 } 

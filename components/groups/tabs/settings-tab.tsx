@@ -318,9 +318,28 @@ export function SettingsTab({
 
   if (isLoadingGroup) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Group Settings</CardTitle>
+          <CardDescription>Loading group settings...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
       </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -345,7 +364,7 @@ export function SettingsTab({
 
   if (isLoading) {
     return (
-      <Card className="h-full max-h-[400px] overflow-y-auto">
+      <Card >
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-semibold">Group Settings</CardTitle>
           <CardDescription>Manage your group's settings and preferences</CardDescription>
@@ -487,27 +506,20 @@ export function SettingsTab({
   }
 
   return (
-    <Card className="h-full max-h-[400px] overflow-y-auto">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Group Settings</CardTitle>
-        <CardDescription>Manage your group's settings and preferences</CardDescription>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Group Settings</CardTitle>
+        <CardDescription>Manage your group settings and preferences</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* General Settings Section */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold mb-2">General Settings</h3>
-            <p className="text-sm text-muted-foreground mb-4">Manage your group's basic settings and preferences</p>
-          </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid gap-8 md:grid-cols-2">
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Group Name</Label>
                   <Input
                     id="name"
                     {...register('name')}
-                    disabled={!isAdmin}
+                placeholder="Enter group name"
                   />
                   {errors.name && (
                     <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -519,68 +531,60 @@ export function SettingsTab({
                   <Textarea
                     id="description"
                     {...register('description')}
-                    disabled={!isAdmin}
+                placeholder="Enter group description"
                   />
                   {errors.description && (
                     <p className="text-sm text-destructive">{errors.description.message}</p>
                   )}
                 </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="isPrivate">Private Group</Label>
+                <Switch
+                  id="isPrivate"
+                  checked={isPrivateForm}
+                  onCheckedChange={(checked) => setValue('isPrivate', checked)}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Private groups require approval for new members to join
+              </p>
               </div>
 
-              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="maxMembers">Maximum Members</Label>
                   <Input
+                id="maxMembers"
                     type="number"
-                    id="maxMembers"
-                    min={2}
-                    max={100}
-                    placeholder="Leave empty for no limit"
-                    {...register('maxMembers', {
-                      setValueAs: (v) => v === '' ? null : Number(v)
-                    })}
-                    disabled={!isAdmin}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Set a limit on the number of members who can join this group.
-                  </p>
+                {...register('maxMembers')}
+                placeholder="Enter maximum number of members"
+              />
                   {errors.maxMembers && (
                     <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="private">Private Group</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {isPrivateForm
-                        ? 'New members will need admin approval to join this group.'
-                        : 'Anyone with the link can join this group.'}
-                    </p>
-                  </div>
-                  <Switch
-                    id="private"
-                    checked={isPrivateForm}
-                    onCheckedChange={(checked) => setValue('isPrivate', checked)}
-                    disabled={!isAdmin}
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add a tag"
+                />
+                <Button type="button" onClick={handleAddTag}>
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tags">Group Tags</Label>
-                <div className="flex flex-wrap gap-2 mb-2">
+              {tagError && (
+                <p className="text-sm text-destructive">{tagError}</p>
+              )}
+              <div className="flex flex-wrap gap-2 mt-2">
                   {formTags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      <Tag className="h-3 w-3" />
+                  <Badge key={tag} variant="secondary">
                       {tag}
-                      {isAdmin && (
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
@@ -588,406 +592,74 @@ export function SettingsTab({
                         >
                           <X className="h-3 w-3" />
                         </button>
-                      )}
                     </Badge>
                   ))}
-                </div>
-                {isAdmin && (
-                  <div className="flex gap-2">
-                    <Input
-                      id="newTag"
-                      value={newTag}
-                      onChange={(e) => {
-                        setNewTag(e.target.value);
-                        setTagError('');
-                      }}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Add a tag"
-                      disabled={formTags.length >= 5}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleAddTag}
-                      disabled={formTags.length >= 5}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-                {tagError && (
-                  <p className="text-sm text-destructive">{tagError}</p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Add up to 5 tags to help others find your group
-                </p>
               </div>
             </div>
 
-            {isAdmin && (
-              <div className="flex justify-end">
-                <Button type="submit" disabled={isLoading} className="w-full md:w-auto">
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Group Features Section */}
-        {isAdmin && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Group Features</h3>
-              <p className="text-sm text-muted-foreground mb-4">Enable or disable group features</p>
-            </div>
             <div className="space-y-4">
-              {/* Membership Features */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Membership</h3>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(GROUP_FEATURES)
-                    .filter(([_, feature]) => feature.category === 'membership')
-                    .map(([key, feature]) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="space-y-0.5">
-                          <Label htmlFor={feature.id} className="text-sm">{feature.name}</Label>
-                          <p className="text-xs text-muted-foreground">{feature.description}</p>
+              <Label>Features</Label>
+              <div className="grid gap-4">
+                {Object.entries(GROUP_FEATURES).map(([key, feature]) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Label htmlFor={key}>{feature.name}</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {feature.description}
+                      </p>
                         </div>
                         <Switch
-                          id={feature.id}
-                          checked={formFeatures[feature.id] ?? feature.defaultValue}
-                          disabled={!isAdmin || (feature.requiresAdmin && !isAdmin)}
-                          onCheckedChange={async (checked) => {
-                            setValue('features', {
-                              ...formFeatures,
-                              [feature.id]: checked
-                            });
-                            try {
-                              await updateGroup.mutateAsync({
-                                groupId,
-                                data: {
-                                  features: {
-                                    ...formFeatures,
-                                    [feature.id]: checked
-                                  }
-                                }
-                              });
-                              toast({
-                                title: 'Success',
-                                description: `${feature.name} ${checked ? 'enabled' : 'disabled'}`,
-                              });
-                            } catch (error) {
-                              toast({
-                                title: 'Error',
-                                description: 'Failed to update feature',
-                                variant: 'destructive',
-                              });
-                              setValue('features', {
-                                ...formFeatures,
-                                [feature.id]: !checked
-                              });
-                            }
-                          }}
+                      id={key}
+                      checked={formFeatures[key] ?? feature.defaultValue}
+                      onCheckedChange={(checked) =>
+                        setValue(`features.${key}`, checked)
+                      }
                         />
                       </div>
                     ))}
-                </div>
-              </div>
-
-              {/* Communication Features */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Communication</h3>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(GROUP_FEATURES)
-                    .filter(([_, feature]) => feature.category === 'communication')
-                    .map(([key, feature]) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="space-y-0.5">
-                          <Label htmlFor={feature.id} className="text-sm">{feature.name}</Label>
-                          <p className="text-xs text-muted-foreground">{feature.description}</p>
-                        </div>
-                        <Switch
-                          id={feature.id}
-                          checked={formFeatures[feature.id] ?? feature.defaultValue}
-                          disabled={!isAdmin || (feature.requiresAdmin && !isAdmin)}
-                          onCheckedChange={async (checked) => {
-                            setValue('features', {
-                              ...formFeatures,
-                              [feature.id]: checked
-                            });
-                            try {
-                              await updateGroup.mutateAsync({
-                                groupId,
-                                data: {
-                                  features: {
-                                    ...formFeatures,
-                                    [feature.id]: checked
-                                  }
-                                }
-                              });
-                              toast({
-                                title: 'Success',
-                                description: `${feature.name} ${checked ? 'enabled' : 'disabled'}`,
-                              });
-                            } catch (error) {
-                              toast({
-                                title: 'Error',
-                                description: 'Failed to update feature',
-                                variant: 'destructive',
-                              });
-                              setValue('features', {
-                                ...formFeatures,
-                                [feature.id]: !checked
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Meal Features */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Meals & Shopping</h3>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(GROUP_FEATURES)
-                    .filter(([_, feature]) => feature.category === 'meals')
-                    .map(([key, feature]) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="space-y-0.5">
-                          <Label htmlFor={feature.id} className="text-sm">{feature.name}</Label>
-                          <p className="text-xs text-muted-foreground">{feature.description}</p>
-                        </div>
-                        <Switch
-                          id={feature.id}
-                          checked={formFeatures[feature.id] ?? feature.defaultValue}
-                          disabled={!isAdmin || (feature.requiresAdmin && !isAdmin)}
-                          onCheckedChange={async (checked) => {
-                            setValue('features', {
-                              ...formFeatures,
-                              [feature.id]: checked
-                            });
-                            try {
-                              await updateGroup.mutateAsync({
-                                groupId,
-                                data: {
-                                  features: {
-                                    ...formFeatures,
-                                    [feature.id]: checked
-                                  }
-                                }
-                              });
-                              toast({
-                                title: 'Success',
-                                description: `${feature.name} ${checked ? 'enabled' : 'disabled'}`,
-                              });
-                            } catch (error) {
-                              toast({
-                                title: 'Error',
-                                description: 'Failed to update feature',
-                                variant: 'destructive',
-                              });
-                              setValue('features', {
-                                ...formFeatures,
-                                [feature.id]: !checked
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Management Features */}
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Management</h3>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(GROUP_FEATURES)
-                    .filter(([_, feature]) => feature.category === 'management')
-                    .map(([key, feature]) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="space-y-0.5">
-                          <Label htmlFor={feature.id} className="text-sm">{feature.name}</Label>
-                          <p className="text-xs text-muted-foreground">{feature.description}</p>
-                        </div>
-                        <Switch
-                          id={feature.id}
-                          checked={formFeatures[feature.id] ?? feature.defaultValue}
-                          disabled={!isAdmin || (feature.requiresAdmin && !isAdmin)}
-                          onCheckedChange={async (checked) => {
-                            setValue('features', {
-                              ...formFeatures,
-                              [feature.id]: checked
-                            });
-                            try {
-                              await updateGroup.mutateAsync({
-                                groupId,
-                                data: {
-                                  features: {
-                                    ...formFeatures,
-                                    [feature.id]: checked
-                                  }
-                                }
-                              });
-                              toast({
-                                title: 'Success',
-                                description: `${feature.name} ${checked ? 'enabled' : 'disabled'}`,
-                              });
-                            } catch (error) {
-                              toast({
-                                title: 'Error',
-                                description: 'Failed to update feature',
-                                variant: 'destructive',
-                              });
-                              setValue('features', {
-                                ...formFeatures,
-                                [feature.id]: !checked
-                              });
-                            }
-                          }}
-                        />
-                      </div>
-                    ))}
-                </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Danger Zone Section */}
-        <div className="space-y-4 border-t pt-6">
-          <div>
-            <h3 className="text-lg font-semibold text-destructive mb-2">Danger Zone</h3>
-            <p className="text-sm text-muted-foreground mb-4">These actions are irreversible. Proceed with caution.</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {(isAdmin || isCreator) && (
-              <div className="flex items-center justify-between p-4 bg-destructive/5 rounded-lg border border-destructive/20">
-                <div>
-                  <h4 className="font-medium text-destructive">Delete Group</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Once you delete a group, there is no going back.
-                  </p>
-                </div>
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      disabled={isLoading || isDeleting}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Group
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the group and all of its data.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                      <Button
-                        variant="destructive"
-                        onClick={handleDeleteGroup}
-                        disabled={isDeleting}
-                      >
-                        {isDeleting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Deleting...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Group
-                          </>
-                        )}
-                      </Button>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-
-            {!isCreator && (
-              <div className="flex items-center justify-between p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
-                <div>
-                  <h4 className="font-medium text-amber-500">Leave Group</h4>
-                  <p className="text-sm text-muted-foreground">
-                    You won't be able to access this group again unless you're re-invited.
-                  </p>
-                </div>
+          <div className="flex justify-between">
+            <div className="space-x-2">
+              {!isCreator && onLeave && (
                 <Button
-                  variant="outline"
-                  className="border-amber-500 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600"
+                  type="button"
+                  variant="destructive"
                   onClick={() => setIsLeaveDialogOpen(true)}
-                  disabled={isLoading || isLeaving}
                 >
-                  {isLeaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Leaving...
-                    </>
-                  ) : (
-                    <>
-                      <LogOut className="mr-2 h-4 w-4" />
+                  <LogOut className="h-4 w-4 mr-2" />
                       Leave Group
-                    </>
-                  )}
                 </Button>
-              </div>
+              )}
+              {isCreator && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Group
+                </Button>
             )}
           </div>
-        </div>
-      </CardContent>
-
-      <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Leave Group</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to leave this group? You won't be able to access it again unless you're re-invited.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLeaving}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleLeaveGroup}
-              disabled={isLeaving}
-            >
-              {isLeaving ? (
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Leaving...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
                 </>
               ) : (
                 <>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Leave Group
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
                 </>
               )}
             </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </div>
+        </form>
+      </CardContent>
     </Card>
   );
 } 
