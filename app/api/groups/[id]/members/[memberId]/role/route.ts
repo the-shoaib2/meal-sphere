@@ -75,7 +75,7 @@ export async function PATCH(
         roomId: groupId,
         userId: currentUserId,
         role: {
-          in: [Role.ADMIN, Role.OWNER]
+          in: [Role.ADMIN, Role.MANAGER]
         }
       }
     });
@@ -113,7 +113,7 @@ export async function PATCH(
     }
 
     // Prevent changing owner's role
-    if (targetMember.role === Role.OWNER) {
+    if (targetMember.role === Role.MANAGER) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Cannot change owner\'s role'

@@ -59,7 +59,7 @@ export async function POST(
           where: {
             userId: session.user.id,
             role: {
-              in: ["ADMIN", "OWNER"]
+              in: ["ADMIN", "MANAGER"]
             }
           }
         }

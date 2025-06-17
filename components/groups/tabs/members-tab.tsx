@@ -136,25 +136,38 @@ export function MembersTab({
 
   const getRoleBadge = (role: Role) => {
     switch (role) {
-      case 'OWNER':
+      case Role.MANAGER:  
         return (
           <Badge variant="default" className="bg-purple-500">
             <Crown className="h-3 w-3 mr-1" />
             Owner
           </Badge>
         );
-      case 'ADMIN':
+      case Role.ADMIN:
         return (
           <Badge variant="default" className="bg-red-500">
             <Shield className="h-3 w-3 mr-1" />
             Admin
           </Badge>
         );
-      case 'MODERATOR':
+      case Role.MODERATOR:
         return (
           <Badge variant="default" className="bg-blue-500">
             <UserCog className="h-3 w-3 mr-1" />
             Moderator
+          </Badge>
+        );
+      case Role.MEMBER:
+        return (
+          <Badge variant="default" className="bg-gray-500">
+            Member
+          </Badge>
+        );
+      case Role.MEAL_MANAGER:
+        return (
+          <Badge variant="default" className="bg-green-500">
+            <UserCog className="h-3 w-3 mr-1" />
+            Meal Manager
           </Badge>
         );
       default:
@@ -213,7 +226,7 @@ export function MembersTab({
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {member.role !== 'OWNER' && (
+                    {member.role !== Role.OWNER && (
                       <>
                         <DropdownMenuItem
                           onClick={() => {

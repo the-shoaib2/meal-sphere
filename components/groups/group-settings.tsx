@@ -69,6 +69,17 @@ interface GroupSettingsProps {
   isCreator?: boolean;
 }
 
+type GroupWithExtras = {
+  id: string;
+  name: string;
+  description: string | null;
+  isPrivate: boolean;
+  maxMembers: number | null;
+  tags: string[];
+  features: Record<string, boolean>;
+  category?: string;
+};
+
 export function GroupSettings({ 
   groupId, 
   onUpdate, 
@@ -95,8 +106,8 @@ export function GroupSettings({
       description: group?.description || '',
       isPrivate: group?.isPrivate || false,
       maxMembers: group?.maxMembers || undefined,
-      tags: group?.tags || [],
-      features: (group?.features as Record<string, boolean>) || {},
+      tags: (group as GroupWithExtras)?.tags || [],
+      features: (group as GroupWithExtras)?.features || {},
     },
   });
 
@@ -112,8 +123,8 @@ export function GroupSettings({
       setValue('description', group.description || '');
       setValue('isPrivate', group.isPrivate);
       setValue('maxMembers', group.maxMembers || undefined);
-      setValue('tags', group.tags || []);
-      setValue('features', (group.features as Record<string, boolean>) || {});
+      setValue('tags', (group as GroupWithExtras).tags || []);
+      setValue('features', (group as GroupWithExtras).features || {});
     }
   }, [group, setValue]);
 

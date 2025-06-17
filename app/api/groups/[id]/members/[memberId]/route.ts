@@ -131,7 +131,7 @@ export async function DELETE(
     await prisma.notification.create({
       data: {
         userId: memberId,
-        type: 'MEMBER_REMOVED',
+        type: NotificationType.MEMBER_REMOVED,
         message: 'You have been removed from the group'
       }
     });
@@ -227,7 +227,7 @@ export async function PATCH(
     // Log the activity
     await prisma.groupActivityLog.create({
       data: {
-        type: 'ROLE_CHANGED',
+        type: "ROLE_CHANGED",
         roomId: groupId,
         userId: session.user.id,
         details: {
