@@ -78,16 +78,13 @@ export function ActivityTab({ groupId, isAdmin }: ActivityTabProps) {
   if (error) return null;
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-48" />
-              </div>
-            </div>
-
+      <div className="h-full max-h-[400px] overflow-y-auto">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
+            <CardDescription>Loading activity logs...</CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
@@ -99,55 +96,59 @@ export function ActivityTab({ groupId, isAdmin }: ActivityTabProps) {
                 </div>
               ))}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   if (!logs?.length) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
-          <CardDescription>No recent activity</CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="h-full max-h-[400px] overflow-y-auto">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
+            <CardDescription>No recent activity</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
-        <CardDescription>Recent group activities</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {logs.map((log) => (
-            <div
-              key={log.id}
-              className="flex items-start gap-4 p-4 border rounded-lg"
-            >
-              <Avatar>
-                <AvatarImage src={log.user.image || undefined} />
-                <AvatarFallback>
-                  {log.user.name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  {getActivityIcon(log.type)}
-                  <p className="font-medium">{getActivityMessage(log)}</p>
+    // <div className="h-full max-h-[400px] overflow-y-auto">
+      <Card className="h-full max-h-[400px] overflow-y-auto">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
+          <CardDescription>Recent group activities</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {logs.map((log) => (
+              <div
+                key={log.id}
+                className="flex items-start gap-4 p-4 border rounded-lg"
+              >
+                <Avatar>
+                  <AvatarImage src={log.user.image || undefined} />
+                  <AvatarFallback>
+                    {log.user.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    {getActivityIcon(log.type)}
+                    <p className="font-medium">{getActivityMessage(log)}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
-                </p>
               </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    // </div>
   );
 } 

@@ -288,7 +288,7 @@ export function SettingsTab({
       setIsLeaving(false);
     }
   };
-  
+
   const handleLeaveDialogOpenChange = (open: boolean) => {
     // Only allow closing if not in the middle of leaving
     if (!open && !isLeaving) {
@@ -298,7 +298,7 @@ export function SettingsTab({
 
   const handleDeleteGroup = async () => {
     if (!groupId) return;
-    
+
     try {
       setIsDeleting(true);
       await deleteGroup.mutateAsync(groupId);
@@ -317,7 +317,7 @@ export function SettingsTab({
   };
 
   if (isLoadingGroup) {
-  return (
+    return (
       <div className="flex items-center justify-center p-8">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
@@ -392,10 +392,10 @@ export function SettingsTab({
   }
 
   return (
-    <>
-      <div className="grid gap-6">
+    <div className="h-full max-h-[400px] overflow-y-auto">
+      <div className="grid gap-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">General Settings</CardTitle>
             <CardDescription>Manage your group's basic settings and preferences</CardDescription>
           </CardHeader>
@@ -448,13 +448,13 @@ export function SettingsTab({
                     {errors.maxMembers && (
                       <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
                     )}
-      </div>
+                  </div>
 
                   <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                     <div className="space-y-0.5">
                       <Label htmlFor="private">Private Group</Label>
                       <p className="text-sm text-muted-foreground">
-                        {isPrivateForm 
+                        {isPrivateForm
                           ? 'New members will need admin approval to join this group.'
                           : 'Anyone with the link can join this group.'}
                       </p>
@@ -464,9 +464,9 @@ export function SettingsTab({
                       checked={isPrivateForm}
                       onCheckedChange={(checked) => setValue('isPrivate', checked)}
                       disabled={!isAdmin}
-        />
-      </div>
-    </div>
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -474,8 +474,8 @@ export function SettingsTab({
                   <Label htmlFor="tags">Group Tags</Label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {formTags.map((tag) => (
-                      <Badge 
-                        key={tag} 
+                      <Badge
+                        key={tag}
                         variant="secondary"
                         className="flex items-center gap-1"
                       >
@@ -605,7 +605,7 @@ export function SettingsTab({
                             }}
                           />
                         </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
 
@@ -658,7 +658,7 @@ export function SettingsTab({
                             }}
                           />
                         </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
 
@@ -711,7 +711,7 @@ export function SettingsTab({
                             }}
                           />
                         </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
 
@@ -764,7 +764,7 @@ export function SettingsTab({
                             }}
                           />
                         </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
               </div>
@@ -773,7 +773,7 @@ export function SettingsTab({
         )}
 
         <Card className="border-destructive/20">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold text-destructive">Danger Zone</CardTitle>
             <CardDescription>These actions are irreversible. Proceed with caution.</CardDescription>
           </CardHeader>
@@ -892,6 +892,6 @@ export function SettingsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 } 

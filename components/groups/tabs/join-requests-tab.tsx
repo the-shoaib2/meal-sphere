@@ -81,17 +81,19 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
 
   if (isLoadingRequests) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Join Requests</CardTitle>
-          <CardDescription>Loading join requests...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full overflow-y-auto">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Join Requests</CardTitle>
+            <CardDescription>Loading join requests...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center p-4">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -99,16 +101,13 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-48" />
-              </div>
-            </div>
-
+      <div className="h-full overflow-y-auto">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Join Requests</CardTitle>
+            <CardDescription>Processing request...</CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
@@ -126,87 +125,89 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
                 </div>
               ))}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg font-semibold">Join Requests</CardTitle>
-            <CardDescription>
-              {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
-            </CardDescription>
+    <div className="h-full max-h-[400px] overflow-y-auto">
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-semibold">Join Requests</CardTitle>
+              <CardDescription>
+                {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+              </CardDescription>
+            </div>
+            <Badge variant="secondary">
+              {pendingRequests.length}
+            </Badge>
           </div>
-          <Badge variant="secondary">
-            {pendingRequests.length}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {pendingRequests.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No pending join requests
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {pendingRequests.map((request) => (
-              <div
-                key={request.id}
-                className="flex items-start justify-between gap-4 p-4 rounded-lg border"
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar>
-                    <AvatarImage src={request.user.image || undefined} />
-                    <AvatarFallback>
-                      {request.user.name?.[0] || request.user.email?.[0] || '?'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">
-                      {request.user.name || request.user.email}
-                    </p>
-                    {request.message && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {request.message}
+        </CardHeader>
+        <CardContent>
+          {pendingRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No pending join requests
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {pendingRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex items-start justify-between gap-4 p-4 rounded-lg border"
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar>
+                      <AvatarImage src={request.user.image || undefined} />
+                      <AvatarFallback>
+                        {request.user.name?.[0] || request.user.email?.[0] || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">
+                        {request.user.name || request.user.email}
                       </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Requested {formatDistanceToNow(new Date(request.createdAt))} ago
-                    </p>
+                      {request.message && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {request.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Requested {formatDistanceToNow(new Date(request.createdAt))} ago
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-green-600 hover:text-green-700"
+                      onClick={() => handleRequest(request.id, 'approve')}
+                      disabled={isLoading}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleRequest(request.id, 'reject')}
+                      disabled={isLoading}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Reject
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-green-600 hover:text-green-700"
-                    onClick={() => handleRequest(request.id, 'approve')}
-                    disabled={isLoading}
-                  >
-                    <Check className="h-4 w-4 mr-1" />
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={() => handleRequest(request.id, 'reject')}
-                    disabled={isLoading}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 } 

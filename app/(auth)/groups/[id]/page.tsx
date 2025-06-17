@@ -254,35 +254,39 @@ export default function GroupPage() {
     : [];
 
   return (
-    <div className="container mx-auto px-0 sm:px-4 py-4 sm:py-8">
-      <div className="flex flex-col gap-4 sm:gap-6">
-        <div className="flex items-center gap-4 px-4 sm:px-0">
+    <div className="min-h-screen flex flex-col">
+      <div className="container mx-auto px-0 sm:px-4 py-2 sm:py-4 flex-1 flex flex-col">
+        <div className="flex flex-col gap-2 sm:gap-4 flex-1">
+          <div className="flex items-center gap-3 px-4 sm:px-0">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{group.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
             {group.description && (
-              <p className="text-muted-foreground">{group.description}</p>
+                <p className="text-sm text-muted-foreground">{group.description}</p>
             )}
+              <div className="flex flex-wrap gap-1 mt-1">
             {category && (
-              <Badge variant="secondary" className="mt-2">
+                  <Badge variant="secondary">
                 {category}
               </Badge>
             )}
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {tags.map((tag: string) => (
+                {tags.length > 0 && tags.map((tag: string) => (
                   <Badge key={tag} variant="outline">
                     {tag}
                   </Badge>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
         </div>
 
-        <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs 
+            defaultValue="members" 
+            value={activeTab} 
+            onValueChange={setActiveTab} 
+            className="w-full flex-1 flex flex-col"
+          >
           <TabsList className="grid grid-cols-4 sm:rounded-md">
             <TabsTrigger value="members" className="flex items-center gap-2">
               <Users className="h-4 w-4 hidden sm:block" />
@@ -313,9 +317,9 @@ export default function GroupPage() {
             )}
           </TabsList>
 
-          <div className="mt-6">
-            <TabsContent value="members">
-
+            <div className="mt-3 flex-1 relative" style={{ height: 'calc(100vh - 250px)', minHeight: '400px' }}>
+              <div className="absolute inset-0 overflow-y-auto">
+                <TabsContent value="members" className="m-0 h-full">
               <MembersTab
                 groupId={groupId}
                 isAdmin={isAdmin}
@@ -326,12 +330,10 @@ export default function GroupPage() {
                   refetch();
                 }}
               />
-
             </TabsContent>
 
             {isAdmin && (
-              <TabsContent value="settings">
-
+                  <TabsContent value="settings" className="m-0 h-full">
                 <SettingsTab
                   groupId={groupId}
                   isAdmin={isAdmin}
@@ -342,34 +344,32 @@ export default function GroupPage() {
                   }}
                   onLeave={!isCreator ? handleLeaveGroup : undefined}
                 />
-
               </TabsContent>
             )}
 
             {showActivityLog && (
-              <TabsContent value="activity">
-
+                  <TabsContent value="activity" className="m-0 h-full">
                 <ActivityTab
                   groupId={groupId}
                   isAdmin={isAdmin}
                 />
-
               </TabsContent>
             )}
 
             {isAdmin && (
-              <TabsContent value="join-requests">
+                  <TabsContent value="join-requests" className="m-0 h-full">
                 <JoinRequestsTab
                   groupId={groupId}
                   isAdmin={isAdmin}
                 />
               </TabsContent>
             )}
+              </div>
           </div>
         </Tabs>
 
         {!isAdmin && (
-          <div className="mt-8 pt-6 border-t">
+            <div className="mt-4 pt-4 border-t">
             <Button
               variant="destructive"
               onClick={() => setShowLeaveDialog(true)}
@@ -390,6 +390,8 @@ export default function GroupPage() {
             </Button>
           </div>
         )}
+        </div>
+      </div>
 
         <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
           <AlertDialogContent className="sm:max-w-[425px]">
@@ -438,7 +440,6 @@ export default function GroupPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
     </div>
   );
 }
