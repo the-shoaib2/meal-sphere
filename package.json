@@ -60,6 +60,7 @@
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "mongodb": "^5.9.2",
+    "nanoid": "^5.1.5",
     "next": "^15.3.3",
     "next-auth": "^4.24.11",
     "next-i18next": "^15.4.2",
