@@ -259,7 +259,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   if (isLoading || !group) {
     return (
       <div className="space-y-4 p-4">
-        <div className="flex items-center space-x-4">
+        {/* <div className="flex items-center space-x-4">
           <Skeleton className="h-10 w-[120px]" />
         </div>
         <div className="space-y-2">
@@ -276,7 +276,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
         <div className="pt-4 border-t">
           <Skeleton className="h-4 w-[100px] mb-2" />
           <Skeleton className="h-[120px] w-[120px] rounded-lg" />
-        </div>
+        </div> */}
       </div>
     );
   }
