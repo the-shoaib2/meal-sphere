@@ -156,7 +156,7 @@ export default function GroupPage() {
   const tags: string[] = groupWithExtras.tags ?? [];
 
   const showActivityLog = isFeatureEnabled(features, 'activity_log', isAdmin);
-  const showJoinRequests = isFeatureEnabled(features, 'join_requests', isAdmin);
+  const showJoinRequests = isAdmin;
 
   // Update the member mapping
   const mappedMembers = Array.isArray(group.members) 
@@ -228,7 +228,7 @@ export default function GroupPage() {
                 Activity
               </TabsTrigger>
             )}
-            {showJoinRequests && (
+            {isAdmin && (
               <TabsTrigger value="join-requests" className="flex items-center gap-2">
                 <UserPlus className="h-4 w-4" />
                 Requests
@@ -293,7 +293,7 @@ export default function GroupPage() {
               </TabsContent>
             )}
 
-            {showJoinRequests && (
+            {isAdmin && (
               <TabsContent value="join-requests">
                 <Card>
                   <CardContent className="p-6">
