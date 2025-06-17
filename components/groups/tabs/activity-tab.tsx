@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, UserPlus, UserMinus, Shield, Settings, MessageSquare, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ActivityLog {
   id: string;
@@ -78,13 +79,26 @@ export function ActivityTab({ groupId, isAdmin }: ActivityTabProps) {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
-          <CardDescription>Loading activity...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

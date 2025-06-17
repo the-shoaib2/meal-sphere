@@ -26,6 +26,7 @@ import { MembersTab } from '@/components/groups/tabs/members-tab';
 import { SettingsTab } from '@/components/groups/tabs/settings-tab';
 import { ActivityTab } from '@/components/groups/tabs/activity-tab';
 import { JoinRequestsTab } from '@/components/groups/tabs/join-requests-tab';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type ApiMember = {
   id: string;
@@ -120,8 +121,79 @@ export default function GroupPage() {
 
   if (isLoading || isLeaving) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto px-0 sm:px-4 py-4 sm:py-8">
+        <div className="flex flex-col gap-4 sm:gap-6">
+          <div className="flex items-center gap-4 px-4 sm:px-0">
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-20" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+            </div>
+          </div>
+
+          <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-4 sm:rounded-md">
+              <TabsTrigger value="members" className="flex items-center gap-2">
+                <Users className="h-4 w-4 hidden sm:block" />
+                Members
+              </TabsTrigger>
+              <TabsTrigger value="join-requests" className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 hidden sm:block" />
+                Requests
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Activity className="h-4 w-4 hidden sm:block" />
+                Activity
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4 hidden sm:block" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="mt-6">
+              <TabsContent value="members">
+                <MembersTab
+                  groupId={groupId}
+                  isAdmin={false}
+                  isCreator={false}
+                  currentUserId={session?.user?.id}
+                  members={[]}
+                  onMemberUpdate={() => {}}
+                />
+              </TabsContent>
+
+              <TabsContent value="join-requests">
+                <JoinRequestsTab
+                  groupId={groupId}
+                  isAdmin={false}
+                />
+              </TabsContent>
+
+              <TabsContent value="activity">
+                <ActivityTab
+                  groupId={groupId}
+                  isAdmin={false}
+                />
+              </TabsContent>
+
+              <TabsContent value="settings">
+                <SettingsTab
+                  groupId={groupId}
+                  isAdmin={false}
+                  isCreator={false}
+                  onUpdate={() => {}}
+                />
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
       </div>
     );
   }

@@ -29,6 +29,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from '../invite-card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Member {
   id: string;
@@ -70,6 +71,7 @@ export function MembersTab({
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const { isLoading } = useGroups();
   const { toast } = useToast();
 
   const handleRoleChange = async (newRole: Role) => {
@@ -178,6 +180,41 @@ export function MembersTab({
         );
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <Skeleton className="h-10 w-32" />
+            </div>
+
+            <div className="divide-y">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

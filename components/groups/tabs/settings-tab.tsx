@@ -19,6 +19,7 @@ import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from '../invite-card';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -152,9 +153,9 @@ type GroupWithExtras = {
   category?: string;
 };
 
-export function SettingsTab({ 
-  groupId, 
-  onUpdate, 
+export function SettingsTab({
+  groupId,
+  onUpdate,
   onLeave,
   isAdmin = false,
   isCreator = false,
@@ -316,7 +317,7 @@ export function SettingsTab({
   };
 
   if (isLoadingGroup) {
-    return (
+  return (
       <div className="flex items-center justify-center p-8">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
@@ -341,6 +342,54 @@ export function SettingsTab({
   const groupWithExtras = group as GroupWithExtras;
   const category = groupWithExtras.category ?? '';
   const tags: string[] = groupWithExtras.tags ?? [];
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex items-center gap-2 p-4 bg-muted/30 rounded-lg">
+                      <Skeleton className="h-4 w-4" />
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -399,7 +448,7 @@ export function SettingsTab({
                     {errors.maxMembers && (
                       <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
                     )}
-                  </div>
+      </div>
 
                   <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                     <div className="space-y-0.5">
@@ -415,9 +464,9 @@ export function SettingsTab({
                       checked={isPrivateForm}
                       onCheckedChange={(checked) => setValue('isPrivate', checked)}
                       disabled={!isAdmin}
-                    />
-                  </div>
-                </div>
+        />
+      </div>
+    </div>
               </div>
 
               <div className="space-y-4">

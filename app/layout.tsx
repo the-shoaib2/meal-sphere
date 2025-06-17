@@ -33,7 +33,7 @@ export default async function RootLayout({
             <ThemeProvider>
               <LanguageProvider>
                 <NotificationProvider>
-                  <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 flex flex-col">
                     {children}
                   </div>
                   <ToastProvider />

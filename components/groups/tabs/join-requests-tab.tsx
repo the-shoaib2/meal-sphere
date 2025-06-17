@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, X, UserPlus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface JoinRequest {
   id: string;
@@ -95,6 +96,41 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
   }
 
   const pendingRequests = requests?.filter(r => r.status === 'PENDING') || [];
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-20" />
+                    <Skeleton className="h-9 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
