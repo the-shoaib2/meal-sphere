@@ -171,6 +171,8 @@ export function SettingsTab({
   const { toast } = useToast();
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState('');
+  const [deleteGroupName, setDeleteGroupName] = useState('');
+  const [isDeleteNameValid, setIsDeleteNameValid] = useState(false);
 
   const form = useForm<GroupSettingsFormValues>({
     resolver: zodResolver(groupSettingsSchema),
@@ -200,6 +202,10 @@ export function SettingsTab({
       setValue('features', (group as GroupWithExtras).features || {});
     }
   }, [group, setValue]);
+
+  useEffect(() => {
+    setIsDeleteNameValid(deleteGroupName === group?.name);
+  }, [deleteGroupName, group?.name]);
 
   const handleAddTag = () => {
     if (!newTag.trim()) {
@@ -269,6 +275,35 @@ export function SettingsTab({
     }
   };
 
+  const handleFeatureToggle = async (featureId: string, checked: boolean) => {
+    try {
+      const newFeatures = { ...formFeatures, [featureId]: checked };
+      setValue(`features.${featureId}`, checked);
+      
+      await updateGroup.mutateAsync({
+        groupId,
+        data: {
+          features: newFeatures,
+        }
+      });
+
+      await refetch();
+      onUpdate();
+      toast({
+        title: 'Success',
+        description: `${GROUP_FEATURES[featureId].name} ${checked ? 'enabled' : 'disabled'}`,
+      });
+    } catch (error) {
+      // Revert the switch if the update fails
+      setValue(`features.${featureId}`, !checked);
+      toast({
+        title: 'Error',
+        description: 'Failed to update feature. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleLeaveGroup = async () => {
     if (isLeaving || !onLeave) {
       return;
@@ -297,23 +332,25 @@ export function SettingsTab({
   };
 
   const handleDeleteGroup = async () => {
-    if (!groupId) return;
+    if (!groupId || !isDeleteNameValid) return;
 
     try {
       setIsDeleting(true);
       await deleteGroup.mutateAsync(groupId);
-      // The onSuccess handler in useGroups will handle the navigation and toast
+      // Dialog will be closed by the mutation's onSuccess handler
     } catch (error) {
       console.error('Error deleting group:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete group. Please try again.',
-        variant: 'destructive',
-      });
     } finally {
       setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
     }
+  };
+
+  const handleDeleteDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      setDeleteGroupName('');
+      setIsDeleteNameValid(false);
+    }
+    setIsDeleteDialogOpen(open);
   };
 
   if (isLoadingGroup) {
@@ -321,7 +358,7 @@ export function SettingsTab({
       <Card>
         <CardHeader>
           <CardTitle>Group Settings</CardTitle>
-          <CardDescription>Loading group settings...</CardDescription>
+          <CardDescription>Manage your group's settings and preferences</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -513,150 +550,281 @@ export function SettingsTab({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Group Name</Label>
-                  <Input
-                    id="name"
-                    {...register('name')}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Group Name</Label>
+              <Input
+                id="name"
+                {...register('name')}
                 placeholder="Enter group name"
-                  />
-                  {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    {...register('description')}
-                placeholder="Enter group description"
-                  />
-                  {errors.description && (
-                    <p className="text-sm text-destructive">{errors.description.message}</p>
-                  )}
-                </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="isPrivate">Private Group</Label>
-                <Switch
-                  id="isPrivate"
-                  checked={isPrivateForm}
-                  onCheckedChange={(checked) => setValue('isPrivate', checked)}
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Private groups require approval for new members to join
-              </p>
-              </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maxMembers">Maximum Members</Label>
-                  <Input
-                id="maxMembers"
-                    type="number"
-                {...register('maxMembers')}
-                placeholder="Enter maximum number of members"
               />
-                  {errors.maxMembers && (
-                    <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
-                  )}
-                </div>
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
 
             <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Add a tag"
-                />
-                <Button type="button" onClick={handleAddTag}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {tagError && (
-                <p className="text-sm text-destructive">{tagError}</p>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                {...register('description')}
+                placeholder="Enter group description"
+              />
+              {errors.description && (
+                <p className="text-sm text-destructive">{errors.description.message}</p>
               )}
-              <div className="flex flex-wrap gap-2 mt-2">
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="maxMembers">Maximum Members</Label>
+                <Input
+                  id="maxMembers"
+                  type="number"
+                  {...register('maxMembers')}
+                  placeholder="Enter maximum number of members"
+                />
+                {errors.maxMembers && (
+                  <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Add a tag"
+                  />
+                  <Button type="button" onClick={handleAddTag}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {tagError && (
+                  <p className="text-sm text-destructive">{tagError}</p>
+                )}
+                <div className="flex flex-wrap gap-2 mt-2">
                   {formTags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
+                    <Badge key={tag} variant="secondary">
                       {tag}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(tag)}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
+                </div>
               </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
             </div>
 
             <div className="space-y-4">
               <Label>Features</Label>
-              <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="isPrivate">Private Group</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Private groups require approval for new members to join
+                    </p>
+                  </div>
+                  <Switch
+                    id="isPrivate"
+                    checked={isPrivateForm}
+                    onCheckedChange={(checked) => {
+                      setValue('isPrivate', checked);
+                      handleSubmit(onSubmit)();
+                    }}
+                  />
+                </div>
+
                 {Object.entries(GROUP_FEATURES).map(([key, feature]) => (
-                  <div key={key} className="flex items-center justify-between">
+                  <div key={key} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                     <div className="space-y-1">
                       <Label htmlFor={key}>{feature.name}</Label>
                       <p className="text-sm text-muted-foreground">
                         {feature.description}
                       </p>
-                        </div>
-                        <Switch
+                    </div>
+                    <Switch
                       id={key}
                       checked={formFeatures[key] ?? feature.defaultValue}
-                      onCheckedChange={(checked) =>
-                        setValue(`features.${key}`, checked)
-                      }
-                        />
-                      </div>
-                    ))}
+                      onCheckedChange={(checked) => handleFeatureToggle(key, checked)}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between">
-            <div className="space-x-2">
-              {!isCreator && onLeave && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setIsLeaveDialogOpen(true)}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                      Leave Group
-                </Button>
-              )}
-              {isCreator && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Group
-                </Button>
-            )}
-          </div>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+            <div className="space-y-4 border-t pt-6">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+                <p className="text-sm text-muted-foreground">
+                  These actions are irreversible and will permanently affect your group. Please proceed with caution.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {!isCreator && onLeave && (
+                  <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-destructive">Leave Group</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setIsLeaveDialogOpen(true)}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Leave
+                    </Button>
+                  </div>
+                )}
+
+                {isCreator && (
+                  <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
+                    <div className="space-y-1">
+                      <h4 className="font-medium text-destructive">Delete Group</h4>
+                      <p className="text-sm text-muted-foreground">
+                        This will permanently delete the group and all associated data. This action cannot be undone. All members will lose access to the group and its content.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Group
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Group</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    <div className="space-y-4">
+                      <div>
+                        This action cannot be undone. This will permanently delete the group
+                        and all associated data including:
+                      </div>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>All group messages and announcements</li>
+                        <li>Member roles and permissions</li>
+                        <li>Activity logs and history</li>
+                        <li>Meal plans and shopping lists</li>
+                        <li>Payment records and transactions</li>
+                      </ul>
+                      <div className="space-y-2 pt-4">
+                        <div className="font-medium">
+                          To confirm, please type <span className="font-bold text-destructive">{group?.name}</span>:
+                        </div>
+                        <Input
+                          placeholder="Enter group name"
+                          value={deleteGroupName}
+                          onChange={(e) => setDeleteGroupName(e.target.value)}
+                          className={`${
+                            isDeleteNameValid 
+                              ? "border-green-500 focus-visible:ring-green-500" 
+                              : deleteGroupName 
+                                ? "border-destructive focus-visible:ring-destructive" 
+                                : ""
+                          }`}
+                          disabled={isDeleting}
+                        />
+                        {deleteGroupName && !isDeleteNameValid && (
+                          <p className="text-sm text-destructive">
+                            The name doesn't match the group name
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel 
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteGroup}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isDeleting || !isDeleteNameValid}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Group
+                      </>
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isLeaveDialogOpen} onOpenChange={handleLeaveDialogOpenChange}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Leave Group</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to leave this group? You will need to be invited back to rejoin.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleLeaveGroup}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isLeaving}
+                  >
+                    {isLeaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Leaving...
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Leave Group
+                      </>
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </form>
       </CardContent>

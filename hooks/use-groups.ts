@@ -370,18 +370,49 @@ export function useGroups(): UseGroupsReturn {
     },
   });
   // Delete group
-  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, string>({
+  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, string, { previousGroups: Group[] | undefined }>({
     mutationFn: async (groupId: string) => {
       await axios.delete(`/api/groups/${groupId}`);
     },
+    onMutate: async (groupId: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['user-groups'] });
+      await queryClient.cancelQueries({ queryKey: ['group', groupId] });
+
+      // Snapshot the previous value
+      const previousGroups = queryClient.getQueryData<Group[]>(['user-groups']);
+
+      // Optimistically update the groups list
+      if (Array.isArray(previousGroups)) {
+        queryClient.setQueryData(['user-groups'], 
+          previousGroups.filter(g => g.id !== groupId)
+        );
+      }
+
+      // Remove the group from cache
+      queryClient.removeQueries({ queryKey: ['group', groupId] });
+
+      return { previousGroups };
+    },
     onSuccess: () => {
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
       toast.success('Group deleted successfully');
       router.push('/groups');
     },
-    onError: (error: AxiosError<{ message: string }>) => {
+    onError: (error: AxiosError<{ message: string }>, groupId: string, context) => {
       console.error('Error deleting group:', error);
+      
+      // Rollback on error
+      if (context?.previousGroups) {
+        queryClient.setQueryData(['user-groups'], context.previousGroups);
+      }
+      
       toast.error(error.response?.data?.message || 'Failed to delete group');
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
     },
   });
 
