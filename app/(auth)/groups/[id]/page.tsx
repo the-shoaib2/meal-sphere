@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft, LogOut, Users, Settings, Activity, UserPlus } from 'lucide-react';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -61,12 +61,12 @@ export default function GroupPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { data: group, isLoading, error, refetch } = useGroups().useGroupDetails(groupId);
-  
+
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
   const [activeTab, setActiveTab] = useState('members');
-  
+
   const { leaveGroup } = useGroups();
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function GroupPage() {
     } catch (error) {
       console.error('Error leaving group:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to leave group';
-      
+
       if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
         toast.error('Group creator cannot leave. Please transfer ownership or delete the group.');
       } else {
@@ -137,10 +137,10 @@ export default function GroupPage() {
   }
 
   // Find the current user's membership in the group
-  const currentUserMembership = Array.isArray(group.members) 
+  const currentUserMembership = Array.isArray(group.members)
     ? group.members.find((member) => member.userId === session?.user?.id)
     : undefined;
-  
+
   const userRole = currentUserMembership?.role;
   const isAdmin = userRole?.toUpperCase() === 'ADMIN' || userRole?.toUpperCase() === 'MODERATOR';
   const isCreator = group.createdByUser?.id === session?.user?.id;
@@ -159,32 +159,32 @@ export default function GroupPage() {
   const showJoinRequests = isAdmin;
 
   // Update the member mapping
-  const mappedMembers = Array.isArray(group.members) 
+  const mappedMembers = Array.isArray(group.members)
     ? group.members.map(member => ({
-        id: member.id,
-        userId: member.userId,
-        roomId: groupId,
-        isCurrent: member.userId === session?.user?.id,
-        isActive: true,
-        lastActive: new Date().toISOString(),
-        role: member.role as Role,
-        joinedAt: member.joinedAt,
-        mutedUntil: null,
-        permissions: null,
-        user: {
-          id: member.user.id,
-          name: member.user.name || '',
-          email: member.user.email || '',
-          image: member.user.image || '',
-          createdAt: new Date().toISOString()
-        }
-      }))
+      id: member.id,
+      userId: member.userId,
+      roomId: groupId,
+      isCurrent: member.userId === session?.user?.id,
+      isActive: true,
+      lastActive: new Date().toISOString(),
+      role: member.role as Role,
+      joinedAt: member.joinedAt,
+      mutedUntil: null,
+      permissions: null,
+      user: {
+        id: member.user.id,
+        name: member.user.name || '',
+        email: member.user.email || '',
+        image: member.user.image || '',
+        createdAt: new Date().toISOString()
+      }
+    }))
     : [];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto px-0 sm:px-4 py-4 sm:py-8">
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex items-center gap-4 px-4 sm:px-0">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -211,26 +211,14 @@ export default function GroupPage() {
         </div>
 
         <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4">
+          <TabsList className="grid grid-cols-4 sm:rounded-md">
             <TabsTrigger value="members" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
+              <Users className="h-4 w-4 hidden sm:block" />
               Members
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </TabsTrigger>
-            )}
-            {showActivityLog && (
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Activity
-              </TabsTrigger>
-            )}
-            {isAdmin && (
               <TabsTrigger value="join-requests" className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
+                <UserPlus className="h-4 w-4 hidden sm:block" />
                 Requests
                 {pendingRequests > 0 && (
                   <Badge variant="destructive" className="ml-2">
@@ -239,70 +227,70 @@ export default function GroupPage() {
                 )}
               </TabsTrigger>
             )}
+            {showActivityLog && (
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Activity className="h-4 w-4 hidden sm:block" />
+                Activity
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4 hidden sm:block" />
+                Settings
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <div className="mt-6">
             <TabsContent value="members">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                  </div>
-                  <MembersTab
-                    groupId={groupId}
-                    isAdmin={isAdmin}
-                    isCreator={isCreator}
-                    currentUserId={session?.user?.id}
-                    members={mappedMembers}
-                    onMemberUpdate={() => {
-                      refetch();
-                    }}
-                  />
-                </CardContent>
-              </Card>
+
+              <MembersTab
+                groupId={groupId}
+                isAdmin={isAdmin}
+                isCreator={isCreator}
+                currentUserId={session?.user?.id}
+                members={mappedMembers}
+                onMemberUpdate={() => {
+                  refetch();
+                }}
+              />
+
             </TabsContent>
 
             {isAdmin && (
               <TabsContent value="settings">
-                <Card>
-                  <CardContent className="p-6">
-                    <SettingsTab
-                      groupId={groupId}
-                      isAdmin={isAdmin}
-                      isCreator={isCreator}
-                      onUpdate={() => {
-                        refetch();
-                        toast.success('Group updated successfully');
-                      }}
-                      onLeave={!isCreator ? handleLeaveGroup : undefined}
-                    />
-                  </CardContent>
-                </Card>
+
+                <SettingsTab
+                  groupId={groupId}
+                  isAdmin={isAdmin}
+                  isCreator={isCreator}
+                  onUpdate={() => {
+                    refetch();
+                    toast.success('Group updated successfully');
+                  }}
+                  onLeave={!isCreator ? handleLeaveGroup : undefined}
+                />
+
               </TabsContent>
             )}
 
             {showActivityLog && (
               <TabsContent value="activity">
-                <Card>
-                  <CardContent className="p-6">
-                    <ActivityTab
-                      groupId={groupId}
-                      isAdmin={isAdmin}
-                    />
-                  </CardContent>
-                </Card>
+
+                <ActivityTab
+                  groupId={groupId}
+                  isAdmin={isAdmin}
+                />
+
               </TabsContent>
             )}
 
             {isAdmin && (
               <TabsContent value="join-requests">
-                <Card>
-                  <CardContent className="p-6">
-                    <JoinRequestsTab
-                      groupId={groupId}
-                      isAdmin={isAdmin}
-                    />
-                  </CardContent>
-                </Card>
+                <JoinRequestsTab
+                  groupId={groupId}
+                  isAdmin={isAdmin}
+                />
               </TabsContent>
             )}
           </div>
@@ -310,8 +298,8 @@ export default function GroupPage() {
 
         {!isAdmin && (
           <div className="mt-8 pt-6 border-t">
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => setShowLeaveDialog(true)}
               disabled={isLeaving}
               className="w-full sm:w-auto"
@@ -355,13 +343,13 @@ export default function GroupPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel 
+              <AlertDialogCancel
                 disabled={isLeaving}
                 className="w-full sm:w-auto"
               >
                 Cancel
               </AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={handleLeaveGroup}
                 className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={isLeaving}
