@@ -13,6 +13,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { Header } from "@/components/header"
+import { QueryProvider } from "@/components/providers/query-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -35,22 +36,24 @@ export default async function RootLayout({
           <ThemeProvider>
             <LanguageProvider>
               <NotificationProvider>
-                <div className="flex h-screen w-full overflow-hidden">
-                  <SidebarProvider>
-                    <AppSidebar />
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                      <Header />
-                      <SidebarInset className="flex-1 flex flex-col overflow-hidden">
-                        <main className="flex-1 overflow-y-auto">
-                          <div className="p-4">
-                            {children}
-                          </div>
-                        </main>
-                      </SidebarInset>
-                    </div>
-                  </SidebarProvider>
-                </div>
-                <ToastProvider />
+                <QueryProvider>
+                  <div className="flex h-screen w-full overflow-hidden">
+                    <SidebarProvider>
+                      <AppSidebar />
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        <Header />
+                        <SidebarInset className="flex-1 flex flex-col overflow-hidden">
+                          <main className="flex-1 overflow-y-auto">
+                            <div className="p-4">
+                              {children}
+                            </div>
+                          </main>
+                        </SidebarInset>
+                      </div>
+                    </SidebarProvider>
+                  </div>
+                  <ToastProvider />
+                </QueryProvider>
               </NotificationProvider>
             </LanguageProvider>
           </ThemeProvider>

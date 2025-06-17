@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { Role } from '@prisma/client';
 import { toast } from 'react-hot-toast';
+import { isValidObjectId } from '@/lib/utils';
 
 interface UseGroupAccessProps {
   groupId: string;
@@ -26,7 +27,7 @@ export function useGroupAccess({
   onError 
 }: UseGroupAccessProps): UseGroupAccessReturn {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(false);
@@ -37,7 +38,13 @@ export function useGroupAccess({
 
   useEffect(() => {
     const checkGroupAccess = async () => {
-      if (!session?.user?.id) {
+      // Wait for session to be ready
+      if (status === 'loading') {
+        return;
+      }
+
+      // Check if user is authenticated
+      if (status === 'unauthenticated' || !session?.user?.id) {
         setError('Please sign in to access this page');
         setIsLoading(false);
         onLoading?.(false);
@@ -48,49 +55,98 @@ export function useGroupAccess({
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/groups/${groupId}/access`);
-        const data = await response.json();
+        // First try to treat it as an invite token
+        setIsInviteToken(true);
+        const inviteResponse = await fetch(`/api/groups/join/${groupId}`);
+        const inviteData = await inviteResponse.json();
 
-        if (!response.ok) {
-          // Handle 404 for invalid invite token
-          if (response.status === 404 && data.isInviteToken) {
-            setError('Invalid or expired invite token');
+        if (inviteResponse.ok) {
+          // It's a valid invite token
+          setIsMember(inviteData.isMember);
+          setUserRole(inviteData.role);
+          setCanAccess(true);
+          setActualGroupId(inviteData.groupId);
+
+          // If user is already a member, show success message
+          if (inviteData.isMember) {
+            toast.success('You are already a member of this group', {
+              icon: '✓',
+            });
+            // Redirect after a short delay to allow the user to see the message
+            setTimeout(() => {
+              router.push(`/groups/${inviteData.groupId}`);
+            }, 1500);
+            return;
+          }
+        } else if (inviteResponse.status === 404) {
+          // Not an invite token, try as a regular group ID
+          setIsInviteToken(false);
+          
+          // Validate regular group ID format
+          if (!isValidObjectId(groupId)) {
+            setError('Invalid group ID format');
             setCanAccess(false);
-            setIsInviteToken(true);
             setIsLoading(false);
             onLoading?.(false);
             return;
           }
-          throw new Error(data.error || 'Failed to check group access');
-        }
 
-        setIsMember(data.isMember);
-        setUserRole(data.userRole);
-        setCanAccess(data.canAccess);
-        setIsInviteToken(data.isInviteToken);
-        setActualGroupId(data.actualId || data.groupId);
+          // Regular group access check
+          const response = await fetch(`/api/groups/${groupId}/access`);
+          const data = await response.json();
 
-        // If user is already a member, show success message
-        if (data.isMember) {
-          toast.success('You are already a member of this group', {
-            icon: '✓',
-          });
-          // Redirect after a short delay to allow the user to see the message
-          setTimeout(() => {
-            router.push(`/groups/${data.actualId || data.groupId}`);
-          }, 1500);
-          return;
-        }
+          if (!response.ok) {
+            if (response.status === 401) {
+              setError('Please sign in to access this page');
+            } else if (response.status === 404) {
+              setError('Group not found');
+            } else {
+              setError(data.error || 'Failed to check group access');
+            }
+            setCanAccess(false);
+            setIsLoading(false);
+            onLoading?.(false);
+            return;
+          }
 
-        // If user doesn't have access, show error message
-        if (!data.canAccess) {
-          setError('You do not have access to this group');
+          setIsMember(data.isMember);
+          setUserRole(data.userRole);
+          setCanAccess(data.canAccess);
+          setActualGroupId(data.actualId || data.groupId);
+
+          // If user is already a member, show success message
+          if (data.isMember) {
+            toast.success('You are already a member of this group', {
+              icon: '✓',
+            });
+            // Redirect after a short delay to allow the user to see the message
+            setTimeout(() => {
+              router.push(`/groups/${data.actualId || data.groupId}`);
+            }, 1500);
+            return;
+          }
+
+          // If user doesn't have access, show error message
+          if (!data.canAccess) {
+            setError('You do not have access to this group');
+            setCanAccess(false);
+            return;
+          }
+        } else {
+          // Handle other invite token errors
+          if (inviteResponse.status === 401) {
+            setError('Please sign in to access this page');
+          } else {
+            setError(inviteData.error || 'Invalid or expired invite token');
+          }
           setCanAccess(false);
+          setIsLoading(false);
+          onLoading?.(false);
           return;
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error checking group access:', error);
-        setError(error.message || 'Failed to check group access');
+        setError(error instanceof Error ? error.message : 'Failed to check group access');
         setCanAccess(false);
       } finally {
         setIsLoading(false);
@@ -99,7 +155,7 @@ export function useGroupAccess({
     };
 
     checkGroupAccess();
-  }, [groupId, session?.user?.id, router, onLoading]);
+  }, [groupId, session?.user?.id, status, router, onLoading]);
 
   useEffect(() => {
     onError?.(error);

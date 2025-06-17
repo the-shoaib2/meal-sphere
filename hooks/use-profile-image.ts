@@ -16,6 +16,16 @@ interface UseProfileImageReturn {
   removeImage: () => Promise<void>
 }
 
+const isValidImageUrl = (url: string | null): boolean => {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export function useProfileImage({ 
   initialImage = null, 
   onImageUpdate,
@@ -27,12 +37,23 @@ export function useProfileImage({
 
   useEffect(() => {
     if (initialImage && lazyLoad) {
+      if (!isValidImageUrl(initialImage)) {
+        setIsLoaded(true)
+        setImage(null)
+        return
+      }
+
       const img = new Image()
       img.src = initialImage
-      img.onload = () => setIsLoaded(true)
+      
+      img.onload = () => {
+        setIsLoaded(true)
+        setImage(initialImage)
+      }
+      
       img.onerror = () => {
-        console.error("Failed to load profile image")
-        setIsLoaded(false)
+        setIsLoaded(true)
+        setImage(null)
       }
     } else {
       setIsLoaded(true)
@@ -43,8 +64,9 @@ export function useProfileImage({
     setIsLoading(true)
     setIsLoaded(false)
     try {
-      // Validate URL format
-      new URL(imageUrl)
+      if (!isValidImageUrl(imageUrl)) {
+        throw new Error("Invalid image URL format")
+      }
 
       // Preload image
       if (lazyLoad) {
@@ -52,7 +74,7 @@ export function useProfileImage({
         img.src = imageUrl
         await new Promise((resolve, reject) => {
           img.onload = resolve
-          img.onerror = reject
+          img.onerror = () => reject(new Error("Failed to load image"))
         })
       }
 
@@ -67,8 +89,9 @@ export function useProfileImage({
 
       toast.success("Profile image updated successfully")
     } catch (error) {
-      console.error("Failed to update profile image:", error)
-      toast.error("Invalid image URL format")
+      toast.error(error instanceof Error ? error.message : "Failed to load image. Please try a different image URL.")
+      setImage(null)
+      setIsLoaded(true)
       throw error
     } finally {
       setIsLoading(false)
@@ -79,7 +102,7 @@ export function useProfileImage({
     setIsLoading(true)
     try {
       setImage(null)
-      setIsLoaded(false)
+      setIsLoaded(true)
       
       // Call the callback if provided
       if (onImageUpdate) {
@@ -88,7 +111,6 @@ export function useProfileImage({
 
       toast.success("Profile image removed successfully")
     } catch (error) {
-      console.error("Failed to remove profile image:", error)
       toast.error("Failed to remove profile image")
       throw error
     } finally {

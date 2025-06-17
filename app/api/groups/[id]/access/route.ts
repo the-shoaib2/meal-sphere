@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
-import { Role } from '@prisma/client';
+import { isValidObjectId } from '@/lib/utils';
 
 export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,180 +14,14 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
 
-    // Check if this is an invite token (64 characters)
-    if (id.length === 64) {
-      // First try to find an InviteToken
-      const inviteToken = await prisma.inviteToken.findUnique({
-        where: {
-          token: id
-        },
-        include: {
-          room: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              isPrivate: true,
-              maxMembers: true,
-              createdBy: true,
-              createdAt: true,
-              createdByUser: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  image: true
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (inviteToken) {
-        // Check if token is expired
-        if (inviteToken.expiresAt && inviteToken.expiresAt < new Date()) {
-          return NextResponse.json(
-            { 
-              error: 'This invite token has expired',
-              isInviteToken: true,
-              canAccess: false
-            },
-            { status: 400 }
-          );
-        }
-
-        // Check if token has been used
-        if (inviteToken.usedAt) {
-          return NextResponse.json(
-            { 
-              error: 'This invite token has already been used',
-              isInviteToken: true,
-              canAccess: false
-            },
-            { status: 400 }
-          );
-        }
-
-        // Check if user is already a member
-        const existingMember = await prisma.roomMember.findFirst({
-          where: {
-            roomId: inviteToken.roomId,
-            userId: session.user.id
-          }
-        });
-
-        if (existingMember) {
-          return NextResponse.json(
-            { 
-              message: 'You are already a member of this group',
-              isInviteToken: true,
-              canAccess: true,
-              groupId: inviteToken.roomId,
-              isMember: true
-            },
-            { status: 200 }
-          );
-        }
-
-        return NextResponse.json({
-          isInviteToken: true,
-          canAccess: true,
-          groupId: inviteToken.roomId
-        });
-      }
-
-      // If no InviteToken found, try to find an Invitation
-      const invitation = await prisma.invitation.findFirst({
-        where: {
-          code: id
-        },
-        include: {
-          group: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              isPrivate: true,
-              maxMembers: true,
-              createdBy: true,
-              createdAt: true,
-              createdByUser: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  image: true
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (!invitation) {
-        return NextResponse.json(
-          { 
-            error: 'Invalid invite token',
-            isInviteToken: true,
-            canAccess: false
-          },
-          { status: 400 }
-        );
-      }
-
-      // Check if invitation has been used
-      if (invitation.usedAt) {
-        return NextResponse.json(
-          { 
-            error: 'This invitation has already been used',
-            isInviteToken: true,
-            canAccess: false
-          },
-          { status: 400 }
-        );
-      }
-
-      // Check if invitation has expired
-      if (invitation.expiresAt < new Date()) {
-        return NextResponse.json(
-          { 
-            error: 'This invitation has expired',
-            isInviteToken: true,
-            canAccess: false
-          },
-          { status: 400 }
-        );
-      }
-
-      // Check if user is already a member
-      const existingMember = await prisma.roomMember.findFirst({
-        where: {
-          roomId: invitation.groupId,
-          userId: session.user.id
-        }
-      });
-
-      if (existingMember) {
-        return NextResponse.json(
-          { 
-            message: 'You are already a member of this group',
-            isInviteToken: true,
-            canAccess: true,
-            groupId: invitation.groupId,
-            isMember: true
-          },
-          { status: 200 }
-        );
-      }
-
-      return NextResponse.json({
-        isInviteToken: true,
-        canAccess: true,
-        groupId: invitation.groupId
-      });
+    // Validate if the ID is a valid MongoDB ObjectId
+    if (!isValidObjectId(id)) {
+      return NextResponse.json(
+        { error: 'Invalid group ID format' },
+        { status: 400 }
+      );
     }
 
     // Regular group access check
@@ -204,31 +38,24 @@ export async function GET(
 
     if (!group) {
       return NextResponse.json(
-        { 
-          error: 'Group not found',
-          isInviteToken: false,
-          canAccess: false
-        },
+        { error: 'Group not found' },
         { status: 404 }
       );
     }
 
     const isMember = group.members.length > 0;
+    const userRole = isMember ? group.members[0].role : null;
 
     return NextResponse.json({
-      isInviteToken: false,
-      canAccess: !group.isPrivate || isMember,
-      groupId: group.id,
-      isMember
+      isMember,
+      userRole,
+      canAccess: isMember,
+      groupId: group.id
     });
   } catch (error) {
     console.error('Error checking group access:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to check group access',
-        isInviteToken: false,
-        canAccess: false
-      },
+      { error: 'Failed to check group access' },
       { status: 500 }
     );
   }

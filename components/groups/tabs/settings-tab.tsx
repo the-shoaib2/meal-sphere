@@ -20,6 +20,7 @@ import { InviteCard } from '../invite-card';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NotificationSettings } from './notification-settings';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -676,6 +677,9 @@ export function SettingsTab({
               </div>
             </div>
 
+            {/* Add Notification Settings section */}
+            <NotificationSettings groupId={groupId} isAdmin={isAdmin} />
+
             <div className="space-y-4 border-t pt-6">
               <div className="space-y-1">
                 <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
@@ -826,6 +830,8 @@ export function SettingsTab({
               </AlertDialogContent>
             </AlertDialog>
           </div>
+
+
         </form>
       </CardContent>
     </Card>

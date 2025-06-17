@@ -47,7 +47,7 @@ export async function POST(
       where: {
         roomId: id,
         userId: session.user.id,
-        status: 'pending'
+        status: 'PENDING'
       }
     });
 
@@ -61,7 +61,7 @@ export async function POST(
         roomId: id,
         userId: session.user.id,
         message,
-        status: 'pending'
+        status: 'PENDING'
       }
     });
 

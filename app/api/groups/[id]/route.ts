@@ -24,7 +24,7 @@ const joinGroupSchema = z.object({
 
 // GET /api/groups/[id] - Get group details
 export async function GET(
-  req: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -43,6 +43,8 @@ export async function GET(
         description: true,
         isPrivate: true,
         maxMembers: true,
+        createdBy: true,
+        createdAt: true,
         members: {
           select: {
             id: true,

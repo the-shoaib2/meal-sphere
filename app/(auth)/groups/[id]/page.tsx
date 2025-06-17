@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, LogOut, Users, Settings, Activity, UserPlus } from 'lucide-react';
+import { Loader2, ArrowLeft, LogOut, Users, Settings, Activity, UserPlus, AlertCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -221,10 +221,15 @@ export default function GroupPage() {
 
   if (!group) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Group not found</h2>
-        <p className="text-muted-foreground mb-6">This group may have been deleted or you no longer have access to it.</p>
-        <Button onClick={() => router.push('/groups')}>Back to Groups</Button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <AlertCircle className="h-12 w-12 text-destructive" />
+          <h1 className="text-2xl font-bold">Group Not Found</h1>
+          <p className="text-muted-foreground">The group you're looking for doesn't exist or you don't have access to it.</p>
+          <Button onClick={() => router.push('/groups')}>
+            Back to Groups
+          </Button>
+        </div>
       </div>
     );
   }

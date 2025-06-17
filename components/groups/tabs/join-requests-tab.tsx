@@ -102,7 +102,7 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-semibold">Join Requests</CardTitle>
-          <CardDescription>Processing request...</CardDescription>
+          <CardDescription>Manage join requests for your group</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

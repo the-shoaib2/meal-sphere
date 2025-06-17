@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,6 +17,7 @@ import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangl
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
+import { isValidObjectId } from '@/lib/utils';
 
 // Update the join room form schema
 const joinRoomSchema = z.object({
@@ -79,10 +79,8 @@ const GroupCardSkeleton = () => (
 
 // Component implementation
 export default function JoinGroupPage() {
-  // Hooks must be called unconditionally at the top level
   const params = useParams();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const router = useRouter();
 
   // Get the group ID from the URL
@@ -150,6 +148,10 @@ export default function JoinGroupPage() {
         const response = await fetch(`/api/groups/join/${groupId}`);
         const data = await response.json();
 
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch group details');
+        }
+
         // Handle already a member case
         if (data.isMember) {
           toast.success('You are already a member of this group', {
@@ -161,21 +163,17 @@ export default function JoinGroupPage() {
           return;
         }
 
-        // Handle used invitation
-        if (data.error === 'This invitation has already been used') {
-          setError('This invitation has already been used');
-          setIsLoading(false);
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch group details');
-        }
-
         setGroup(data.group);
         setRole(data.role);
         setIsInviteToken(true);
-        setActualGroupId(data.group.id);
+        setActualGroupId(data.groupId);
+        return;
+      }
+
+      // For regular group IDs, validate the format
+      if (!isValidObjectId(groupId)) {
+        setError('Invalid group ID format');
+        setIsLoading(false);
         return;
       }
 
@@ -211,14 +209,9 @@ export default function JoinGroupPage() {
       }
 
       setGroup(data);
-      setIsInviteToken(false);
-      setActualGroupId(data.id);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching group details:', error);
-      setError(error.message || 'Failed to fetch group details');
-      toast.error(error.message || 'Failed to fetch group details', {
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
+      setError(error instanceof Error ? error.message : 'Failed to fetch group details');
     } finally {
       setIsLoading(false);
     }
@@ -327,10 +320,10 @@ export default function JoinGroupPage() {
 
   // Initial data fetch
   useEffect(() => {
-    if (session?.user?.id && groupId) {
+    if (groupId) {
       fetchGroupDetails();
     }
-  }, [session?.user?.id, groupId, fetchGroupDetails]);
+  }, [groupId, fetchGroupDetails]);
 
   // Handle code from URL
   useEffect(() => {
@@ -416,8 +409,10 @@ export default function JoinGroupPage() {
             <CardContent>
               <div className="flex flex-col gap-4">
                 <p className="text-sm text-muted-foreground">
-                  {accessError === 'This invitation has already been used' 
-                    ? 'This invitation link has already been used by another user.'
+                  {accessError === 'This invitation has expired or is invalid'
+                    ? 'This invitation link has expired or is no longer valid.'
+                    : accessError === 'Invalid group ID format'
+                    ? 'The group ID format is invalid. Please check the URL and try again.'
                     : 'You may not have access to this group or the invitation has expired.'}
                 </p>
                 <Button 

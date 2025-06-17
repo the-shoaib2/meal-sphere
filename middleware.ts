@@ -4,19 +4,63 @@ import type { NextRequest } from "next/server"
 
 // Define protected routes that require authentication
 const protectedRoutes = [
+  // Dashboard
   "/dashboard",
-  "/voting",
-  "/meals",
-  "/shopping",
-  "/expenses",
-  "/payments",
-  "/calculations",
-  "/analytics",
-  "/market",
-  "/excel",
-  "/notifications",
+  "/dashboard/:path*",
+  
+  // Groups
+  "/groups",
+  "/groups/:path*",
+  "/groups/join/:id",
+  "/groups/create",
+  
+  // Settings
   "/settings",
-  "/profile"
+  "/settings/:path*",
+  
+  // Market
+  "/market",
+  "/market/:path*",
+  
+  // Expenses
+  "/expenses",
+  "/expenses/:path*",
+  
+  // Analytics
+  "/analytics",
+  "/analytics/:path*",
+  
+  // Excel
+  "/excel",
+  "/excel/:path*",
+  
+  // Calculations
+  "/calculations",
+  "/calculations/:path*",
+  
+  // Notifications
+  "/notifications",
+  "/notifications/:path*",
+  
+  // Shopping
+  "/shopping",
+  "/shopping/:path*",
+  
+  // Voting
+  "/voting",
+  "/voting/:path*",
+  
+  // Meals
+  "/meals",
+  "/meals/:path*",
+  
+  // Payments
+  "/payments",
+  "/payments/:path*",
+  
+  // Profile
+  "/profile",
+  "/profile/:path*"
 ]
 
 // Define public paths that don't require authentication
@@ -60,9 +104,15 @@ export async function middleware(request: NextRequest) {
   )
 
   // Check if current path is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname === route || pathname.startsWith(route + "/")
-  )
+  const isProtectedRoute = protectedRoutes.some(route => {
+    // Convert route pattern to regex
+    const pattern = route
+      .replace(/:\w+\*/g, '.*') // Replace :path* with .*
+      .replace(/:\w+/g, '[^/]+') // Replace :id with [^/]+
+      .replace(/\//g, '\\/') // Escape forward slashes
+    const regex = new RegExp(`^${pattern}$`)
+    return regex.test(pathname)
+  })
 
   // Check if current path is an auth page
   const isAuthPage = authPages.some(page => 
@@ -80,6 +130,7 @@ export async function middleware(request: NextRequest) {
     if (!token) {
       // User is not authenticated and trying to access protected route
       const loginUrl = new URL('/login', request.url)
+      // Store the original URL to redirect back after login
       loginUrl.searchParams.set('callbackUrl', pathname)
       return NextResponse.redirect(loginUrl)
     }

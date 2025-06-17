@@ -131,11 +131,21 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       }
 
       const data = await response.json();
-      setInvite(data.invitation);
+      
+      if (!data.invitation?.code) {
+        throw new Error('Invalid invitation response');
+      }
+
+      setInvite({
+        token: data.invitation.code,
+        expiresAt: data.invitation.expiresAt,
+        role: selectedRole,
+        groupId
+      });
       
       // Generate the invite link with the code
       const baseUrl = window.location.origin;
-      const inviteUrl = `${baseUrl}/groups/join?code=${data.invitation.code}&groupId=${groupId}`;
+      const inviteUrl = `${baseUrl}/groups/join/${data.invitation.code}`;
       setInviteLink(inviteUrl);
     } catch (error) {
       uiToast({

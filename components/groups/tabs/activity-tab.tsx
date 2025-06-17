@@ -81,7 +81,7 @@ export function ActivityTab({ groupId, isAdmin }: ActivityTabProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-semibold">Activity Log</CardTitle>
-          <CardDescription>Loading activity logs...</CardDescription>
+          <CardDescription>Recent group activities</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

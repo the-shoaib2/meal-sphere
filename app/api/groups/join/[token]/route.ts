@@ -1,86 +1,30 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
-import prisma from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ token: string }> }
+  request: NextRequest,
+  context: { params: Promise<{ token: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const { token } = await params;
+    const { token } = await context.params;
 
+    // Find the invite token
     const inviteToken = await prisma.inviteToken.findUnique({
       where: { token },
       include: {
         room: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            isPrivate: true,
-            maxMembers: true,
-            createdBy: true,
-            createdAt: true,
-            createdByUser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!inviteToken) {
-      return new NextResponse('Invalid or expired invite token', { status: 404 });
-    }
-
-    if (inviteToken.expiresAt && new Date(inviteToken.expiresAt) < new Date()) {
-      return new NextResponse('Invite token has expired', { status: 400 });
-    }
-
-    if (inviteToken.usedAt) {
-      return new NextResponse('Invite token has already been used', { status: 400 });
-    }
-
-    return NextResponse.json(inviteToken);
-  } catch (error) {
-    console.error('Error validating invite token:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
-}
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ token: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const { token } = await params;
-
-    const inviteToken = await prisma.inviteToken.findUnique({
-      where: { token },
-      include: {
-        room: {
-          select: {
-            id: true,
-            name: true,
-            isPrivate: true,
-            maxMembers: true,
+          include: {
             members: {
               where: {
                 userId: session.user.id
@@ -92,51 +36,125 @@ export async function POST(
     });
 
     if (!inviteToken) {
-      return new NextResponse('Invalid or expired invite token', { status: 404 });
+      return NextResponse.json(
+        { error: 'Invalid or expired invite token' },
+        { status: 404 }
+      );
     }
 
-    if (inviteToken.expiresAt && new Date(inviteToken.expiresAt) < new Date()) {
-      return new NextResponse('Invite token has expired', { status: 400 });
+    // Check if the token is expired
+    if (inviteToken.expiresAt && inviteToken.expiresAt < new Date()) {
+      return NextResponse.json(
+        { error: 'Invite token has expired' },
+        { status: 400 }
+      );
     }
 
-    if (inviteToken.usedAt) {
-      return new NextResponse('Invite token has already been used', { status: 400 });
+    // Check if user is already a member
+    const isMember = inviteToken.room.members.length > 0;
+
+    return NextResponse.json({
+      group: {
+        id: inviteToken.room.id,
+        name: inviteToken.room.name,
+        description: inviteToken.room.description,
+        isPrivate: inviteToken.room.isPrivate,
+        createdAt: inviteToken.room.createdAt,
+        updatedAt: inviteToken.room.updatedAt,
+        createdById: inviteToken.room.createdBy,
+        isMember
+      },
+      role: inviteToken.role,
+      groupId: inviteToken.roomId,
+      isMember
+    });
+  } catch (error) {
+    console.error('Error in join token route:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ token: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { token } = await context.params;
+
+    // Find the invite token
+    const inviteToken = await prisma.inviteToken.findUnique({
+      where: { token },
+      include: {
+        room: {
+          include: {
+            members: {
+              where: {
+                userId: session.user.id
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!inviteToken) {
+      return NextResponse.json(
+        { error: 'Invalid or expired invite token' },
+        { status: 404 }
+      );
+    }
+
+    // Check if the token is expired
+    if (inviteToken.expiresAt && inviteToken.expiresAt < new Date()) {
+      return NextResponse.json(
+        { error: 'Invite token has expired' },
+        { status: 400 }
+      );
     }
 
     // Check if user is already a member
     if (inviteToken.room.members.length > 0) {
-      return new NextResponse('Already a member of this group', { status: 400 });
+      return NextResponse.json(
+        { error: 'You are already a member of this group' },
+        { status: 400 }
+      );
     }
 
-    // Check if group is full
-    const memberCount = await prisma.roomMember.count({
-      where: { roomId: inviteToken.room.id }
+    // Add user to the group
+    await prisma.roomMember.create({
+      data: {
+        roomId: inviteToken.roomId,
+        userId: session.user.id,
+        role: inviteToken.role
+      }
     });
 
-    if (inviteToken.room.maxMembers && memberCount >= inviteToken.room.maxMembers) {
-      return new NextResponse('Group is full', { status: 400 });
-    }
+    // Delete the used invite token
+    await prisma.inviteToken.delete({
+      where: { id: inviteToken.id }
+    });
 
-    // Create membership and update member count in a transaction
-    const result = await prisma.$transaction([
-      prisma.roomMember.create({
-        data: {
-          userId: session.user.id,
-          roomId: inviteToken.room.id,
-          role: inviteToken.role
-        }
-      }),
-      prisma.inviteToken.update({
-        where: { id: inviteToken.id },
-        data: {
-          usedAt: new Date()
-        }
-      })
-    ]);
-
-    return NextResponse.json(result[0]);
+    return NextResponse.json({
+      success: true,
+      groupId: inviteToken.roomId
+    });
   } catch (error) {
-    console.error('Error joining group with token:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error in join token route:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 } 

@@ -250,7 +250,7 @@ export function useGroups(): UseGroupsReturn {
 
       const endpoint = inviteToken 
         ? `/api/groups/join/${inviteToken}`
-        : `/api/groups/${groupId}`;
+        : `/api/groups/${groupId}/join`;
       
       await axios.post(endpoint, { 
         join: true,
