@@ -15,7 +15,10 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' }, 
+        { status: 401 }
+      );
     }
 
     const { id: groupId } = await params;
@@ -33,17 +36,26 @@ export async function POST(
     });
 
     if (!group) {
-      return new NextResponse('Group not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'Group not found' }, 
+        { status: 404 }
+      );
     }
 
     const membership = group.members[0];
     if (!membership) {
-      return new NextResponse('Not a member of this group', { status: 400 });
+      return NextResponse.json(
+        { error: 'Not a member of this group' }, 
+        { status: 400 }
+      );
     }
 
     // Check if user is the creator
     if (group.createdBy === session.user.id) {
-      return new NextResponse('CREATOR_CANNOT_LEAVE', { status: 400 });
+      return NextResponse.json(
+        { error: 'CREATOR_CANNOT_LEAVE' }, 
+        { status: 400 }
+      );
     }
 
     // Remove membership
@@ -53,9 +65,15 @@ export async function POST(
       }
     });
 
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json(
+      { message: 'Successfully left the group' }, 
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error leaving group:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' }, 
+      { status: 500 }
+    );
   }
 } 
