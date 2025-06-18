@@ -296,29 +296,8 @@ export function useGroups(): UseGroupsReturn {
   // Leave a group
   const leaveGroup = useMutation<void, AxiosError<{ message: string }>, string, LeaveGroupContext>({
     mutationFn: async (groupId: string) => {
-      // First get the current user's membership ID
-      interface GroupMember {
-        id: string;
-        userId: string;
-        role: string;
-        joinedAt: string;
-        user: {
-          id: string;
-          name: string | null;
-          email: string | null;
-          image: string | null;
-        };
-      }
-      
-      const { data: members } = await axios.get<GroupMember[]>(`/api/groups/${groupId}/members`);
-      const currentUserMembership = members.find((m) => m.userId === session?.user?.id);
-      
-      if (!currentUserMembership) {
-        throw new Error('You are not a member of this group');
-      }
-      
-      // Now delete using the membership ID
-      await axios.delete(`/api/groups/${groupId}/members/${currentUserMembership.id}`);
+      // Use the proper API endpoint for leaving a group
+      await axios.post(`/api/groups/${groupId}/leave`);
     },
     onMutate: async (groupId: string): Promise<LeaveGroupContext> => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
@@ -345,10 +324,23 @@ export function useGroups(): UseGroupsReturn {
       
       return { previousGroup, previousGroups };
     },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      toast.success('You have left the group successfully');
+      router.push('/groups');
+    },
     onError: (error: AxiosError<{ message: string }>, groupId: string, context: LeaveGroupContext | undefined) => {
       console.error('Error leaving group:', error);
+      
+      // Handle specific error cases
       const errorMessage = error.response?.data?.message || 'Failed to leave group';
-      toast.error(errorMessage);
+      
+      if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
+        toast.error('Group creator cannot leave. Please transfer ownership or delete the group.');
+      } else {
+        toast.error(errorMessage);
+      }
       
       // Rollback on error
       if (context?.previousGroup) {
@@ -356,11 +348,6 @@ export function useGroups(): UseGroupsReturn {
       }
       if (context?.previousGroups) {
         queryClient.setQueryData(['user-groups'], context.previousGroups);
-      }
-      
-      // Force refresh the page to ensure clean state
-      if (typeof window !== 'undefined') {
-        window.location.href = '/groups';
       }
     },
     onSettled: (data, error, groupId) => {

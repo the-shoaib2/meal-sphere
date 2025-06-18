@@ -62,6 +62,7 @@ export default function GroupPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { data: group, isLoading, error, refetch } = useGroups().useGroupDetails(groupId);
+  const { leaveGroup } = useGroups();
 
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
@@ -69,8 +70,6 @@ export default function GroupPage() {
   const [activeTab, setActiveTab] = useState('members');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-
-  const { leaveGroup } = useGroups();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -108,32 +107,19 @@ export default function GroupPage() {
   }, [error]);
 
   const handleLeaveGroup = async () => {
+    if (!groupId) return;
+
     try {
       setIsLeaving(true);
-      const response = await fetch(`/api/groups/${groupId}/leave`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to leave group');
-      }
-
-      toast.success('You have left the group');
-      router.push('/groups');
+      
+      // Use the leaveGroup mutation from useGroups hook
+      await leaveGroup.mutateAsync(groupId);
+      
+      // The mutation will handle the toast and navigation automatically
+      // No need to manually show toast or navigate here
     } catch (error) {
       console.error('Error leaving group:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to leave group';
-
-      if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
-        toast.error('Group creator cannot leave. Please transfer ownership or delete the group.');
-      } else {
-        toast.error(errorMessage);
-      }
+      // The mutation will handle error toasts automatically
     } finally {
       setIsLeaving(false);
       setShowLeaveDialog(false);
@@ -369,7 +355,6 @@ export default function GroupPage() {
                   refetch();
                   toast.success('Group updated successfully');
                 }}
-                onLeave={!isCreator ? handleLeaveGroup : undefined}
               />
             </TabsContent>
           )}
@@ -399,10 +384,10 @@ export default function GroupPage() {
           <Button
             variant="destructive"
             onClick={() => setShowLeaveDialog(true)}
-            disabled={isLeaving}
+            disabled={isLeaving || leaveGroup.isPending}
             className="w-full sm:w-auto"
           >
-            {isLeaving ? (
+            {isLeaving || leaveGroup.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Leaving...
@@ -442,7 +427,7 @@ export default function GroupPage() {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel
-              disabled={isLeaving}
+              disabled={isLeaving || leaveGroup.isPending}
               className="w-full sm:w-auto"
             >
               Cancel
@@ -450,9 +435,9 @@ export default function GroupPage() {
             <AlertDialogAction
               onClick={handleLeaveGroup}
               className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isLeaving}
+              disabled={isLeaving || leaveGroup.isPending}
             >
-              {isLeaving ? (
+              {isLeaving || leaveGroup.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Leaving...

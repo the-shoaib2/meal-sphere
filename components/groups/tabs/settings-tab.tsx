@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from '@/components/ui/textarea';
 import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from '../invite-card';
-import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NotificationSettings } from './notification-settings';
@@ -140,7 +139,6 @@ interface SettingsTabProps {
   isAdmin: boolean;
   isCreator: boolean;
   onUpdate: () => void;
-  onLeave?: () => Promise<void>;
 }
 
 type GroupWithExtras = {
@@ -157,7 +155,6 @@ type GroupWithExtras = {
 export function SettingsTab({
   groupId,
   onUpdate,
-  onLeave,
   isAdmin = false,
   isCreator = false,
 }: SettingsTabProps) {
@@ -167,9 +164,8 @@ export function SettingsTab({
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
-  const { deleteGroup, useGroupDetails, updateGroup } = useGroups();
+  const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
-  const { toast } = useToast();
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
@@ -306,20 +302,21 @@ export function SettingsTab({
   };
 
   const handleLeaveGroup = async () => {
-    if (isLeaving || !onLeave) {
+    if (isLeaving || !groupId) {
       return;
     }
 
     try {
       setIsLeaving(true);
-      await onLeave();
+      
+      // Use the leaveGroup mutation from useGroups hook
+      await leaveGroup.mutateAsync(groupId);
+      
+      // The mutation will handle the toast and navigation automatically
       setIsLeaveDialogOpen(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to leave group. Please try again.',
-        variant: 'destructive',
-      });
+      console.error('Error leaving group:', error);
+      // The mutation will handle error toasts automatically
     } finally {
       setIsLeaving(false);
     }
@@ -327,7 +324,7 @@ export function SettingsTab({
 
   const handleLeaveDialogOpenChange = (open: boolean) => {
     // Only allow closing if not in the middle of leaving
-    if (!open && !isLeaving) {
+    if (!open && !isLeaving && !leaveGroup.isPending) {
       setIsLeaveDialogOpen(false);
     }
   };
@@ -689,7 +686,7 @@ export function SettingsTab({
               </div>
 
               <div className="space-y-4">
-                {!isCreator && onLeave && (
+                {!isCreator && (
                   <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
                     <div className="space-y-1">
                       <h4 className="font-medium text-destructive">Leave Group</h4>
@@ -701,6 +698,7 @@ export function SettingsTab({
                       type="button"
                       variant="destructive"
                       onClick={() => setIsLeaveDialogOpen(true)}
+                      disabled={leaveGroup.isPending}
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Leave
@@ -804,17 +802,35 @@ export function SettingsTab({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Leave Group</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to leave this group? You will need to be invited back to rejoin.
+                    <div className="space-y-4">
+                      <p>Are you sure you want to leave this group?</p>
+                      <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                        <p className="text-sm font-medium">This action will:</p>
+                        <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                          <li>Remove you from all group activities</li>
+                          <li>Revoke your access to group content</li>
+                          <li>Cancel any pending meal registrations</li>
+                          <li>Remove you from group notifications</li>
+                        </ul>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        You won't be able to access this group again unless you're re-invited.
+                      </p>
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel 
+                    disabled={isLeaving || leaveGroup.isPending}
+                  >
+                    Cancel
+                  </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleLeaveGroup}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    disabled={isLeaving}
+                    disabled={isLeaving || leaveGroup.isPending}
                   >
-                    {isLeaving ? (
+                    {isLeaving || leaveGroup.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Leaving...
