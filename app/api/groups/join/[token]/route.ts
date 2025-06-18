@@ -72,6 +72,11 @@ export async function GET(
     // Check if user is already a member
     const isMember = inviteToken.room.members.length > 0;
 
+    // Get current member count
+    const currentMemberCount = await prisma.roomMember.count({
+      where: { roomId: inviteToken.roomId }
+    });
+
     // Return the response with proper headers
     return NextResponse.json({
       success: true,
@@ -85,7 +90,7 @@ export async function GET(
           updatedAt: inviteToken.room.updatedAt,
           createdById: inviteToken.room.createdBy,
           isMember,
-          memberCount: inviteToken.room.memberCount || 0,
+          memberCount: currentMemberCount,
           maxMembers: inviteToken.room.maxMembers,
           fineEnabled: inviteToken.room.fineEnabled || false,
           fineAmount: inviteToken.room.fineAmount || 0,
@@ -203,6 +208,24 @@ export async function POST(
       );
     }
 
+    // Check if group is full
+    const currentMemberCount = await prisma.roomMember.count({
+      where: { roomId: inviteToken.roomId }
+    });
+
+    if (inviteToken.room.maxMembers && currentMemberCount >= inviteToken.room.maxMembers) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Group is full. Cannot join at this time.' 
+        },
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     // Add user to the group
     await prisma.roomMember.create({
       data: {
@@ -212,10 +235,16 @@ export async function POST(
       }
     });
 
-    // Delete the used invite token
-    await prisma.inviteToken.delete({
-      where: { id: inviteToken.id }
+    // Update member count in the room
+    await prisma.room.update({
+      where: { id: inviteToken.roomId },
+      data: {
+        memberCount: currentMemberCount + 1
+      }
     });
+
+    // Note: We don't delete the invite token anymore to allow multiple joins
+    // The token will only be invalidated when it expires
 
     return NextResponse.json({
       success: true,

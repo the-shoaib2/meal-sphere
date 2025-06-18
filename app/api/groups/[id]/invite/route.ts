@@ -3,38 +3,37 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { nanoid } from 'nanoid';
 
-
-interface InvitationResponse {
+interface InviteTokenResponse {
   id: string;
-  code: string;
-  email: string;
-  role: Role;
-  createdAt: Date;
-  updatedAt: Date;
-  expiresAt: Date;
-  usedAt?: Date;
-  usedBy?: string;
-  groupId: string;
+  token: string;
+  roomId: string;
   createdBy: string;
-  creator?: {
+  role: Role;
+  expiresAt: Date | null;
+  createdAt: Date;
+  createdByUser?: {
     id: string;
     name: string | null;
     email: string | null;
   };
 }
 
-interface CreateInvitationResponse {
-  invitationUrl: string;
-  invitation: InvitationResponse;
+interface CreateInviteTokenResponse {
+  success: boolean;
+  data: {
+    token: string;
+    inviteUrl: string;
+    expiresAt: Date | null;
+    role: Role;
+  };
 }
 
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-// POST /api/groups/[id]/invite - Create an invitation link
+// POST /api/groups/[id]/invite - Create an invite token
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -46,11 +45,7 @@ export async function POST(
     }
 
     const { id: groupId } = await params;
-    const { email = session.user.email, role = "MEMBER" } = await request.json();
-
-    if (!email) {
-      return new NextResponse("Email is required", { status: 400 });
-    }
+    const { role = "MEMBER", expiresInDays = 7 } = await request.json();
 
     // Validate the group exists and user has permission
     const group = await prisma.room.findUnique({
@@ -60,7 +55,7 @@ export async function POST(
           where: {
             userId: session.user.id,
             role: {
-              in: [Role.ADMIN, Role.MANAGER, Role.MODERATOR]
+              in: [Role.ADMIN, Role.MANAGER, Role.MODERATOR, Role.OWNER]
             }
           }
         }
@@ -72,57 +67,78 @@ export async function POST(
     }
 
     if (group.members.length === 0) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return new NextResponse("Unauthorized - You need admin permissions to create invites", { status: 401 });
     }
 
-    // Check if user already has an invitation
-    const existingInvitation = await prisma.invitation.findFirst({
-      where: {
-        groupId,
-        email,
-        usedAt: null,
-        expiresAt: {
-          gt: new Date()
-        }
-      }
+    // Check if group is full
+    const currentMemberCount = await prisma.roomMember.count({
+      where: { roomId: groupId }
     });
 
-    if (existingInvitation) {
-      return new NextResponse("Invitation already exists", { status: 400 });
+    if (group.maxMembers && currentMemberCount >= group.maxMembers) {
+      return new NextResponse("Group is full. Cannot create more invites.", { status: 400 });
     }
 
-    // Create invitation
-    const invitation = await prisma.invitation.create({
+    // Generate a unique token - mixed characters (letters, numbers, special chars)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz23456789@#$&=<>?';
+    let token = '';
+    for (let i = 0; i < 10; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Calculate expiration date - handle both hours and days
+    let expiresAt: Date | null = null;
+    if (expiresInDays !== null && expiresInDays !== 0) {
+      // Convert to milliseconds (expiresInDays can be fractional for hours)
+      const expiryMs = expiresInDays * 24 * 60 * 60 * 1000;
+      expiresAt = new Date(Date.now() + expiryMs);
+    }
+
+    // Create invite token
+    const inviteToken = await prisma.inviteToken.create({
       data: {
-        code: nanoid(10),
-        email: email,
+        token,
+        roomId: groupId,
+        createdBy: session.user.id,
         role: role as Role,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        groupId,
-        createdBy: session.user.id
+        expiresAt
+      },
+      include: {
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
       }
     });
 
     // Create activity log
     await prisma.groupActivityLog.create({
       data: {
-        type: "INVITATION_CREATED",
+        type: "INVITE_TOKEN_CREATED",
         details: {
-          email,
-          role,
-          invitationId: invitation.id
+          token: token,
+          role: role,
+          expiresAt: expiresAt
         },
         roomId: groupId,
         userId: session.user.id
       }
     });
 
+    // Generate invite URL
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const inviteUrl = `${baseUrl}/groups/join/${token}`;
+
     return NextResponse.json({
       success: true,
-      invitation: {
-        code: invitation.code,
-        email: invitation.email,
-        expiresAt: invitation.expiresAt
+      data: {
+        token: inviteToken.token,
+        inviteUrl,
+        expiresAt: inviteToken.expiresAt,
+        role: inviteToken.role
       }
     });
   } catch (error) {
@@ -131,7 +147,7 @@ export async function POST(
   }
 }
 
-// GET /api/groups/[id]/invite - Get group's invitations
+// GET /api/groups/[id]/invite - Get group's invite tokens
 export async function GET(
   request: NextRequest,
   { params }: RouteParams
@@ -160,20 +176,23 @@ export async function GET(
       where: {
         roomId: groupId,
         userId,
-        role: { in: ['ADMIN', 'MODERATOR'] },
+        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'OWNER'] },
       },
     });
 
     if (!membership) {
-      return new NextResponse('Forbidden', { status: 403 });
+      return new NextResponse('Forbidden - You need admin permissions to view invites', { status: 403 });
     }
 
-    const invitations = await prisma.invitation.findMany({
+    const inviteTokens = await prisma.inviteToken.findMany({
       where: {
-        groupId,
+        roomId: groupId,
+        expiresAt: {
+          gt: new Date() // Only show non-expired tokens
+        }
       },
       include: {
-        creator: {
+        createdByUser: {
           select: {
             id: true,
             name: true,
@@ -186,17 +205,21 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(invitations);
+    return NextResponse.json({
+      success: true,
+      data: inviteTokens
+    });
   } catch (error) {
+    console.error("[GET_INVITE_TOKENS]", error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
 type DeleteRouteParams = {
-  params: Promise<{ id: string; code: string }>;
+  params: Promise<{ id: string; token: string }>;
 };
 
-// DELETE /api/groups/[id]/invite - Delete an invitation
+// DELETE /api/groups/[id]/invite - Delete an invite token
 export async function DELETE(
   request: NextRequest,
   { params }: DeleteRouteParams
@@ -210,7 +233,7 @@ export async function DELETE(
     }
 
     const resolvedParams = await params;
-    const { id: groupId, code } = resolvedParams;
+    const { id: groupId, token } = resolvedParams;
     
     const group = await prisma.room.findUnique({
       where: { id: groupId },
@@ -225,31 +248,37 @@ export async function DELETE(
       where: {
         roomId: groupId,
         userId,
-        role: { in: ['ADMIN', 'MODERATOR'] },
+        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'OWNER'] },
       },
     });
 
     if (!membership) {
-      return new NextResponse('Forbidden', { status: 403 });
+      return new NextResponse('Forbidden - You need admin permissions to delete invites', { status: 403 });
     }
 
-    await prisma.invitation.delete({
+    // Delete the invite token
+    await prisma.inviteToken.delete({
       where: {
-        code_groupId: {
-          code,
-          groupId,
-        },
+        token: token
       },
+    });
+
+    // Create activity log
+    await prisma.groupActivityLog.create({
+      data: {
+        type: "INVITE_TOKEN_DELETED",
+        details: {
+          token: token
+        },
+        roomId: groupId,
+        userId: session.user.id
+      }
     });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
+    console.error("[DELETE_INVITE_TOKEN]", error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
-
-// Remove the first POST and GET implementations (invitation model)
-// Keep only the inviteToken-based POST and GET at the end of the file
-// Ensure only one POST and one GET are exported
-// Remove any code referencing the invitation model
 

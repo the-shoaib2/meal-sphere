@@ -62,7 +62,7 @@ export function useGroupAccess({
         return;
       }
 
-      // If not an invite token, try to validate as a regular group ID
+      // If not an invite token, then validate as a regular group ID
       if (!isValidObjectId(groupId)) {
         const errorMessage = 'Invalid group ID format. Please check the URL and try again.';
         setError(errorMessage);
