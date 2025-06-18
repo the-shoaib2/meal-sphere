@@ -409,10 +409,10 @@ export default function GroupPage() {
               <LogOut className="h-5 w-5 text-destructive" />
               Leave Group
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Are you sure you want to leave this group?</p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <span>Are you sure you want to leave this group?</span>
               <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                <p className="text-sm font-medium">This action will:</p>
+                <span className="text-sm font-medium">This action will:</span>
                 <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
                   <li>Remove you from all group activities</li>
                   <li>Revoke your access to group content</li>
@@ -420,10 +420,10 @@ export default function GroupPage() {
                   <li>Remove you from group notifications</li>
                 </ul>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
+              <span className="text-sm text-muted-foreground mt-2">
                 You won't be able to access this group again unless you're re-invited.
-              </p>
-            </AlertDialogDescription>
+              </span>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel

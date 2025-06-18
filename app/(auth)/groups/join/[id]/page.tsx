@@ -193,8 +193,9 @@ export default function JoinGroupPage() {
       setError(null);
 
       // Check if this is an invite token
-      if (isInviteToken) {
-        if (!actualGroupId) {
+      if (isInviteToken || accessIsInviteToken) {
+        const targetGroupId = accessActualGroupId || actualGroupId;
+        if (!targetGroupId) {
           throw new Error('Invalid invite token');
         }
 
@@ -211,16 +212,41 @@ export default function JoinGroupPage() {
           throw new Error(data.error || 'Failed to join group');
         }
 
+        // Check if this is a private group that requires admin approval
+        if (data.data?.joinRequest && data.data?.isPrivate) {
+          setRequestStatus('pending');
+          
+          toast.success('Join request sent successfully!', {
+            icon: <CheckCircle2 className="h-4 w-4" />,
+          });
+
+          toast('Waiting for admin approval...', {
+            icon: <AlertCircle className="h-4 w-4" />,
+          });
+
+          router.push('/groups');
+          return;
+        }
+
+        // Direct join for public groups
         toast.success('Successfully joined the group!', {
           icon: <CheckCircle2 className="h-4 w-4" />,
         });
-        if (actualGroupId) {
-          router.push(`/groups/${actualGroupId}`);
+        if (targetGroupId) {
+          router.push(`/groups/${targetGroupId}`);
         }
         return;
       }
 
-      const response = await fetch(`/api/groups/${actualGroupId}/join-request`, {
+      // For direct group joining (not via invite token)
+      const targetGroupId = accessActualGroupId || actualGroupId || groupId;
+      if (!targetGroupId) {
+        throw new Error('Invalid group ID');
+      }
+
+      console.log('Using direct join flow with targetGroupId:', targetGroupId);
+
+      const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,6 +257,7 @@ export default function JoinGroupPage() {
       });
 
       const data = await response.json();
+      console.log('Direct join response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send join request');
@@ -256,7 +283,7 @@ export default function JoinGroupPage() {
     } finally {
       setIsJoining(false);
     }
-  }, [groupId, isInviteToken, actualGroupId, router]);
+  }, [groupId, isInviteToken, accessIsInviteToken, actualGroupId, accessActualGroupId, router]);
 
   // Handle form submission
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -324,7 +351,7 @@ export default function JoinGroupPage() {
             </CardHeader>
             <CardContent>
               <Button 
-                onClick={() => router.push(`/groups/${actualGroupId || groupId}`)} 
+                onClick={() => router.push(`/groups/${accessActualGroupId || actualGroupId || groupId}`)} 
                 className="mt-4"
               >
                 Go to Group

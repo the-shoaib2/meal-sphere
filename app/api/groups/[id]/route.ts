@@ -210,6 +210,11 @@ export async function POST(
       return new NextResponse('Already a member of this group', { status: 400 });
     }
 
+    // For private groups, require join request instead of direct joining
+    if (group.isPrivate) {
+      return new NextResponse('This is a private group. Please send a join request instead of trying to join directly.', { status: 403 });
+    }
+
     // Check if group is full
     const memberCount = await prisma.roomMember.count({
       where: { roomId: group.id }
@@ -219,7 +224,7 @@ export async function POST(
       return new NextResponse('Group is full', { status: 400 });
     }
 
-    // Create membership
+    // Create membership (only for public groups)
     const result = await prisma.roomMember.create({
       data: {
         userId: session.user.id,

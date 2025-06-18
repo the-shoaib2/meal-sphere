@@ -55,9 +55,20 @@ export async function POST(
       return NextResponse.json({ error: 'You already have a pending join request' }, { status: 400 });
     }
 
-    // Create join request
-    const joinRequest = await prisma.joinRequest.create({
-      data: {
+    // Create or update join request using upsert
+    const joinRequest = await prisma.joinRequest.upsert({
+      where: {
+        userId_roomId: {
+          userId: session.user.id,
+          roomId: id
+        }
+      },
+      update: {
+        status: 'PENDING',
+        message,
+        updatedAt: new Date()
+      },
+      create: {
         roomId: id,
         userId: session.user.id,
         message,

@@ -163,6 +163,14 @@ export async function POST(
               }
             }
           }
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
         }
       }
     });
@@ -226,7 +234,65 @@ export async function POST(
       );
     }
 
-    // Add user to the group
+    // For private groups, require join request instead of direct joining
+    if (inviteToken.room.isPrivate) {
+      // Check if user already has a pending request
+      const existingRequest = await prisma.joinRequest.findFirst({
+        where: {
+          roomId: inviteToken.roomId,
+          userId: session.user.id,
+          status: 'PENDING'
+        }
+      });
+
+      if (existingRequest) {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: 'You already have a pending join request for this group' 
+          },
+          { 
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      // Create or update join request for private group using upsert
+      const joinRequest = await prisma.joinRequest.upsert({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId: inviteToken.roomId
+          }
+        },
+        update: {
+          status: 'PENDING',
+          message: `Invited via token by ${inviteToken.createdByUser?.name || 'an admin'}`,
+          updatedAt: new Date()
+        },
+        create: {
+          roomId: inviteToken.roomId,
+          userId: session.user.id,
+          message: `Invited via token by ${inviteToken.createdByUser?.name || 'an admin'}`,
+          status: 'PENDING'
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          groupId: inviteToken.roomId,
+          message: 'Join request sent successfully. Waiting for admin approval.',
+          joinRequest: true,
+          isPrivate: true
+        }
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // For public groups, allow direct joining
     await prisma.roomMember.create({
       data: {
         roomId: inviteToken.roomId,
