@@ -75,27 +75,6 @@ export async function PATCH(
       );
     }
 
-    // Check if group is full (if maxMembers is set)
-    if (action === 'approve') {
-      const group = await prisma.room.findUnique({
-        where: { id: groupId },
-        select: { maxMembers: true }
-      });
-
-      if (group?.maxMembers) {
-        const currentMemberCount = await prisma.roomMember.count({
-          where: { roomId: groupId }
-        });
-
-        if (currentMemberCount >= group.maxMembers) {
-          return NextResponse.json(
-            { error: 'Group is full. Cannot approve more join requests.' },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
     // Update join request status
     const updatedRequest = await prisma.joinRequest.update({
       where: { id: requestId },
@@ -114,36 +93,12 @@ export async function PATCH(
         }
       });
 
-      // Update group member count
-      await prisma.room.update({
-        where: { id: groupId },
-        data: {
-          memberCount: {
-            increment: 1
-          }
-        }
-      });
-
       // Create notification for approved request
       await prisma.notification.create({
         data: {
           userId: joinRequest.userId,
           type: NotificationType.JOIN_REQUEST_APPROVED,
           message: `Your join request for ${joinRequest.room.name} has been approved!`
-        }
-      });
-
-      // Create activity log
-      await prisma.groupActivityLog.create({
-        data: {
-          type: "JOIN_REQUEST_APPROVED",
-          details: {
-            userId: joinRequest.userId,
-            userName: joinRequest.user.name,
-            approvedBy: session.user.id
-          },
-          roomId: groupId,
-          userId: session.user.id
         }
       });
     } else {
@@ -153,20 +108,6 @@ export async function PATCH(
           userId: joinRequest.userId,
           type: NotificationType.JOIN_REQUEST_REJECTED,
           message: `Your join request for ${joinRequest.room.name} has been rejected.`
-        }
-      });
-
-      // Create activity log
-      await prisma.groupActivityLog.create({
-        data: {
-          type: "JOIN_REQUEST_REJECTED",
-          details: {
-            userId: joinRequest.userId,
-            userName: joinRequest.user.name,
-            rejectedBy: session.user.id
-          },
-          roomId: groupId,
-          userId: session.user.id
         }
       });
     }
