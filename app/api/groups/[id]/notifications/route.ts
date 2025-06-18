@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,6 +13,7 @@ export async function PATCH(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { groupMessages, announcements, mealUpdates, memberActivity, joinRequests } = body;
 
@@ -21,12 +22,12 @@ export async function PATCH(
       where: {
         userId_groupId: {
           userId: session.user.id,
-          groupId: params.id,
+          groupId: id,
         },
       },
       create: {
         userId: session.user.id,
-        groupId: params.id,
+        groupId: id,
         groupMessages,
         announcements,
         mealUpdates,
@@ -51,7 +52,7 @@ export async function PATCH(
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -59,11 +60,12 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
+    const { id } = await params;
     const settings = await prisma.groupNotificationSettings.findUnique({
       where: {
         userId_groupId: {
           userId: session.user.id,
-          groupId: params.id,
+          groupId: id,
         },
       },
     });
