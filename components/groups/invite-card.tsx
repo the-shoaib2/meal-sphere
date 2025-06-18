@@ -187,6 +187,13 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
     }
   }, [isOpen, activeTab]);
 
+  // Auto-generate invite token when dialog opens on link tab
+  useEffect(() => {
+    if (isOpen && activeTab === 'link' && !inviteToken && !loading) {
+      generateInviteToken();
+    }
+  }, [isOpen, activeTab, inviteToken, loading, generateInviteToken]);
+
   // Handle tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'link' | 'custom' | 'email');
