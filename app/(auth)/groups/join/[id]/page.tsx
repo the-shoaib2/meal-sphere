@@ -31,7 +31,7 @@ type JoinRoomFormValues = z.infer<typeof joinRoomSchema>;
 
 // Define the base Group interface
 interface Group {
-  id: string;
+      id: string;
   name: string;
   description?: string;
   isPrivate: boolean;
@@ -136,8 +136,6 @@ export default function JoinGroupPage() {
 
   // Handle group data from useGroupAccess
   const handleGroupData = useCallback((data: any) => {
-    if (!data) return;
-
     setGroup(data.group);
     setRole(data.role);
     setIsInviteToken(true);
@@ -164,15 +162,6 @@ export default function JoinGroupPage() {
         router.push(`/groups/${data.groupId}`);
         return;
       }
-    }
-
-    // Check if group is full
-    if (data.group.memberCount >= data.group.maxMembers) {
-      toast.error('This group has reached its maximum member limit', {
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-      router.push('/groups');
-      return;
     }
   }, [router]);
 
@@ -219,13 +208,6 @@ export default function JoinGroupPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          if (data.error === 'Group has reached maximum member limit') {
-            toast.error('This group has reached its maximum member limit', {
-              icon: <AlertCircle className="h-4 w-4" />,
-            });
-            router.push('/groups');
-            return;
-          }
           throw new Error(data.error || 'Failed to join group');
         }
 
@@ -538,22 +520,22 @@ export default function JoinGroupPage() {
             <div className="space-y-3">
               {/* Group Type and Inviter Info */}
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
+              <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
                   {group.isPrivate ? (
-                    <Lock className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Users className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">
+                  <Lock className="h-5 w-5 text-primary" />
+                ) : (
+                  <Users className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-medium">
                     {group.isPrivate ? 'Private Group' : 'Public Group'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
                     {group.isPrivate
-                      ? 'This is a private group. Your join request will need to be approved by an admin.'
-                      : 'This is a public group. Anyone can join.'}
-                  </p>
+                    ? 'This is a private group. Your join request will need to be approved by an admin.'
+                    : 'This is a public group. Anyone can join.'}
+                </p>
                 </div>
               </div>
 
@@ -562,7 +544,7 @@ export default function JoinGroupPage() {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Members</p>
                   <p className="font-medium">{group.memberCount} / {group.maxMembers}</p>
-                </div>
+                    </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Created At</p>
                   <p className="font-medium">{new Date(group.createdAt).toLocaleDateString()}</p>
@@ -573,7 +555,7 @@ export default function JoinGroupPage() {
                     <p className="font-medium">₹{group.fineAmount}</p>
                   </div>
                 )}
-              </div>
+            </div>
 
               {/* Inviter Information */}
               {group.inviter && (
@@ -592,63 +574,63 @@ export default function JoinGroupPage() {
               {/* Join Form */}
               <form onSubmit={handleSubmit} className="space-y-3 pt-2">
                 {group.isPrivate && showMessageField && (
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Message to Admins (Optional)</Label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      placeholder="Tell the admins why you want to join this group"
-                      disabled={isJoining}
-                      value={formValues.message}
-                      onChange={handleInputChange}
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message to Admins (Optional)</Label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    placeholder="Tell the admins why you want to join this group"
+                    disabled={isJoining}
+                    value={formValues.message}
+                    onChange={handleInputChange}
                       className="w-full min-h-[80px] p-2 border rounded-md"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This message will be sent to the group admins along with your join request.
-                    </p>
-                  </div>
-                )}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This message will be sent to the group admins along with your join request.
+                  </p>
+                </div>
+              )}
 
                 <div className="flex items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    asChild
-                    disabled={isJoining}
-                  >
-                    <Link href="/groups">
-                      Cancel
-                    </Link>
-                  </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  asChild
+                  disabled={isJoining}
+                >
+                  <Link href="/groups">
+                    Cancel
+                  </Link>
+                </Button>
 
-                  <Button
-                    type={showMessageField ? 'submit' : 'button'}
-                    onClick={!showMessageField ? handleJoinClick : undefined}
-                    disabled={isJoining}
-                  >
-                    {isJoining ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Button
+                  type={showMessageField ? 'submit' : 'button'}
+                  onClick={!showMessageField ? handleJoinClick : undefined}
+                  disabled={isJoining}
+                >
+                  {isJoining ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         {group.isPrivate ? 'Sending Request...' : 'Joining...'}
-                      </>
-                    ) : (
-                      <>
+                    </>
+                  ) : (
+                    <>
                         {group.isPrivate ? (
-                          <>
-                            <Lock className="h-4 w-4 mr-2" />
-                            {showMessageField ? 'Send Join Request' : 'Request to Join'}
-                          </>
-                        ) : (
-                          <>
-                            <Users className="h-4 w-4 mr-2" />
-                            Join Group
-                          </>
-                        )}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+                        <>
+                          <Lock className="h-4 w-4 mr-2" />
+                          {showMessageField ? 'Send Join Request' : 'Request to Join'}
+                        </>
+                      ) : (
+                        <>
+                          <Users className="h-4 w-4 mr-2" />
+                          Join Group
+                        </>
+                      )}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
             </div>
           </CardContent>
         </Card>

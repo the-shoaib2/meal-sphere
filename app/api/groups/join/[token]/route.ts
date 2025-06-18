@@ -203,24 +203,6 @@ export async function POST(
       );
     }
 
-    // Check if room has reached max members
-    const currentMemberCount = await prisma.roomMember.count({
-      where: { roomId: inviteToken.roomId }
-    });
-
-    if (currentMemberCount >= inviteToken.room.maxMembers) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Group has reached maximum member limit' 
-        },
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
     // Add user to the group
     await prisma.roomMember.create({
       data: {
@@ -230,12 +212,9 @@ export async function POST(
       }
     });
 
-    // Update member count
-    await prisma.room.update({
-      where: { id: inviteToken.roomId },
-      data: {
-        memberCount: currentMemberCount + 1
-      }
+    // Delete the used invite token
+    await prisma.inviteToken.delete({
+      where: { id: inviteToken.id }
     });
 
     return NextResponse.json({
