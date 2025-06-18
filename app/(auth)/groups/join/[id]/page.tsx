@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -18,6 +19,8 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
 import { isValidObjectId } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Update the join room form schema
 const joinRoomSchema = z.object({
@@ -26,8 +29,26 @@ const joinRoomSchema = z.object({
 
 type JoinRoomFormValues = z.infer<typeof joinRoomSchema>;
 
-// Import Group type from use-groups
-import type { Group } from '@/hooks/use-groups';
+// Define the base Group interface
+interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  isPrivate: boolean;
+  memberCount: number;
+  maxMembers: number;
+  category?: string;
+  fineEnabled: boolean;
+  fineAmount?: number;
+  createdAt: Date;
+  tags?: string[];
+  inviter?: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string;
+  };
+}
 
 // Extend Group type with additional UI-specific properties
 interface ExtendedGroup extends Group {
@@ -99,22 +120,61 @@ export default function JoinGroupPage() {
   const [actualGroupId, setActualGroupId] = useState<string | null>(null);
   const [requestStatus, setRequestStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
 
-  // Initialize groups hook
-  const { joinGroup, getGroupDetails } = useGroups();
-
   // Form handling
   const [formValues, setFormValues] = useState<JoinRoomFormValues>({
     message: '',
   });
 
   // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormValues(prev => ({
       ...prev,
       [name]: value
     }));
-  };
+  }, []);
+
+  // Handle group data from useGroupAccess
+  const handleGroupData = useCallback((data: any) => {
+    if (!data) return;
+
+    setGroup(data.group);
+    setRole(data.role);
+    setIsInviteToken(true);
+    setActualGroupId(data.groupId);
+    
+    // Handle already a member case
+    if (data.isMember) {
+      toast.success('You are already a member of this group', {
+        icon: <CheckCircle2 className="h-4 w-4" />,
+      });
+      if (data.groupId) {
+        router.push(`/groups/${data.groupId}`);
+      }
+      return;
+    }
+
+    // Check for existing join request
+    if (data.joinRequest) {
+      setRequestStatus(data.joinRequest.status);
+      if (data.joinRequest.status === 'approved') {
+        toast.success('Your join request has been approved!', {
+          icon: <CheckCircle2 className="h-4 w-4" />,
+        });
+        router.push(`/groups/${data.groupId}`);
+        return;
+      }
+    }
+
+    // Check if group is full
+    if (data.group.memberCount >= data.group.maxMembers) {
+      toast.error('This group has reached its maximum member limit', {
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+      router.push('/groups');
+      return;
+    }
+  }, [router]);
 
   // Use the group access hook
   const {
@@ -128,97 +188,12 @@ export default function JoinGroupPage() {
   } = useGroupAccess({
     groupId,
     onLoading: setIsLoading,
-    onError: setError
+    onError: setError,
+    onGroupData: handleGroupData
   });
 
-  // Fetch group details
-  const fetchGroupDetails = useCallback(async () => {
-    if (!groupId) {
-      setError('Invalid group ID');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Check if this is an invite token (64 characters)
-      if (groupId.length === 64) {
-        const response = await fetch(`/api/groups/join/${groupId}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch group details');
-        }
-
-        // Handle already a member case
-        if (data.isMember) {
-          toast.success('You are already a member of this group', {
-            icon: <CheckCircle2 className="h-4 w-4" />,
-          });
-          if (data.groupId) {
-            router.push(`/groups/${data.groupId}`);
-          }
-          return;
-        }
-
-        setGroup(data.group);
-        setRole(data.role);
-        setIsInviteToken(true);
-        setActualGroupId(data.groupId);
-        return;
-      }
-
-      // For regular group IDs, validate the format
-      if (!isValidObjectId(groupId)) {
-        setError('Invalid group ID format');
-        setIsLoading(false);
-        return;
-      }
-
-      // Regular group join
-      const response = await fetch(`/api/groups/${groupId}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch group details');
-      }
-
-      // Handle already a member case
-      if (data.isMember) {
-        toast.success('You are already a member of this group', {
-          icon: <CheckCircle2 className="h-4 w-4" />,
-        });
-        if (groupId) {
-          router.push(`/groups/${groupId}`);
-        }
-        return;
-      }
-
-      // Check for existing join request
-      if (data.joinRequest) {
-        setRequestStatus(data.joinRequest.status);
-        if (data.joinRequest.status === 'approved') {
-          toast.success('Your join request has been approved!', {
-            icon: <CheckCircle2 className="h-4 w-4" />,
-          });
-          router.push(`/groups/${groupId}`);
-          return;
-        }
-      }
-
-      setGroup(data);
-    } catch (error) {
-      console.error('Error fetching group details:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch group details');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [groupId, router]);
-
   // Handle join request submission
-  const handleJoinRequest = async (values: JoinRoomFormValues) => {
+  const handleJoinRequest = useCallback(async (values: JoinRoomFormValues) => {
     if (!groupId) {
       setError('Invalid group ID');
       return;
@@ -244,6 +219,13 @@ export default function JoinGroupPage() {
         const data = await response.json();
 
         if (!response.ok) {
+          if (data.error === 'Group has reached maximum member limit') {
+            toast.error('This group has reached its maximum member limit', {
+              icon: <AlertCircle className="h-4 w-4" />,
+            });
+            router.push('/groups');
+            return;
+          }
           throw new Error(data.error || 'Failed to join group');
         }
 
@@ -254,11 +236,6 @@ export default function JoinGroupPage() {
           router.push(`/groups/${actualGroupId}`);
         }
         return;
-      }
-
-      // Regular group join request
-      if (!group || !actualGroupId) {
-        throw new Error('Group not found');
       }
 
       const response = await fetch(`/api/groups/${actualGroupId}/join-request`, {
@@ -279,12 +256,10 @@ export default function JoinGroupPage() {
 
       setRequestStatus('pending');
       
-      // Show success toast with icon
       toast.success('Join request sent successfully!', {
         icon: <CheckCircle2 className="h-4 w-4" />,
       });
 
-      // Show additional toast for next steps
       toast('Waiting for admin approval...', {
         icon: <AlertCircle className="h-4 w-4" />,
       });
@@ -293,37 +268,29 @@ export default function JoinGroupPage() {
     } catch (error: any) {
       console.error('Error sending join request:', error);
       setError(error.message || 'Failed to send join request');
-      // Show error toast with icon
       toast.error(error.message || 'Failed to send join request', {
         icon: <AlertCircle className="h-4 w-4" />,
       });
     } finally {
       setIsJoining(false);
     }
-  };
+  }, [groupId, isInviteToken, actualGroupId, router]);
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     handleJoinRequest(formValues);
-  };
+  }, [formValues, handleJoinRequest]);
 
   // Handle join button click
-  const handleJoinClick = () => {
+  const handleJoinClick = useCallback(() => {
     if (group?.isPrivate && !showMessageField) {
       setShowMessageField(true);
       return;
     }
     
     handleJoinRequest(formValues);
-  };
-
-  // Initial data fetch
-  useEffect(() => {
-    if (groupId) {
-      fetchGroupDetails();
-    }
-  }, [groupId, fetchGroupDetails]);
+  }, [group?.isPrivate, showMessageField, formValues, handleJoinRequest]);
 
   // Handle code from URL
   useEffect(() => {
@@ -550,7 +517,7 @@ export default function JoinGroupPage() {
   }
 
   return (
-    <div className="flex items-center justify-center ">
+    <div className="flex items-center justify-center">
       <div className="w-full max-w-2xl px-4">
         <Button variant="ghost" asChild className="mb-6">
           <Link href="/groups">
@@ -560,100 +527,129 @@ export default function JoinGroupPage() {
         </Button>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Join Group</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle>{group.name}</CardTitle>
             <CardDescription>
-              {name ? `You're joining: ${name}` : <Skeleton className="h-4 w-48" />}
+              {group.description || 'No description provided'}
             </CardDescription>
           </CardHeader>
           
           <CardContent>
-            <div className="flex items-start gap-4 mb-6 p-4 bg-muted/50 rounded-lg">
-              <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
-                {isPrivate ? (
-                  <Lock className="h-5 w-5 text-primary" />
-                ) : (
-                  <Users className="h-5 w-5 text-primary" />
-                )}
+            <div className="space-y-3">
+              {/* Group Type and Inviter Info */}
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
+                  {group.isPrivate ? (
+                    <Lock className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Users className="h-5 w-5 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium">
+                    {group.isPrivate ? 'Private Group' : 'Public Group'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {group.isPrivate
+                      ? 'This is a private group. Your join request will need to be approved by an admin.'
+                      : 'This is a public group. Anyone can join.'}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-medium">
-                  {isPrivate ? 'Private Group' : 'Public Group'}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {isPrivate
-                    ? 'This is a private group. Your join request will need to be approved by an admin.'
-                    : 'This is a public group. Anyone can join.'}
-                </p>
 
-                {isPrivate && !showMessageField && (
-                  <div className="mt-3 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                    <ShieldAlert className="h-4 w-4" />
-                    <span>This group requires admin approval to join</span>
+              {/* Group Details Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Members</p>
+                  <p className="font-medium">{group.memberCount} / {group.maxMembers}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Created At</p>
+                  <p className="font-medium">{new Date(group.createdAt).toLocaleDateString()}</p>
+                </div>
+                {group.fineEnabled && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Fine Amount</p>
+                    <p className="font-medium">₹{group.fineAmount}</p>
                   </div>
                 )}
               </div>
-            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isPrivate && showMessageField && (
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message to Admins (Optional)</Label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    placeholder="Tell the admins why you want to join this group"
-                    disabled={isJoining}
-                    value={formValues.message}
-                    onChange={handleInputChange}
-                    className="w-full min-h-[100px] p-2 border rounded-md"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This message will be sent to the group admins along with your join request.
-                  </p>
+              {/* Inviter Information */}
+              {group.inviter && (
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Avatar>
+                    <AvatarImage src={group.inviter.image} alt={group.inviter.name} />
+                    <AvatarFallback>{group.inviter.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">Invited by {group.inviter.name}</p>
+                    <p className="text-sm text-muted-foreground">{group.inviter.email}</p>
+                  </div>
                 </div>
               )}
 
-              <div className="flex items-center gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  asChild
-                  disabled={isJoining}
-                >
-                  <Link href="/groups">
-                    Cancel
-                  </Link>
-                </Button>
+              {/* Join Form */}
+              <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+                {group.isPrivate && showMessageField && (
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Message to Admins (Optional)</Label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      placeholder="Tell the admins why you want to join this group"
+                      disabled={isJoining}
+                      value={formValues.message}
+                      onChange={handleInputChange}
+                      className="w-full min-h-[80px] p-2 border rounded-md"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This message will be sent to the group admins along with your join request.
+                    </p>
+                  </div>
+                )}
 
-                <Button
-                  type={showMessageField ? 'submit' : 'button'}
-                  onClick={!showMessageField ? handleJoinClick : undefined}
-                  disabled={isJoining}
-                >
-                  {isJoining ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {isPrivate ? 'Sending Request...' : 'Joining...'}
-                    </>
-                  ) : (
-                    <>
-                      {isPrivate ? (
-                        <>
-                          <Lock className="h-4 w-4 mr-2" />
-                          {showMessageField ? 'Send Join Request' : 'Request to Join'}
-                        </>
-                      ) : (
-                        <>
-                          <Users className="h-4 w-4 mr-2" />
-                          Join Group
-                        </>
-                      )}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    asChild
+                    disabled={isJoining}
+                  >
+                    <Link href="/groups">
+                      Cancel
+                    </Link>
+                  </Button>
+
+                  <Button
+                    type={showMessageField ? 'submit' : 'button'}
+                    onClick={!showMessageField ? handleJoinClick : undefined}
+                    disabled={isJoining}
+                  >
+                    {isJoining ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {group.isPrivate ? 'Sending Request...' : 'Joining...'}
+                      </>
+                    ) : (
+                      <>
+                        {group.isPrivate ? (
+                          <>
+                            <Lock className="h-4 w-4 mr-2" />
+                            {showMessageField ? 'Send Join Request' : 'Request to Join'}
+                          </>
+                        ) : (
+                          <>
+                            <Users className="h-4 w-4 mr-2" />
+                            Join Group
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
           </CardContent>
         </Card>
       </div>
