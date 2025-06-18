@@ -31,13 +31,13 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Link href="/register">
-                    <Button size="lg" className="gap-1.5">
+                    <Button size="lg" className="gap-1.5 rounded-full">
                       Get Started
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
                   <Link href="/about">
-                    <Button size="lg" variant="outline">
+                    <Button size="lg" variant="outline" className="rounded-full">
                       Learn More
                     </Button>
                   </Link>

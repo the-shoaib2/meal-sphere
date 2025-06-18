@@ -19,7 +19,7 @@ import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from '../invite-card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { NotificationSettings } from './notification-settings';
+import { DropdownMenuContent } from '@/components/ui/dropdown-menu';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -659,9 +659,6 @@ export function SettingsTab({
                 ))}
               </div>
             </div>
-
-            {/* Add Notification Settings section */}
-            <NotificationSettings groupId={groupId} isAdmin={isAdmin} />
 
             <div className="space-y-4 border-t pt-6">
               <div className="space-y-1">
