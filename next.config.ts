@@ -19,7 +19,7 @@ const nextConfig = {
   // Add output configuration
   output: 'standalone',
   // Configure webpack to handle font files
-  webpack: (config, { isServer }) => {
+  webpack: (config: any, { isServer }: { isServer: boolean }) => {
     // Add rule for font files
     config.module.rules.push({
       test: /\.(woff|woff2|eot|ttf|otf)$/i,
