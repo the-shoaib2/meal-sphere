@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
 import { Role } from '@prisma/client';
+import { validateGroupAccess, validateAdminAccess } from '@/lib/auth/group-auth';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -15,30 +16,22 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const { id } = await params;
     const { message } = await request.json();
 
-    // Check if group exists
-    const group = await prisma.room.findUnique({
-      where: { id },
-      include: {
-        members: {
-          where: {
-            userId: session.user.id
-          }
-        }
-      }
-    });
-
-    if (!group) {
-      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    // Check if group exists and user can access it
+    const validation = await validateGroupAccess(id);
+    if (!validation.success || !validation.authResult) {
+      return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
+    const { authResult } = validation;
+
     // Check if user is already a member
-    if (group.members.length > 0) {
+    if (authResult.isMember) {
       return NextResponse.json({ error: 'You are already a member of this group' }, { status: 400 });
     }
 
@@ -95,32 +88,12 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { id: groupId } = await params;
 
-    // Check if user is admin or manager
-    const membership = await prisma.roomMember.findFirst({
-      where: {
-        roomId: groupId,
-        userId: session.user.id,
-        role: {
-          in: [Role.ADMIN, Role.MANAGER]
-        }
-      }
-    });
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Only admins and managers can view join requests' },
-        { status: 401 }
-      );
+    // Validate admin access
+    const validation = await validateAdminAccess(groupId);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
     // Get all join requests for the group

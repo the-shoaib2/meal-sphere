@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserPlus, UserMinus, Shield, Settings, MessageSquare, History } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, UserPlus, UserMinus, Shield, Settings, MessageSquare, History, Link, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -26,41 +27,15 @@ interface ActivityTabProps {
 }
 
 const getActivityIcon = (type: string) => {
-  switch (type) {
-    case 'MEMBER_JOINED':
-    case 'MEMBER_ADDED':
-      return <UserPlus className="h-4 w-4" />;
-    case 'MEMBER_REMOVED':
-    case 'MEMBER_BANNED':
-      return <UserMinus className="h-4 w-4" />;
-    case 'ROLE_CHANGED':
-      return <Shield className="h-4 w-4" />;
-    case 'SETTINGS_CHANGED':
-      return <Settings className="h-4 w-4" />;
-    default:
-      return <MessageSquare className="h-4 w-4" />;
-  }
+  // Default icon for any activity type
+  return <MessageSquare className="h-4 w-4" />;
 };
 
 const getActivityMessage = (log: ActivityLog) => {
   const { type, details, user } = log;
   
-  switch (type) {
-    case 'MEMBER_JOINED':
-      return `${user.name} joined the group`;
-    case 'MEMBER_ADDED':
-      return `${user.name} added ${details.targetUserName} to the group`;
-    case 'MEMBER_REMOVED':
-      return `${user.name} removed ${details.targetUserName} from the group`;
-    case 'MEMBER_BANNED':
-      return `${user.name} banned ${details.targetUserName} from the group`;
-    case 'ROLE_CHANGED':
-      return `${user.name} changed ${details.targetUserName}'s role to ${details.newRole}`;
-    case 'SETTINGS_CHANGED':
-      return `${user.name} updated group settings`;
-    default:
-      return `${user.name} performed an action`;
-  }
+  // Return a generic message that works for any activity type
+  return `${user.name} performed ${type.toLowerCase().replace(/_/g, ' ')}`;
 };
 
 export function ActivityTab({ groupId, isAdmin }: ActivityTabProps) {
@@ -118,30 +93,46 @@ export function ActivityTab({ groupId, isAdmin }: ActivityTabProps) {
         <CardDescription>Recent group activities</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {logs.map((log) => (
-            <div
-              key={log.id}
-              className="flex items-start gap-4 p-4 border rounded-lg"
-            >
-              <Avatar>
-                <AvatarImage src={log.user.image || undefined} />
-                <AvatarFallback>
-                  {log.user.name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  {getActivityIcon(log.type)}
-                  <p className="font-medium">{getActivityMessage(log)}</p>
+        <ScrollArea className="h-[400px]">
+          <div className="space-y-4 pr-4">
+            {logs.map((log) => (
+              <div
+                key={log.id}
+                className="flex items-start gap-4 p-4 border rounded-lg"
+              >
+                <Avatar>
+                  <AvatarImage src={log.user.image || undefined} />
+                  <AvatarFallback>
+                    {log.user.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    {getActivityIcon(log.type)}
+                    <p className="font-medium">{getActivityMessage(log)}</p>
+                  </div>
+                  
+                  {/* Show all details dynamically for any activity type */}
+                  {log.details && Object.keys(log.details).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        {Object.entries(log.details).map(([key, value]) => (
+                          <Badge key={key} variant="outline" className="text-xs">
+                            {key}: {String(value)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
-                </p>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

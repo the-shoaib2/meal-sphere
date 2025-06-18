@@ -16,20 +16,19 @@ const createGroupSchema = z.object({
   maxMembers: z.number().int().positive().max(100).optional(),
 });
 
-// GET /api/groups - Get all public groups or user's groups
 // POST /api/groups - Create a new group
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const body = await req.json();
     const validation = createGroupSchema.safeParse(body);
 
     if (!validation.success) {
-      return new NextResponse(JSON.stringify(validation.error.format()), { status: 400 });
+      return NextResponse.json({ error: 'Invalid input data', details: validation.error.format() }, { status: 400 });
     }
 
     const { name, description, isPrivate, maxMembers } = validation.data;
@@ -96,17 +95,14 @@ export async function POST(req: Request) {
     return NextResponse.json(group);
   } catch (error) {
     console.error('Error in group creation:', error);
-    return new NextResponse(
-      JSON.stringify({ 
-        error: 'Failed to create group', 
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }), 
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      error: 'Failed to create group', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
-// GET /api/groups - Get all public groups or user's groups
+// GET /api/groups - Get groups based on user authentication and permissions
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -114,11 +110,15 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const isMember = searchParams.get('isMember') === 'true';
+    const includePrivate = searchParams.get('includePrivate') === 'true';
 
     // If user is not authenticated, only return public groups
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       const publicGroups = await prisma.room.findMany({
-        where: { isPrivate: false },
+        where: { 
+          isPrivate: false,
+          isActive: true 
+        },
         include: {
           createdByUser: {
             select: {
@@ -128,18 +128,27 @@ export async function GET(req: NextRequest) {
               image: true,
             },
           },
+          _count: {
+            select: {
+              members: true
+            }
+          }
         },
+        orderBy: { createdAt: 'desc' }
       });
 
       return NextResponse.json(publicGroups);
     }
 
-    // If user is authenticated, get their groups or all groups based on query params
+    // If user is authenticated, get groups based on permissions
     let groups;
     if (isMember && userId) {
-      // Get groups where the user is a member
+      // Get groups where the user is a member (including private groups)
       const memberGroups = await prisma.roomMember.findMany({
-        where: { userId },
+        where: { 
+          userId: session.user.id,
+          room: { isActive: true }
+        },
         include: {
           room: {
             include: {
@@ -163,30 +172,32 @@ export async function GET(req: NextRequest) {
                   },
                 },
               },
+              _count: {
+                select: {
+                  members: true
+                }
+              }
             },
           },
         },
+        orderBy: {
+          room: { createdAt: 'desc' }
+        }
       });
 
-      // Remove duplicates by user ID
       groups = memberGroups.map(member => ({
         ...member.room,
-        // Filter out duplicate users by creating a Map with user.id as key
-        members: Array.from(
-          new Map(
-            member.room.members.map(member => [member.user.id, {
-              ...member,
-              // Only include the first occurrence of each user
-              user: member.user
-            }])
-          ).values()
-        ),
+        userRole: member.role,
+        isCurrentMember: true
       }));
     } else {
-      // Get all public groups and groups where user is a member
-      const [publicGroups, userGroups] = await Promise.all([
+      // Get public groups and user's private groups
+      const [publicGroups, userPrivateGroups] = await Promise.all([
         prisma.room.findMany({
-          where: { isPrivate: false },
+          where: { 
+            isPrivate: false,
+            isActive: true 
+          },
           include: {
             createdByUser: {
               select: {
@@ -196,10 +207,22 @@ export async function GET(req: NextRequest) {
                 image: true,
               },
             },
+            _count: {
+              select: {
+                members: true
+              }
+            }
           },
+          orderBy: { createdAt: 'desc' }
         }),
         prisma.roomMember.findMany({
-          where: { userId: session.user.id },
+          where: { 
+            userId: session.user.id,
+            room: { 
+              isPrivate: true,
+              isActive: true 
+            }
+          },
           include: {
             room: {
               include: {
@@ -211,26 +234,45 @@ export async function GET(req: NextRequest) {
                     image: true,
                   },
                 },
+                members: {
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        image: true,
+                      },
+                    },
+                  },
+                },
+                _count: {
+                  select: {
+                    members: true
+                  }
+                }
               },
             },
           },
+          orderBy: {
+            room: { createdAt: 'desc' }
+          }
         }),
       ]);
 
-      // Combine and deduplicate groups
-      const allGroups = [...publicGroups, ...userGroups.map(ug => ug.room)];
-      const uniqueGroupIds = new Set();
-      
-      groups = allGroups.filter(group => {
-        if (uniqueGroupIds.has(group.id)) return false;
-        uniqueGroupIds.add(group.id);
-        return true;
-      });
+      // Combine and mark user's private groups
+      const privateGroupsWithRole = userPrivateGroups.map(member => ({
+        ...member.room,
+        userRole: member.role,
+        isCurrentMember: true
+      }));
+
+      groups = [...publicGroups, ...privateGroupsWithRole];
     }
 
     return NextResponse.json(groups);
   } catch (error) {
     console.error('Error fetching groups:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
