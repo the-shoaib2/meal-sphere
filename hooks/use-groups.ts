@@ -62,6 +62,22 @@ interface UpdateGroupInput {
   features?: Record<string, boolean>;
 }
 
+interface JoinRequest {
+  id: string;
+  userId: string;
+  roomId: string;
+  message?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: Date;
+  updatedAt: Date;
+  user: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  };
+}
+
 interface UseGroupsReturn {
   data: Group[];
   isLoading: boolean;
@@ -78,6 +94,12 @@ interface UseGroupsReturn {
   joinGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>>;
   leaveGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, string>>;
   deleteGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, string>>;
+  useJoinRequests: (groupId: string) => {
+    data: JoinRequest[];
+    isLoading: boolean;
+    error: Error | null;
+  };
+  handleJoinRequest: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string; requestId: string; action: 'approve' | 'reject' }>>;
 }
 
 export function useGroups(): UseGroupsReturn {
@@ -270,7 +292,7 @@ export function useGroups(): UseGroupsReturn {
     },
   });
 
-    // Update a group
+  // Update a group
   const updateGroup = useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>({
     mutationFn: async ({ groupId, data }) => {
       const { data: updatedGroup } = await axios.patch<Group>(`/api/groups/${groupId}`, data);
@@ -403,6 +425,47 @@ export function useGroups(): UseGroupsReturn {
     },
   });
 
+  // Fetch join requests
+  const useJoinRequests = (groupId: string) => {
+    const { data: joinRequests = [], isLoading: isLoadingJoinRequests, error: joinRequestsError } = useQuery<JoinRequest[], Error>({
+      queryKey: ['join-requests', groupId],
+      queryFn: async () => {
+        if (!session?.user?.id) return [];
+        try {
+          const { data } = await axios.get<JoinRequest[]>(`/api/groups/${groupId}/join-request`);
+          return data;
+        } catch (error) {
+          console.error(`Error fetching join requests for group ${groupId}:`, error);
+          throw new Error('Failed to fetch join requests');
+        }
+      },
+      enabled: !!session?.user?.id && !!groupId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false
+    });
+
+    return {
+      data: joinRequests,
+      isLoading: isLoadingJoinRequests,
+      error: joinRequestsError || null,
+    };
+  };
+
+  // Handle join request
+  const handleJoinRequest = useMutation<void, AxiosError<{ message: string }>, { groupId: string; requestId: string; action: 'approve' | 'reject' }>({
+    mutationFn: async ({ groupId, requestId, action }) => {
+      await axios.patch(`/api/groups/${groupId}/join-request/${requestId}`, { action });
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
+      toast.success('Join request handled successfully');
+    },
+    onError: (error) => {
+      console.error('Error handling join request:', error);
+      toast.error(error.response?.data?.message || 'Failed to handle join request');
+    },
+  });
+
   return {
     data: userGroups,
     isLoading: isLoadingGroups,
@@ -415,6 +478,8 @@ export function useGroups(): UseGroupsReturn {
     joinGroup,
     leaveGroup,
     deleteGroup,
+    useJoinRequests,
+    handleJoinRequest,
   };
 }
 

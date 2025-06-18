@@ -66,7 +66,6 @@ export default function GroupPage() {
 
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState(0);
   const [activeTab, setActiveTab] = useState('members');
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -96,7 +95,6 @@ export default function GroupPage() {
         const errorData = JSON.parse(error.message);
         if (errorData.requiresApproval) {
           setActiveTab('join-requests');
-          setPendingRequests(errorData.pendingRequests || 0);
           return;
         }
         toast.error(errorData.message || 'Failed to load group details');
@@ -310,11 +308,6 @@ export default function GroupPage() {
             <TabsTrigger value="join-requests" className="flex items-center gap-2">
               <UserPlus className="h-4 w-4 hidden sm:block" />
               Requests
-              {pendingRequests > 0 && (
-                <Badge variant="destructive" className="ml-2">
-                  {pendingRequests}
-                </Badge>
-              )}
             </TabsTrigger>
           )}
           {showActivityLog && (

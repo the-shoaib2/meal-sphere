@@ -224,7 +224,7 @@ export default function JoinGroupPage() {
             icon: <AlertCircle className="h-4 w-4" />,
           });
 
-          router.push('/groups');
+          // Don't navigate away, let the component show the pending state
           return;
         }
 
@@ -273,7 +273,8 @@ export default function JoinGroupPage() {
         icon: <AlertCircle className="h-4 w-4" />,
       });
 
-      router.push('/groups');
+      // Don't navigate away, let the component show the pending state
+      return;
     } catch (error: any) {
       console.error('Error sending join request:', error);
       setError(error.message || 'Failed to send join request');
