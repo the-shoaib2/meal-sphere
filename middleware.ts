@@ -11,7 +11,8 @@ const protectedRoutes = [
   // Groups
   "/groups",
   "/groups/:path*",
-  "/groups/join/:id",
+  "/groups/join",
+  "/groups/join/:path*",
   "/groups/create",
   
   // Settings
@@ -111,7 +112,10 @@ export async function middleware(request: NextRequest) {
       .replace(/:\w+/g, '[^/]+') // Replace :id with [^/]+
       .replace(/\//g, '\\/') // Escape forward slashes
     const regex = new RegExp(`^${pattern}$`)
-    return regex.test(pathname)
+    
+    // Decode the pathname to handle URL-encoded characters
+    const decodedPathname = decodeURIComponent(pathname)
+    return regex.test(decodedPathname)
   })
 
   // Check if current path is an auth page

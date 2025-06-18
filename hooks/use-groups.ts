@@ -100,6 +100,7 @@ interface UseGroupsReturn {
     error: Error | null;
   };
   handleJoinRequest: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string; requestId: string; action: 'approve' | 'reject' }>>;
+  resetJoinRequestStatus: (groupId: string) => void;
 }
 
 export function useGroups(): UseGroupsReturn {
@@ -325,6 +326,10 @@ export function useGroups(): UseGroupsReturn {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['group', groupId] });
       await queryClient.cancelQueries({ queryKey: ['user-groups'] });
+      await queryClient.cancelQueries({ queryKey: ['groups', 'my'] });
+      await queryClient.cancelQueries({ queryKey: ['groups', 'public'] });
+      await queryClient.cancelQueries({ queryKey: ['join-requests', groupId] });
+      await queryClient.cancelQueries({ queryKey: ['join-request-status', groupId] });
       
       // Snapshot the previous value
       const previousGroup = queryClient.getQueryData<Group>(['group', groupId]);
@@ -346,9 +351,22 @@ export function useGroups(): UseGroupsReturn {
       
       return { previousGroup, previousGroups };
     },
-    onSuccess: () => {
-      // Invalidate and refetch
+    onSuccess: (_, groupId) => {
+      // Comprehensive cache invalidation and clearing
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'public'] });
+      
+      // Remove specific group data from cache
+      queryClient.removeQueries({ queryKey: ['group', groupId] });
+      queryClient.removeQueries({ queryKey: ['join-requests', groupId] });
+      queryClient.removeQueries({ queryKey: ['join-request-status', groupId] });
+      queryClient.removeQueries({ queryKey: ['group-members', groupId] });
+      queryClient.removeQueries({ queryKey: ['group-activities', groupId] });
+      
+      // Clear any join request status for this group
+      queryClient.setQueryData(['join-request-status', groupId], null);
+      
       toast.success('You have left the group successfully');
       router.push('/groups');
     },
@@ -376,6 +394,10 @@ export function useGroups(): UseGroupsReturn {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
       queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'public'] });
+      queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['join-request-status', groupId] });
     },
   });
   // Delete group
@@ -466,6 +488,18 @@ export function useGroups(): UseGroupsReturn {
     },
   });
 
+  // Reset join request status for a specific group
+  const resetJoinRequestStatus = useCallback((groupId: string) => {
+    // Clear join request status from cache
+    queryClient.setQueryData(['join-request-status', groupId], null);
+    queryClient.removeQueries({ queryKey: ['join-request-status', groupId] });
+    queryClient.invalidateQueries({ queryKey: ['join-request-status', groupId] });
+    
+    // Also clear join requests list for this group
+    queryClient.removeQueries({ queryKey: ['join-requests', groupId] });
+    queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
+  }, [queryClient]);
+
   return {
     data: userGroups,
     isLoading: isLoadingGroups,
@@ -480,6 +514,7 @@ export function useGroups(): UseGroupsReturn {
     deleteGroup,
     useJoinRequests,
     handleJoinRequest,
+    resetJoinRequestStatus,
   };
 }
 

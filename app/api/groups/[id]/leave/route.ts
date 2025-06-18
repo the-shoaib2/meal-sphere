@@ -58,11 +58,22 @@ export async function POST(
       );
     }
 
-    // Remove membership
-    await prisma.roomMember.delete({
-      where: {
-        id: membership.id
-      }
+    // Use a transaction to ensure both operations complete or fail together
+    await prisma.$transaction(async (tx) => {
+      // Remove membership
+      await tx.roomMember.delete({
+        where: {
+          id: membership.id
+        }
+      });
+
+      // Delete any join requests for this user in this group
+      await tx.joinRequest.deleteMany({
+        where: {
+          userId: session.user.id,
+          roomId: groupId
+        }
+      });
     });
 
     return NextResponse.json(
