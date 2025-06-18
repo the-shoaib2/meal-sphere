@@ -136,9 +136,11 @@ export default function JoinGroupPage() {
 
   // Handle group data from useGroupAccess
   const handleGroupData = useCallback((data: any) => {
-    setGroup(data.group);
-    setRole(data.role);
-    setIsInviteToken(true);
+    if (data.group) {
+      setGroup(data.group);
+    }
+    setRole(data.userRole);
+    setIsInviteToken(data.isInviteToken || false);
     setActualGroupId(data.groupId);
     
     // Handle already a member case

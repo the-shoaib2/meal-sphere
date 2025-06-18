@@ -257,16 +257,9 @@ export function SettingsTab({
       await refetch();
 
       onUpdate();
-      toast({
-        title: 'Success',
-        description: 'Group settings updated successfully',
-      });
+      toast.success('Group settings updated successfully');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update group. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to update group. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -286,18 +279,11 @@ export function SettingsTab({
 
       await refetch();
       onUpdate();
-      toast({
-        title: 'Success',
-        description: `${GROUP_FEATURES[featureId].name} ${checked ? 'enabled' : 'disabled'}`,
-      });
+      toast.success(`${GROUP_FEATURES[featureId].name} ${checked ? 'enabled' : 'disabled'}`);
     } catch (error) {
       // Revert the switch if the update fails
       setValue(`features.${featureId}`, !checked);
-      toast({
-        title: 'Error',
-        description: 'Failed to update feature. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to update feature. Please try again.');
     }
   };
 

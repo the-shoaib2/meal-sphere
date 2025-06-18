@@ -21,7 +21,7 @@ export async function POST(
     const { id } = await params;
     const { message } = await request.json();
 
-    // Check if group exists
+    // Check if group exists and get its privacy settings
     const group = await prisma.room.findUnique({
       where: { id },
       include: {
@@ -42,33 +42,96 @@ export async function POST(
       return NextResponse.json({ error: 'You are already a member of this group' }, { status: 400 });
     }
 
-    // Check if user already has a pending request
-    const existingRequest = await prisma.joinRequest.findFirst({
-      where: {
-        roomId: id,
-        userId: session.user.id,
-        status: 'PENDING'
-      }
-    });
+    // Check if group is full
+    if (group.maxMembers) {
+      const currentMemberCount = await prisma.roomMember.count({
+        where: { roomId: id }
+      });
 
-    if (existingRequest) {
-      return NextResponse.json({ error: 'You already have a pending join request' }, { status: 400 });
+      if (currentMemberCount >= group.maxMembers) {
+        return NextResponse.json({ error: 'Group is full. Cannot join at this time.' }, { status: 400 });
+      }
     }
 
-    // Create join request
-    const joinRequest = await prisma.joinRequest.create({
-      data: {
-        roomId: id,
-        userId: session.user.id,
-        message,
-        status: 'PENDING'
-      }
-    });
+    // For private groups, create join request
+    if (group.isPrivate) {
+      // Check if user already has a pending request
+      const existingRequest = await prisma.joinRequest.findFirst({
+        where: {
+          roomId: id,
+          userId: session.user.id,
+          status: 'PENDING'
+        }
+      });
 
-    return NextResponse.json({
-      message: 'Join request sent successfully',
-      joinRequest
-    });
+      if (existingRequest) {
+        return NextResponse.json({ error: 'You already have a pending join request' }, { status: 400 });
+      }
+
+      // Create join request
+      const joinRequest = await prisma.joinRequest.create({
+        data: {
+          roomId: id,
+          userId: session.user.id,
+          message,
+          status: 'PENDING'
+        }
+      });
+
+      // Create activity log
+      await prisma.groupActivityLog.create({
+        data: {
+          type: "JOIN_REQUEST_CREATED",
+          details: {
+            userId: session.user.id,
+            message: message
+          },
+          roomId: id,
+          userId: session.user.id
+        }
+      });
+
+      return NextResponse.json({
+        message: 'Join request sent successfully',
+        joinRequest
+      });
+    } else {
+      // For public groups, directly add user as member
+      await prisma.roomMember.create({
+        data: {
+          roomId: id,
+          userId: session.user.id,
+          role: Role.MEMBER
+        }
+      });
+
+      // Update group member count
+      await prisma.room.update({
+        where: { id },
+        data: {
+          memberCount: {
+            increment: 1
+          }
+        }
+      });
+
+      // Create activity log
+      await prisma.groupActivityLog.create({
+        data: {
+          type: "MEMBER_JOINED",
+          details: {
+            userId: session.user.id
+          },
+          roomId: id,
+          userId: session.user.id
+        }
+      });
+
+      return NextResponse.json({
+        message: 'Successfully joined the group',
+        joined: true
+      });
+    }
   } catch (error) {
     console.error('Error creating join request:', error);
     return NextResponse.json(
@@ -93,7 +156,7 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get join request status
+    // Get join request status for the current user
     const joinRequest = await prisma.joinRequest.findFirst({
       where: {
         roomId: id,
