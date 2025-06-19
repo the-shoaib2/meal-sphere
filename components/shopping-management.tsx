@@ -332,7 +332,7 @@ export default function ShoppingManagement() {
           )}
 
           {purchasedItems.length > 0 && (
-            <Card className="border-green-100 border-dash">
+            <Card className="border-green-100">
               <CardHeader className="pb-2">
                 <CardTitle className="text-green-800">Purchased Items</CardTitle>
                 <CardDescription className="text-green-700">
