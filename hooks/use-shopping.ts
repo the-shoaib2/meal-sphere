@@ -34,18 +34,56 @@ export function useShopping() {
   const groupId = activeGroup?.id;
 
   // Fetch shopping list for the active group
+  interface ApiShoppingItem {
+    id: string;
+    name: string;
+    description: string;
+    quantity: number;
+    unit: string | null;
+    purchased: boolean;
+    date: string;
+    receiptUrl: string | null;
+    createdAt: string;
+    updatedAt: string;
+    userId: string;
+    roomId: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      image: string;
+    };
+  }
+
   const {
     data: items = [],
     isLoading,
     error,
     refetch,
-  } = useQuery<ShoppingItem[], Error>({
+  } = useQuery<ApiShoppingItem[], Error, ShoppingItem[]>({
     queryKey: ['shopping', groupId],
-    queryFn: async (): Promise<ShoppingItem[]> => {
+    queryFn: async (): Promise<ApiShoppingItem[]> => {
       if (!groupId) return [];
-      const { data } = await axios.get<ShoppingItem[]>(`/api/shopping?groupId=${groupId}`);
+      const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping?roomId=${groupId}`);
       return data;
     },
+    select: (data) => 
+      data.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit || undefined,
+        purchased: item.purchased,
+        addedById: item.userId,
+        addedBy: {
+          id: item.user.id,
+          name: item.user.name,
+          image: item.user.image
+        },
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt
+      })),
     enabled: !!groupId, // Only run the query when groupId is available
   });
 
@@ -53,9 +91,17 @@ export function useShopping() {
   const addItem = useMutation<ShoppingItem, Error, AddShoppingItemInput>({
     mutationFn: async (newItem): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
-      const { data } = await axios.post<ShoppingItem>('/api/shopping', {
-        ...newItem,
-        groupId,
+      
+      const formData = new FormData();
+      formData.append('roomId', groupId);
+      formData.append('description', newItem.name);
+      formData.append('amount', (newItem.quantity || 0).toString());
+      formData.append('date', new Date().toISOString());
+      
+      const { data } = await axios.post<ShoppingItem>('/api/shopping', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       return data;
     },
@@ -68,9 +114,8 @@ export function useShopping() {
   const updateItem = useMutation<ShoppingItem, Error, UpdateShoppingItemInput>({
     mutationFn: async (updatedItem): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
-      const { data } = await axios.patch<ShoppingItem>(`/api/shopping/${updatedItem.id}`, {
+      const { data } = await axios.patch<ShoppingItem>(`/api/shopping?id=${updatedItem.id}&groupId=${groupId}`, {
         ...updatedItem,
-        groupId,
       });
       return data;
     },
@@ -83,10 +128,15 @@ export function useShopping() {
   const togglePurchased = useMutation<ShoppingItem, Error, { id: string; purchased: boolean }>({
     mutationFn: async ({ id, purchased }): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
-      const { data } = await axios.patch<ShoppingItem>(`/api/shopping/${id}`, {
-        purchased,
-        groupId,
-      });
+      const { data } = await axios.patch<ShoppingItem>(
+        '/api/shopping',
+        { id, purchased },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
       return data;
     },
     onSuccess: () => {
@@ -98,7 +148,7 @@ export function useShopping() {
   const deleteItem = useMutation<void, Error, string>({
     mutationFn: async (itemId) => {
       if (!groupId) throw new Error('No active group selected');
-      await axios.delete(`/api/shopping/${itemId}?groupId=${groupId}`);
+      await axios.delete(`/api/shopping?id=${itemId}&groupId=${groupId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
