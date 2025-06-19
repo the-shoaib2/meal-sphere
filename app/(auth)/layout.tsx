@@ -7,13 +7,13 @@ import { SessionProvider } from "@/components/providers/session-provider"
 import { authOptions } from "@/lib/auth/auth"
 import { getServerSession } from "next-auth"
 import { LanguageProvider } from "@/contexts/language-context"
-import { NotificationProvider } from "@/contexts/notification-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { Header } from "@/components/header"
 import { QueryProvider } from "@/components/providers/query-provider"
+import { GroupProvider } from "@/contexts/group-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -35,8 +35,8 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           <ThemeProvider>
             <LanguageProvider>
-              <NotificationProvider>
-                <QueryProvider>
+              <QueryProvider>
+                <GroupProvider>
                   <div className="flex h-screen w-full overflow-hidden">
                     <SidebarProvider>
                       <AppSidebar />
@@ -53,8 +53,8 @@ export default async function RootLayout({
                     </SidebarProvider>
                   </div>
                   <ToastProvider />
-                </QueryProvider>
-              </NotificationProvider>
+                </GroupProvider>
+              </QueryProvider>
             </LanguageProvider>
           </ThemeProvider>
         </SessionProvider>

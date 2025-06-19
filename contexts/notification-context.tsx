@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { toast } from "@/hooks/use-toast"
 import { Bell } from "lucide-react"
@@ -110,15 +110,40 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }
 
+  const initialFetchRef = useRef(false);
+
+  // Initial fetch when the component mounts and session is authenticated
   useEffect(() => {
-    if (status === 'authenticated') {
-      setIsLoading(true)
-      fetchNotifications().finally(() => setIsLoading(false))
-      // Set up polling every 60 seconds
-      const interval = setInterval(fetchNotifications, 60000)
-      return () => clearInterval(interval)
-    }
-  }, [session, status])
+    let isMounted = true;
+    
+    const fetchInitialNotifications = async () => {
+      if (status === 'authenticated' && !initialFetchRef.current) {
+        initialFetchRef.current = true;
+        setIsLoading(true);
+        try {
+          await fetchNotifications();
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+        }
+      }
+    };
+
+    fetchInitialNotifications();
+
+    // Set up polling every 60 seconds
+    const interval = setInterval(() => {
+      if (status === 'authenticated') {
+        fetchNotifications();
+      }
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [status]); // Only depend on status, not session or notifications
 
   // Show toast for new notifications
   useEffect(() => {

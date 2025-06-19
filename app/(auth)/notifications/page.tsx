@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { useNotifications } from "@/contexts/notification-context"
+import { useNotifications, type Notification } from "@/contexts/notification-context"
 import { Bell, Check, Loader2, BellOff, Users, MessageSquare, Megaphone, Utensils, UserPlus, Settings } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useGroups } from "@/hooks/use-groups"
@@ -13,14 +13,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 
+type NotificationItem = {
+  id: string
+  message: string
+  read: boolean
+  createdAt: string
+}
+
+type Group = {
+  id: string
+  name: string
+  description?: string
+  role: 'ADMIN' | 'MANAGER' | 'MEMBER'
+}
+
+type GroupSettings = {
+  groupMessages: boolean
+  announcements: boolean
+  mealUpdates: boolean
+  memberActivity: boolean
+  joinRequests: boolean
+}
+
+type GlobalSettings = {
+  mealReminders: boolean
+  paymentAlerts: boolean
+  votingNotifications: boolean
+  managerUpdates: boolean
+  shoppingAlerts: boolean
+  emailNotifications: boolean
+}
+
 export default function NotificationsPage() {
-  const { notifications, markAllAsRead } = useNotifications()
+  const { notifications = [], markAllAsRead } = useNotifications()
   const { data: groups = [] } = useGroups()
-  const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("global")
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [activeTab, setActiveTab] = useState<string>("global")
 
   // Global notification settings
-  const [globalSettings, setGlobalSettings] = useState({
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings>({
     mealReminders: true,
     paymentAlerts: true,
     votingNotifications: true,
@@ -30,42 +61,44 @@ export default function NotificationsPage() {
   })
 
   // Group-specific notification settings
-  const [groupSettings, setGroupSettings] = useState<Record<string, {
-    groupMessages: boolean;
-    announcements: boolean;
-    mealUpdates: boolean;
-    memberActivity: boolean;
-    joinRequests: boolean;
-  }>>({})
+  const [groupSettings, setGroupSettings] = useState<Record<string, GroupSettings>>({})
 
   // Initialize group settings when groups data loads
   useEffect(() => {
-    const initialGroupSettings: Record<string, any> = {}
-    groups.forEach(group => {
-      initialGroupSettings[group.id] = {
-        groupMessages: true,
-        announcements: true,
-        mealUpdates: true,
-        memberActivity: true,
-        joinRequests: group.role === 'ADMIN' || group.role === 'MANAGER',
-      }
-    })
-    setGroupSettings(initialGroupSettings)
+    const initialGroupSettings: Record<string, GroupSettings> = {}
+    
+    if (groups && groups.length > 0) {
+      groups.forEach((group) => {
+        initialGroupSettings[group.id] = {
+          groupMessages: true,
+          announcements: true,
+          mealUpdates: true,
+          memberActivity: true,
+          joinRequests: group.role === 'ADMIN' || group.role === 'MANAGER',
+        }
+      })
+      setGroupSettings(initialGroupSettings)
+    }
   }, [groups])
 
-  const handleGlobalToggle = (setting: keyof typeof globalSettings) => {
-    setGlobalSettings((prev) => ({
+  const handleGlobalToggle = useCallback((setting: keyof GlobalSettings) => {
+    setGlobalSettings(prev => ({
       ...prev,
       [setting]: !prev[setting],
     }))
-  }
+  }, [])
 
-  const handleGroupToggle = async (groupId: string, key: string) => {
+  const handleGroupToggle = useCallback(async (groupId: string, key: keyof GroupSettings) => {
+    const currentSettings = groupSettings[groupId]
+    if (!currentSettings) return
+    
+    const currentValue = currentSettings[key]
+    const newValue = !currentValue
+    
     try {
       setIsLoading(true)
-      const newValue = !groupSettings[groupId]?.[key as keyof typeof groupSettings[typeof groupId]]
       
-      // Update local state optimistically
+      // Optimistic update
       setGroupSettings(prev => ({
         ...prev,
         [groupId]: {
@@ -74,15 +107,11 @@ export default function NotificationsPage() {
         }
       }))
 
-      // Make API call to update notification settings
+      // API call
       const response = await fetch(`/api/groups/${groupId}/notifications`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          [key]: newValue
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: newValue })
       })
 
       if (!response.ok) {
@@ -99,7 +128,7 @@ export default function NotificationsPage() {
         ...prev,
         [groupId]: {
           ...prev[groupId],
-          [key]: !groupSettings[groupId]?.[key as keyof typeof groupSettings[typeof groupId]]
+          [key]: currentValue
         }
       }))
 
@@ -111,9 +140,9 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [groupSettings])
 
-  const handleReadAll = async () => {
+  const handleReadAll = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/notifications/read-all`, {
@@ -127,12 +156,16 @@ export default function NotificationsPage() {
         throw new Error('Failed to mark notifications as read')
       }
 
-      markAllAsRead()
+      if (markAllAsRead) {
+        markAllAsRead()
+      }
+      
       toast({
         title: 'Success',
         description: 'All notifications marked as read',
       })
     } catch (error) {
+      console.error('Error marking notifications as read:', error)
       toast({
         title: 'Error',
         description: 'Failed to mark notifications as read',
@@ -141,18 +174,43 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [markAllAsRead])
 
-  const handleSaveGlobalSettings = () => {
-    // This would be replaced with an actual API call to save global settings
-    toast({
-      title: "Settings saved",
-      description: "Your global notification preferences have been updated",
-      action: <Check className="h-4 w-4" />,
-    })
-  }
+  const handleSaveGlobalSettings = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      // This would be replaced with an actual API call to save global settings
+      const response = await fetch('/api/settings/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(globalSettings)
+      })
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+      if (!response.ok) {
+        throw new Error('Failed to save settings')
+      }
+
+      toast({
+        title: "Settings saved",
+        description: "Your global notification preferences have been updated",
+        action: <Check className="h-4 w-4" />,
+      })
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save notification settings',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [globalSettings])
+
+  const unreadCount = useMemo(() => {
+    if (!Array.isArray(notifications)) return 0
+    return notifications.filter(n => !n.read).length
+  }, [notifications])
 
   return (
     <div className="space-y-6">
@@ -269,9 +327,9 @@ export default function NotificationsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {notifications.length > 0 ? (
+                {notifications && notifications.length > 0 ? (
                   <div className="space-y-4">
-                    {notifications.slice(0, 5).map((notification) => (
+                    {notifications.slice(0, 5).map((notification: Notification) => (
                       <div
                         key={notification.id}
                         className={`flex items-start ${!notification.read ? "bg-muted/50 -mx-2 p-2 rounded-md" : ""}`}

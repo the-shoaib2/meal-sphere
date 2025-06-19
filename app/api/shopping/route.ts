@@ -54,8 +54,9 @@ export async function POST(request: Request) {
     // Create shopping item
     const shoppingItem = await prisma.shoppingItem.create({
       data: {
+        name: description?.substring(0, 50) || 'Shopping Item', // Required field
         description,
-        amount,
+        quantity: amount,
         date,
         receiptUrl,
         userId: user.id,
@@ -168,5 +169,140 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Error fetching shopping items:", error)
     return NextResponse.json({ message: "Failed to fetch shopping items" }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id, ...updateData } = await request.json()
+
+    if (!id) {
+      return NextResponse.json({ message: "Item ID is required" }, { status: 400 })
+    }
+
+    // Get the current item to verify ownership
+    const currentItem = await prisma.shoppingItem.findUnique({
+      where: { id },
+      include: {
+        room: {
+          include: {
+            members: {
+              where: { userId: session.user.id },
+              select: { role: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!currentItem) {
+      return NextResponse.json({ message: "Item not found" }, { status: 404 })
+    }
+
+    // Check if user is a member of the room
+    if (currentItem.room.members.length === 0) {
+      return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
+    }
+
+    // Only allow updating certain fields
+    const allowedUpdates = ['name', 'quantity', 'unit', 'purchased']
+    const updates = Object.keys(updateData).filter(key => allowedUpdates.includes(key))
+    
+    if (updates.length === 0) {
+      return NextResponse.json({ message: "No valid updates provided" }, { status: 400 })
+    }
+
+    const updatePayload: any = {}
+    updates.forEach(update => {
+      updatePayload[update] = updateData[update]
+    })
+
+    // Update the item
+    const updatedItem = await prisma.shoppingItem.update({
+      where: { id },
+      data: updatePayload,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updatedItem)
+  } catch (error) {
+    console.error("Error updating shopping item:", error)
+    return NextResponse.json(
+      { message: "Failed to update shopping item" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+    const groupId = searchParams.get("groupId")
+
+    if (!id || !groupId) {
+      return NextResponse.json(
+        { message: "Item ID and Group ID are required" },
+        { status: 400 }
+      )
+    }
+
+    // Get the current item to verify ownership
+    const currentItem = await prisma.shoppingItem.findUnique({
+      where: { id },
+      include: {
+        room: {
+          include: {
+            members: {
+              where: { userId: session.user.id },
+              select: { role: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!currentItem) {
+      return NextResponse.json({ message: "Item not found" }, { status: 404 })
+    }
+
+    // Check if user is a member of the room
+    if (currentItem.room.members.length === 0) {
+      return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
+    }
+
+    // Delete the item
+    await prisma.shoppingItem.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ message: "Item deleted successfully" })
+  } catch (error) {
+    console.error("Error deleting shopping item:", error)
+    return NextResponse.json(
+      { message: "Failed to delete shopping item" },
+      { status: 500 }
+    )
   }
 }

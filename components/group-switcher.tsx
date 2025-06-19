@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Users } from "lucide-react"
+import { ChevronsUpDown, Plus, Users, Check } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import {
@@ -19,29 +19,31 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useGroups } from "@/hooks/use-groups"
+import { useGroups, Group } from "@/hooks/use-groups"
 import { useSession } from "next-auth/react"
+import { useActiveGroup } from "@/contexts/group-context"
 
 export function GroupSwitcher() {
   const { isMobile } = useSidebar()
   const router = useRouter()
   const { data: session } = useSession()
   const { data: groups = [], isLoading } = useGroups()
-  const [activeGroup, setActiveGroup] = React.useState<string | null>(null)
-
-  // Set the first group as active when groups are loaded
-  React.useEffect(() => {
-    if (groups.length > 0 && !activeGroup) {
-      setActiveGroup(groups[0].id)
-    }
-  }, [groups, activeGroup])
-
-  const currentGroup = groups.find(g => g.id === activeGroup) || groups[0]
+  const { activeGroup, setActiveGroup } = useActiveGroup()
   const hasGroups = groups.length > 0
 
-  const handleGroupSelect = (groupId: string) => {
-    setActiveGroup(groupId)
-    // You can add additional logic here when a group is selected
+  // Set the first group as active when groups are loaded and no group is selected
+  React.useEffect(() => {
+    if (groups.length > 0 && !activeGroup) {
+      setActiveGroup(groups[0])
+    }
+  }, [groups, activeGroup, setActiveGroup])
+
+  const handleGroupSelect = (group: Group) => {
+    setActiveGroup(group)
+    // Close the dropdown on mobile after selection
+    if (isMobile) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    }
   }
 
   const handleAddGroup = () => {
@@ -84,10 +86,10 @@ export function GroupSwitcher() {
                 {hasGroups ? (
                   <>
                     <span className="truncate font-semibold">
-                      {currentGroup?.name || 'Select a group'}
+                      {activeGroup?.name || 'Select a group'}
                     </span>
                     <span className="truncate text-xs">
-                      {currentGroup?.members?.length || 0} members
+                      {activeGroup?.members?.length || 0} members • {activeGroup?.role || 'Member'}
                     </span>
                   </>
                 ) : (
@@ -100,49 +102,60 @@ export function GroupSwitcher() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            className="w-72"
             align="start"
             side={isMobile ? "bottom" : "right"}
-            sideOffset={4}
           >
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {hasGroups ? 'Your Groups' : 'No Groups'}
+            <DropdownMenuLabel className="flex justify-between items-center">
+              <span>My Groups</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {groups.length} {groups.length === 1 ? 'group' : 'groups'}
+              </span>
             </DropdownMenuLabel>
-            
-            {hasGroups ? (
-              groups.map((group) => (
+            <DropdownMenuSeparator />
+            <div className="max-h-[300px] overflow-y-auto">
+              {groups.map((group) => (
                 <DropdownMenuItem
                   key={group.id}
-                  onClick={() => handleGroupSelect(group.id)}
-                  className="gap-2 p-2 rounded-md transition-all duration-200 hover:bg-accent/50 hover:translate-x-1 focus:bg-accent/50 focus:translate-x-1"
+                  onClick={() => handleGroupSelect(group)}
+                  className="flex items-center justify-between group"
                 >
-                  <div className="flex size-6 items-center justify-center rounded-sm bg-muted">
-                    <Users className="size-4 shrink-0" />
+                  <div className="flex items-center">
+                    <span className="truncate max-w-[180px]">{group.name}</span>
+                    {group.role === 'ADMIN' && (
+                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                        Admin
+                      </span>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate">{group.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
+                  <div className="flex items-center">
+                    <span className="text-xs text-muted-foreground mr-2">
                       {group.members?.length || 0} members
-                    </p>
+                    </span>
+                    {activeGroup?.id === group.id && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
                   </div>
                 </DropdownMenuItem>
-              ))
-            ) : (
-              <div className="p-3 text-sm text-muted-foreground">
-                You don't have any groups yet.
-              </div>
-            )}
-            
+              ))}
+            </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={handleAddGroup}
-              className="gap-2 p-2 rounded-md transition-all duration-200 hover:bg-accent/50 hover:translate-x-1 focus:bg-accent/50 focus:translate-x-1 cursor-pointer"
+              className="text-primary focus:text-primary"
             >
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <Plus className="size-4" />
-              </div>
-              <div className="font-medium">Create group</div>
+              <Plus className="mr-2 h-4 w-4" />
+              Create new group
+              <DropdownMenuShortcut>⌘+N</DropdownMenuShortcut>
             </DropdownMenuItem>
+            {hasGroups && (
+              <DropdownMenuItem
+                onClick={() => router.push('/groups')}
+                className="text-muted-foreground text-xs"
+              >
+                Manage all groups
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

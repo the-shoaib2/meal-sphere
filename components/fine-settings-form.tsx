@@ -55,7 +55,7 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`/api/rooms/${data.roomId}/fine-settings`, {
+      const response = await fetch(`/api/groups/${data.roomId}/fine-settings`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

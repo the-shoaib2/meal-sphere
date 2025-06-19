@@ -5,7 +5,6 @@ import "@/app/globals.css"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { SessionProvider } from "@/components/providers/session-provider"
 import { LanguageProvider } from "@/contexts/language-context"
-import { NotificationProvider } from "@/contexts/notification-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -27,12 +26,10 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <SessionProvider>
             <LanguageProvider>
-              <NotificationProvider>
-                <div className="flex-1 flex flex-col">
-                  {children}
-                </div>
-                <ToastProvider />
-              </NotificationProvider>
+              <div className="flex-1 flex flex-col">
+                {children}
+              </div>
+              <ToastProvider />
             </LanguageProvider>
           </SessionProvider>
         </ThemeProvider>

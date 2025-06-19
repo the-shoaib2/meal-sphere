@@ -71,11 +71,11 @@ export async function calculateUserMealSummary(
       },
     },
     select: {
-      amount: true,
+      quantity: true,
     },
   })
 
-  const totalCost = shoppingCosts.reduce((sum, item) => sum + item.amount, 0)
+  const totalCost = shoppingCosts.reduce((sum, item) => sum + item.quantity, 0)
 
   // Calculate meal rate
   const mealRate = allMeals > 0 ? totalCost / allMeals : 0
@@ -123,11 +123,11 @@ export async function calculateRoomMealSummary(
       },
     },
     select: {
-      amount: true,
+      quantity: true,
     },
   })
 
-  const totalCost = shoppingCosts.reduce((sum, item) => sum + item.amount, 0)
+  const totalCost = shoppingCosts.reduce((sum, item) => sum + item.quantity, 0)
 
   // Calculate meal rate
   const mealRate = allMeals > 0 ? totalCost / allMeals : 0

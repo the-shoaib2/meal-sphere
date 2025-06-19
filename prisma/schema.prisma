@@ -89,6 +89,8 @@ enum ExpenseType {
   OTHER
 }
 
+
+
 /// USER MODEL
 model User {
   id               String           @id @default(auto()) @map("_id") @db.ObjectId
@@ -289,9 +291,12 @@ model GuestMeal {
 /// SHOPPING ITEM MODEL
 model ShoppingItem {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  description String
-  amount      Float
-  date        DateTime
+  name        String
+  description String?
+  quantity    Int      @default(1)
+  unit        String?
+  purchased   Boolean  @default(false)
+  date        DateTime @default(now())
   receiptUrl  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -301,11 +306,11 @@ model ShoppingItem {
   room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([roomId, date])
-  @@index([amount])
-  @@index([userId, date])
+  @@index([roomId])
+  @@index([purchased])
+  @@index([createdAt])
+  @@index([userId])
 }
-
 /// PAYMENT MODEL
 model Payment {
   id           String        @id @default(auto()) @map("_id") @db.ObjectId

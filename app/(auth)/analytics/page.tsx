@@ -110,7 +110,7 @@ export default async function AnalyticsPage() {
       
       // Calculate total expenses
       const totalExpense = roomExpenses.reduce((sum, expense) => sum + expense.amount, 0) +
-                          roomShopping.reduce((sum, item) => sum + item.amount, 0)
+                          roomShopping.reduce((sum, item) => sum + (item.quantity || 0), 0)
       
       // Calculate meal rate
       const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0

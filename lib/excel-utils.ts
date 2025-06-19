@@ -198,13 +198,13 @@ export async function exportShoppingToExcel(roomId: string, startDate: Date, end
     // Convert to Excel rows
     const rows: ShoppingExcelRow[] = shoppingItems.map((item) => ({
       Date: item.date.toISOString().split("T")[0],
-      Description: item.description,
-      Amount: item.amount,
+      Description: item.description || '', // Handle null description
+      Amount: item.quantity, // Use quantity instead of amount
       AddedBy: item.user.name,
     }))
 
     // Add a total row
-    const totalAmount = shoppingItems.reduce((sum, item) => sum + item.amount, 0)
+    const totalAmount = shoppingItems.reduce((sum, item) => sum + item.quantity, 0)
     rows.push({
       Date: "",
       Description: "TOTAL",

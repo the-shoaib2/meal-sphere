@@ -60,7 +60,7 @@ export default function MealManagement() {
     
     const fetchRooms = async () => {
       try {
-        const response = await fetch("/api/rooms")
+        const response = await fetch("/api/groups")
         const data = await response.json()
 
         if (data.length > 0) {

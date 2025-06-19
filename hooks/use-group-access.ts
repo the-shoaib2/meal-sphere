@@ -1,5 +1,5 @@
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from 'react';
 import { Role } from '@prisma/client';
 import { toast } from 'react-hot-toast';
