@@ -36,9 +36,7 @@ export default async function ExpensesPage() {
       <h1 className="text-3xl font-bold">Extra Expenses</h1>
       <p className="text-muted-foreground">Track additional expenses like utilities, rent, internet, and more.</p>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <ExtraExpenseForm user={user} rooms={rooms} />
-      </div>
+      <ExtraExpenseForm user={user} rooms={rooms} />
 
       <ExpenseList user={user} rooms={rooms} />
     </div>

@@ -41,12 +41,33 @@ const expenseFormSchema = z.object({
     required_error: "Please select an expense type",
   }),
   receipt: z
-    .instanceof(FileList)
+    .any()
     .optional()
-    .refine((files) => !files || files.length === 0 || files[0].size <= MAX_FILE_SIZE, {
+    .refine((files) => {
+      if (!files) return true;
+      // Only validate if running in the browser and files is a FileList
+      if (typeof File !== 'undefined' && files instanceof FileList) {
+        return files.length === 0 || files[0].size <= MAX_FILE_SIZE;
+      }
+      // If it's a single File (from SSR or fallback), check size
+      if (typeof File !== 'undefined' && files instanceof File) {
+        return files.size <= MAX_FILE_SIZE;
+      }
+      // Otherwise, skip validation (SSR)
+      return true;
+    }, {
       message: `Max file size is 5MB.`,
     })
-    .transform((files) => (files && files.length > 0 ? files[0] : undefined)),
+    .transform((files) => {
+      if (!files) return undefined;
+      if (typeof File !== 'undefined' && files instanceof FileList) {
+        return files.length > 0 ? files[0] : undefined;
+      }
+      if (typeof File !== 'undefined' && files instanceof File) {
+        return files;
+      }
+      return undefined;
+    }),
 })
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>
@@ -134,151 +155,153 @@ export function ExtraExpenseForm({ user, rooms }: ExtraExpenseFormProps) {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="roomId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("meals.room")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a room" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("expense.type")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select expense type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="UTILITY">{t("expense.utility")}</SelectItem>
-                      <SelectItem value="RENT">{t("expense.rent")}</SelectItem>
-                      <SelectItem value="INTERNET">{t("expense.internet")}</SelectItem>
-                      <SelectItem value="CLEANING">{t("expense.cleaning")}</SelectItem>
-                      <SelectItem value="MAINTENANCE">{t("expense.maintenance")}</SelectItem>
-                      <SelectItem value="OTHER">{t("expense.other")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("expense.description")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter description" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("expense.amount")}</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} step={0.01} placeholder="0.00" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>{t("expense.date")}</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="roomId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("meals.room")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                        >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a room" />
+                        </SelectTrigger>
                       </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date > new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="receipt"
-              render={({ field: { value, onChange, ...fieldProps } }) => (
-                <FormItem>
-                  <FormLabel>{t("expense.receipt")}</FormLabel>
-                  <FormControl>
-                    <div className="grid w-full gap-2">
-                      <Input
-                        id="receipt"
-                        type="file"
-                        accept="image/*,.pdf"
-                        className="cursor-pointer"
-                        onChange={(e) => {
-                          onChange(e.target.files)
-                          handleFileChange(e)
-                        }}
-                        {...fieldProps}
-                      />
-                      {previewUrl && (
-                        <div className="relative h-40 w-full overflow-hidden rounded-md">
-                          <Image
-                            src={previewUrl || "/placeholder.svg"}
-                            alt="Receipt preview"
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormDescription>{t("shopping.uploadReceipt")}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isLoading}>
+                      <SelectContent>
+                        {rooms.map((room) => (
+                          <SelectItem key={room.id} value={room.id}>
+                            {room.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("expense.type")}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select expense type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="UTILITY">{t("expense.utility")}</SelectItem>
+                        <SelectItem value="RENT">{t("expense.rent")}</SelectItem>
+                        <SelectItem value="INTERNET">{t("expense.internet")}</SelectItem>
+                        <SelectItem value="CLEANING">{t("expense.cleaning")}</SelectItem>
+                        <SelectItem value="MAINTENANCE">{t("expense.maintenance")}</SelectItem>
+                        <SelectItem value="OTHER">{t("expense.other")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("expense.description")}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("expense.amount")}</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} step={0.01} placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>{t("expense.date")}</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                          >
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date > new Date()}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="receipt"
+                render={({ field: { value, onChange, ...fieldProps } }) => (
+                  <FormItem>
+                    <FormLabel>{t("expense.receipt")}</FormLabel>
+                    <FormControl>
+                      <div className="grid w-full gap-2">
+                        <Input
+                          id="receipt"
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="cursor-pointer"
+                          onChange={(e) => {
+                            onChange(e.target.files)
+                            handleFileChange(e)
+                          }}
+                          {...fieldProps}
+                        />
+                        {previewUrl && (
+                          <div className="relative h-40 w-full overflow-hidden rounded-md">
+                            <Image
+                              src={previewUrl || "/placeholder.svg"}
+                              alt="Receipt preview"
+                              fill
+                              className="object-contain"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription>{t("shopping.uploadReceipt")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <Button type="submit" disabled={isLoading} className="w-full md:w-auto">
               {isLoading ? "Adding..." : t("button.add")}
             </Button>
           </form>

@@ -171,8 +171,17 @@ export function ExpenseList({ user, rooms }: ExpenseListProps) {
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="flex flex-col gap-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="animate-pulse flex flex-row items-center gap-4 p-4 border rounded-md">
+                <div className="h-4 w-24 bg-gray-200 rounded" />
+                <div className="h-4 w-16 bg-gray-200 rounded" />
+                <div className="h-4 w-40 bg-gray-200 rounded" />
+                <div className="h-4 w-16 bg-gray-200 rounded" />
+                <div className="h-4 w-24 bg-gray-200 rounded" />
+                <div className="h-4 w-16 bg-gray-200 rounded" />
+              </div>
+            ))}
           </div>
         ) : expenses.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">No expenses found for the selected criteria.</div>
