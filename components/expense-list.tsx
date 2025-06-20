@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,7 @@ import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
 import { ExpenseActions } from "./expense-actions"
 
 export function ExpenseList() {
+  const queryClient = useQueryClient()
   const { data: session } = useSession()
   const { activeGroup } = useActiveGroup()
   const [selectedType, setSelectedType] = useState<string>("")
@@ -54,7 +56,20 @@ export function ExpenseList() {
   })
 
   const handleDeleteExpense = async (expenseId: string) => {
-    await deleteExpense.mutateAsync(expenseId)
+    try {
+      await deleteExpense.mutateAsync(expenseId)
+      toast.success('Expense deleted successfully')
+    } catch (error) {
+      console.error('Error deleting expense:', error)
+      toast.error('Failed to delete expense')
+    }
+  }
+
+  const handleEditSuccess = () => {
+    // Invalidate the expenses query to trigger a refetch
+    queryClient.invalidateQueries({ 
+      queryKey: ['extraExpenses', activeGroup?.id] 
+    })
   }
 
   if (!activeGroup) {
@@ -276,8 +291,10 @@ export function ExpenseList() {
                         <TableCell>
                           <ExpenseActions 
                             expenseId={expense.id}
+                            expense={expense}
                             onDelete={handleDeleteExpense}
-                            isDeleting={deleteMutation.isPending}
+                            isDeleting={deleteExpense.isPending}
+                            onSuccess={handleEditSuccess}
                           />
                         </TableCell>
                       )}

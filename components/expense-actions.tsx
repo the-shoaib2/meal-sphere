@@ -7,15 +7,20 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { toast } from "react-hot-toast"
 import { Loader2 } from "lucide-react"
+import { ExtraExpenseDialog } from "./extra-expense-dialog"
+import { type ExtraExpense } from "@/hooks/use-extra-expense"
 
 interface ExpenseActionsProps {
   expenseId: string
+  expense: ExtraExpense
   onDelete: (id: string) => Promise<void>
   isDeleting: boolean
+  onSuccess?: () => void
 }
 
-export function ExpenseActions({ expenseId, onDelete, isDeleting }: ExpenseActionsProps) {
+export function ExpenseActions({ expenseId, expense, onDelete, isDeleting, onSuccess }: ExpenseActionsProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   const handleDeleteClick = () => {
     setIsDeleteDialogOpen(true)
@@ -45,8 +50,7 @@ export function ExpenseActions({ expenseId, onDelete, isDeleting }: ExpenseActio
           <DropdownMenuItem 
             className="cursor-pointer flex items-center gap-2"
             onClick={() => {
-              // TODO: Implement edit functionality
-              toast('Edit functionality coming soon')
+              setIsEditDialogOpen(true)
             }}
           >
             <Pencil className="h-4 w-4" />
@@ -90,6 +94,18 @@ export function ExpenseActions({ expenseId, onDelete, isDeleting }: ExpenseActio
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {isEditDialogOpen && (
+        <ExtraExpenseDialog 
+          open={isEditDialogOpen} 
+          onOpenChange={setIsEditDialogOpen}
+          expense={expense}
+          onSuccess={() => {
+            setIsEditDialogOpen(false)
+            onSuccess?.()
+          }}
+        />
+      )}
     </>
   )
 }

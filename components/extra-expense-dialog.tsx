@@ -1,22 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon, Plus } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "react-hot-toast"
-import { useExtraExpense } from "@/hooks/use-extra-expense"
+import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
 import { Loader2 } from "lucide-react"
+
+interface ExtraExpenseDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  expense?: ExtraExpense
+  onSuccess?: () => void
+}
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -62,10 +69,10 @@ const expenseFormSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>
 
-export function ExtraExpenseDialog() {
-  const [open, setOpen] = useState(false)
+export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: ExtraExpenseDialogProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const { addExpense } = useExtraExpense()
+  const isEditMode = !!expense
+  const { addExpense, updateExpense } = useExtraExpense()
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -82,41 +89,81 @@ export function ExtraExpenseDialog() {
     if (file) {
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
+      form.setValue('receipt', file, { shouldValidate: true })
     } else {
-      previewUrl && URL.revokeObjectURL(previewUrl)
       setPreviewUrl(null)
+      form.setValue('receipt', undefined, { shouldValidate: true })
     }
   }
 
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
+
+  // Reset form when dialog opens/closes or when expense changes
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        description: expense?.description || "",
+        amount: expense?.amount || 0,
+        date: expense?.date ? new Date(expense.date) : new Date(),
+        type: (expense?.type as any) || "OTHER",
+        receipt: undefined,
+      })
+      setPreviewUrl(expense?.receiptUrl || null)
+    } else {
+      form.reset()
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+      }
+    }
+  }, [open, expense, form])
+
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
-      await addExpense.mutateAsync({
-        ...data,
-        receipt: data.receipt,
-      })
-      toast.success("Expense added successfully!")
-      form.reset()
-      setPreviewUrl(null)
-      setOpen(false)
+      const { receipt, ...expenseData } = data;
+      
+      if (isEditMode && expense) {
+        // For update, convert date to ISO string
+        await updateExpense.mutateAsync({
+          id: expense.id,
+          ...expenseData,
+          date: expenseData.date.toISOString(),
+          receipt: receipt as File | undefined,
+        });
+        toast.success("Expense updated successfully!");
+      } else {
+        // For new expense, keep date as Date object
+        await addExpense.mutateAsync({
+          ...expenseData,
+          receipt: receipt as File | undefined,
+        });
+        toast.success("Expense added successfully!");
+      }
+      
+      onOpenChange(false);
+      onSuccess?.();
     } catch (error) {
-      console.error("Error adding expense:", error)
-      toast.error("Failed to add expense. Please try again.")
+      console.error("Error saving expense:", error);
+      toast.error("Failed to save expense. Please try again.");
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Expense
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] md:max-w-[600px]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Expense</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
           <DialogDescription>
-            Add a new expense to track. Click save when you're done.
+            {isEditMode 
+              ? 'Update the expense details.' 
+              : 'Add a new expense to the group. Click save when you\'re done.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -147,23 +194,26 @@ export function ExtraExpenseDialog() {
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">৳</span>
                           <Input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="0.00" 
-                            className="pl-8"
-                            {...field}
-                            value={field.value || ''}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 0;
-                              field.onChange(value);
-                            }}
-                          />
+                        type="number" 
+                        step="0.01" 
+                        min="0"
+                        placeholder="0.00" 
+                        className="pl-8"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          field.onChange(isNaN(value) ? 0 : value);
+                        }}
+                      />
                         </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+
 
                 <FormField
                   control={form.control}
@@ -237,17 +287,18 @@ export function ExtraExpenseDialog() {
               <FormField
                 control={form.control}
                 name="receipt"
-                render={({ field: { value, onChange, ...field } }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Receipt (Optional)</FormLabel>
                     <FormControl>
                       <Input
                         type="file"
                         accept="image/*,.pdf"
-                        {...field}
-                        onChange={(e) => {
-                          handleFileChange(e)
-                          onChange(e.target.files?.[0])
+                        onChange={handleFileChange}
+                        onClick={(e) => {
+                          // Allow selecting the same file again
+                          const element = e.target as HTMLInputElement;
+                          element.value = '';
                         }}
                       />
                     </FormControl>
@@ -270,27 +321,23 @@ export function ExtraExpenseDialog() {
             </div>
             
             <DialogFooter className="flex flex-col sm:flex-row gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  form.reset()
-                  setPreviewUrl(null)
-                  setOpen(false)
-                }}
-                disabled={addExpense.isPending}
+              <Button 
+                type="submit"
+                disabled={isEditMode ? updateExpense.isPending : addExpense.isPending}
               >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={addExpense.isPending}>
-                {addExpense.isPending ? (
+                {isEditMode ? (
+                  updateExpense.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : 'Update Expense'
+                ) : addExpense.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Adding...
                   </>
-                ) : (
-                  "Add Expense"
-                )}
+                ) : 'Add Expense'}
               </Button>
             </DialogFooter>
           </form>
