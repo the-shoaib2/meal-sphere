@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "react-hot-toast"
 import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
@@ -157,18 +157,18 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
-          <DialogDescription>
-            {isEditMode 
-              ? 'Update the expense details.' 
-              : 'Add a new expense to the group. Click save when you\'re done.'}
+      <DialogContent className="sm:max-w-[425px] w-[calc(100%-2rem)] mx-auto sm:w-full">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-xl sm:text-2xl">
+            {isEditMode ? 'Edit Expense' : 'Add New Expense'}
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            {isEditMode ? 'Update the expense details below.' : 'Fill out the form to add a new expense.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-3 sm:gap-4 py-2 sm:py-4">
               <FormField
                 control={form.control}
                 name="description"
@@ -194,18 +194,18 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">৳</span>
                           <Input 
-                        type="number" 
+                          type="number" 
                         step="0.01" 
-                        min="0"
+                          min="0"
                         placeholder="0.00" 
-                        className="pl-8"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={(e) => {
+                          className="pl-8"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => {
                           const value = parseFloat(e.target.value);
                           field.onChange(isNaN(value) ? 0 : value);
-                        }}
-                      />
+                          }}
+                        />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -254,7 +254,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-full pl-3 text-left font-normal h-10 sm:h-auto",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -267,7 +267,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 sm:max-w-[320px]" align="start" side="bottom">
                         <Calendar
                           mode="single"
                           selected={field.value}
@@ -308,11 +308,11 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                     <FormMessage />
                     {previewUrl && (
                       <div className="mt-2">
-                        <img
-                          src={previewUrl}
-                          alt="Receipt preview"
-                          className="h-32 w-auto rounded-md object-cover"
-                        />
+                          <img
+                            src={previewUrl}
+                            alt="Receipt preview"
+                            className="max-h-48 w-auto max-w-full rounded-md object-contain"
+                          />
                       </div>
                     )}
                   </FormItem>
@@ -320,10 +320,12 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
               />
             </div>
             
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
               <Button 
                 type="submit"
+                className="w-full sm:w-auto"
                 disabled={isEditMode ? updateExpense.isPending : addExpense.isPending}
+                size="lg"
               >
                 {isEditMode ? (
                   updateExpense.isPending ? (
@@ -337,7 +339,12 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Adding...
                   </>
-                ) : 'Add Expense'}
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Expense
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>

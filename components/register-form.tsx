@@ -395,7 +395,7 @@ export default function RegisterForm() {
   }, [currentStep, isLoading]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gray-50 px-4 py-8 dark:bg-gray-900">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-8 dark:bg-gray-900">
       <div className="mb-2">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Utensils className="h-6 w-6" />

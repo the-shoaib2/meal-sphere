@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { ExpenseList } from "@/components/expense-list"
 import { ExtraExpenseDialog } from "@/components/extra-expense-dialog"
 import { useActiveGroup } from "@/contexts/group-context"
+import { toast } from "react-hot-toast"
+import { Plus } from "lucide-react"
 
 export default function ExpensesPage() {
   const { activeGroup } = useActiveGroup()
@@ -22,7 +24,6 @@ export default function ExpensesPage() {
 
   const handleSuccess = () => {
     setOpen(false);
-    // You could add additional success handling here, like refreshing the expense list
   };
 
   return (
@@ -35,7 +36,12 @@ export default function ExpensesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setOpen(true)}>Add Expense</Button>
+          <Button
+            onClick={() => setOpen(true)}
+            className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Expense
+          </Button>
         </div>
       </div>
       

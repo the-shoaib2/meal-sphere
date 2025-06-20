@@ -58,10 +58,8 @@ export function ExpenseList() {
   const handleDeleteExpense = async (expenseId: string) => {
     try {
       await deleteExpense.mutateAsync(expenseId)
-      toast.success('Expense deleted successfully')
     } catch (error) {
       console.error('Error deleting expense:', error)
-      toast.error('Failed to delete expense')
     }
   }
 
@@ -217,9 +215,16 @@ export function ExpenseList() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Expenses</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} • Total: ৳{totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* <Badge variant="outline" className="text-sm font-normal"> */}
+                {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''}
+              {/* </Badge> */}
+              <Badge  className="text-sm font-medium">
+                Total: ৳{expenses
+                  .reduce((sum, exp) => sum + exp.amount, 0)
+                  .toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
