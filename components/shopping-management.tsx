@@ -23,7 +23,7 @@ import { Check, Loader2, Plus, ShoppingBag, Trash2, MoreHorizontal, Pencil } fro
 import { useShopping, type ShoppingItem } from "@/hooks/use-shopping"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
-import { toast } from "sonner"
+import { toast } from "react-hot-toast"
 
 export default function ShoppingManagement() {
   const { data: session, status } = useSession()

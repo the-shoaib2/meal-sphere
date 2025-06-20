@@ -1,259 +1,294 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { CalendarIcon, FileText, Eye } from "lucide-react"
+import { format, startOfMonth } from "date-fns"
+import { CalendarIcon, FileText, Eye, Loader2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "react-hot-toast"
 import { useLanguage } from "@/contexts/language-context"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+// AlertDialog related components are now handled in ExpenseActions component
 import Image from "next/image"
-import type { Room, User } from "@prisma/client"
+import { useActiveGroup } from "@/contexts/group-context"
+import { useSession } from "next-auth/react"
+import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
+import { ExpenseActions } from "./expense-actions"
 
-interface ExpenseListProps {
-  user: User
-  rooms: Room[]
-}
-
-export function ExpenseList({ user, rooms }: ExpenseListProps) {
-  const [selectedRoom, setSelectedRoom] = useState<string>("")
+export function ExpenseList() {
+  const { data: session } = useSession()
+  const { activeGroup } = useActiveGroup()
   const [selectedType, setSelectedType] = useState<string>("")
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().setDate(1)))
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()))
   const [endDate, setEndDate] = useState<Date>(new Date())
-  const [expenses, setExpenses] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const { expenses = [], isLoading, error, deleteExpense } = useExtraExpense()
+  const deleteMutation = deleteExpense as { isPending: boolean, mutateAsync: (id: string) => Promise<any> }
+  const [selectedExpense, setSelectedExpense] = useState<ExtraExpense | null>(null)
   const { t } = useLanguage()
+  
+  const currentUserRole = activeGroup?.members?.find(
+    member => member.userId === session?.user?.id
+  )?.role || 'MEMBER'
+  
+  const canManageExpenses = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(currentUserRole)
 
-  useEffect(() => {
-    if (rooms.length > 0 && !selectedRoom) {
-      setSelectedRoom(rooms[0].id)
-    }
-  }, [rooms, selectedRoom])
 
-  useEffect(() => {
-    if (selectedRoom) {
-      fetchExpenses()
-    }
-  }, [selectedRoom, selectedType, startDate, endDate])
-
-  async function fetchExpenses() {
-    setIsLoading(true)
+  const filteredExpenses = expenses.filter(expense => {
     try {
-      const params = new URLSearchParams({
-        roomId: selectedRoom,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-      })
-
-      if (selectedType) {
-        params.append("type", selectedType)
-      }
-
-      const response = await fetch(`/api/expenses?${params.toString()}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch expenses")
-      }
-
-      const data = await response.json()
-      setExpenses(data)
+      const expenseDate = expense.date ? new Date(expense.date) : null
+      if (!expenseDate || isNaN(expenseDate.getTime())) return false
+      
+      const matchesType = selectedType === 'ALL_TYPES' || !selectedType || expense.type === selectedType
+      const matchesDate = expenseDate >= startDate && expenseDate <= endDate
+      return matchesType && matchesDate
     } catch (error) {
-      console.error(error)
-      toast.error("Failed to fetch expenses")
-    } finally {
-      setIsLoading(false)
+      console.error('Error processing expense:', expense.id, error)
+      return false
     }
+  })
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    await deleteExpense.mutateAsync(expenseId)
   }
 
-  function getExpenseTypeBadge(type: string) {
-    const typeColors: Record<string, string> = {
-      UTILITY: "bg-blue-100 text-blue-800",
-      RENT: "bg-purple-100 text-purple-800",
-      INTERNET: "bg-green-100 text-green-800",
-      CLEANING: "bg-yellow-100 text-yellow-800",
-      MAINTENANCE: "bg-orange-100 text-orange-800",
-      OTHER: "bg-gray-100 text-gray-800",
-    }
-
-    const typeLabels: Record<string, string> = {
-      UTILITY: t("expense.utility"),
-      RENT: t("expense.rent"),
-      INTERNET: t("expense.internet"),
-      CLEANING: t("expense.cleaning"),
-      MAINTENANCE: t("expense.maintenance"),
-      OTHER: t("expense.other"),
-    }
-
-    return <Badge className={typeColors[type] || "bg-gray-100 text-gray-800"}>{typeLabels[type] || type}</Badge>
+  if (!activeGroup) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>No Group Selected</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Please select a group to view expenses.</p>
+        </CardContent>
+      </Card>
+    )
   }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-destructive/15 p-4">
+        <div className="flex">
+          <AlertCircle className="h-5 w-5 text-destructive" />
+          <h3 className="text-sm font-medium text-destructive ml-2">
+            Error loading expenses
+          </h3>
+        </div>
+        <p className="mt-2 text-sm text-destructive">
+          {error.message}
+        </p>
+      </div>
+    )
+  }
+
+  const expenseTypes = [
+    { value: 'ALL_TYPES', label: 'All Types' },
+    { value: 'UTILITY', label: 'Utility' },
+    { value: 'RENT', label: 'Rent' },
+    { value: 'INTERNET', label: 'Internet' },
+    { value: 'CLEANING', label: 'Cleaning' },
+    { value: 'MAINTENANCE', label: 'Maintenance' },
+    { value: 'OTHER', label: 'Other' },
+  ]
+
+  const getTypeBadge = (type: string) => {
+    const typeMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
+      UTILITY: { variant: 'default', label: 'Utility' },
+      RENT: { variant: 'secondary', label: 'Rent' },
+      INTERNET: { variant: 'outline', label: 'Internet' },
+      CLEANING: { variant: 'outline', label: 'Cleaning' },
+      MAINTENANCE: { variant: 'secondary', label: 'Maintenance' },
+      OTHER: { variant: 'outline', label: 'Other' },
+    }
+    const typeInfo = typeMap[type] || { variant: 'outline' as const, label: type }
+    return <Badge variant={typeInfo.variant}>{typeInfo.label}</Badge>
+  }
+
+  const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Expense History</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="w-full md:w-1/4">
-            <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a room" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-full md:w-1/4">
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger>
-                <SelectValue placeholder="All expense types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Types</SelectItem>
-                <SelectItem value="UTILITY">{t("expense.utility")}</SelectItem>
-                <SelectItem value="RENT">{t("expense.rent")}</SelectItem>
-                <SelectItem value="INTERNET">{t("expense.internet")}</SelectItem>
-                <SelectItem value="CLEANING">{t("expense.cleaning")}</SelectItem>
-                <SelectItem value="MAINTENANCE">{t("expense.maintenance")}</SelectItem>
-                <SelectItem value="OTHER">{t("expense.other")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-full md:w-1/4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, "PPP") : <span>Start date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => date && setStartDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="w-full md:w-1/4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, "PPP") : <span>End date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={endDate} onSelect={(date) => date && setEndDate(date)} initialFocus />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Expense Type</label>
+              <Select value={selectedType || 'ALL_TYPES'} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {expenseTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {isLoading ? (
-          <div className="flex flex-col gap-2">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="animate-pulse flex flex-row items-center gap-4 p-4 border rounded-md">
-                <div className="h-4 w-24 bg-gray-200 rounded" />
-                <div className="h-4 w-16 bg-gray-200 rounded" />
-                <div className="h-4 w-40 bg-gray-200 rounded" />
-                <div className="h-4 w-16 bg-gray-200 rounded" />
-                <div className="h-4 w-24 bg-gray-200 rounded" />
-                <div className="h-4 w-16 bg-gray-200 rounded" />
-              </div>
-            ))}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">From</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => date && setStartDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">To</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => date && setEndDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
-        ) : expenses.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No expenses found for the selected criteria.</div>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Added By</TableHead>
-                  <TableHead>Receipt</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>{format(new Date(expense.date), "PPP")}</TableCell>
-                    <TableCell>{getExpenseTypeBadge(expense.type)}</TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell>{expense.amount.toFixed(2)}</TableCell>
-                    <TableCell>{expense.user.name}</TableCell>
-                    <TableCell>
-                      {expense.receiptUrl ? (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-3xl">
-                            <DialogHeader>
-                              <DialogTitle>Receipt</DialogTitle>
-                            </DialogHeader>
-                            <div className="relative h-[60vh] w-full">
-                              {expense.receiptUrl.endsWith(".pdf") ? (
-                                <div className="flex flex-col items-center justify-center h-full">
-                                  <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                                  <a
-                                    href={expense.receiptUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline"
-                                  >
-                                    Open PDF in new tab
-                                  </a>
-                                </div>
-                              ) : (
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Expenses</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''} • Total: ৳{totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredExpenses.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium">No expenses found</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Get started by adding a new expense.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Added By</TableHead>
+                    <TableHead>Receipt</TableHead>
+                    {canManageExpenses && <TableHead className="w-[50px]">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExpenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="font-medium">{expense.description}</TableCell>
+                      <TableCell>{getTypeBadge(expense.type)}</TableCell>
+                      <TableCell>৳{expense.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                      <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell className="flex items-center space-x-2">
+                        {expense.user?.image && (
+                          <Image
+                            src={expense.user.image}
+                            alt={expense.user?.name || 'User'}
+                            width={24}
+                            height={24}
+                            className="rounded-full"
+                          />
+                        )}
+                        <span>{expense.user?.name || 'Unknown'}</span>
+                      </TableCell>
+                      <TableCell>
+                        {expense.receiptUrl ? (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl">
+                              <div className="relative aspect-video">
                                 <Image
-                                  src={expense.receiptUrl || "/placeholder.svg"}
+                                  src={expense.receiptUrl}
                                   alt="Receipt"
                                   fill
                                   className="object-contain"
                                 />
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      ) : (
-                        <span className="text-muted-foreground">None</span>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">None</span>
+                        )}
+                      </TableCell>
+                      {canManageExpenses && (
+                        <TableCell>
+                          <ExpenseActions 
+                            expenseId={expense.id}
+                            onDelete={handleDeleteExpense}
+                            isDeleting={deleteMutation.isPending}
+                          />
+                        </TableCell>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
