@@ -157,7 +157,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] w-[calc(100%-2rem)] mx-auto sm:w-full">
+      <DialogContent className="sm:max-w-[425px] w-[calc(100%-2rem)] mx-auto sm:w-full rounded-lg sm:rounded-lg">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl sm:text-2xl">
             {isEditMode ? 'Edit Expense' : 'Add New Expense'}

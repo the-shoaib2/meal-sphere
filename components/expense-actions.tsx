@@ -72,24 +72,31 @@ export function ExpenseActions({ expenseId, expense, onDelete, isDeleting, onSuc
       </DropdownMenu>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the expense.
+        <AlertDialogContent className="sm:max-w-[350px] w-[calc(100%-2rem)] mx-auto rounded-lg">
+          <AlertDialogHeader className="space-y-2">
+            <AlertDialogTitle className="text-lg">Delete Expense?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              This action cannot be undone. The expense will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+            <AlertDialogCancel 
+              className="w-full sm:w-auto mt-0" 
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Delete
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete Expense
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
