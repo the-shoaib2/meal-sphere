@@ -106,9 +106,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
-  const expenseId = params.id;
+  const expenseId = context.params.id;
   
   if (!expenseId) {
     return NextResponse.json(
