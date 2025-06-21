@@ -55,7 +55,7 @@ export default function Home() {
             </div>
           </div>
         </section>
-        <section className="w-full py-8 md:py-12 lg:py-16 bg-gray-100 dark:bg-gray-800 px-4 sm:px-6">
+        <section className="w-full py-8 md:py-12 lg:py-16  dark:bg-gray-800 px-4 sm:px-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
