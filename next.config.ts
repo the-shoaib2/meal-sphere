@@ -11,7 +11,11 @@ const nextConfig = {
   // Configure experimental features
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'https://www.meal-sphere.vercel.app'],
+      allowedOrigins: [
+        'localhost:3000', 
+        'meal-sphere.vercel.app',
+        '*.vercel.app'
+      ],
     },
     // Add experimental features for better build handling
     optimizePackageImports: ['@radix-ui/react-*'],
