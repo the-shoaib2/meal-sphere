@@ -1,219 +1,214 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format, subDays, addDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns"
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { format, isSameDay, startOfWeek, addDays } from "date-fns"
+import { Calendar as CalendarIcon, Utensils, CalendarDays, Users, Check } from "lucide-react"
+import { useMeal, type MealType } from "@/hooks/use-meal"
 
-type MealType = 'Breakfast' | 'Lunch' | 'Dinner'
-type DayMeals = Record<MealType, boolean>
-type MealData = Record<string, DayMeals>
+// Define the meal types as const to preserve literal types
+const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner"] as const
+
+// Type for the meal types
+type MealTypeValue = typeof MEAL_TYPES[number]
+
+// Type guard to check if a string is a valid MealType
+function isMealType(value: string): value is MealTypeValue {
+  return (MEAL_TYPES as readonly string[]).includes(value)
+}
 
 export default function MealTracker() {
-  const [date, setDate] = useState<Date>(new Date())
-  const [selectedRoom, setSelectedRoom] = useState("room-1")
-  const isMobile = useIsMobile()
+  const { data: session } = useSession()
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()))
+  
+  const {
+    meals,
+    isLoading,
+    hasMeal,
+    toggleMeal,
+    getMealsByDate
+  } = useMeal()
 
-  // Sample data - would come from API
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date()
-    day.setDate(day.getDate() - i)
-    return day
-  }).reverse()
-
-  const mealTypes = ["Breakfast", "Lunch", "Dinner"]
-
-  // Sample meal data - would come from API
-  const [mealData, setMealData] = useState<MealData>({
-    "2024-05-21": { Breakfast: true, Lunch: true, Dinner: false },
-    "2024-05-20": { Breakfast: true, Lunch: true, Dinner: true },
-    "2024-05-19": { Breakfast: false, Lunch: true, Dinner: true },
-    "2024-05-18": { Breakfast: true, Lunch: false, Dinner: true },
-    "2024-05-17": { Breakfast: true, Lunch: true, Dinner: true },
-    "2024-05-16": { Breakfast: true, Lunch: true, Dinner: false },
-    "2024-05-15": { Breakfast: false, Lunch: true, Dinner: true },
-  })
-
-  const handleMealToggle = (date: string, mealType: MealType) => {
-    setMealData((prev) => {
-      const dateData = prev[date] || { Breakfast: false, Lunch: false, Dinner: false }
-      return {
-        ...prev,
-        [date]: {
-          ...dateData,
-          [mealType]: !dateData[mealType],
-        },
-      }
-    })
+  // Format date for display
+  const formatDate = (date: Date) => {
+    return format(date, "EEEE, MMMM d, yyyy")
   }
 
-  const formatDateKey = (date: Date) => {
-    return format(date, "yyyy-MM-dd")
+  // Get week days for the current week
+  const getWeekDays = (startDate: Date) => {
+    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i))
   }
+  
+  // Get meals for the selected date
+  const todaysMeals = getMealsByDate(selectedDate)
 
-  const getMealStatus = (date: Date, mealType: MealType): boolean => {
-    const dateKey = formatDateKey(date)
-    return mealData[dateKey]?.[mealType] || false
-  }
-
-  const navigateWeek = (direction: "prev" | "next") => {
-    const newDate = new Date(date)
-    if (direction === "prev") {
-      newDate.setDate(newDate.getDate() - 7)
-    } else {
-      newDate.setDate(newDate.getDate() + 7)
+  // Get the current week's days
+  const weekDays = getWeekDays(weekStart) as Date[]
+  
+  // Toggle meal selection
+  const handleMealToggle = async (mealType: MealTypeValue) => {
+    if (!session?.user?.id) return
+    try {
+      await toggleMeal(selectedDate, mealType as MealType, session.user.id)
+    } catch (error) {
+      console.error("Failed to toggle meal:", error)
     }
-    setDate(newDate)
   }
+  
+  // Safely handle meal type selection
+  const handleMealTypeClick = (mealType: string) => {
+    if (isMealType(mealType)) {
+      handleMealToggle(mealType)
+    }
+  }
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Utensils className="h-6 w-6" />
+          Meal Tracker
+        </h1>
+      </div>
 
-  // Mobile view for meal tracking
-  const renderMobileMealTracker = () => {
-    return (
-      <div className="space-y-4">
-        {days.map((day) => (
-          <Card key={day.toISOString()}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{format(day, "EEE, MMM d")}</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <div className="grid grid-cols-3 gap-2">
-                {mealTypes.map((mealType) => (
-                  <div key={mealType} className="flex items-center justify-between border rounded-md p-2">
-                    <span className="text-sm">{mealType}</span>
-                    <Checkbox
-                      checked={getMealStatus(day, mealType as MealType)}
-                      onCheckedChange={() => handleMealToggle(formatDateKey(day), mealType as MealType)}
-                    />
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Weekly Overview
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4" />
+            Calendar View
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Column 1: All Meals */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  All Meals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {MEAL_TYPES.map((mealType) => (
+                    <div 
+                      key={mealType}
+                      className="p-3 rounded-lg border flex items-center justify-between hover:bg-accent cursor-pointer"
+                      onClick={() => handleMealToggle(mealType)}
+                    >
+                      <span>{mealType}</span>
+                      <input 
+                        type="checkbox" 
+                        checked={hasMeal(selectedDate, mealType)}
+                        onChange={() => {}}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Column 2: Date Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5" />
+                  Select Date
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  className="rounded-md border"
+                />
+                <div className="mt-4 space-y-2">
+                  <h3 className="font-medium">This Week</h3>
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {weekDays.map((day) => (
+                      <div 
+                        key={day.toString()}
+                        className={`p-2 rounded-md cursor-pointer text-sm ${
+                          isSameDay(day, selectedDate) 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'hover:bg-accent'
+                        }`}
+                        onClick={() => setSelectedDate(day)}
+                      >
+                        <div>{format(day, 'EEE')}</div>
+                        <div className="font-medium">{format(day, 'd')}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Column 3: Meals for Selected Date */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  {format(selectedDate, 'EEEE, MMMM d')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {MEAL_TYPES.map((mealType) => {
+                    const hasMealSelected = hasMeal(selectedDate, mealType)
+                    return (
+                      <div key={mealType} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">{mealType}</h3>
+                          <Button
+                            variant={hasMealSelected ? 'destructive' : 'default'}
+                            size="sm"
+                            onClick={() => handleMealTypeClick(mealType)}
+                          >
+                            {hasMealSelected ? 'Remove' : 'Add'}
+                          </Button>
+                        </div>
+                        {hasMealSelected && (
+                          <div className="bg-accent/50 p-3 rounded-md">
+                            <p className="text-sm">Meal is scheduled for {format(selectedDate, 'MMMM d')}.</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="calendar">
+          <Card>
+            <CardHeader>
+              <CardTitle>Calendar View</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Calendar view coming soon.</p>
             </CardContent>
           </Card>
-        ))}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Meal Tracker</h2>
-          <p className="text-muted-foreground">Track and manage your daily meals</p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Select Room" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="room-1">Room 1</SelectItem>
-              <SelectItem value="room-2">Room 2</SelectItem>
-            </SelectContent>
-          </Select>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(date, "MMMM yyyy")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={date} onSelect={(date) => date && setDate(date)} initialFocus />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle>Weekly Meal Plan</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={() => navigateWeek("prev")}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => navigateWeek("next")}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <CardDescription>
-            {format(days[0], "MMMM d")} - {format(days[days.length - 1], "MMMM d, yyyy")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isMobile ? (
-            renderMobileMealTracker()
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px]">Meal Type</TableHead>
-                  {days.map((day) => (
-                    <TableHead key={day.toISOString()} className="text-center">
-                      <div>{format(day, "EEE")}</div>
-                      <div className="text-xs text-muted-foreground">{format(day, "MMM d")}</div>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mealTypes.map((mealType) => (
-                  <TableRow key={mealType}>
-                    <TableCell className="font-medium">{mealType}</TableCell>
-                    {days.map((day) => (
-                      <TableCell key={day.toISOString()} className="text-center">
-                        <Checkbox
-                          checked={getMealStatus(day, mealType as MealType)}
-                          onCheckedChange={() => handleMealToggle(formatDateKey(day), mealType as MealType)}
-                          className="mx-auto"
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Summary</CardTitle>
-          <CardDescription>Your meal statistics for {format(date, "MMMM yyyy")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-            <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-              <div className="text-2xl font-bold">32</div>
-              <p className="text-xs text-muted-foreground">Total Meals</p>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-              <div className="text-2xl font-bold">৳2,096</div>
-              <p className="text-xs text-muted-foreground">Total Cost</p>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-              <div className="text-2xl font-bold">৳65.50</div>
-              <p className="text-xs text-muted-foreground">Per Meal Rate</p>
-            </div>
-          </div>
-          <div className="mt-6 h-[200px] w-full">
-            {/* This would be a chart component */}
-            <div className="flex items-center justify-center h-full border rounded-md bg-muted/20">
-              <p className="text-sm text-muted-foreground">Meal distribution chart will be displayed here</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

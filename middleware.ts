@@ -13,7 +13,12 @@ const protectedRoutes = [
   "/groups/:path*",
   "/groups/join",
   "/groups/join/:path*",
+  "/groups/join-request",
+  "/groups/join-request/:path*",
   "/groups/create",
+  "/groups/create/:path*",
+  "/groups/:id",
+  "/groups/:id/:path*",
   
   // Settings
   "/settings",

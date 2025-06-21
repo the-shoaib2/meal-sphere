@@ -80,7 +80,7 @@ export async function POST(
     }
 
     // Generate a unique token - mixed characters (letters, numbers, special chars)
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz23456789@#$&=<>?';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@#$&';
     let token = '';
     for (let i = 0; i < 10; i++) {
       token += chars.charAt(Math.floor(Math.random() * chars.length));
