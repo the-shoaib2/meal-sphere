@@ -10,6 +10,7 @@ import { Plus } from "lucide-react"
 
 export default function ExpensesPage() {
   const { activeGroup } = useActiveGroup()
+  const [open, setOpen] = useState(false)
 
   if (!activeGroup) {
     return (
@@ -19,8 +20,6 @@ export default function ExpensesPage() {
       </div>
     )
   }
-
-  const [open, setOpen] = useState(false)
 
   const handleSuccess = () => {
     setOpen(false);

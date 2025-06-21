@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils"
 import { toast } from "react-hot-toast"
 import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
 import { Loader2 } from "lucide-react"
+import { ExpenseType } from "@prisma/client"
+
 
 interface ExtraExpenseDialogProps {
   open: boolean
@@ -37,7 +39,7 @@ const expenseFormSchema = z.object({
   date: z.date({
     required_error: "Please select a date",
   }),
-  type: z.enum(["UTILITY", "RENT", "INTERNET", "CLEANING", "MAINTENANCE", "OTHER"], {
+  type: z.nativeEnum(ExpenseType, {
     required_error: "Please select an expense type",
   }),
   receipt: z
@@ -67,7 +69,9 @@ const expenseFormSchema = z.object({
     }),
 })
 
-type ExpenseFormValues = z.infer<typeof expenseFormSchema>
+type ExpenseFormValues = z.infer<typeof expenseFormSchema> & {
+  receipt?: File | undefined;
+}
 
 export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: ExtraExpenseDialogProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -228,12 +232,11 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="UTILITY">Utility</SelectItem>
-                          <SelectItem value="RENT">Rent</SelectItem>
-                          <SelectItem value="INTERNET">Internet</SelectItem>
-                          <SelectItem value="CLEANING">Cleaning</SelectItem>
-                          <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                          <SelectItem value="OTHER">Other</SelectItem>
+                          {Object.values(ExpenseType).map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type.charAt(0) + type.slice(1).toLowerCase().replace('_', ' ')}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

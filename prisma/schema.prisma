@@ -87,6 +87,10 @@ enum ExpenseType {
   UTILITY
   RENT
   OTHER
+  DAILY_EXPENSE
+  INTERNET
+  CLEANING
+  MAINTENANCE
 }
 
 

@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useActiveGroup } from '@/contexts/group-context';
+import { ExpenseType } from '@prisma/client';
 
 export interface ExtraExpense {
   id: string;
   description: string;
   amount: number;
   date: string;
-  type: 'UTILITY' | 'RENT' | 'INTERNET' | 'CLEANING' | 'MAINTENANCE' | 'OTHER';
+  type: ExpenseType;
   receiptUrl: string | null;
   createdAt: string;
   updatedAt: string;
@@ -24,7 +25,7 @@ export interface AddExtraExpenseInput {
   description: string;
   amount: number;
   date: Date;
-  type: string;
+  type: ExpenseType;
   receipt?: File;
 }
 

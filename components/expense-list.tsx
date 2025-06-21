@@ -20,7 +20,7 @@ import Image from "next/image"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
 import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
-import { ExpenseActions } from "./expense-actions"
+import { ExpenseActions } from "@/components/expense-actions"
 
 export function ExpenseList() {
   const queryClient = useQueryClient()
@@ -109,21 +109,25 @@ export function ExpenseList() {
 
   const expenseTypes = [
     { value: 'ALL_TYPES', label: 'All Types' },
+    { value: 'FOOD', label: 'Food' },
     { value: 'UTILITY', label: 'Utility' },
     { value: 'RENT', label: 'Rent' },
     { value: 'INTERNET', label: 'Internet' },
     { value: 'CLEANING', label: 'Cleaning' },
     { value: 'MAINTENANCE', label: 'Maintenance' },
+    { value: 'DAILY_EXPENSE', label: 'Daily Expense' },
     { value: 'OTHER', label: 'Other' },
   ]
 
   const getTypeBadge = (type: string) => {
     const typeMap: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline', label: string }> = {
+      FOOD: { variant: 'default', label: 'Food' },
       UTILITY: { variant: 'default', label: 'Utility' },
       RENT: { variant: 'secondary', label: 'Rent' },
       INTERNET: { variant: 'outline', label: 'Internet' },
       CLEANING: { variant: 'outline', label: 'Cleaning' },
       MAINTENANCE: { variant: 'secondary', label: 'Maintenance' },
+      DAILY_EXPENSE: { variant: 'outline', label: 'Daily Expense' },
       OTHER: { variant: 'outline', label: 'Other' },
     }
     const typeInfo = typeMap[type] || { variant: 'outline' as const, label: type }
