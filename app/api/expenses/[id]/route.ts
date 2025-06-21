@@ -6,8 +6,9 @@ import { ExpenseType } from '@prisma/client';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: expenseId } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -17,7 +18,7 @@ export async function PATCH(
       );
     }
 
-    const expenseId = params.id;
+
     if (!expenseId) {
       return NextResponse.json(
         { error: 'Expense ID is required' },
