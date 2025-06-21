@@ -133,6 +133,7 @@ model User {
   inviteTokens      InviteToken[]
   announcements     Announcement[] @relation("CreatedAnnouncements")
   groupNotificationSettings GroupNotificationSettings[]
+  autoMealSettings  AutoMealSettings[]
 
   @@index([role, isActive])
   @@index([resetToken])
@@ -175,6 +176,8 @@ model Room {
   marketDates   MarketDate[]
   inviteTokens  InviteToken[]
   groupNotificationSettings GroupNotificationSettings[]
+  mealSettings  MealSettings?
+  autoMealSettings AutoMealSettings[]
 
   @@index([isActive])
   @@index([createdAt])
@@ -555,5 +558,45 @@ model GroupNotificationSettings {
   @@unique([userId, groupId])
   @@index([userId])
   @@index([groupId])
+}
+
+/// MEAL SETTINGS MODEL (Admin controls)
+model MealSettings {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  roomId                String   @db.ObjectId @unique
+  breakfastTime         String   @default("08:00")
+  lunchTime             String   @default("13:00")
+  dinnerTime            String   @default("20:00")
+  autoMealEnabled       Boolean  @default(false)
+  mealCutoffTime        String   @default("22:00")
+  maxMealsPerDay        Int      @default(3)
+  allowGuestMeals       Boolean  @default(true)
+  guestMealLimit        Int      @default(5)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+}
+
+/// AUTO MEAL SETTINGS MODEL (User preferences)
+model AutoMealSettings {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String   @db.ObjectId
+  roomId                String   @db.ObjectId
+  isEnabled             Boolean  @default(false)
+  breakfastEnabled      Boolean  @default(true)
+  lunchEnabled          Boolean  @default(true)
+  dinnerEnabled         Boolean  @default(true)
+  startDate             DateTime @default(now())
+  endDate               DateTime?
+  excludedDates         String[] // Store dates as strings
+  excludedMealTypes     MealType[] // Store meal types to exclude
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
 }
 

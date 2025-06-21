@@ -6,33 +6,44 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { format, isSameDay, startOfWeek, addDays } from "date-fns"
-import { Calendar as CalendarIcon, Utensils, CalendarDays, Users, Check } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { format, isSameDay, startOfWeek, addDays, eachDayOfInterval } from "date-fns"
+import { Calendar as CalendarIcon, Utensils, CalendarDays, Users, Check, Clock } from "lucide-react"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 
 // Define the meal types as const to preserve literal types
-const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner"] as const
+const MEAL_TYPES: MealType[] = ["BREAKFAST", "LUNCH", "DINNER"]
 
 // Type for the meal types
-type MealTypeValue = typeof MEAL_TYPES[number]
+type MealTypeValue = MealType
 
 // Type guard to check if a string is a valid MealType
 function isMealType(value: string): value is MealTypeValue {
   return (MEAL_TYPES as readonly string[]).includes(value)
 }
 
-export default function MealTracker() {
+interface MealTrackerProps {
+  roomId: string
+}
+
+export default function MealTracker({ roomId }: MealTrackerProps) {
   const { data: session } = useSession()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [weekStart, setWeekStart] = useState<Date>(startOfWeek(new Date()))
   
   const {
     meals,
+    guestMeals,
+    mealSettings,
+    autoMealSettings,
     isLoading,
     hasMeal,
     toggleMeal,
-    getMealsByDate
-  } = useMeal()
+    useMealCount,
+    updateAutoMealSettings
+  } = useMeal(roomId)
 
   // Format date for display
   const formatDate = (date: Date) => {
@@ -41,20 +52,22 @@ export default function MealTracker() {
 
   // Get week days for the current week
   const getWeekDays = (startDate: Date) => {
-    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i))
+    return eachDayOfInterval({ start: startDate, end: addDays(startDate, 6) })
   }
   
   // Get meals for the selected date
-  const todaysMeals = getMealsByDate(selectedDate)
+  const todaysMeals = useMealCount(selectedDate, 'BREAKFAST') + 
+                     useMealCount(selectedDate, 'LUNCH') + 
+                     useMealCount(selectedDate, 'DINNER')
 
   // Get the current week's days
-  const weekDays = getWeekDays(weekStart) as Date[]
+  const weekDays = getWeekDays(weekStart)
   
   // Toggle meal selection
   const handleMealToggle = async (mealType: MealTypeValue) => {
     if (!session?.user?.id) return
     try {
-      await toggleMeal(selectedDate, mealType as MealType, session.user.id)
+      await toggleMeal(selectedDate, mealType, session.user.id)
     } catch (error) {
       console.error("Failed to toggle meal:", error)
     }
@@ -66,6 +79,19 @@ export default function MealTracker() {
       handleMealToggle(mealType)
     }
   }
+
+  // Handle auto meal settings
+  const handleAutoMealToggle = (mealType: MealTypeValue, enabled: boolean) => {
+    if (!autoMealSettings) return
+    
+    const updates: any = {}
+    if (mealType === 'BREAKFAST') updates.breakfastEnabled = enabled
+    if (mealType === 'LUNCH') updates.lunchEnabled = enabled
+    if (mealType === 'DINNER') updates.dinnerEnabled = enabled
+    
+    updateAutoMealSettings(updates)
+  }
+
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
@@ -73,6 +99,12 @@ export default function MealTracker() {
           <Utensils className="h-6 w-6" />
           Meal Tracker
         </h1>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Auto: {autoMealSettings?.isEnabled ? 'On' : 'Off'}
+          </Badge>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
@@ -104,21 +136,34 @@ export default function MealTracker() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {MEAL_TYPES.map((mealType) => (
-                    <div 
-                      key={mealType}
-                      className="p-3 rounded-lg border flex items-center justify-between hover:bg-accent cursor-pointer"
-                      onClick={() => handleMealToggle(mealType)}
-                    >
-                      <span>{mealType}</span>
-                      <input 
-                        type="checkbox" 
-                        checked={hasMeal(selectedDate, mealType)}
-                        onChange={() => {}}
-                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      />
-                    </div>
-                  ))}
+                  {MEAL_TYPES.map((mealType) => {
+                    const hasMealSelected = hasMeal(selectedDate, mealType)
+                    const mealCount = useMealCount(selectedDate, mealType)
+                    
+                    return (
+                      <div 
+                        key={mealType}
+                        className="p-3 rounded-lg border flex items-center justify-between hover:bg-accent cursor-pointer"
+                        onClick={() => handleMealToggle(mealType)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">{mealType}</span>
+                          <Badge variant="secondary">{mealCount}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                            hasMealSelected 
+                              ? 'bg-primary border-primary' 
+                              : 'border-gray-300'
+                          }`}>
+                            {hasMealSelected && (
+                              <Check className="w-3 h-3 text-primary-foreground" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -137,6 +182,18 @@ export default function MealTracker() {
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
                   className="rounded-md border"
+                  modifiers={{
+                    today: (date) => isSameDay(date, new Date()),
+                    hasMeals: (date) => {
+                      const breakfast = useMealCount(date, 'BREAKFAST')
+                      const lunch = useMealCount(date, 'LUNCH')
+                      const dinner = useMealCount(date, 'DINNER')
+                      return breakfast > 0 || lunch > 0 || dinner > 0
+                    }
+                  }}
+                  modifiersStyles={{
+                    hasMeals: { backgroundColor: 'hsl(var(--primary) / 0.1)' }
+                  }}
                 />
                 <div className="mt-4 space-y-2">
                   <h3 className="font-medium">This Week</h3>
@@ -153,6 +210,9 @@ export default function MealTracker() {
                       >
                         <div>{format(day, 'EEE')}</div>
                         <div className="font-medium">{format(day, 'd')}</div>
+                        <div className="text-xs">
+                          {useMealCount(day, 'BREAKFAST') + useMealCount(day, 'LUNCH') + useMealCount(day, 'DINNER')}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -171,17 +231,23 @@ export default function MealTracker() {
                 <div className="space-y-4">
                   {MEAL_TYPES.map((mealType) => {
                     const hasMealSelected = hasMeal(selectedDate, mealType)
+                    const mealCount = useMealCount(selectedDate, mealType)
                     return (
                       <div key={mealType} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{mealType}</h3>
-                          <Button
-                            variant={hasMealSelected ? 'destructive' : 'default'}
-                            size="sm"
-                            onClick={() => handleMealTypeClick(mealType)}
-                          >
-                            {hasMealSelected ? 'Remove' : 'Add'}
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium">{mealType}</h3>
+                            <Badge variant="secondary">{mealCount}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant={hasMealSelected ? 'destructive' : 'default'}
+                              size="sm"
+                              onClick={() => handleMealTypeClick(mealType)}
+                            >
+                              {hasMealSelected ? 'Remove' : 'Add'}
+                            </Button>
+                          </div>
                         </div>
                         {hasMealSelected && (
                           <div className="bg-accent/50 p-3 rounded-md">
@@ -201,10 +267,41 @@ export default function MealTracker() {
         <TabsContent value="calendar">
           <Card>
             <CardHeader>
-              <CardTitle>Calendar View</CardTitle>
+              <CardTitle>Auto Meal Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Calendar view coming soon.</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Enable Auto Meals</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically add meals based on your schedule
+                    </p>
+                  </div>
+                  <Switch
+                    checked={autoMealSettings?.isEnabled || false}
+                    onCheckedChange={(checked) => updateAutoMealSettings({ isEnabled: checked })}
+                  />
+                </div>
+                
+                <div className="space-y-3">
+                  <Label>Meal Types</Label>
+                  {MEAL_TYPES.map((mealType) => (
+                    <div key={mealType} className="flex items-center justify-between">
+                      <Label className="text-sm">{mealType}</Label>
+                      <Switch
+                        checked={
+                          mealType === 'BREAKFAST' ? autoMealSettings?.breakfastEnabled :
+                          mealType === 'LUNCH' ? autoMealSettings?.lunchEnabled :
+                          autoMealSettings?.dinnerEnabled
+                        }
+                        onCheckedChange={(checked) => handleAutoMealToggle(mealType, checked)}
+                        disabled={!autoMealSettings?.isEnabled}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

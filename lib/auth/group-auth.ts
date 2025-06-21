@@ -77,6 +77,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
 
     // Check if user is banned
     const member = group.members[0];
+    
     if (member?.isBanned) {
       return {
         isAuthenticated: true,

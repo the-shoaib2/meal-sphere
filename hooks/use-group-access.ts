@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Role } from '@prisma/client';
 import { toast } from 'react-hot-toast';
 import { isValidObjectId } from '@/lib/utils';
@@ -37,30 +37,17 @@ export function useGroupAccess({
   const [canAccess, setCanAccess] = useState(false);
   const [isInviteToken, setIsInviteToken] = useState(false);
   const [actualGroupId, setActualGroupId] = useState<string | null>(null);
+  const isCheckingRef = useRef(false);
 
   const checkAccess = useCallback(async () => {
-    if (!groupId || status === 'loading') return;
+    if (!groupId || status === 'loading' || isCheckingRef.current) return;
 
     try {
+      isCheckingRef.current = true;
       setIsLoading(true);
       onLoading?.(true);
       setError(null);
       onError?.(null);
-
-      // First try to treat it as an invite token
-      const response = await fetch(`/api/groups/join/${groupId}`);
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // It's a valid invite token
-        setIsInviteToken(true);
-        setActualGroupId(result.data.groupId);
-        setIsMember(result.data.isMember);
-        setUserRole(result.data.role);
-        setCanAccess(true);
-        onGroupData?.(result.data);
-        return;
-      }
 
       // If not an invite token, then validate as a regular group ID
       if (!isValidObjectId(groupId)) {
@@ -80,7 +67,7 @@ export function useGroupAccess({
       }
 
       setIsMember(groupData.isMember);
-      setUserRole(groupData.role);
+      setUserRole(groupData.userRole);
       setCanAccess(groupData.canAccess);
       onGroupData?.(groupData);
     } catch (error) {
@@ -92,12 +79,16 @@ export function useGroupAccess({
     } finally {
       setIsLoading(false);
       onLoading?.(false);
+      isCheckingRef.current = false;
     }
   }, [groupId, status, onLoading, onError, onGroupData]);
 
   useEffect(() => {
-    checkAccess();
-  }, [checkAccess]);
+    // Only check access if we have a groupId and session is loaded
+    if (groupId && status !== 'loading') {
+      checkAccess();
+    }
+  }, [groupId, status, checkAccess]);
 
   return {
     isLoading,

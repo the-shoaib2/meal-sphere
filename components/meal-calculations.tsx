@@ -9,88 +9,113 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { format, subMonths, addMonths } from "date-fns"
+import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns"
 import { CalendarIcon, Download, ChevronLeft, ChevronRight } from "lucide-react"
 import { formatCurrency } from "@/lib/meal-calculations"
-import type { RoomMealSummary } from "@/lib/meal-calculations"
+import { useMeal } from "@/hooks/use-meal"
 
-export default function MealCalculations() {
-  const [selectedRoom, setSelectedRoom] = useState("room-1")
+interface MealCalculationsProps {
+  roomId: string
+}
+
+export default function MealCalculations({ roomId }: MealCalculationsProps) {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
   const [endDate, setEndDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0))
   const [isLoading, setIsLoading] = useState(false)
-  const [summary, setSummary] = useState<RoomMealSummary | null>(null)
+  const [summary, setSummary] = useState<any>(null)
 
-  // Sample data - would be replaced with API call
-  const rooms = [
-    { id: "room-1", name: "Apartment 303" },
-    { id: "room-2", name: "Hostel Block B" },
-  ]
+  const { 
+    meals, 
+    guestMeals, 
+    useMealSummary, 
+    useMealCount 
+  } = useMeal(roomId)
 
-  // Sample data - would be replaced with API response
-  const sampleSummary: RoomMealSummary = {
-    totalMeals: 145,
-    totalCost: 9500,
-    mealRate: 65.52,
-    startDate: new Date(2024, 4, 1),
-    endDate: new Date(2024, 4, 31),
-    userSummaries: [
-      {
-        userId: "user-1",
-        userName: "John Doe",
-        userImage: "/placeholder-user.jpg",
-        mealCount: 45,
-        cost: 2948.4,
-        paid: 3000,
-        balance: 51.6,
-      },
-      {
-        userId: "user-2",
-        userName: "Jane Smith",
-        userImage: "/placeholder-user.jpg",
-        mealCount: 38,
-        cost: 2489.76,
-        paid: 2500,
-        balance: 10.24,
-      },
-      {
-        userId: "user-3",
-        userName: "Bob Johnson",
-        userImage: "/placeholder-user.jpg",
-        mealCount: 42,
-        cost: 2751.84,
-        paid: 2000,
-        balance: -751.84,
-      },
-      {
-        userId: "user-4",
-        userName: "Alice Brown",
-        userImage: "/placeholder-user.jpg",
-        mealCount: 20,
-        cost: 1310.4,
-        paid: 2000,
-        balance: 689.6,
-      },
-    ],
-  }
-
+  // Calculate meal summary for the selected period
   useEffect(() => {
-    // This would be replaced with an actual API call
-    const fetchData = async () => {
+    const calculateSummary = () => {
       setIsLoading(true)
+      
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        setSummary(sampleSummary)
+        const mealSummaries = useMealSummary(startDate, endDate)
+        
+        // Calculate totals
+        const totalBreakfast = mealSummaries.reduce((sum, day) => sum + day.breakfast, 0)
+        const totalLunch = mealSummaries.reduce((sum, day) => sum + day.lunch, 0)
+        const totalDinner = mealSummaries.reduce((sum, day) => sum + day.dinner, 0)
+        const totalMeals = totalBreakfast + totalLunch + totalDinner
+        
+        // Calculate meal rate based on actual data
+        const mealRate = totalMeals > 0 ? 65.52 : 0 // This would be calculated from actual expenses
+        const totalCost = totalMeals * mealRate
+        
+        // Get unique users from meals and guest meals
+        const allMeals = [...meals, ...guestMeals]
+        const uniqueUsers = new Map()
+        
+        allMeals.forEach(meal => {
+          if (!uniqueUsers.has(meal.user.id)) {
+            uniqueUsers.set(meal.user.id, {
+              id: meal.user.id,
+              name: meal.user.name,
+              image: meal.user.image,
+              mealCount: 0,
+              cost: 0,
+              paid: 0, // This would come from payment system
+              balance: 0
+            })
+          }
+        })
+        
+        // Calculate meal counts for each user
+        allMeals.forEach(meal => {
+          const user = uniqueUsers.get(meal.user.id)
+          if (user) {
+            const mealDate = new Date(meal.date)
+            if (mealDate >= startDate && mealDate <= endDate) {
+              if ('count' in meal) {
+                // Guest meal
+                user.mealCount += meal.count
+              } else {
+                // Regular meal
+                user.mealCount += 1
+              }
+            }
+          }
+        })
+        
+        // Calculate costs and balances
+        const userSummaries = Array.from(uniqueUsers.values()).map(user => {
+          const cost = user.mealCount * mealRate
+          const paid = Math.floor(cost * 0.8) // Sample data - would come from payment system
+          const balance = cost - paid
+          
+          return {
+            ...user,
+            cost,
+            paid,
+            balance
+          }
+        })
+        
+        setSummary({
+          totalMeals,
+          totalCost,
+          mealRate,
+          startDate,
+          endDate,
+          userSummaries,
+          dailyBreakdown: mealSummaries
+        })
       } catch (error) {
-        console.error("Error fetching meal calculations:", error)
+        console.error("Error calculating meal summary:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchData()
-  }, [selectedRoom, startDate, endDate])
+    calculateSummary()
+  }, [startDate, endDate, meals, guestMeals, useMealSummary])
 
   const navigateMonth = (direction: "prev" | "next") => {
     if (direction === "prev") {
@@ -112,18 +137,6 @@ export default function MealCalculations() {
           <p className="text-muted-foreground">View and manage meal costs and balances</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Room" />
-            </SelectTrigger>
-            <SelectContent>
-              {rooms.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => navigateMonth("prev")}>
               <ChevronLeft className="h-4 w-4" />
@@ -203,20 +216,20 @@ export default function MealCalculations() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {summary.userSummaries.map((user) => (
-                    <TableRow key={user.userId}>
+                  {summary.userSummaries.map((user: any) => (
+                    <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.userImage || "/placeholder.svg"} alt={user.userName} />
+                            <AvatarImage src={user.image || "/placeholder.svg"} alt={user.name} />
                             <AvatarFallback>
-                              {user.userName
+                              {user.name
                                 .split(" ")
-                                .map((n) => n[0])
+                                .map((n: string) => n[0])
                                 .join("")}
                             </AvatarFallback>
                           </Avatar>
-                          <div>{user.userName}</div>
+                          <div>{user.name}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{user.mealCount}</TableCell>

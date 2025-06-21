@@ -1,215 +1,226 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import type { Room, User } from "@prisma/client"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { Calendar as CalendarIcon, Plus, Minus, Users } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { toast } from "react-hot-toast"
-import { useLanguage } from "@/contexts/language-context"
-import { ResponsiveFormLayout, ResponsiveFormItem } from "@/components/ui/responsive-form-layout"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useMeal, type MealType } from "@/hooks/use-meal"
 
-const guestMealFormSchema = z.object({
-  roomId: z.string({
-    required_error: "Please select a room",
-  }),
+const guestMealSchema = z.object({
   date: z.date({
     required_error: "Please select a date",
   }),
-  type: z.enum(["BREAKFAST", "LUNCH", "DINNER"], {
+  type: z.enum(["BREAKFAST", "LUNCH", "DINNER"] as const, {
     required_error: "Please select a meal type",
   }),
-  count: z.coerce.number().min(1).max(10, {
-    message: "You can request up to 10 guest meals",
-  }),
+  notes: z.string().optional(),
 })
 
-type GuestMealFormValues = z.infer<typeof guestMealFormSchema>
+type GuestMealFormData = z.infer<typeof guestMealSchema>
 
 interface GuestMealFormProps {
-  user: User
-  rooms: Room[]
+  roomId: string
+  onSuccess?: () => void
 }
 
-export function GuestMealForm({ user, rooms }: GuestMealFormProps) {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const { t } = useLanguage()
-  const isMobile = useIsMobile()
+export default function GuestMealForm({ roomId, onSuccess }: GuestMealFormProps) {
+  const [open, setOpen] = useState(false)
+  const [guestCount, setGuestCount] = useState(1)
+  
+  const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId)
 
-  const form = useForm<GuestMealFormValues>({
-    resolver: zodResolver(guestMealFormSchema),
+  const form = useForm<GuestMealFormData>({
+    resolver: zodResolver(guestMealSchema),
     defaultValues: {
-      count: 1,
       date: new Date(),
+      type: "LUNCH",
+      notes: "",
     },
   })
 
-  async function onSubmit(data: GuestMealFormValues) {
-    setIsLoading(true)
-
+  const onSubmit = async (data: GuestMealFormData) => {
     try {
-      const response = await fetch("/api/meals/guest", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to request guest meal")
-      }
-
-      toast.success("Guest meal requested successfully")
-      form.reset({
-        roomId: data.roomId,
-        date: new Date(),
-        type: "BREAKFAST",
-        count: 1,
-      })
-      router.refresh()
-    } catch (error: any) {
-      console.error(error)
-      toast.error(error.message || "Failed to request guest meal")
-    } finally {
-      setIsLoading(false)
+      await addGuestMeal(data.date, data.type, guestCount)
+      form.reset()
+      setGuestCount(1)
+      setOpen(false)
+      onSuccess?.()
+    } catch (error) {
+      console.error("Error adding guest meal:", error)
     }
   }
 
+  const handleCountChange = (increment: boolean) => {
+    const newCount = increment ? guestCount + 1 : guestCount - 1
+    if (newCount >= 1 && newCount <= (mealSettings?.guestMealLimit || 10)) {
+      setGuestCount(newCount)
+    }
+  }
+
+  const isGuestMealsAllowed = mealSettings?.allowGuestMeals ?? true
+  const guestMealLimit = mealSettings?.guestMealLimit ?? 10
+
+  if (!isGuestMealsAllowed) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Guest meals are not allowed in this group.</p>
+      </div>
+    )
+  }
+
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full sm:w-auto">
+          <Users className="mr-2 h-4 w-4" />
+          Add Guest Meal
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add Guest Meal</DialogTitle>
+          <DialogDescription>
+            Add guest meals for a specific date and time. You can add up to {guestMealLimit} guest meals.
+          </DialogDescription>
+        </DialogHeader>
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <ResponsiveFormLayout>
-              <ResponsiveFormItem>
-                <FormField
-                  control={form.control}
-                  name="roomId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("meals.room")}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a room" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {rooms.map((room) => (
-                            <SelectItem key={room.id} value={room.id}>
-                              {room.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </ResponsiveFormItem>
-
-              <ResponsiveFormItem>
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>{t("meals.date")}</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date("1900-01-01")}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </ResponsiveFormItem>
-
-              <ResponsiveFormItem>
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("meals.type")}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select meal type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="BREAKFAST">{t("meals.breakfast")}</SelectItem>
-                          <SelectItem value="LUNCH">{t("meals.lunch")}</SelectItem>
-                          <SelectItem value="DINNER">{t("meals.dinner")}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </ResponsiveFormItem>
-
-              <ResponsiveFormItem>
-                <FormField
-                  control={form.control}
-                  name="count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("meals.guestCount")}</FormLabel>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <Input type="number" min={1} max={10} {...field} />
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <FormDescription>You can request up to 10 guest meals at a time.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </ResponsiveFormItem>
-            </ResponsiveFormLayout>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <Button type="submit" disabled={isLoading} className={isMobile ? "w-full" : ""}>
-              {isLoading ? "Submitting..." : t("button.submit")}
-            </Button>
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Meal Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a meal type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="BREAKFAST">Breakfast</SelectItem>
+                      <SelectItem value="LUNCH">Lunch</SelectItem>
+                      <SelectItem value="DINNER">Dinner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-2">
+              <FormLabel>Guest Count</FormLabel>
+              <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCountChange(false)}
+                    disabled={guestCount <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold min-w-[2rem] text-center">{guestCount}</span>
+                    <Badge variant="secondary">guests</Badge>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCountChange(true)}
+                    disabled={guestCount >= guestMealLimit}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Max: {guestMealLimit}
+                </div>
+              </div>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Any special requirements or notes..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Adding..." : `Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`}
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
