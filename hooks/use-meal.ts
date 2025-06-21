@@ -61,6 +61,7 @@ export function useMeal() {
       if (!groupId) throw new Error('No group selected');
       const { data } = await axios.post('/api/meals', {
         ...input,
+        type: input.type.toUpperCase(), // Convert to uppercase for Prisma
         roomId: groupId,
       });
       return data;
@@ -73,6 +74,10 @@ export function useMeal() {
   // Update an existing meal
   const updateMeal = useMutation({
     mutationFn: async ({ id, ...updates }: UpdateMealInput) => {
+      // Convert type to uppercase if it's being updated
+      if (updates.type) {
+        updates.type = updates.type.toUpperCase() as any;
+      }
       const { data } = await axios.put(`/api/meals/${id}`, updates);
       return data;
     },

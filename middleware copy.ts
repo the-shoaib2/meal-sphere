@@ -4,20 +4,69 @@ import type { NextRequest } from "next/server"
 
 // Define protected routes that require authentication
 const protectedRoutes = [
+  // Dashboard
   "/dashboard",
+  "/dashboard/:path*",
+  
+  // Groups
   "/groups",
+  "/groups/:path*",
+  "/groups/join",
+  "/groups/join/:path*",
+  "/groups/join-request",
+  "/groups/join-request/:path*",
+  "/groups/create",
+  "/groups/create/:path*",
+  "/groups/:id",
+  "/groups/:id/:path*",
+  
+  // Settings
   "/settings",
+  "/settings/:path*",
+  
+  // Market
   "/market",
+  "/market/:path*",
+  
+  // Expenses
   "/expenses",
+  "/expenses/:path*",
+  
+  // Analytics
   "/analytics",
+  "/analytics/:path*",
+  
+  // Excel
   "/excel",
+  "/excel/:path*",
+  
+  // Calculations
   "/calculations",
+  "/calculations/:path*",
+  
+  // Notifications
   "/notifications",
+  "/notifications/:path*",
+  
+  // Shopping
   "/shopping",
+  "/shopping/:path*",
+  
+  // Voting
   "/voting",
+  "/voting/:path*",
+  
+  // Meals
   "/meals",
+  "/meals/:path*",
+  
+  // Payments
   "/payments",
-  "/profile"
+  "/payments/:path*",
+  
+  // Profile
+  "/profile",
+  "/profile/:path*"
 ]
 
 // Define public paths that don't require authentication
@@ -43,6 +92,7 @@ const authPages = [
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const url = request.nextUrl.clone()
 
   // Skip middleware for static files, API routes, and auth callbacks
   if (
@@ -60,9 +110,18 @@ export async function middleware(request: NextRequest) {
   )
 
   // Check if current path is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname === route || pathname.startsWith(route + "/")
-  )
+  const isProtectedRoute = protectedRoutes.some(route => {
+    // Convert route pattern to regex
+    const pattern = route
+      .replace(/:\w+\*/g, '.*') // Replace :path* with .*
+      .replace(/:\w+/g, '[^/]+') // Replace :id with [^/]+
+      .replace(/\//g, '\\/') // Escape forward slashes
+    const regex = new RegExp(`^${pattern}$`)
+    
+    // Decode the pathname to handle URL-encoded characters
+    const decodedPathname = decodeURIComponent(pathname)
+    return regex.test(decodedPathname)
+  })
 
   // Check if current path is an auth page
   const isAuthPage = authPages.some(page => 
@@ -121,6 +180,6 @@ export async function middleware(request: NextRequest) {
 // Configure which paths the middleware will run on
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.(?:png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|eot)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/auth|.*\.(?:png|jpg|jpeg|gif|svg|css|js|woff|woff2|ttf|eot)$).*)',
   ],
 }
