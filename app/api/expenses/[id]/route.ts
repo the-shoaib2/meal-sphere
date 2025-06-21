@@ -108,27 +108,21 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { id: expenseId } = await Promise.resolve(params);
+  const expenseId = params.id;
+  
   if (!expenseId) {
     return NextResponse.json(
       { error: 'Expense ID is required' },
       { status: 400 }
     );
   }
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      );
-    }
-
-    const expenseId = params.id;
-    if (!expenseId) {
-      return NextResponse.json(
-        { error: 'Expense ID is required' },
-        { status: 400 }
       );
     }
 
