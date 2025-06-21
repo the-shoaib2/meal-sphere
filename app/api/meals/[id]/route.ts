@@ -5,15 +5,14 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { [key: string]: string | string[] } }
 ) {
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const { id } = params;
 
   try {
     const meal = await prisma.meal.findUnique({
@@ -62,15 +61,14 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { [key: string]: string | string[] } }
 ) {
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const { id } = params;
 
   try {
     const body = await request.json();
@@ -123,15 +121,14 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { [key: string]: string | string[] } }
 ) {
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const { id } = params;
 
   try {
     // First, get the existing meal to check permissions
