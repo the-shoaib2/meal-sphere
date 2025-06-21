@@ -1,5 +1,4 @@
 import type React from "react"
-import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth/auth"
 import { getServerSession } from "next-auth"
 import { LanguageProvider } from "@/contexts/language-context"
@@ -17,8 +16,10 @@ export default async function AuthLayout({
 }>) {
   const session = await getServerSession(authOptions)
   
+  // If no session, the middleware should have already redirected
+  // This is just a safety check
   if (!session) {
-    redirect('/login')
+    throw new Error('Unauthorized - Session not found')
   }
 
   return (

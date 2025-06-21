@@ -63,7 +63,7 @@ export async function middleware(request: NextRequest) {
     console.error('Error getting token:', error)
   }
 
-  // Handle protected routes
+  // Handle protected routes - redirect to login with callbackUrl
   if (isProtectedRoute && !token) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
