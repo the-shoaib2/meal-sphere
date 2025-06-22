@@ -8,14 +8,21 @@ const updateGuestMealSchema = z.object({
   count: z.number().min(1).max(10),
 })
 
+interface RouteContext {
+  params: {
+    id: string
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
@@ -23,22 +30,13 @@ export async function PATCH(
     const validatedData = updateGuestMealSchema.parse(body)
 
     // Check if user is a member of the room and owns the guest meal
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
-
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
-    }
-
-    // Get the guest meal and check ownership
     const guestMeal = await prisma.guestMeal.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         room: {
           include: {
             members: {
-              where: { userId: user.id }
+              where: { userId: session.user.id }
             }
           }
         }
@@ -49,7 +47,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Guest meal not found" }, { status: 404 })
     }
 
-    if (guestMeal.userId !== user.id) {
+    if (guestMeal.userId !== session.user.id) {
       return NextResponse.json({ message: "You can only update your own guest meals" }, { status: 403 })
     }
 
@@ -59,7 +57,7 @@ export async function PATCH(
 
     // Update the guest meal
     const updatedGuestMeal = await prisma.guestMeal.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         count: validatedData.count,
       },
@@ -77,32 +75,24 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
     // Check if user is a member of the room and owns the guest meal
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
-
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
-    }
-
-    // Get the guest meal and check ownership
     const guestMeal = await prisma.guestMeal.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         room: {
           include: {
             members: {
-              where: { userId: user.id }
+              where: { userId: session.user.id }
             }
           }
         }
@@ -113,7 +103,7 @@ export async function DELETE(
       return NextResponse.json({ message: "Guest meal not found" }, { status: 404 })
     }
 
-    if (guestMeal.userId !== user.id) {
+    if (guestMeal.userId !== session.user.id) {
       return NextResponse.json({ message: "You can only delete your own guest meals" }, { status: 403 })
     }
 
@@ -123,7 +113,7 @@ export async function DELETE(
 
     // Delete the guest meal
     await prisma.guestMeal.delete({
-      where: { id: params.id },
+      where: { id: id },
     })
 
     return NextResponse.json({

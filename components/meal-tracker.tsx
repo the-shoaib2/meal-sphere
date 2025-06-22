@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { format, isSameDay, startOfWeek, addDays, eachDayOfInterval } from "date-fns"
-import { Calendar as CalendarIcon, Utensils, CalendarDays, Users, Check, Clock } from "lucide-react"
+import { Calendar as CalendarIcon, Utensils, CalendarDays, Users, Check, Clock, Zap } from "lucide-react"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 
 // Define the meal types as const to preserve literal types
@@ -42,7 +42,10 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
     hasMeal,
     toggleMeal,
     useMealCount,
-    updateAutoMealSettings
+    updateAutoMealSettings,
+    triggerAutoMeals,
+    shouldAutoAddMeal,
+    isAutoMealTime
   } = useMeal(roomId)
 
   // Format date for display
@@ -70,6 +73,15 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
       await toggleMeal(selectedDate, mealType, session.user.id)
     } catch (error) {
       console.error("Failed to toggle meal:", error)
+    }
+  }
+
+  // Handle triggering auto meals
+  const handleTriggerAutoMeals = async () => {
+    try {
+      await triggerAutoMeals(selectedDate)
+    } catch (error) {
+      console.error("Error triggering auto meals:", error)
     }
   }
   
@@ -104,6 +116,18 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
             <Clock className="h-3 w-3" />
             Auto: {autoMealSettings?.isEnabled ? 'On' : 'Off'}
           </Badge>
+          {mealSettings?.autoMealEnabled && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleTriggerAutoMeals}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <Zap className="h-4 w-4" />
+              Auto Add
+            </Button>
+          )}
         </div>
       </div>
 
@@ -139,6 +163,8 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
                   {MEAL_TYPES.map((mealType) => {
                     const hasMealSelected = hasMeal(selectedDate, mealType)
                     const mealCount = useMealCount(selectedDate, mealType)
+                    const shouldAutoAdd = shouldAutoAddMeal(selectedDate, mealType)
+                    const isAutoTime = isAutoMealTime(selectedDate, mealType)
                     
                     return (
                       <div 
@@ -148,7 +174,21 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-medium">{mealType}</span>
-                          <Badge variant="secondary">{mealCount}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{mealCount}</Badge>
+                            {shouldAutoAdd && (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs flex items-center gap-1">
+                                <Zap className="h-3 w-3" />
+                                Auto
+                              </Badge>
+                            )}
+                            {isAutoTime && (
+                              <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Time
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
@@ -232,12 +272,29 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
                   {MEAL_TYPES.map((mealType) => {
                     const hasMealSelected = hasMeal(selectedDate, mealType)
                     const mealCount = useMealCount(selectedDate, mealType)
+                    const shouldAutoAdd = shouldAutoAddMeal(selectedDate, mealType)
+                    const isAutoTime = isAutoMealTime(selectedDate, mealType)
+                    
                     return (
                       <div key={mealType} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <h3 className="font-medium">{mealType}</h3>
-                            <Badge variant="secondary">{mealCount}</Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">{mealCount}</Badge>
+                              {shouldAutoAdd && (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs flex items-center gap-1">
+                                  <Zap className="h-3 w-3" />
+                                  Auto
+                                </Badge>
+                              )}
+                              {isAutoTime && (
+                                <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Time
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Button

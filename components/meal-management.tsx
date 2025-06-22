@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "react-hot-toast"
-import { Loader2, Plus, Settings, Clock, Users, Calendar as CalendarIcon, Utensils, Minus } from "lucide-react"
+import { Loader2, Plus, Settings, Clock, Users, Calendar as CalendarIcon, Utensils, Minus, Zap } from "lucide-react"
 import { format, startOfMonth, endOfMonth, isToday, isSameDay, addDays, subDays, eachDayOfInterval } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType } from "@/hooks/use-meal"
@@ -75,7 +75,10 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
     updateMealSettings,
     updateAutoMealSettings,
     hasMeal,
-    canAddMeal
+    canAddMeal,
+    triggerAutoMeals,
+    shouldAutoAddMeal,
+    isAutoMealTime
   } = useMeal(roomId)
 
   // Get meals for the selected date
@@ -94,10 +97,30 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
     }
   }
 
+  // Handle triggering auto meals
+  const handleTriggerAutoMeals = async () => {
+    try {
+      await triggerAutoMeals(selectedDate)
+    } catch (error) {
+      console.error("Error triggering auto meals:", error)
+      toast.error("Failed to trigger auto meals")
+    }
+  }
+
   // Check if current user has a meal of a specific type on the selected date
   const userHasMeal = (type: MealType) => {
     if (!session?.user?.id) return false
     return hasMeal(selectedDate, type, session.user.id)
+  }
+
+  // Check if auto meal should be added for current user
+  const shouldAutoAddForUser = (type: MealType) => {
+    return shouldAutoAddMeal(selectedDate, type)
+  }
+
+  // Check if it's auto meal time for a specific meal type
+  const isAutoTimeForMeal = (type: MealType) => {
+    return isAutoMealTime(selectedDate, type)
   }
 
   // Get meal counts for calendar display
@@ -455,6 +478,18 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
           <Button variant="outline" size="icon" onClick={() => setAutoSettingsOpen(true)}>
             <Clock className="h-4 w-4" />
           </Button>
+          {mealSettings?.autoMealEnabled && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleTriggerAutoMeals}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <Zap className="h-4 w-4" />
+              Auto Add
+            </Button>
+          )}
         </div>
       </div>
 
@@ -508,6 +543,8 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
                       const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' : 
                                            mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' : 
                                            'bg-blue-100 text-blue-700'
+                      const shouldAutoAdd = shouldAutoAddForUser(mealType)
+                      const isAutoTime = isAutoTimeForMeal(mealType)
                       
                       return (
                         <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
@@ -522,6 +559,18 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
                                 {hasMealSelected && (
                                   <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm">
                                     ✓ You're in
+                                  </Badge>
+                                )}
+                                {shouldAutoAdd && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs sm:text-sm flex items-center gap-1">
+                                    <Zap className="h-3 w-3" />
+                                    Auto
+                                  </Badge>
+                                )}
+                                {isAutoTime && (
+                                  <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs sm:text-sm flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    Time
                                   </Badge>
                                 )}
                               </div>

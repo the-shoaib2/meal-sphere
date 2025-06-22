@@ -102,10 +102,14 @@ interface UseMealReturn {
   updateMealSettings: (settings: Partial<MealSettings>) => Promise<void>;
   updateAutoMealSettings: (settings: Partial<AutoMealSettings>) => Promise<void>;
   
+  // Auto Meal Functions
+  triggerAutoMeals: (date: Date) => Promise<void>;
+  isAutoMealTime: (date: Date, type: MealType) => boolean;
+  shouldAutoAddMeal: (date: Date, type: MealType) => boolean;
+  
   // Utilities
   hasMeal: (date: Date, type: MealType, userId?: string) => boolean;
   canAddMeal: (date: Date, type: MealType) => boolean;
-  isAutoMealTime: (date: Date, type: MealType) => boolean;
   getUserGuestMeals: (date: Date, userId?: string) => GuestMeal[];
   getUserGuestMealCount: (date: Date, userId?: string) => number;
 }
@@ -270,6 +274,26 @@ export function useMeal(roomId?: string): UseMealReturn {
     }
   });
 
+  // Trigger auto meals mutation
+  const triggerAutoMealsMutation = useMutation({
+    mutationFn: async (date: Date) => {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      await axios.post('/api/meals/auto-process', {
+        roomId,
+        date: formattedDate
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      toast.success('Auto meals processed successfully');
+    },
+    onError: (error: any) => {
+      console.error('Error triggering auto meals:', error);
+      toast.error(error.response?.data?.message || 'Failed to trigger auto meals');
+    }
+  });
+
   // Utility functions
   const useMealsByDate = useCallback((date: Date): Meal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -353,6 +377,30 @@ export function useMeal(roomId?: string): UseMealReturn {
     return currentTime === mealTime;
   }, [autoMealSettings, mealSettings]);
 
+  const shouldAutoAddMeal = useCallback((date: Date, type: MealType): boolean => {
+    if (!autoMealSettings?.isEnabled || !mealSettings?.autoMealEnabled) return false;
+    
+    // Check if this meal type is enabled for the user
+    const isEnabled = type === 'BREAKFAST' ? autoMealSettings.breakfastEnabled :
+                     type === 'LUNCH' ? autoMealSettings.lunchEnabled :
+                     autoMealSettings.dinnerEnabled;
+    
+    if (!isEnabled) return false;
+    
+    // Check if this meal type is excluded
+    if (autoMealSettings.excludedMealTypes.includes(type)) return false;
+    
+    // Check if the date is excluded
+    const dateStr = format(date, 'yyyy-MM-dd');
+    if (autoMealSettings.excludedDates.includes(dateStr)) return false;
+    
+    // Check if user already has this meal
+    if (hasMeal(date, type)) return false;
+    
+    // Check if it's the right time
+    return isAutoMealTime(date, type);
+  }, [autoMealSettings, mealSettings, hasMeal, isAutoMealTime]);
+
   // Get user's guest meals for a specific date
   const getUserGuestMeals = useCallback((date: Date, userId?: string): GuestMeal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -397,6 +445,10 @@ export function useMeal(roomId?: string): UseMealReturn {
     await updateAutoMealSettingsMutation.mutateAsync(settings);
   }, [updateAutoMealSettingsMutation]);
 
+  const triggerAutoMeals = useCallback(async (date: Date) => {
+    await triggerAutoMealsMutation.mutateAsync(date);
+  }, [triggerAutoMealsMutation]);
+
   return {
     // Data
     meals,
@@ -422,10 +474,14 @@ export function useMeal(roomId?: string): UseMealReturn {
     updateMealSettings,
     updateAutoMealSettings,
     
+    // Auto Meal Functions
+    triggerAutoMeals,
+    isAutoMealTime,
+    shouldAutoAddMeal,
+    
     // Utilities
     hasMeal,
     canAddMeal,
-    isAutoMealTime,
     getUserGuestMeals,
     getUserGuestMealCount,
   };
