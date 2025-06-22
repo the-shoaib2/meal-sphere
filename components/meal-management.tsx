@@ -478,18 +478,6 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
           <Button variant="outline" size="icon" onClick={() => setAutoSettingsOpen(true)}>
             <Clock className="h-4 w-4" />
           </Button>
-          {mealSettings?.autoMealEnabled && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleTriggerAutoMeals}
-              disabled={isLoading}
-              className="flex items-center gap-2"
-            >
-              <Zap className="h-4 w-4" />
-              Auto Add
-            </Button>
-          )}
         </div>
       </div>
 
