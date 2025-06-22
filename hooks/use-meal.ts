@@ -61,6 +61,7 @@ export interface AutoMealSettings {
   breakfastEnabled: boolean;
   lunchEnabled: boolean;
   dinnerEnabled: boolean;
+  guestMealEnabled: boolean;
   startDate: string;
   endDate?: string;
   excludedDates: string[];

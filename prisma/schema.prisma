@@ -587,6 +587,7 @@ model AutoMealSettings {
   breakfastEnabled      Boolean  @default(true)
   lunchEnabled          Boolean  @default(true)
   dinnerEnabled         Boolean  @default(true)
+  guestMealEnabled      Boolean  @default(false)
   startDate             DateTime @default(now())
   endDate               DateTime?
   excludedDates         String[] // Store dates as strings

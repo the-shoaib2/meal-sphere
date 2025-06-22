@@ -296,7 +296,7 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
   // Render meal settings dialog
   const renderMealSettings = () => (
     <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] rounded-lg">
         <DialogHeader>
           <DialogTitle>Meal Settings</DialogTitle>
           <DialogDescription>
@@ -392,7 +392,7 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
   // Render auto meal settings dialog
   const renderAutoMealSettings = () => (
     <Dialog open={autoSettingsOpen} onOpenChange={setAutoSettingsOpen}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] rounded-lg">
         <DialogHeader>
           <DialogTitle>Auto Meal Settings</DialogTitle>
           <DialogDescription>
@@ -413,46 +413,65 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
               onCheckedChange={(checked) => updateAutoMealSettings({ isEnabled: checked })}
             />
           </div>
-          
           <Separator />
-          
-          <div className="space-y-3">
-            <Label>Meal Types</Label>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Breakfast</Label>
-                <Switch
-                  checked={autoMealSettings?.breakfastEnabled || true}
-                  onCheckedChange={(checked) => updateAutoMealSettings({ breakfastEnabled: checked })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Lunch</Label>
-                <Switch
-                  checked={autoMealSettings?.lunchEnabled || true}
-                  onCheckedChange={(checked) => updateAutoMealSettings({ lunchEnabled: checked })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Dinner</Label>
-                <Switch
-                  checked={autoMealSettings?.dinnerEnabled || true}
-                  onCheckedChange={(checked) => updateAutoMealSettings({ dinnerEnabled: checked })}
-                />
+          {autoMealSettings?.isEnabled && (
+            <div className="space-y-3">
+              <Label>Meal Types</Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Breakfast</Label>
+                  <Switch
+                    checked={autoMealSettings?.breakfastEnabled ?? true}
+                    onCheckedChange={(checked) => updateAutoMealSettings({ breakfastEnabled: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Lunch</Label>
+                  <Switch
+                    checked={autoMealSettings?.lunchEnabled ?? true}
+                    onCheckedChange={(checked) => updateAutoMealSettings({ lunchEnabled: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Dinner</Label>
+                  <Switch
+                    checked={autoMealSettings?.dinnerEnabled ?? true}
+                    onCheckedChange={(checked) => updateAutoMealSettings({ dinnerEnabled: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Auto Guest Meal</Label>
+                  <Switch
+                    checked={autoMealSettings?.guestMealEnabled ?? false}
+                    onCheckedChange={(checked) => updateAutoMealSettings({ guestMealEnabled: checked })}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   )
 
+  // Helper: check if user can edit meal for a type (not after meal time unless privileged)
+  const canEditMeal = (type: MealType) => {
+    if (!session?.user?.id) return false
+    // Only allow edit if current time is before meal time, or user is admin/manager/meal manager
+    const now = new Date()
+    let mealTimeStr = ''
+    if (type === 'BREAKFAST') mealTimeStr = mealSettings?.breakfastTime || '08:00'
+    if (type === 'LUNCH') mealTimeStr = mealSettings?.lunchTime || '13:00'
+    if (type === 'DINNER') mealTimeStr = mealSettings?.dinnerTime || '20:00'
+    const [h, m] = mealTimeStr.split(':').map(Number)
+    const mealTime = new Date(selectedDate)
+    mealTime.setHours(h, m, 0, 0)
+    const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
+    return privileged || now < mealTime
+  }
+
   if (!session) {
-    return (
-      <div className="text-center py-8">
-        <p>Please sign in to manage meals</p>
-      </div>
-    )
+    return null
   }
 
   return (
@@ -558,7 +577,7 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
                               size="sm"
                               className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto"
                               onClick={() => handleToggleMeal(mealType)}
-                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType))}
+                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
                             >
                               {hasMealSelected ? (
                                 <>

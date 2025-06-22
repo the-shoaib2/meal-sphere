@@ -87,7 +87,7 @@ export default function GuestMealForm({ roomId, onSuccess }: GuestMealFormProps)
           Add Guest Meal
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] rounded-lg">
         <DialogHeader>
           <DialogTitle>Add Guest Meal</DialogTitle>
           <DialogDescription>

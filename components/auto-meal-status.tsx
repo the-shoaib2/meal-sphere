@@ -63,6 +63,7 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
 
   const mealTypes: MealType[] = ['BREAKFAST', 'LUNCH', 'DINNER']
   const currentTime = format(new Date(), 'HH:mm')
+  const showGuestAuto = autoMealSettings?.guestMealEnabled
 
   return (
     <Card>
@@ -163,77 +164,19 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
                   </div>
                 )
               })}
+              {showGuestAuto && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="capitalize">Guest Meal</span>
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 border-blue-200">
+                    <Zap className="h-3 w-3 mr-1" />
+                    Auto
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-2">
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="flex-1">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Auto Meal Settings</DialogTitle>
-                <DialogDescription>
-                  Configure your automatic meal preferences
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Enable Auto Meals</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Automatically add meals based on your schedule
-                    </p>
-                  </div>
-                  <Switch
-                    checked={autoMealSettings?.isEnabled || false}
-                    onCheckedChange={(checked) => updateAutoMealSettings({ isEnabled: checked })}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-3">
-                  <Label>Meal Types</Label>
-                  {mealTypes.map((mealType) => (
-                    <div key={mealType} className="flex items-center justify-between">
-                      <Label className="text-sm capitalize">{mealType.toLowerCase()}</Label>
-                      <Switch
-                        checked={
-                          mealType === 'BREAKFAST' ? autoMealSettings?.breakfastEnabled :
-                          mealType === 'LUNCH' ? autoMealSettings?.lunchEnabled :
-                          autoMealSettings?.dinnerEnabled
-                        }
-                        onCheckedChange={(checked) => handleAutoMealToggle(mealType, checked)}
-                        disabled={!autoMealSettings?.isEnabled}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          {isSystemEnabled && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleTriggerAutoMeals}
-              disabled={isLoading}
-              className="flex-1"
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              Trigger Now
-            </Button>
-          )}
-        </div>
 
         {/* Warning */}
         {!isSystemEnabled && (
