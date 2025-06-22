@@ -493,14 +493,14 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>
+                <CardTitle className="text-lg sm:text-xl">
                   Meals for {format(selectedDate, 'MMMM d, yyyy')}
                   {isToday(selectedDate) && ' (Today)'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     {(['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
                       const hasMealSelected = userHasMeal(mealType)
                       const mealCount = useMealCount(selectedDate, mealType)
@@ -510,39 +510,39 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
                                            'bg-blue-100 text-blue-700'
                       
                       return (
-                        <div key={mealType} className="flex items-center justify-between p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${mealTypeColor}`}>
-                              <span className="text-lg">{mealTypeIcon}</span>
+                        <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
+                          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
+                            <div className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}>
+                              <span className="text-base sm:text-lg">{mealTypeIcon}</span>
                             </div>
-                            <div>
-                              <span className="font-semibold text-base">{mealType}</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="secondary">{mealCount} total</Badge>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
+                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+                                <Badge variant="secondary" className="text-xs sm:text-sm">{mealCount} total</Badge>
                                 {hasMealSelected && (
-                                  <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
+                                  <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm">
                                     ✓ You're in
                                   </Badge>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-end sm:justify-start">
                             <Button
                               variant={hasMealSelected ? 'destructive' : 'default'}
                               size="sm"
-                              className="rounded-full px-6"
+                              className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto"
                               onClick={() => handleToggleMeal(mealType)}
-                              disabled={isLoading || !canAddMeal(selectedDate, mealType)}
+                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType))}
                             >
                               {hasMealSelected ? (
                                 <>
-                                  <Minus className="h-4 w-4 mr-1" />
+                                  <Minus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                   Remove
                                 </>
                               ) : (
                                 <>
-                                  <Plus className="h-4 w-4 mr-1" />
+                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                   Add
                                 </>
                               )}

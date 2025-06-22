@@ -93,7 +93,7 @@ export default function MealTracker({ roomId }: MealTrackerProps) {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="container mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Utensils className="h-6 w-6" />

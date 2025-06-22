@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react"
 
 export default function MealsPage() {
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto">
       <Suspense fallback={<MealsLoading />}>
         <MealsContent />
       </Suspense>
