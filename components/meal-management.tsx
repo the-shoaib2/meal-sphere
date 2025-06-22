@@ -22,8 +22,9 @@ import { format, startOfMonth, endOfMonth, isToday, isSameDay, addDays, subDays,
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
-import GuestMealForm from "./guest-meal-form"
-import GuestMealManager from "./guest-meal-manager"
+import GuestMealForm from "@/components/guest-meal-form"
+import GuestMealManager from "@/components/guest-meal-manager"
+import MealCalendar from "@/components/meal-calendar"
 
 interface MealWithUser {
   id: string
@@ -494,23 +495,10 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
                 <CardTitle>Select Date</CardTitle>
               </CardHeader>
               <CardContent>
-                <Calendar
-                  mode="single"
+                <MealCalendar
                   selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  className="rounded-md border"
-                  modifiers={{
-                    today: (date) => isToday(date),
-                    hasMeals: (date) => {
-                      const breakfast = useMealCount(date, 'BREAKFAST')
-                      const lunch = useMealCount(date, 'LUNCH')
-                      const dinner = useMealCount(date, 'DINNER')
-                      return breakfast > 0 || lunch > 0 || dinner > 0
-                    }
-                  }}
-                  modifiersStyles={{
-                    hasMeals: { backgroundColor: 'hsl(var(--primary) / 0.1)' }
-                  }}
+                  onSelect={setSelectedDate}
+                  getMealCount={(date: Date) => useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')}
                 />
               </CardContent>
             </Card>
