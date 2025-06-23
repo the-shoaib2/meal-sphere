@@ -40,7 +40,7 @@ export interface Group extends Omit<Room, 'createdBy'> {
       image: string | null;
     };
   }>;
-  role?: string;
+  userRole?: string;
   joinedAt?: string;
 }
 

@@ -470,9 +470,6 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
     return privileged || now < mealTime
   }
 
-  if (!session) {
-    return null
-  }
 
   return (
     <div className="space-y-6">

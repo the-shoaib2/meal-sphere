@@ -89,7 +89,7 @@ export function GroupSwitcher() {
                       {activeGroup?.name || 'Select a group'}
                     </span>
                     <span className="truncate text-xs">
-                      {activeGroup?.members?.length || 0} members • {activeGroup?.role || 'Member'}
+                      {activeGroup?.members?.length || 0} members • {activeGroup?.userRole || 'Member'}
                     </span>
                   </>
                 ) : (
@@ -122,7 +122,7 @@ export function GroupSwitcher() {
                 >
                   <div className="flex items-center">
                     <span className="truncate max-w-[180px]">{group.name}</span>
-                    {group.role === 'ADMIN' && (
+                    {group.userRole === 'ADMIN' && (
                       <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                         Admin
                       </span>
