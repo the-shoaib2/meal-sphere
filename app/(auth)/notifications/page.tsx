@@ -24,7 +24,7 @@ type Group = {
   id: string
   name: string
   description?: string
-  role: 'ADMIN' | 'MANAGER' | 'MEMBER'
+  userRole: 'ADMIN' | 'MANAGER' | 'MEMBER'
 }
 
 type GroupSettings = {
@@ -74,7 +74,7 @@ export default function NotificationsPage() {
           announcements: true,
           mealUpdates: true,
           memberActivity: true,
-          joinRequests: group.role === 'ADMIN' || group.role === 'MANAGER',
+          joinRequests: group.userRole === 'ADMIN' || group.userRole === 'MANAGER',
         }
       })
       setGroupSettings(initialGroupSettings)
@@ -407,8 +407,8 @@ export default function NotificationsPage() {
                         <CardTitle className="text-lg">{group.name}</CardTitle>
                         <CardDescription>{group.description || 'No description'}</CardDescription>
                       </div>
-                      <Badge variant={group.role === 'ADMIN' || group.role === 'MANAGER' ? 'default' : 'secondary'}>
-                        {group.role}
+                      <Badge variant={group.userRole === 'ADMIN' || group.userRole === 'MANAGER' ? 'default' : 'secondary'}>
+                        {group.userRole}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -473,7 +473,7 @@ export default function NotificationsPage() {
                       />
                     </div>
 
-                    {(group.role === 'ADMIN' || group.role === 'MANAGER') && (
+                    {(group.userRole === 'ADMIN' || group.userRole === 'MANAGER') && (
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
                           <Label htmlFor={`${group.id}-requests`}>Join Requests</Label>
