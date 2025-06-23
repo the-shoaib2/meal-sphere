@@ -15,7 +15,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "MealSphere - Meal Management System",
   description: "A comprehensive meal management system for roommates and hostels",
-  generator: 'v0.1.0'
 }
 
 export default async function RootLayout({
