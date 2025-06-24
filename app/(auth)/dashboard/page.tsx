@@ -27,7 +27,11 @@ export default async function DashboardPage() {
     include: {
       rooms: {
         include: {
-          room: true
+          room: {
+            include: {
+              members: true
+            }
+          }
         }
       }
     }
@@ -36,6 +40,85 @@ export default async function DashboardPage() {
   if (!user) {
     redirect("/login")
   }
+
+  // Get current month range
+  const now = new Date()
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+  // Calculate dashboard summary data
+  let totalMeals = 0
+  let totalCost = 0
+  let totalUserCost = 0
+  let totalPaid = 0
+  let mealRateSum = 0
+  let mealRateCount = 0
+
+  for (const membership of user.rooms) {
+    // Get meals for this room in current month
+    const meals = await prisma.meal.count({
+      where: {
+        roomId: membership.roomId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    })
+
+    // Get user's meals for this room in current month
+    const userMeals = await prisma.meal.count({
+      where: {
+        userId: user.id,
+        roomId: membership.roomId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    })
+
+    // Get expenses for this room in current month
+    const expenses = await prisma.extraExpense.findMany({
+      where: {
+        roomId: membership.roomId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: { amount: true },
+    })
+
+    const roomExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
+    const mealRate = meals > 0 ? roomExpenses / meals : 0
+
+    totalMeals += userMeals
+    totalCost += roomExpenses
+    totalUserCost += userMeals * mealRate
+    mealRateSum += mealRate
+    mealRateCount += 1
+
+    // Get user's payments for this room in current month
+    const payments = await prisma.payment.findMany({
+      where: {
+        userId: user.id,
+        roomId: membership.roomId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: 'COMPLETED',
+      },
+      select: { amount: true },
+    })
+    totalPaid += payments.reduce((sum, p) => sum + p.amount, 0)
+  }
+
+  const currentRate = mealRateCount > 0 ? mealRateSum / mealRateCount : 0
+  const myBalance = totalPaid - totalUserCost
+  const activeRooms = user.rooms.length
+  const totalMembers = user.rooms.reduce((acc, r) => acc + (r.room.members?.length || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -46,7 +129,16 @@ export default async function DashboardPage() {
           <span className="sr-only sm:not-sr-only sm:inline">Notifications</span>
         </Button>
       </div>
-      <DashboardSummaryCards />
+      
+      <DashboardSummaryCards
+        totalMeals={totalMeals}
+        currentRate={currentRate}
+        myBalance={myBalance}
+        totalCost={totalCost}
+        activeRooms={activeRooms}
+        totalMembers={totalMembers}
+      />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>

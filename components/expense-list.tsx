@@ -91,21 +91,6 @@ export function ExpenseList() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="rounded-md bg-destructive/15 p-4">
-        <div className="flex">
-          <AlertCircle className="h-5 w-5 text-destructive" />
-          <h3 className="text-sm font-medium text-destructive ml-2">
-            Error loading expenses
-          </h3>
-        </div>
-        <p className="mt-2 text-sm text-destructive">
-          {error.message}
-        </p>
-      </div>
-    )
-  }
 
   const expenseTypes = [
     { value: 'ALL_TYPES', label: 'All Types' },
@@ -259,7 +244,7 @@ export function ExpenseList() {
                     <TableRow key={expense.id}>
                       <TableCell className="font-medium">{expense.description}</TableCell>
                       <TableCell>{getTypeBadge(expense.type)}</TableCell>
-                      <TableCell>৳{expense.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                      <TableCell className="text-red-600" >৳ -{expense.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
                       <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="flex items-center space-x-2">
                         {expense.user?.image && (

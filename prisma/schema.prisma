@@ -134,6 +134,9 @@ model User {
   announcements     Announcement[] @relation("CreatedAnnouncements")
   groupNotificationSettings GroupNotificationSettings[]
   autoMealSettings  AutoMealSettings[]
+  accountTransactionsSent AccountTransaction[] @relation("TransactionUser")
+  accountTransactionsReceived AccountTransaction[] @relation("TransactionTarget")
+  accountTransactionsCreated AccountTransaction[] @relation("TransactionCreator")
 
   @@index([role, isActive])
   @@index([resetToken])
@@ -178,6 +181,7 @@ model Room {
   groupNotificationSettings GroupNotificationSettings[]
   mealSettings  MealSettings?
   autoMealSettings AutoMealSettings[]
+  accountTransactions AccountTransaction[]
 
   @@index([isActive])
   @@index([createdAt])
@@ -580,24 +584,50 @@ model MealSettings {
 
 /// AUTO MEAL SETTINGS MODEL (User preferences)
 model AutoMealSettings {
-  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId                String   @db.ObjectId
-  roomId                String   @db.ObjectId
-  isEnabled             Boolean  @default(false)
-  breakfastEnabled      Boolean  @default(true)
-  lunchEnabled          Boolean  @default(true)
-  dinnerEnabled         Boolean  @default(true)
-  guestMealEnabled      Boolean  @default(false)
-  startDate             DateTime @default(now())
-  endDate               DateTime?
-  excludedDates         String[] // Store dates as strings
-  excludedMealTypes     MealType[] // Store meal types to exclude
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String   @db.ObjectId
+  roomId            String   @db.ObjectId
+  isEnabled         Boolean  @default(false)
+  breakfastEnabled  Boolean  @default(true)
+  lunchEnabled      Boolean  @default(true)
+  dinnerEnabled     Boolean  @default(true)
+  guestMealEnabled  Boolean  @default(false)
+  startDate         DateTime @default(now())
+  endDate           DateTime?
+  excludedDates     String[] // Store dates as strings
+  excludedMealTypes MealType[] // Store meal types to exclude
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
+}
+
+/// ACCOUNT TRANSACTION MODEL
+model AccountTransaction {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId 
+  targetUserId String   @db.ObjectId  
+  roomId       String   @db.ObjectId
+  amount       Float
+  type         String   @default("PAYMENT") // PAYMENT, ADJUSTMENT, REFUND
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String   @db.ObjectId
+
+  // Relations
+  user         User     @relation("TransactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  targetUser   User     @relation("TransactionTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  creator      User     @relation("TransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([userId])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@index([type])
 }
 

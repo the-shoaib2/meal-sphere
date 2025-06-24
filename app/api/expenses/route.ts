@@ -52,17 +52,36 @@ export async function POST(request: Request) {
       receiptUrl = await uploadReceipt(receiptFile, user.id, roomId)
     }
 
-    // Create expense
-    const expense = await prisma.extraExpense.create({
-      data: {
-        description,
-        amount,
-        date,
-        type: type as ExpenseType,
-        receiptUrl,
-        userId: user.id,
-        roomId,
-      },
+    // Create expense and account transaction in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create expense
+      const expense = await tx.extraExpense.create({
+        data: {
+          description,
+          amount,
+          date,
+          type: type as ExpenseType,
+          receiptUrl,
+          userId: user.id,
+          roomId,
+        },
+      })
+
+      // Create account transaction to decrease group balance
+      // The expense is treated as a negative transaction from the group to the expense creator
+      const accountTransaction = await tx.accountTransaction.create({
+        data: {
+          roomId,
+          userId: user.id, // Who created the expense
+          targetUserId: user.id, // The expense affects the group balance
+          amount: -amount, // Negative amount to decrease group balance
+          type: 'EXPENSE',
+          description: `Expense: ${description}`,
+          createdBy: user.id,
+        },
+      })
+
+      return { expense, accountTransaction }
     })
 
     // Get room details for notification
@@ -92,7 +111,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: "Expense added successfully",
-      expense,
+      expense: result.expense,
     })
   } catch (error) {
     console.error("Error adding expense:", error)

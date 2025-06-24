@@ -80,19 +80,40 @@ export async function PATCH(
       console.log('New receipt uploaded, but storage integration is not implemented');
     }
 
-    // Update the expense
-    const updatedExpense = await prisma.extraExpense.update({
-      where: { id: expenseId },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
+    // Update the expense and corresponding account transaction in a transaction
+    const updatedExpense = await prisma.$transaction(async (tx) => {
+      // Update the expense
+      const expense = await tx.extraExpense.update({
+        where: { id: expenseId },
+        data: updateData,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
           },
         },
-      },
+      });
+
+      // Update the corresponding account transaction
+      await tx.accountTransaction.updateMany({
+        where: {
+          roomId: existingExpense.roomId,
+          userId: existingExpense.userId,
+          targetUserId: existingExpense.userId,
+          amount: -existingExpense.amount, // Old negative amount
+          type: 'EXPENSE',
+          description: `Expense: ${existingExpense.description}`,
+        },
+        data: {
+          amount: -amount, // New negative amount
+          description: `Expense: ${description}`,
+        }
+      });
+
+      return expense;
     });
 
     return NextResponse.json(updatedExpense);
@@ -157,9 +178,24 @@ export async function DELETE(
       );
     }
 
-    // Delete the expense
-    await prisma.extraExpense.delete({
-      where: { id: expenseId }
+    // Delete the expense and corresponding account transaction in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Delete the expense
+      await tx.extraExpense.delete({
+        where: { id: expenseId }
+      });
+
+      // Find and delete the corresponding account transaction
+      await tx.accountTransaction.deleteMany({
+        where: {
+          roomId: expense.roomId,
+          userId: expense.userId,
+          targetUserId: expense.userId,
+          amount: -expense.amount, // Negative amount
+          type: 'EXPENSE',
+          description: `Expense: ${expense.description}`,
+        }
+      });
     });
 
     return NextResponse.json(

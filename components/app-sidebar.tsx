@@ -75,10 +75,16 @@ const navMain = [
       icon: Receipt,
       exact: false,
     },
+    // {
+    //   title: "Payments",
+    //   url: "/payments",
+    //   icon: CreditCard,
+    //   exact: false,
+    // },
     {
-      title: "Payments",
-      url: "/payments",
-      icon: CreditCard,
+      title: "Balance",
+      url: "/account-balance",
+      icon: PieChart,
       exact: false,
     },
     {
