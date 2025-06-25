@@ -35,7 +35,7 @@ async function checkPrivileges(userId: string, roomId: string) {
 // PUT: Update a transaction
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { transactionId: string } }
+  context: { params: Promise<{ transactionId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -43,7 +43,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { transactionId } = params;
+    const { transactionId } = await context.params;
     const body = await request.json();
     const { amount, description, type } = body;
 
@@ -76,7 +76,7 @@ export async function PUT(
 // DELETE: Delete a transaction
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { transactionId: string } }
+  context: { params: Promise<{ transactionId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -84,7 +84,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { transactionId } = params;
+    const { transactionId } = await context.params;
 
     const transaction = await prisma.accountTransaction.findUnique({
       where: { id: transactionId },
