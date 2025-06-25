@@ -124,24 +124,30 @@ export default function GroupPage() {
     }
   };
 
-  if (isLoading || isLeaving) {
+  if (isLoading || isLeaving || !group) {
     return (
       <div className="container mx-auto px-0 sm:px-4 py-4 sm:py-8">
         <div className="flex flex-col gap-4 sm:gap-6">
+          {/* Header Skeleton */}
           <div className="flex items-center gap-4 px-4 sm:px-0">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <Button variant="ghost" size="icon" disabled>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-96" />
-              <div className="flex gap-2">
-                <Skeleton className="h-5 w-20" />
-                <Skeleton className="h-5 w-20" />
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="h-8 w-48" />
+              </div>
+              <Skeleton className="h-4 w-64" />
+              <div className="flex gap-2 mt-1">
+                <Skeleton className="h-5 w-20 rounded" />
+                <Skeleton className="h-5 w-16 rounded" />
+                <Skeleton className="h-5 w-12 rounded" />
               </div>
             </div>
           </div>
 
+          {/* Tabs Skeleton */}
           <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 sm:rounded-md">
               <TabsTrigger value="members" className="flex items-center gap-2">
@@ -164,37 +170,58 @@ export default function GroupPage() {
 
             <div className="mt-6">
               <TabsContent value="members">
-                <MembersTab
-                  groupId={groupId}
-                  isAdmin={false}
-                  isCreator={false}
-                  currentUserId={session?.user?.id}
-                  members={[]}
-                  onMemberUpdate={() => { }}
-                />
+                {/* MembersTab Skeleton */}
+                <div className="flex flex-col gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-2 border rounded-md">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                      <Skeleton className="h-6 w-16 rounded" />
+                    </div>
+                  ))}
+                </div>
               </TabsContent>
 
               <TabsContent value="join-requests">
-                <JoinRequestsTab
-                  groupId={groupId}
-                  isAdmin={false}
-                />
+                {/* JoinRequestsTab Skeleton */}
+                <div className="flex flex-col gap-4">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-2 border rounded-md">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded" />
+                    </div>
+                  ))}
+                </div>
               </TabsContent>
 
               <TabsContent value="activity">
-                <ActivityTab
-                  groupId={groupId}
-                  isAdmin={false}
-                />
+                {/* ActivityTab Skeleton */}
+                <div className="flex flex-col gap-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  ))}
+                </div>
               </TabsContent>
 
               <TabsContent value="settings">
-                <SettingsTab
-                  groupId={groupId}
-                  isAdmin={false}
-                  isCreator={false}
-                  onUpdate={() => { }}
-                />
+                {/* SettingsTab Skeleton */}
+                <div className="flex flex-col gap-4 max-w-md">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-10 w-full rounded" />
+                  <Skeleton className="h-10 w-1/2 rounded" />
+                </div>
               </TabsContent>
             </div>
           </Tabs>
@@ -203,20 +230,6 @@ export default function GroupPage() {
     );
   }
 
-  if (!group) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <AlertCircle className="h-12 w-12 text-destructive" />
-          <h1 className="text-2xl font-bold">Group Not Found</h1>
-          <p className="text-muted-foreground">The group you're looking for doesn't exist or you don't have access to it.</p>
-          <Button onClick={() => router.push('/groups')}>
-            Back to Groups
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   // Find the current user's membership in the group
   const currentUserMembership = Array.isArray(group.members)

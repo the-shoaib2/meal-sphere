@@ -9,7 +9,7 @@ import MemberView from '@/components/account-balance/member-view';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const PRIVILEGED_ROLES = ['OWNER', 'ADMIN', 'ACCOUNTANT'];
+const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER','MEAL_MANAGER'];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
@@ -58,33 +58,32 @@ const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
   <div className="space-y-6">
     <Card>
       <CardHeader>
-        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-8 w-1/2 mb-2" />
+        <Skeleton className="h-4 w-1/3" />
       </CardHeader>
-      <CardContent className="space-y-4">
-        {hasPrivilege ? (
-          <>
-            <div className="grid grid-cols-3 gap-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
+      <CardContent className="space-y-6">
+        {/* Stats Grid Skeleton - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(hasPrivilege ? 6 : 3)].map((_, i) => (
+            <div key={i} className="bg-muted/30 rounded-lg p-4 flex flex-col gap-2">
+              <Skeleton className="h-4 w-1/2 mb-1" />
+              <Skeleton className="h-6 w-2/3" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
+          ))}
+        </div>
+        {/* Table/List Skeleton */}
+        <div className="space-y-3">
+          {[...Array(hasPrivilege ? 4 : 2)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-2 border rounded-md">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="h-4 w-32 mb-1" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-6 w-16 rounded" />
             </div>
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </>
-        ) : (
-          <div className="space-y-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        )}
+          ))}
+        </div>
       </CardContent>
     </Card>
   </div>

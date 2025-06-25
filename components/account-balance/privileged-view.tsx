@@ -17,7 +17,7 @@ import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils } fr
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 
 // Using the same PRIVILEGED_ROLES from the main panel
-const PRIVILEGED_ROLES = ['OWNER', 'ADMIN', 'ACCOUNTANT'];
+const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
