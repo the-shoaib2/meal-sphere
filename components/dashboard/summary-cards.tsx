@@ -18,6 +18,7 @@ import { useDashboardSummary } from '@/hooks/use-dashboard';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useSession } from 'next-auth/react';
 import { useGroups } from '@/hooks/use-groups';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SummaryCardsProps {
   totalMeals: number;
@@ -28,7 +29,7 @@ interface SummaryCardsProps {
   totalMembers: number;
 }
 
-const PRIVILEGED_ROLES = ['OWNER', 'ADMIN', 'ACCOUNTANT'];
+const PRIVILEGED_ROLES = ['ADMIN', 'MANNAGER', 'MEAL_MANNAGER'];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
@@ -67,28 +68,26 @@ export default function SummaryCards({
 
   const { data: groupData, error: groupError } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);
 
-  // Show message when no group is selected
-  if (!activeGroup) {
+  // Show skeleton loading while data is being fetched
+  if (isLoadingSummary) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="col-span-full">
-          <CardHeader>
-            <CardTitle className="text-center">No Group Selected</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground">
-              Please select a group from the group switcher to view your dashboard summary.
-            </p>
-            {userGroups.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                You have {userGroups.length} group(s) available.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {[...Array(8)].map((_, i) => (
+          <Card key={`skeleton-${i}`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-6 w-6" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-24 mb-2" />
+              <Skeleton className="h-4 w-32" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
+
 
   // Show error message if there's an error
   if (summaryError) {

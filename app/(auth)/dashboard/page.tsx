@@ -12,8 +12,11 @@ import { useDashboardSummary } from "@/hooks/use-dashboard"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { redirect } from "next/navigation"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default async function DashboardPage() {
+  // Simulate loading state for skeleton
+  const isLoading = false // This would normally come from your data fetching logic
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.email) {
@@ -27,6 +30,28 @@ export default async function DashboardPage() {
   const totalCost = 0
   const activeRooms = 0
   const totalMembers = 0
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-9 w-36" />
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={`skeleton-${i}`} className="h-32 rounded-lg" />
+          ))}
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+          <Skeleton className="col-span-4 h-[400px] rounded-lg" />
+          <Skeleton className="col-span-3 h-[400px] rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
