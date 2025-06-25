@@ -140,64 +140,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(publicGroups);
     }
 
-    // If user is authenticated, get groups based on permissions
-    let groups;
-    if (isMember && userId) {
-      // Get groups where the user is a member (including private groups)
-      const memberGroups = await prisma.roomMember.findMany({
-        where: { 
-          userId: session.user.id,
-          room: { isActive: true }
-        },
-        include: {
-          room: {
-            include: {
-              createdByUser: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  image: true,
-                },
-              },
-              members: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                      image: true,
-                    },
-                  },
-                },
-              },
-              _count: {
-                select: {
-                  members: true
-                }
-              }
-            },
-          },
-        },
-        orderBy: {
-          room: { createdAt: 'desc' }
-        }
-      });
-
-      groups = memberGroups.map(member => ({
-        ...member.room,
-        userRole: member.role,
-        isCurrentMember: true
-      }));
-    } else {
-      // Get public groups and user's private groups
-      const [publicGroups, userPrivateGroups] = await Promise.all([
-        prisma.room.findMany({
-          where: { 
-            isPrivate: false,
-            isActive: true 
-          },
+    // For authenticated users, only return groups where they are members
+    const memberGroups = await prisma.roomMember.findMany({
+      where: { 
+        userId: session.user.id,
+        room: { isActive: true }
+      },
+      include: {
+        room: {
           include: {
             createdByUser: {
               select: {
@@ -207,26 +157,9 @@ export async function GET(req: NextRequest) {
                 image: true,
               },
             },
-            _count: {
-              select: {
-                members: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        }),
-        prisma.roomMember.findMany({
-          where: { 
-            userId: session.user.id,
-            room: { 
-              isPrivate: true,
-              isActive: true 
-            }
-          },
-          include: {
-            room: {
+            members: {
               include: {
-                createdByUser: {
+                user: {
                   select: {
                     id: true,
                     name: true,
@@ -234,41 +167,28 @@ export async function GET(req: NextRequest) {
                     image: true,
                   },
                 },
-                members: {
-                  include: {
-                    user: {
-                      select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        image: true,
-                      },
-                    },
-                  },
-                },
-                _count: {
-                  select: {
-                    members: true
-                  }
-                }
               },
             },
+            _count: {
+              select: {
+                members: true
+              }
+            }
           },
-          orderBy: {
-            room: { createdAt: 'desc' }
-          }
-        }),
-      ]);
+        },
+      },
+      orderBy: {
+        room: { createdAt: 'desc' }
+      }
+    });
 
-      // Combine and mark user's private groups
-      const privateGroupsWithRole = userPrivateGroups.map(member => ({
-        ...member.room,
-        userRole: member.role,
-        isCurrentMember: true
-      }));
-
-      groups = [...publicGroups, ...privateGroupsWithRole];
-    }
+    // Transform the data to match the expected format
+    const groups = memberGroups.map(member => ({
+      ...member.room,
+      userRole: member.role,
+      joinedAt: member.joinedAt,
+      isCurrentMember: true
+    }));
 
     return NextResponse.json(groups);
   } catch (error) {

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { useActiveGroup } from '@/contexts/group-context';
 
 export type AccountBalance = {
   id: string;
@@ -57,14 +58,25 @@ export type AccountTransaction = {
 };
 
 export function useGroupBalances(roomId: string, enabled: boolean = true, includeDetails: boolean = false) {
-  return useQuery<GroupBalanceSummary>({
+  return useQuery<GroupBalanceSummary | null>({
     queryKey: ['group-balances', roomId, includeDetails],
     queryFn: async () => {
       const res = await fetch(`/api/account-balance?roomId=${roomId}&all=true&includeDetails=${includeDetails}`);
+      if (res.status === 403) {
+        // User doesn't have privileged access, return null instead of throwing
+        return null;
+      }
       if (!res.ok) throw new Error('Failed to fetch group balances');
       return res.json();
     },
     enabled: !!roomId && enabled,
+    retry: (failureCount, error) => {
+      // Don't retry on 403 errors (insufficient permissions)
+      if (error.message.includes('403') || error.message.includes('Forbidden')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }
 
@@ -221,5 +233,34 @@ export function useDeleteBalance() {
       queryClient.invalidateQueries({ queryKey: ['account-balance'] });
       queryClient.invalidateQueries({ queryKey: ['account-balances'] });
     },
+  });
+}
+
+export type DashboardSummary = {
+  totalUserMeals: number;
+  totalAllMeals: number;
+  currentRate: number;
+  currentBalance: number;
+  availableBalance: number;
+  totalCost: number;
+  activeRooms: number;
+  totalActiveGroups: number;
+  totalMembers: number;
+};
+
+export function useDashboardSummary() {
+  const { data: session } = useSession();
+  const { activeGroup } = useActiveGroup();
+  
+  return useQuery<DashboardSummary>({
+    queryKey: ['dashboard-summary', activeGroup?.id],
+    queryFn: async () => {
+      const res = await fetch('/api/dashboard/summary');
+      if (!res.ok) throw new Error('Failed to fetch dashboard summary');
+      return res.json();
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes - shorter for more responsive updates
+    enabled: !!session?.user?.id,
+    refetchOnWindowFocus: false,
   });
 }

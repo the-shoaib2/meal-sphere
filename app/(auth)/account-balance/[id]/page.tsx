@@ -219,113 +219,138 @@ export default function UserAccountBalancePage() {
       <Card>
         <CardContent className="p-4">
           {/* User Info */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12 border">
-              <AvatarImage src={userBalance?.user?.image} />
-              <AvatarFallback className="text-lg font-semibold">
-                {userBalance?.user?.name?.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="text-lg font-semibold">{userBalance?.user?.name}</h3>
-              <p className="text-sm text-muted-foreground">{userBalance?.user?.email}</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-12 w-12 border">
+                <AvatarImage src={userBalance?.user?.image} />
+                <AvatarFallback className="text-lg font-semibold">
+                  {userBalance?.user?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-lg font-semibold">{userBalance?.user?.name}</h3>
+                <p className="text-sm text-muted-foreground">{userBalance?.user?.email}</p>
+              </div>
             </div>
           </div>
 
           <Separator className="my-4" />
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Available Balance</p>
-              <p className={`text-xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {/* Stats Grid - Responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-muted/30 rounded-lg p-3">
+              <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
+              <p className={`text-lg sm:text-xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 ৳{availableBalance.toFixed(2)}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Spent</p>
-              <p className="text-xl font-bold text-red-600">৳{totalSpent.toFixed(2)}</p>
+            <div className="bg-muted/30 rounded-lg p-3">
+              <p className="text-sm text-muted-foreground mb-1">Total Spent</p>
+              <p className="text-lg sm:text-xl font-bold text-red-600">৳{totalSpent.toFixed(2)}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Received</p>
-              <p className="text-xl font-bold text-green-600">৳{totalReceived.toFixed(2)}</p>
+            <div className="bg-muted/30 rounded-lg p-3">
+              <p className="text-sm text-muted-foreground mb-1">Total Received</p>
+              <p className="text-lg sm:text-xl font-bold text-green-600">৳{totalReceived.toFixed(2)}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Transactions</p>
-              <p className="text-xl font-bold">{totalTransactions}</p>
+            <div className="bg-muted/30 rounded-lg p-3">
+              <p className="text-sm text-muted-foreground mb-1">Total Transactions</p>
+              <p className="text-lg sm:text-xl font-bold">{totalTransactions}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Transaction History</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg sm:text-xl">Transaction History</CardTitle>
+        </CardHeader>
         <CardContent>
           {filteredTransactions && filteredTransactions.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Added By</TableHead>
-                  <TableHead>Date</TableHead>
-                  {hasPrivilege && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow></TableHeader>
-                <TableBody>
-                  {filteredTransactions.map((t) => {
-                    const isEdited = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000;
-                    return (
-                      <TableRow key={t.id}>
-                        <TableCell><span className={`font-medium ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {t.amount > 0 ? '+' : ''}৳{t.amount.toFixed(2)}
-                        </span></TableCell>
-                        <TableCell><Badge variant="outline">{t.type}</Badge></TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{t.description}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{t.creator?.name || 'System'}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span>{new Date(t.createdAt).toLocaleString()}</span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Created: {new Date(t.createdAt).toLocaleString()}</p>
-                                {isEdited && <p>Updated: {new Date(t.updatedAt).toLocaleString()}</p>}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        {hasPrivilege && (
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditTransactionDialog(t)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openDeleteDialog(t.id)} className="text-red-500 focus:text-red-500">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  <span>Delete</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+            <div className="rounded-md border overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[100px]">Amount</TableHead>
+                      <TableHead className="min-w-[100px]">Type</TableHead>
+                      <TableHead className="min-w-[150px] hidden sm:table-cell">Description</TableHead>
+                      <TableHead className="min-w-[120px] hidden md:table-cell">Added By</TableHead>
+                      <TableHead className="min-w-[140px]">Date</TableHead>
+                      {hasPrivilege && <TableHead className="text-right min-w-[80px]">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransactions.map((t) => {
+                      const isEdited = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000;
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell>
+                            <span className={`font-medium ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {t.amount > 0 ? '+' : ''}৳{t.amount.toFixed(2)}
+                            </span>
                           </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">{t.type}</Badge>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="max-w-[200px] truncate text-sm text-muted-foreground" title={t.description}>
+                              {t.description}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="text-sm text-muted-foreground truncate max-w-[120px]" title={t.creator?.name || 'System'}>
+                              {t.creator?.name || 'System'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-muted-foreground">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="block sm:hidden">{new Date(t.createdAt).toLocaleDateString()}</span>
+                                    <span className="hidden sm:block">{new Date(t.createdAt).toLocaleString()}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Created: {new Date(t.createdAt).toLocaleString()}</p>
+                                    {isEdited && <p>Updated: {new Date(t.updatedAt).toLocaleString()}</p>}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          </TableCell>
+                          {hasPrivilege && (
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => openEditTransactionDialog(t)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openDeleteDialog(t.id)} className="text-red-500 focus:text-red-500">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : (
-            <div className="text-center py-8">No transactions found.</div>
+            <div className="text-center py-8">
+              <div className="text-muted-foreground">No transactions found.</div>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -407,31 +432,33 @@ const UserBalanceSkeleton = () => (
     <Card>
       <CardContent className="p-4">
         {/* User Info Skeleton */}
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-[150px]" />
-            <Skeleton className="h-4 w-[200px]" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-[150px]" />
+              <Skeleton className="h-4 w-[200px]" />
+            </div>
           </div>
         </div>
 
         <Separator className="my-4" />
 
-        {/* Stats Grid Skeleton */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
+        {/* Stats Grid Skeleton - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-6 w-1/2" />
           </div>
-          <div className="space-y-2">
+          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-6 w-1/2" />
           </div>
-          <div className="space-y-2">
+          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-6 w-1/2" />
           </div>
-          <div className="space-y-2">
+          <div className="bg-muted/30 rounded-lg p-3 space-y-2">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-6 w-1/2" />
           </div>
@@ -441,12 +468,18 @@ const UserBalanceSkeleton = () => (
 
     {/* Transaction History Skeleton */}
     <Card>
-      <CardHeader><Skeleton className="h-7 w-1/3" /></CardHeader>
+      <CardHeader>
+        <Skeleton className="h-7 w-1/3" />
+      </CardHeader>
       <CardContent className="space-y-3">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
+        <div className="overflow-x-auto">
+          <div className="min-w-[600px]">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
       </CardContent>
     </Card>
   </div>

@@ -1,7 +1,3 @@
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth/auth"
-import { redirect } from "next/navigation"
-import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
@@ -12,6 +8,10 @@ import {
   Users
 } from "lucide-react"
 import DashboardSummaryCards from "@/components/dashboard/summary-cards"
+import { useDashboardSummary } from "@/hooks/use-dashboard"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth/auth"
+import { redirect } from "next/navigation"
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -20,105 +20,13 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      email: session.user.email,
-    },
-    include: {
-      rooms: {
-        include: {
-          room: {
-            include: {
-              members: true
-            }
-          }
-        }
-      }
-    }
-  })
-
-  if (!user) {
-    redirect("/login")
-  }
-
-  // Get current month range
-  const now = new Date()
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-
-  // Calculate dashboard summary data
-  let totalMeals = 0
-  let totalCost = 0
-  let totalUserCost = 0
-  let totalPaid = 0
-  let mealRateSum = 0
-  let mealRateCount = 0
-
-  for (const membership of user.rooms) {
-    // Get meals for this room in current month
-    const meals = await prisma.meal.count({
-      where: {
-        roomId: membership.roomId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-    })
-
-    // Get user's meals for this room in current month
-    const userMeals = await prisma.meal.count({
-      where: {
-        userId: user.id,
-        roomId: membership.roomId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-    })
-
-    // Get expenses for this room in current month
-    const expenses = await prisma.extraExpense.findMany({
-      where: {
-        roomId: membership.roomId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      select: { amount: true },
-    })
-
-    const roomExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
-    const mealRate = meals > 0 ? roomExpenses / meals : 0
-
-    totalMeals += userMeals
-    totalCost += roomExpenses
-    totalUserCost += userMeals * mealRate
-    mealRateSum += mealRate
-    mealRateCount += 1
-
-    // Get user's payments for this room in current month
-    const payments = await prisma.payment.findMany({
-      where: {
-        userId: user.id,
-        roomId: membership.roomId,
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-        status: 'COMPLETED',
-      },
-      select: { amount: true },
-    })
-    totalPaid += payments.reduce((sum, p) => sum + p.amount, 0)
-  }
-
-  const currentRate = mealRateCount > 0 ? mealRateSum / mealRateCount : 0
-  const myBalance = totalPaid - totalUserCost
-  const activeRooms = user.rooms.length
-  const totalMembers = user.rooms.reduce((acc, r) => acc + (r.room.members?.length || 0), 0)
+  // Only provide fallback values, all real data comes from the hook
+  const totalMeals = 0
+  const currentRate = 0
+  const myBalance = 0
+  const totalCost = 0
+  const activeRooms = 0
+  const totalMembers = 0
 
   return (
     <div className="space-y-6">

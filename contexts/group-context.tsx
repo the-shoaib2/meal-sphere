@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Group } from '@/hooks/use-groups';
 
 type GroupContextType = {
@@ -16,6 +17,7 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Load active group from localStorage on mount
   useEffect(() => {
@@ -48,6 +50,14 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [session]);
+
+  // Invalidate dashboard queries when active group changes
+  useEffect(() => {
+    if (activeGroup?.id) {
+      console.log('Active group changed, invalidating dashboard queries:', activeGroup.id);
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    }
+  }, [activeGroup?.id, queryClient]);
 
   return (
     <GroupContext.Provider value={{ activeGroup, setActiveGroup, isLoading }}>

@@ -22,6 +22,7 @@ export async function middleware(request: NextRequest) {
     '/settings',
     '/market',
     '/expenses',
+    '/account-balance',
     '/analytics',
     '/excel',
     '/calculations',
