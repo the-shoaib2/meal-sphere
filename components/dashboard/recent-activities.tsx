@@ -162,8 +162,8 @@ export default function RecentActivities() {
   }
 
   return (
-    <Card className="h-full min-h-[300px] max-h-[500px] sm:max-h-[450px] lg:max-h-[500px] overflow-hidden">
-      <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6">
+    <Card className="overflow-hidden h-[400px] lg:h-[450px] xl:h-[500px] flex flex-col">
+      <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6 border-b z-10 bg-background/95 backdrop-blur-sm sticky top-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -179,9 +179,9 @@ export default function RecentActivities() {
           Latest updates from your meal group
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0 sm:px-2">
-        <ScrollArea className="h-[calc(100%-80px)] sm:h-[calc(100%-90px)] w-full px-3 sm:px-4">
-          <div className="space-y-3 pr-1">
+      <CardContent className="p-0 flex-grow overflow-hidden">
+        <ScrollArea className="h-full w-full">
+          <div className="space-y-3 p-4">
             {activities.map((activity) => {
               const IconComponent = getActivityIcon(activity.type);
               const iconColor = getActivityColor(activity.type);

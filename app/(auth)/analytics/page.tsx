@@ -173,41 +173,8 @@ export default function AnalyticsPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold">Analytics</h1>
           <p className="text-muted-foreground">
-            {viewMode === 'current' 
-              ? `${activeGroup?.name || 'Current Group'} Analytics` 
-              : `Selected Rooms Analytics (${selectedRoomIds.length} rooms)`
-            }
+            {activeGroup?.name } Analytics
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={viewMode} onValueChange={(value: 'current' | 'selected') => setViewMode(value)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select view" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="current" disabled={!activeGroup}>
-                Current Group
-              </SelectItem>
-              <SelectItem value="selected">
-                Selected Rooms
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          
-          {viewMode === 'selected' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowRoomSelector(!showRoomSelector)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Select Rooms
-            </Button>
-          )}
-          
-          <Badge variant="secondary">
-            {data?.roomStats?.length || 0} Rooms
-          </Badge>
         </div>
       </div>
 

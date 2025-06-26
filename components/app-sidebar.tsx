@@ -106,12 +106,6 @@ const navMain = [
       exact: false,
     },
     {
-      title: "Market",
-      url: "/market",
-      icon: Map,  
-      exact: false,
-    },
-    {
       title: "Excel",
       url: "/excel",
       icon: FileSpreadsheet,
