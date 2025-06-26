@@ -34,13 +34,13 @@ export function GroupSwitcher() {
   // Set the first group as active when groups are loaded and no group is selected
   React.useEffect(() => {
     if (groups.length > 0 && !activeGroup) {
-      console.log('Setting first group as active:', groups[0].name);
+      // console.log('Setting first group as active:', groups[0].name);
       setActiveGroup(groups[0])
     }
   }, [groups, activeGroup, setActiveGroup])
 
   const handleGroupSelect = (group: Group) => {
-    console.log('Setting active group:', group.name);
+    // console.log('Setting active group:', group.name);
     setActiveGroup(group)
     // Close the dropdown on mobile after selection
     if (isMobile) {

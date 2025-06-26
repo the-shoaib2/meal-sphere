@@ -16,12 +16,16 @@ export type DashboardSummary = {
 
 export type DashboardActivity = {
   id: string;
-  type: 'MEAL' | 'PAYMENT' | 'EXPENSE' | 'GROUP_JOIN' | 'GROUP_LEAVE';
+  type: 'MEAL' | 'PAYMENT' | 'EXPENSE' | 'GROUP_JOIN' | 'GROUP_LEAVE' | 'SHOPPING' | 'ACTIVITY';
   title: string;
   description: string;
   timestamp: string;
   amount?: number;
   groupName?: string;
+  user?: {
+    name: string;
+    image?: string;
+  };
 };
 
 export type DashboardChartData = {
@@ -35,7 +39,6 @@ export function useDashboardSummary() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
   
-  console.log('useDashboardSummary - Session:', !!session?.user?.id, 'Active Group:', activeGroup?.name, 'Group ID:', activeGroup?.id);
   
   return useQuery<DashboardSummary>({
     queryKey: ['dashboard-summary', activeGroup?.id],
@@ -44,18 +47,15 @@ export function useDashboardSummary() {
         throw new Error('No active group selected');
       }
       
-      console.log('Fetching dashboard summary for group:', activeGroup.name, 'ID:', activeGroup.id);
       const url = `/api/dashboard/summary/${activeGroup.id}`;
       const res = await fetch(url);
       
       if (!res.ok) {
         const errorText = await res.text();
-        console.error('Dashboard summary fetch failed:', res.status, errorText);
         throw new Error(`Failed to fetch dashboard summary: ${res.status} ${errorText}`);
       }
       
       const data = await res.json();
-      console.log('Dashboard summary fetched successfully:', data);
       return data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes - shorter for more responsive updates
@@ -71,12 +71,16 @@ export function useDashboardActivities() {
   return useQuery<DashboardActivity[]>({
     queryKey: ['dashboard-activities', activeGroup?.id],
     queryFn: async () => {
+      if (!activeGroup?.id) {
+        throw new Error('No active group selected');
+      }
+      
       const res = await fetch('/api/dashboard/activities');
       if (!res.ok) throw new Error('Failed to fetch dashboard activities');
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!session?.user?.id,
+    enabled: !!session?.user?.id && !!activeGroup?.id,
     refetchOnWindowFocus: false,
   });
 }
@@ -88,12 +92,16 @@ export function useDashboardChartData() {
   return useQuery<DashboardChartData[]>({
     queryKey: ['dashboard-chart-data', activeGroup?.id],
     queryFn: async () => {
+      if (!activeGroup?.id) {
+        throw new Error('No active group selected');
+      }
+      
       const res = await fetch('/api/dashboard/chart-data');
       if (!res.ok) throw new Error('Failed to fetch dashboard chart data');
       return res.json();
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
-    enabled: !!session?.user?.id,
+    enabled: !!session?.user?.id && !!activeGroup?.id,
     refetchOnWindowFocus: false,
   });
 }
@@ -103,11 +111,9 @@ export function useDashboardRefresh() {
   
   return useMutation({
     mutationFn: async () => {
-      // This is a placeholder for any refresh logic
       return Promise.resolve();
     },
     onSuccess: () => {
-      // Invalidate all dashboard-related queries
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-activities'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-chart-data'] });
