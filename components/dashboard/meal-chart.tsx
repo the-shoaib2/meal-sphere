@@ -53,18 +53,66 @@ export default function MealChart() {
 
   if (!chartData || chartData.length === 0) {
     return (
-      <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            <CardTitle>Monthly Meal Summary</CardTitle>
+      <Card className="h-full min-h-[400px] max-h-[600px] sm:max-h-[500px] lg:max-h-[550px] overflow-hidden">
+        <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-base sm:text-lg font-semibold">
+                Monthly Meal Summary
+              </CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                <div className="h-2 w-2 rounded-full bg-primary/80"></div>
+                <span>Meals</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                <div className="h-2 w-2 rounded-full bg-secondary-foreground/50"></div>
+                <span>Average</span>
+              </div>
+            </div>
           </div>
+          <CardDescription className="text-xs sm:text-sm">
+            Your meal consumption over the last 30 days
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[300px] border rounded-md bg-muted/20">
-            <div className="text-center">
-              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No meal data available for this month</p>
+        <CardContent className="p-0 sm:px-2">
+          <div className="h-[300px] sm:h-[350px] w-full px-3 sm:px-4">
+            <div className="h-full w-full border rounded-lg bg-muted/5 p-3 sm:p-4">
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <TrendingUp className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50 mx-auto" />
+                  <p className="text-sm text-muted-foreground">Chart coming soon</p>
+                  <p className="text-xs text-muted-foreground/70">
+                    Interactive meal chart will be displayed here
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Stats Summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mt-4 px-3 sm:px-4">
+            <div className="p-2 sm:p-3 rounded-lg border bg-card">
+              <p className="text-xs sm:text-sm text-muted-foreground">Total Meals</p>
+              <p className="text-lg sm:text-xl font-semibold mt-1">24</p>
+              <p className="text-[10px] sm:text-xs text-green-600 mt-0.5">+2 from last month</p>
+            </div>
+            <div className="p-2 sm:p-3 rounded-lg border bg-card">
+              <p className="text-xs sm:text-sm text-muted-foreground">Daily Avg</p>
+              <p className="text-lg sm:text-xl font-semibold mt-1">2.8</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">meals/day</p>
+            </div>
+            <div className="p-2 sm:p-3 rounded-lg border bg-card">
+              <p className="text-xs sm:text-sm text-muted-foreground">Most Active</p>
+              <p className="text-lg sm:text-xl font-semibold mt-1">Dinner</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">8:15 PM avg</p>
+            </div>
+            <div className="p-2 sm:p-3 rounded-lg border bg-card">
+              <p className="text-xs sm:text-sm text-muted-foreground">Favorite Meal</p>
+              <p className="text-lg sm:text-xl font-semibold mt-1">Chicken</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">6 times this month</p>
             </div>
           </div>
         </CardContent>

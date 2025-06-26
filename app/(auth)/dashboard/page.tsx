@@ -215,15 +215,27 @@ export default function DashboardPage() {
 
       {/* Main Content Section */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Settings className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Analytics & Activities</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <h2 className="text-lg sm:text-xl font-semibold">Analytics & Activities</h2>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+            onClick={() => refreshDashboard()}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-          <div className="col-span-4 lg:col-span-4">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-7">
+          <div className="lg:col-span-4">
             <MealChart />
           </div>
-          <div className="col-span-3 lg:col-span-3">
+          <div className="lg:col-span-3 mt-4 lg:mt-0">
             <RecentActivities />
           </div>
         </div>

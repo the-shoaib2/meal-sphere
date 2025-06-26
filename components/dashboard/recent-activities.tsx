@@ -162,64 +162,56 @@ export default function RecentActivities() {
   }
 
   return (
-    <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-      <CardHeader className="pb-4">
+    <Card className="h-full min-h-[300px] max-h-[500px] sm:max-h-[450px] lg:max-h-[500px] overflow-hidden">
+      <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <CardTitle>Recent Activities</CardTitle>
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg font-semibold">
+              Recent Activities
+            </CardTitle>
           </div>
-          <Badge variant="secondary" className="text-xs">
-            {activities.length} activities
+          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+            {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
           </Badge>
         </div>
-        <CardDescription>Your recent meal and payment activities</CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
+          Latest updates from your meal group
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px] lg:h-[340px] xl:h-[380px] w-full">
-          <div className="space-y-3 pr-4">
+      <CardContent className="p-0 sm:px-2">
+        <ScrollArea className="h-[calc(100%-80px)] sm:h-[calc(100%-90px)] w-full px-3 sm:px-4">
+          <div className="space-y-3 pr-1">
             {activities.map((activity) => {
               const IconComponent = getActivityIcon(activity.type);
               const iconColor = getActivityColor(activity.type);
               const badge = getActivityBadge(activity.type);
               
               return (
-                <div key={activity.id} className="group">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border border-transparent hover:border-border hover:bg-muted/50 transition-all duration-200">
-                    <div className={`rounded-full p-2 border ${iconColor} group-hover:scale-110 transition-transform duration-200`}>
-                      <IconComponent className="h-4 w-4" />
+                <div 
+                  key={activity.id} 
+                  className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/30 transition-colors group"
+                >
+                  <div className="mt-0.5 flex-shrink-0">
+                    <div className={`p-1.5 sm:p-2 rounded-full ${iconColor.split(' ')[0]}/10`}>
+                      <IconComponent className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${iconColor.split(' ')[0]}`} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Avatar className="h-6 w-6 border-2 border-background">
-                            <AvatarImage src={activity.user?.image || ''} />
-                            <AvatarFallback className="text-xs bg-primary/10">
-                              {activity.user?.name?.charAt(0) || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <p className="text-sm font-medium leading-none truncate">
-                            {activity.title}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {activity.amount && (
-                            <span className="text-sm font-semibold text-primary">
-                              ৳{activity.amount.toFixed(2)}
-                            </span>
-                          )}
-                          <Badge variant="outline" className={`text-xs ${badge.color}`}>
-                            {badge.text}
-                          </Badge>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate mb-1">
-                        {activity.description}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium leading-tight line-clamp-1 text-ellipsis">
+                        {activity.title}
                       </p>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatTimestamp(activity.timestamp)}</span>
-                      </div>
+                      <Badge variant="outline" className={`text-[10px] ${badge.color} px-1.5 py-0.5`}>
+                        {badge.text}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      {activity.description}
+                    </p>
+                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground mt-1">
+                      <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                      <span>{formatTimestamp(activity.timestamp)}</span>
                     </div>
                   </div>
                 </div>
