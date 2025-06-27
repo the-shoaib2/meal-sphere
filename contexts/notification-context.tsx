@@ -50,8 +50,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!response.ok) throw new Error("Failed to fetch notifications")
 
       const data = await response.json()
-      setNotifications(data)
-      setUnreadCount(data.filter((notif: Notification) => !notif.read).length)
+      
+      // Ensure unique notifications by ID to prevent React key errors
+      const uniqueNotifications = data.filter((notification: Notification, index: number, self: Notification[]) => 
+        index === self.findIndex((n) => n.id === notification.id)
+      )
+      
+      setNotifications(uniqueNotifications)
+      setUnreadCount(uniqueNotifications.filter((notif: Notification) => !notif.read).length)
       setLastFetched(new Date())
     } catch (error) {
       console.error("Error fetching notifications:", error)
@@ -132,7 +138,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     fetchInitialNotifications();
 
-    // Set up polling every 60 seconds
+    // Set up polling every 30 seconds
     const interval = setInterval(() => {
       if (status === 'authenticated') {
         fetchNotifications();

@@ -13,6 +13,9 @@ export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
   const [open, setOpen] = useState(false)
 
+  // Ensure notifications is always an array
+  const safeNotifications = Array.isArray(notifications) ? notifications : []
+
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
     // Mark notifications as read when opening the popover
@@ -85,16 +88,16 @@ export function NotificationBell() {
           <CardHeader className="pb-3">
             <CardTitle>Notifications</CardTitle>
             <CardDescription>
-              {notifications.length > 0
-                ? `You have ${notifications.length} notification${notifications.length !== 1 ? "s" : ""}`
+              {safeNotifications.length > 0
+                ? `You have ${safeNotifications.length} notification${safeNotifications.length !== 1 ? "s" : ""}`
                 : "No notifications"}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[300px] px-4">
-              {notifications.length > 0 ? (
+              {safeNotifications.length > 0 ? (
                 <div className="space-y-4 py-2">
-                  {notifications.map((notification) => (
+                  {safeNotifications.map((notification) => (
                     <div
                       key={notification.id}
                       className={`flex items-start ${!notification.read ? "bg-muted/50 -mx-2 p-2 rounded-md" : ""}`}
@@ -140,7 +143,7 @@ export function NotificationBell() {
               )}
             </ScrollArea>
           </CardContent>
-          {notifications.length > 0 && (
+          {safeNotifications.length > 0 && (
             <CardFooter className="border-t p-4">
               <Button variant="outline" size="sm" className="w-full" onClick={() => markAllAsRead()}>
                 Mark all as read

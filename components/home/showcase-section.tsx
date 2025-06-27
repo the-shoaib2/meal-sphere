@@ -18,49 +18,63 @@ export default function ShowcaseSection() {
         <div className="flex flex-col md:flex-row gap-10 items-center justify-center w-full">
           {/* Desktop View */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: -40 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.7, delay: 0 }}
             whileHover={{ scale: 1.03, boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.18)" }}
             className="w-full md:w-2/3 max-w-2xl cursor-pointer"
           >
-            <Card className="overflow-hidden transition-all duration-300 bg-white/90 dark:bg-gray-900/80 border border-muted shadow-lg hover:shadow-2xl">
-              <CardContent className="p-0">
-                <AspectRatio ratio={16/9} className="bg-muted">
-                  <img
-                    src="/Screenshot-desktop.png"
-                    alt="Desktop view screenshot"
-                    className="w-full h-full object-cover object-top md:rounded-t-lg transition-transform duration-300 hover:scale-105"
-                    style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.10))" }}
-                  />
-                </AspectRatio>
-              </CardContent>
-            </Card>
+            {/* Desktop Frame */}
+            <div className="relative">
+              {/* Desktop Border */}
+              <div className="bg-gray-800 rounded-lg p-2 shadow-2xl">
+                {/* Screen Content */}
+                <Card className="overflow-hidden transition-all duration-300 bg-white/90 dark:bg-gray-900/80 border-0 shadow-none rounded-md">
+                  <CardContent className="p-0">
+                    <AspectRatio ratio={16/9} className="bg-muted rounded-md">
+                      <img
+                        src="/Screenshot-desktop.png"
+                        alt="Desktop view screenshot"
+                        className="w-full h-full object-cover object-top transition-transform duration-300 hover:scale-105"
+                        style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.10))" }}
+                      />
+                    </AspectRatio>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
             <div className="text-center mt-3 text-muted-foreground font-semibold text-base sm:text-lg">Desktop View</div>
           </motion.div>
           {/* Phone View */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: 40 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.7, delay: 0.15 }}
             whileHover={{ scale: 1.06, boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.22)" }}
             className="w-full max-w-[260px] md:w-[220px] cursor-pointer"
           >
-            <Card className="overflow-hidden transition-all duration-300 bg-white/90 dark:bg-gray-900/80 border border-muted shadow-lg hover:shadow-2xl rounded-2xl">
-              <CardContent className="p-0">
-                <AspectRatio ratio={9/18} className="bg-muted rounded-2xl">
-                  <img
-                    src="/Screenshot-phone.png"
-                    alt="Phone view screenshot"
-                    className="w-full h-full object-cover object-top rounded-2xl transition-transform duration-300 hover:scale-105"
-                    style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.12))" }}
-                  />
-                </AspectRatio>
-              </CardContent>
-            </Card>
-            <div className="text-center mt-3 text-muted-foreground font-semibold text-base sm:text-lg">Phone View</div>
+            {/* Phone Frame */}
+            <div className="relative">
+              {/* Phone Body */}
+              <div className="bg-gray-800 rounded-2xl p-1.5 shadow-2xl">
+                {/* Screen Content */}
+                <Card className="overflow-hidden transition-all duration-300 dark:bg-gray-900/80 border-0 shadow-none rounded-xl">
+                  <CardContent className="p-0">
+                    <AspectRatio ratio={9/18} className="bg-muted rounded-xl">
+                      <img
+                        src="/Screenshot-phone.png"
+                        alt="Phone view screenshot"
+                        className="w-full h-full object-cover object-top rounded-xl transition-transform duration-300 hover:scale-105"
+                        style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.12))" }}
+                      />
+                    </AspectRatio>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            <div className=" bg-transparent text-center mt-3 text-muted-foreground font-semibold text-base sm:text-lg">Phone View</div>
           </motion.div>
         </div>
       </div>
