@@ -9,6 +9,7 @@ import { toast } from "react-hot-toast"
 import { Loader2 } from "lucide-react"
 import { ExtraExpenseDialog } from "./extra-expense-dialog"
 import { type ExtraExpense } from "@/hooks/use-extra-expense"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ExpenseActionsProps {
   expenseId: string
@@ -36,6 +37,15 @@ export function ExpenseActions({ expenseId, expense, onDelete, isDeleting, onSuc
     } finally {
       setIsDeleteDialogOpen(false)
     }
+  }
+
+  // Show skeleton while deleting
+  if (isDeleting) {
+    return (
+      <div className="flex items-center justify-center">
+        <Skeleton className="h-8 w-8 rounded" />
+      </div>
+    )
   }
 
   return (

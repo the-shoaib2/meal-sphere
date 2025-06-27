@@ -18,6 +18,7 @@ import { toast } from "react-hot-toast"
 import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
 import { Loader2 } from "lucide-react"
 import { ExpenseType } from "@prisma/client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 
 interface ExtraExpenseDialogProps {
@@ -159,6 +160,8 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
     }
   }
 
+  const isLoading = isEditMode ? updateExpense.isPending : addExpense.isPending
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] w-[calc(100%-2rem)] mx-auto sm:w-full rounded-lg sm:rounded-lg">
@@ -180,7 +183,11 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input placeholder="What was this expense for?" {...field} />
+                      <Input 
+                        placeholder="What was this expense for?" 
+                        {...field} 
+                        disabled={isLoading}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -209,6 +216,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                           const value = parseFloat(e.target.value);
                           field.onChange(isNaN(value) ? 0 : value);
                           }}
+                          disabled={isLoading}
                         />
                         </div>
                       </FormControl>
@@ -225,7 +233,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a category" />
@@ -260,6 +268,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                               "w-full pl-3 text-left font-normal h-10 sm:h-auto",
                               !field.value && "text-muted-foreground"
                             )}
+                            disabled={isLoading}
                           >
                             {field.value ? (
                               format(field.value, "PPP")
@@ -303,6 +312,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                           const element = e.target as HTMLInputElement;
                           element.value = '';
                         }}
+                        disabled={isLoading}
                       />
                     </FormControl>
                     <FormDescription>
@@ -327,17 +337,17 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
               <Button 
                 type="submit"
                 className="w-full sm:w-auto"
-                disabled={isEditMode ? updateExpense.isPending : addExpense.isPending}
+                disabled={isLoading}
                 size="lg"
               >
                 {isEditMode ? (
-                  updateExpense.isPending ? (
+                  isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Updating...
                     </>
                   ) : 'Update Expense'
-                ) : addExpense.isPending ? (
+                ) : isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Adding...
