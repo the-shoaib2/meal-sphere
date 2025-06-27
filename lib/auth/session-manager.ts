@@ -18,7 +18,7 @@ export async function getCurrentSessionInfo(userId: string) {
     
     return currentSession;
   } catch (error) {
-    console.error('Error getting current session info:', error);
+    // Comment out all console.log and debugging statements
     return null;
   }
 }
@@ -36,7 +36,7 @@ export async function getAllActiveSessions(userId: string) {
     
     return sessions;
   } catch (error) {
-    console.error('Error getting all active sessions:', error);
+    // Comment out all console.log and debugging statements
     return [];
   }
 }
@@ -102,7 +102,7 @@ export async function updateSessionInfo(
 
     return true;
   } catch (error) {
-    console.error('Error updating session info:', error);
+    // Comment out all console.log and debugging statements
     return false;
   }
 }
@@ -119,7 +119,7 @@ export async function revokeSession(sessionId: string, userId: string) {
     
     return result.count > 0;
   } catch (error) {
-    console.error('Error revoking session:', error);
+    // Comment out all console.log and debugging statements
     return false;
   }
 }
@@ -138,7 +138,7 @@ export async function revokeMultipleSessions(sessionIds: string[], userId: strin
     
     return result.count;
   } catch (error) {
-    console.error('Error revoking multiple sessions:', error);
+    // Comment out all console.log and debugging statements
     return 0;
   }
 }
@@ -155,7 +155,7 @@ export async function revokeAllSessions(userId: string) {
     
     return result.count;
   } catch (error) {
-    console.error('Error revoking all sessions:', error);
+    // Comment out all console.log and debugging statements
     return 0;
   }
 }
@@ -166,7 +166,7 @@ export async function isCurrentSessionById(sessionId: string, userId: string) {
     const currentSession = await getCurrentSessionInfo(userId);
     return currentSession?.id === sessionId;
   } catch (error) {
-    console.error('Error checking if session is current:', error);
+    // Comment out all console.log and debugging statements
     return false;
   }
 }
@@ -199,6 +199,6 @@ export async function updateSessionWithDeviceInfo(userId: string) {
       });
     }
   } catch (error) {
-    console.error('Error updating session with device info:', error);
+    // Comment out all console.log and debugging statements
   }
 } 

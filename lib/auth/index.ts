@@ -39,4 +39,6 @@ export {
   revokeAllSessions,
   isCurrentSessionById,
   updateSessionWithDeviceInfo
-} from './session-manager' 
+} from './session-manager'
+
+// Comment out all console.log and debugging statements 
