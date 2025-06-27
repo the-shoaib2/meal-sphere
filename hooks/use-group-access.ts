@@ -22,6 +22,13 @@ interface UseGroupAccessReturn {
   actualGroupId: string | null;
 }
 
+// Helper function to check if a string looks like an invite token
+function checkIsInviteToken(token: string): boolean {
+  // Invite tokens are 10 characters long and contain a mix of letters, numbers, and special characters
+  // They are not MongoDB ObjectIds (which are 24 hex characters)
+  return token.length === 10 && !isValidObjectId(token);
+}
+
 export function useGroupAccess({ 
   groupId, 
   onLoading, 
@@ -49,7 +56,33 @@ export function useGroupAccess({
       setError(null);
       onError?.(null);
 
-      // If not an invite token, then validate as a regular group ID
+      // Check if this is an invite token
+      if (checkIsInviteToken(groupId)) {
+        setIsInviteToken(true);
+        
+        // For invite tokens, we need to fetch the token details first
+        const tokenResponse = await fetch(`/api/groups/join/${groupId}`);
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+          throw new Error(tokenData.error || 'Invalid or expired invite token');
+        }
+
+        // Set the actual group ID from the token data
+        setActualGroupId(tokenData.data?.groupId || null);
+        
+        // Handle the group data
+        if (tokenData.data?.group) {
+          setIsMember(tokenData.data.isMember || false);
+          setUserRole(tokenData.data.role || null);
+          setCanAccess(true); // If we can fetch token data, we have access
+          onGroupData?.(tokenData.data);
+        }
+        
+        return;
+      }
+
+      // For regular group IDs, validate as ObjectId
       if (!isValidObjectId(groupId)) {
         const errorMessage = 'Invalid group ID format. Please check the URL and try again.';
         setError(errorMessage);
