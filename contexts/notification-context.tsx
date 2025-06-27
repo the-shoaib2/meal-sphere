@@ -157,7 +157,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         toast({
           title: getNotificationTitle(newestNotification.type),
           description: newestNotification.message,
-          action: <Bell className="h-4 w-4" />,
         })
       }
     }

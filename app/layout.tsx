@@ -31,10 +31,12 @@ export default async function RootLayout({
             <ThemeProvider>
               <LanguageProvider>
                 <NotificationProvider>
-                  <div className="flex-1 flex flex-col">
-                    {children}
-                  </div>
-                  <ToastProvider />
+                  <>
+                    <div className="flex-1 flex flex-col">
+                      {children}
+                    </div>
+                    <ToastProvider />
+                  </>
                 </NotificationProvider>
               </LanguageProvider>
             </ThemeProvider>

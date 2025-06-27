@@ -24,14 +24,7 @@ if (!process.env.NEXTAUTH_URL) {
   // console.warn('NEXTAUTH_URL is not set. This may cause issues in production.');
 }
 
-// Debug environment variables in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔧 Auth Configuration Debug:');
-  console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ SET' : '❌ NOT SET');
-  console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅ SET' : '❌ NOT SET');
-  console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '✅ SET' : '❌ NOT SET');
-  console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'NOT SET');
-}
+
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -211,25 +204,49 @@ export const authOptions: AuthOptions = {
         token.role = user.role;
       }
       
-      // Update token with session data if available
+      // Update session info when a new session is created
       if (account?.provider === 'google' && trigger === 'signIn') {
         try {
-          // Find the most recent session for this user
-          const session = await prisma.session.findFirst({
-            where: { userId: token.id },
-            orderBy: { createdAt: 'desc' },
-            take: 1
-          });
+          // Get request details for device info
+          const req = (account as any).request;
+          const { userAgent, ipAddress } = extractClientInfo(req);
           
-          if (session) {
-            token.sessionId = session.id;
-            token.ipAddress = session.ipAddress;
-            token.userAgent = session.userAgent;
-            token.deviceType = session.deviceType;
-            token.deviceModel = session.deviceModel;
+          // Parse user agent for device info
+          const parser = new UAParser(userAgent);
+          const device = parser.getDevice();
+          const os = parser.getOS();
+          const browser = parser.getBrowser();
+          
+          // Better device type detection
+          const deviceType = device.type || 
+                            (userAgent.toLowerCase().includes('mobile') ? 'mobile' : 
+                             userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
+          
+          // Better device model detection with fallbacks
+          let deviceModel = '';
+          if (device.vendor && device.model) {
+            deviceModel = `${device.vendor} ${device.model}`.trim();
+          } else if (device.model) {
+            deviceModel = device.model;
+          } else if (os.name) {
+            deviceModel = `${os.name} ${os.version || ''}`.trim();
+          } else if (browser.name) {
+            deviceModel = `${browser.name} ${browser.version || ''}`.trim();
           }
+
+          // Store device info in token for later use
+          token.userAgent = userAgent;
+          token.ipAddress = ipAddress;
+          token.deviceType = deviceType;
+          token.deviceModel = deviceModel;
+          
+          // console.log('🔧 JWT callback - Device info stored:', {
+          //   deviceType,
+          //   deviceModel,
+          //   ipAddress: ipAddress ? ipAddress.substring(0, 10) + '...' : 'N/A'
+          // });
         } catch (error) {
-          // console.error('Error updating JWT with session data:', error);
+          console.error('Error updating JWT with device data:', error);
         }
       }
       
@@ -251,11 +268,20 @@ export const authOptions: AuthOptions = {
           (session as any).deviceType = token.deviceType || 'desktop';
           (session as any).deviceModel = token.deviceModel || '';
           
-          // Update session in database with the latest info
-          if (token.sessionId) {
-            try {
+          // Update the session in database with device info
+          try {
+            // Find the current session by user ID and update it
+            const currentSession = await prisma.session.findFirst({
+              where: {
+                userId: token.id as string,
+                expires: { gt: new Date() }
+              },
+              orderBy: { updatedAt: 'desc' }
+            });
+            
+            if (currentSession) {
               await prisma.session.update({
-                where: { id: token.sessionId as string },
+                where: { id: currentSession.id },
                 data: {
                   ipAddress: token.ipAddress || '',
                   userAgent: token.userAgent || '',
@@ -264,9 +290,15 @@ export const authOptions: AuthOptions = {
                   updatedAt: new Date()
                 }
               });
-            } catch (error) {
-              // console.error('Error updating session in database:', error);
+              
+              // console.log('✅ Session updated with device info:', {
+              //   sessionId: currentSession.id,
+              //   deviceType: token.deviceType,
+              //   deviceModel: token.deviceModel
+              // });
             }
+          } catch (error) {
+            console.error('Error updating session in database:', error);
           }
         }
       }
@@ -274,37 +306,19 @@ export const authOptions: AuthOptions = {
     },
     async signIn(params) {
       const { user, account, profile } = params;
-      const request = (params as any).request;
+      
       try {
-        // Get request details for both Google and credentials login
-        const req = request as any;
-        const { userAgent, ipAddress } = extractClientInfo(req);
-        // Parse user agent for device info
-        const parser = new UAParser(userAgent);
-        const device = parser.getDevice();
-        const os = parser.getOS();
-        const browser = parser.getBrowser();
-        
-        // Better device type detection
-        const deviceType = device.type || 
-                          (userAgent.toLowerCase().includes('mobile') ? 'mobile' : 
-                           userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
-        
-        // Better device model detection with fallbacks
-        let deviceModel = '';
-        if (device.vendor && device.model) {
-          deviceModel = `${device.vendor} ${device.model}`.trim();
-        } else if (device.model) {
-          deviceModel = device.model;
-        } else if (os.name) {
-          deviceModel = `${os.name} ${os.version || ''}`.trim();
-        } else if (browser.name) {
-          deviceModel = `${browser.name} ${browser.version || ''}`.trim();
-        }
+        // console.log('🔍 SignIn callback started:', {
+        //   userEmail: user.email,
+        //   provider: account?.provider,
+        //   hasEmail: !!user.email
+        // });
 
         if (account?.provider === 'google') {
           if (!user.email) {
-            // console.error('No email found in user object');
+            console.error('❌ No email found in user object from Google OAuth');
+            console.log('User object:', user);
+            console.log('Account object:', account);
             return false; 
           }
 
@@ -315,6 +329,7 @@ export const authOptions: AuthOptions = {
           });
 
           if (!existingUser) {
+            // console.log('🆕 Creating new user for:', user.email);
             // Create a new user with default values
             const newUser = await prisma.user.create({
               data: {
@@ -339,30 +354,23 @@ export const authOptions: AuthOptions = {
                     scope: account.scope,
                     id_token: account.id_token
                   }
-                },
-                sessions: {
-                  create: {
-                    sessionToken: account.providerAccountId, // This will be updated by NextAuth
-                    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-                    userAgent,
-                    ipAddress,
-                    deviceType,
-                    deviceModel
-                  }
                 }
               },
-              include: { sessions: true }
+              include: { accounts: true }
             });
             
             user.id = newUser.id;
             user.role = newUser.role;
+            // console.log('✅ New user created:', newUser.id);
           } else {
+            // console.log('👤 Existing user found:', existingUser.id);
             // Check if user has a Google account linked
             const hasGoogleAccount = existingUser.accounts.some(
               acc => acc.provider === 'google' && acc.providerAccountId === account.providerAccountId
             );
 
             if (!hasGoogleAccount) {
+              // console.log('🔗 Linking Google account to existing user');
               // Link the Google account to the existing user
               await prisma.account.create({
                 data: {
@@ -382,57 +390,27 @@ export const authOptions: AuthOptions = {
             // Update the user object with existing user's data
             user.id = existingUser.id;
             user.role = existingUser.role;
-            
-            // Check if a session already exists for this device
-            const existingDeviceSession = await checkExistingDeviceSession(existingUser.id, userAgent, ipAddress);
-            
-            if (!existingDeviceSession) {
-              // Create a new session for this device login
-              // This allows multiple devices to have separate sessions
-              await prisma.session.create({
-                data: {
-                  sessionToken: account.providerAccountId, // Will be updated by NextAuth
-                  userId: existingUser.id,
-                  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-                  userAgent,
-                  ipAddress,
-                  deviceType,
-                  deviceModel
-                }
-              });
-            }
-          }
-        } else if (account?.provider === 'credentials') {
-          // Handle credentials login - update or create session with device info
-          const existingUser = await prisma.user.findUnique({
-            where: { id: user.id }
-          });
-
-          if (existingUser) {
-            // Check if a session already exists for this device
-            const existingDeviceSession = await checkExistingDeviceSession(existingUser.id, userAgent, ipAddress);
-            
-            if (!existingDeviceSession) {
-              // Create a new session for this device login
-              // This allows multiple devices to have separate sessions
-              await prisma.session.create({
-                data: {
-                  sessionToken: '', // Will be updated by NextAuth
-                  userId: existingUser.id,
-                  expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-                  userAgent,
-                  ipAddress,
-                  deviceType,
-                  deviceModel
-                }
-              });
-            }
           }
         }
+        
+        // console.log('✅ SignIn callback completed successfully');
         return true;
       } catch (error) {
-        // console.error('Error in signIn:', error);
-        return false;
+        console.error('❌ Error in signIn callback:', error);
+        // console.log('🔍 SignIn callback error details:', {
+        //   user: user?.email,
+        //   provider: account?.provider,
+        //   error: error instanceof Error ? error.message : error,
+        //   stack: error instanceof Error ? error.stack : undefined
+        // });
+        
+        // Log the full error for debugging
+        if (error instanceof Error) {
+          console.error('Full error stack:', error.stack);
+        }
+        
+        // Return true to allow the sign-in to continue even if there's an error
+        return true;
       }
     }
   },
@@ -441,26 +419,32 @@ export const authOptions: AuthOptions = {
     error: '/login/error',
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: false, // process.env.NODE_ENV === 'development',
-  logger: {
-    error(code, metadata) {
-      // console.error('NextAuth Error:', code, metadata);
-    },
-    warn(code) {
-      // console.warn('NextAuth Warning:', code);
-    },
-    debug(code, metadata) {
-      // if (process.env.NODE_ENV === 'development') {
-      //   console.log('NextAuth Debug:', code, metadata);
-      // }
-    }
-  },
+  // debug: true, // Enable debug logging to see what's happening
+  // logger: {
+  //   error(code, metadata) {
+  //     console.error('NextAuth Error:', code, metadata);
+  //   },
+  //   warn(code) {
+  //     console.warn('NextAuth Warning:', code);
+  //   },
+  //   debug(code, metadata) {
+  //     if (process.env.NODE_ENV === 'development') {
+  //       console.log('NextAuth Debug:', code, metadata);
+  //     }
+  //   }
+  // },
   events: {
     async signIn(message) {
-      // console.log('User signed in:', message.user?.email);
+      // console.log('🎉 User signed in event:', {
+      //   email: message.user?.email,
+      //   provider: message.account?.provider,
+      //   userId: message.user?.id
+      // });
     },
     async signOut(message) {
-      // console.log('User signed out:', message.session?.user?.email);
+      // console.log('👋 User signed out event:', {
+      //   email: message.session?.user?.email
+      // });
     }
   }
 };
@@ -479,7 +463,7 @@ const getServerAuthSessionForApi = async (req: NextApiRequest, res: NextApiRespo
     // Update session with device info
     (session as any).userAgent = userAgent || '';
     (session as any).ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() || 
-                                req.headers['x-real-ip']?.toString() || 
+                                req.headers['x-real-ip']?.toString() ||
                                 (req.socket as any)?.remoteAddress || '';
     (session as any).deviceType = device.type || 'desktop';
     (session as any).deviceModel = `${device.vendor || ''} ${device.model || ''}`.trim() || '';
@@ -664,23 +648,6 @@ export async function updateSessionInfo(
     return true;
   } catch (error) {
     // console.error('Error updating session info:', error);
-    return false;
-  }
-}
-
-// Helper function to check if a session already exists for the same device
-async function checkExistingDeviceSession(userId: string, userAgent: string, ipAddress: string): Promise<boolean> {
-  try {
-    const existingSession = await prisma.session.findFirst({
-      where: {
-        userId,
-        userAgent,
-        ipAddress,
-        expires: { gt: new Date() }
-      }
-    });
-    return !!existingSession;
-  } catch (error) {
     return false;
   }
 }
