@@ -56,11 +56,35 @@ interface Session {
   ipAddress?: string
   deviceType?: string
   deviceModel?: string
+  userAgent?: string
   city?: string
   country?: string
   latitude?: number
   longitude?: number
   isCurrent?: boolean
+}
+
+// Helper function to extract browser info from user agent
+const getBrowserInfo = (userAgent: string): string => {
+  if (!userAgent) return 'N/A'
+  
+  // Extract browser name
+  let browser = 'Unknown'
+  if (userAgent.includes('Chrome')) browser = 'Chrome'
+  else if (userAgent.includes('Firefox')) browser = 'Firefox'
+  else if (userAgent.includes('Safari')) browser = 'Safari'
+  else if (userAgent.includes('Edge')) browser = 'Edge'
+  else if (userAgent.includes('Opera')) browser = 'Opera'
+  
+  // Extract OS
+  let os = 'Unknown'
+  if (userAgent.includes('Windows')) os = 'Windows'
+  else if (userAgent.includes('Mac OS X')) os = 'macOS'
+  else if (userAgent.includes('iPhone')) os = 'iOS'
+  else if (userAgent.includes('Android')) os = 'Android'
+  else if (userAgent.includes('Linux')) os = 'Linux'
+  
+  return `${browser} on ${os}`
 }
 
 // Skeleton component for table rows
@@ -88,6 +112,9 @@ const TableSkeleton = () => (
         </TableCell>
         <TableCell>
           <Skeleton className="h-4 w-20" />
+        </TableCell>
+        <TableCell>
+          <Skeleton className="h-4 w-24" />
         </TableCell>
         <TableCell>
           <Skeleton className="h-4 w-16" />
@@ -409,98 +436,212 @@ export function SecurityForm({ user }: SecurityFormProps) {
                 {sessions.length} active sessions
               </Badge>
             </div>
-            <ScrollArea className="h-[400px] w-full">
-              <div className="min-w-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[30px]">
-                        <Checkbox
-                          checked={selectedSessions.length === sessions.length}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedSessions(sessions.map(s => s.id))
-                            } else {
-                              setSelectedSessions([])
-                            }
-                          }}
-                        />
-                      </TableHead>
-                      <TableHead className={isMobile ? "hidden" : ""}>Device</TableHead>
-                      <TableHead className={isMobile ? "hidden" : ""}>Location</TableHead>
-                      <TableHead className={isMobile ? "hidden" : ""}>Last Active</TableHead>
-                      <TableHead className={isMobile ? "hidden" : ""}>IP Address</TableHead>
-                      <TableHead className={isMobile ? "hidden" : ""}>Device Type</TableHead>
-                      <TableHead className={isMobile ? "hidden" : ""}>Device Model</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableSkeleton />
-                    ) : (
-                      sessions.map((session) => (
-                        <TableRow key={session.id} className={session.isCurrent ? 'bg-blue-50' : ''}>
-                          <TableCell>
+            
+            {/* Mobile Card View */}
+            {isMobile && (
+              <div className="space-y-3">
+                {isLoading ? (
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                      <div className="space-y-1">
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  sessions.map((session) => (
+                    <div 
+                      key={session.id} 
+                      className={`p-4 border rounded-lg space-y-3 ${
+                        session.isCurrent ? 'bg-blue-50 border-blue-200' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedSessions.includes(session.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedSessions([...selectedSessions, session.id])
+                              } else {
+                                setSelectedSessions(
+                                  selectedSessions.filter(id => id !== session.id)
+                                )
+                              }
+                            }}
+                            disabled={session.isCurrent}
+                          />
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate max-w-[120px]">
+                              {session.device || 'Unknown Device'}
+                            </span>
+                            {session.isCurrent && (
+                              <Badge variant="default" className="bg-blue-600 text-xs">Current</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground">
+                        <div className="space-y-1">
+                          <span className="font-medium text-foreground">Location:</span>
+                          <div className="truncate">
+                            {session.city && session.country ? `${session.city}, ${session.country}` : 
+                             session.city || session.country || 'Unknown'}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="font-medium text-foreground">IP Address:</span>
+                          <div className="truncate font-mono">{session.ipAddress || 'N/A'}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="font-medium text-foreground">Device Type:</span>
+                          <div className="truncate">{session.deviceType || 'N/A'}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="font-medium text-foreground">Last Active:</span>
+                          <div className="truncate">
+                            {session.lastActive || new Date(session.expires).toLocaleDateString()}
+                          </div>
+                        </div>
+                        {session.deviceModel && (
+                          <div className="space-y-1">
+                            <span className="font-medium text-foreground">Device Model:</span>
+                            <div className="truncate">{session.deviceModel}</div>
+                          </div>
+                        )}
+                        {session.userAgent && (
+                          <div className="space-y-1 sm:col-span-2">
+                            <span className="font-medium text-foreground">Browser:</span>
+                            <div className="truncate">
+                              {getBrowserInfo(session.userAgent)}
+                            </div>
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                                Show full user agent
+                              </summary>
+                              <div className="mt-1 text-xs font-mono bg-muted p-2 rounded break-all">
+                                {session.userAgent}
+                              </div>
+                            </details>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Tablet/Desktop Table View */}
+            {!isMobile && (
+              <div className="overflow-x-auto">
+                <ScrollArea className="h-[400px] w-full">
+                  <div className="min-w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[30px]">
                             <Checkbox
-                              checked={selectedSessions.includes(session.id)}
+                              checked={selectedSessions.length === sessions.length}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setSelectedSessions([...selectedSessions, session.id])
+                                  setSelectedSessions(sessions.map(s => s.id))
                                 } else {
-                                  setSelectedSessions(
-                                    selectedSessions.filter(id => id !== session.id)
-                                  )
+                                  setSelectedSessions([])
                                 }
                               }}
-                              disabled={session.isCurrent}
                             />
-                          </TableCell>
-                          <TableCell className={isMobile ? "hidden" : ""}>
-                            <div className="max-w-[120px] truncate" title={session.device || 'N/A'}>
-                              {session.device || 'N/A'}
-                            </div>
-                          </TableCell>
-                          <TableCell className={isMobile ? "hidden" : ""}>
-                            <div className="max-w-[100px] truncate" title={session.city && session.country ? `${session.city}, ${session.country}` : session.city || session.country || 'Unknown Location'}>
-                              {session.city && session.country ? `${session.city}, ${session.country}` : 
-                               session.city || session.country || 'Unknown Location'}
-                            </div>
-                          </TableCell>
-                          <TableCell className={isMobile ? "hidden" : ""}>
-                            <div className="max-w-[140px] truncate" title={session.lastActive || new Date(session.expires).toLocaleString()}>
-                              {session.lastActive || new Date(session.expires).toLocaleString()}
-                            </div>
-                          </TableCell>
-                          <TableCell className={isMobile ? "hidden" : ""}>
-                            <div className="max-w-[100px] truncate" title={session.ipAddress || 'N/A'}>
-                              {session.ipAddress || 'N/A'}
-                            </div>
-                          </TableCell>
-                          <TableCell className={isMobile ? "hidden" : ""}>
-                            <div className="max-w-[100px] truncate" title={session.deviceType || 'N/A'}>
-                              {session.deviceType || 'N/A'}
-                            </div>
-                          </TableCell>
-                          <TableCell className={isMobile ? "hidden" : ""}>
-                            <div className="max-w-[120px] truncate" title={session.deviceModel || 'N/A'}>
-                              {session.deviceModel || 'N/A'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {session.isCurrent ? (
-                              <Badge variant="default" className="bg-blue-600 text-xs">Current</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">Active</Badge>
-                            )}
-                          </TableCell>
+                          </TableHead>
+                          <TableHead>Device</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead>Last Active</TableHead>
+                          <TableHead>IP Address</TableHead>
+                          <TableHead>Device Type</TableHead>
+                          <TableHead>Device Model</TableHead>
+                          <TableHead>User Agent</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoading ? (
+                          <TableSkeleton />
+                        ) : (
+                          sessions.map((session) => (
+                            <TableRow key={session.id} className={session.isCurrent ? 'bg-blue-50' : ''}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedSessions.includes(session.id)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedSessions([...selectedSessions, session.id])
+                                    } else {
+                                      setSelectedSessions(
+                                        selectedSessions.filter(id => id !== session.id)
+                                      )
+                                    }
+                                  }}
+                                  disabled={session.isCurrent}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[120px] truncate" title={session.device || 'N/A'}>
+                                  {session.device || 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[100px] truncate" title={session.city && session.country ? `${session.city}, ${session.country}` : session.city || session.country || 'Unknown Location'}>
+                                  {session.city && session.country ? `${session.city}, ${session.country}` : 
+                                   session.city || session.country || 'Unknown Location'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[140px] truncate" title={session.lastActive || new Date(session.expires).toLocaleString()}>
+                                  {session.lastActive || new Date(session.expires).toLocaleString()}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[100px] truncate font-mono" title={session.ipAddress || 'N/A'}>
+                                  {session.ipAddress || 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[100px] truncate" title={session.deviceType || 'N/A'}>
+                                  {session.deviceType || 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[120px] truncate" title={session.deviceModel || 'N/A'}>
+                                  {session.deviceModel || 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[200px] truncate" title={session.userAgent || 'N/A'}>
+                                  {session.userAgent ? getBrowserInfo(session.userAgent) : 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {session.isCurrent ? (
+                                  <Badge variant="default" className="bg-blue-600 text-xs">Current</Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">Active</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </ScrollArea>
               </div>
-            </ScrollArea>
+            )}
           </div>
         </CardContent>
       </Card>
