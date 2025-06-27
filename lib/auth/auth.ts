@@ -202,6 +202,7 @@ export const authOptions: AuthOptions = {
       // Update token with session data if available
       if (account?.provider === 'google' && trigger === 'signIn') {
         try {
+          // Find the most recent session for this user
           const session = await prisma.session.findFirst({
             where: { userId: token.id },
             orderBy: { createdAt: 'desc' },
@@ -370,34 +371,12 @@ export const authOptions: AuthOptions = {
             user.id = existingUser.id;
             user.role = existingUser.role;
             
-            // Update the most recent active session with device info
-            const activeSessions = await prisma.session.findMany({
-              where: { 
-                userId: existingUser.id,
-                expires: { gt: new Date() },
-                sessionToken: {
-                  not: undefined
-                }
-              },
-              orderBy: { createdAt: 'desc' },
-              take: 1
-            });
-
-            if (activeSessions.length > 0) {
-              // Always update the session with all available device info
-              await prisma.session.update({
-                where: { id: activeSessions[0].id },
-                data: {
-                  updatedAt: new Date(),
-                  // Use existing values as fallback if new values are not provided
-                  userAgent: userAgent !== undefined ? (userAgent || '') : activeSessions[0].userAgent || '',
-                  ipAddress: ipAddress !== undefined ? (ipAddress || '') : activeSessions[0].ipAddress || '',
-                  deviceType: deviceType !== undefined ? (deviceType || 'desktop') : activeSessions[0].deviceType || 'desktop',
-                  deviceModel: deviceModel !== undefined ? (deviceModel || '') : activeSessions[0].deviceModel || '',
-                }
-              });
-            } else {
-              // Create a new session if none exists
+            // Check if a session already exists for this device
+            const existingDeviceSession = await checkExistingDeviceSession(existingUser.id, userAgent, ipAddress);
+            
+            if (!existingDeviceSession) {
+              // Create a new session for this device login
+              // This allows multiple devices to have separate sessions
               await prisma.session.create({
                 data: {
                   sessionToken: account.providerAccountId, // Will be updated by NextAuth
@@ -418,33 +397,12 @@ export const authOptions: AuthOptions = {
           });
 
           if (existingUser) {
-            // Update the most recent active session with device info
-            const activeSessions = await prisma.session.findMany({
-              where: { 
-                userId: existingUser.id,
-                expires: { gt: new Date() },
-                sessionToken: {
-                  not: undefined
-                }
-              },
-              orderBy: { createdAt: 'desc' },
-              take: 1
-            });
-
-            if (activeSessions.length > 0) {
-              // Update existing session with device info
-              await prisma.session.update({
-                where: { id: activeSessions[0].id },
-                data: {
-                  updatedAt: new Date(),
-                  userAgent: userAgent || '',
-                  ipAddress: ipAddress || '',
-                  deviceType: deviceType || 'desktop',
-                  deviceModel: deviceModel || '',
-                }
-              });
-            } else {
-              // Create a new session if none exists
+            // Check if a session already exists for this device
+            const existingDeviceSession = await checkExistingDeviceSession(existingUser.id, userAgent, ipAddress);
+            
+            if (!existingDeviceSession) {
+              // Create a new session for this device login
+              // This allows multiple devices to have separate sessions
               await prisma.session.create({
                 data: {
                   sessionToken: '', // Will be updated by NextAuth
@@ -694,6 +652,23 @@ export async function updateSessionInfo(
     return true;
   } catch (error) {
     // console.error('Error updating session info:', error);
+    return false;
+  }
+}
+
+// Helper function to check if a session already exists for the same device
+async function checkExistingDeviceSession(userId: string, userAgent: string, ipAddress: string): Promise<boolean> {
+  try {
+    const existingSession = await prisma.session.findFirst({
+      where: {
+        userId,
+        userAgent,
+        ipAddress,
+        expires: { gt: new Date() }
+      }
+    });
+    return !!existingSession;
+  } catch (error) {
     return false;
   }
 }
