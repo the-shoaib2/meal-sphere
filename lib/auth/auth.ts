@@ -24,6 +24,15 @@ if (!process.env.NEXTAUTH_URL) {
   // console.warn('NEXTAUTH_URL is not set. This may cause issues in production.');
 }
 
+// Debug environment variables in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Auth Configuration Debug:');
+  console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? '✅ SET' : '❌ NOT SET');
+  console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '✅ SET' : '❌ NOT SET');
+  console.log('NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '✅ SET' : '❌ NOT SET');
+  console.log('NEXTAUTH_URL:', process.env.NEXTAUTH_URL || 'NOT SET');
+}
+
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
@@ -63,23 +72,26 @@ declare module "next-auth/jwt" {
   }
 }
 
+// Create Google provider with explicit environment variable access
+const googleProvider = GoogleProvider({
+  clientId: process.env.GOOGLE_CLIENT_ID!,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  httpOptions: {
+    timeout: 10000 // Increase timeout to 10 seconds
+  },
+  authorization: {
+    params: {
+      prompt: "consent",
+      access_type: "offline",
+      response_type: "code"
+    }
+  }
+});
+
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      httpOptions: {
-        timeout: 10000 // Increase timeout to 10 seconds
-      },
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          response_type: "code"
-        }
-      }
-    }),
+    googleProvider,
     CredentialsProvider({
       name: 'credentials',
       credentials: {
