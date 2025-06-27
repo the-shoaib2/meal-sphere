@@ -160,8 +160,8 @@ export async function revokeAllSessions(userId: string) {
   }
 }
 
-// Function to check if a session is the current session
-export async function isCurrentSession(sessionId: string, userId: string) {
+// Function to check if a session is the current session by ID
+export async function isCurrentSessionById(sessionId: string, userId: string) {
   try {
     const currentSession = await getCurrentSessionInfo(userId);
     return currentSession?.id === sessionId;

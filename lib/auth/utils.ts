@@ -34,6 +34,20 @@ export function getCurrentSessionToken(request: any): string | null {
     null;
 }
 
+// Helper function to get current session token from browser cookies
+export function getCurrentSessionTokenFromBrowser(): string | null {
+  if (typeof document === 'undefined') return null;
+  
+  // Try to get session token from cookies
+  const cookies = document.cookie.split('; ');
+  
+  // Check for both development and production cookie names
+  const sessionToken = cookies.find(row => row.startsWith('next-auth.session-token='))?.split('=')[1] ||
+                      cookies.find(row => row.startsWith('__Secure-next-auth.session-token='))?.split('=')[1];
+  
+  return sessionToken || null;
+}
+
 // Parse device information from user agent
 export function parseDeviceInfo(userAgent: string): DeviceInfo {
   const parser = new UAParser(userAgent);
@@ -153,4 +167,10 @@ export function getBrowserInfo(userAgent: string): string {
   }
   
   return `${browserName} on ${osName}`;
+}
+
+// Check if a session is the current session
+export function isCurrentSession(sessionToken: string): boolean {
+  const currentToken = getCurrentSessionTokenFromBrowser();
+  return sessionToken === currentToken;
 } 

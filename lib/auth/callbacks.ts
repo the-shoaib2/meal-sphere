@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { updateSessionWithDeviceInfo } from './session-manager';
+import { getLocationFromIP } from '@/lib/location-utils';
 
 const prisma = new PrismaClient();
 
@@ -114,13 +115,110 @@ export async function signInCallback(params: any) {
 // Events callbacks
 export const eventsCallbacks = {
   async signIn(message: any) {
-    // Update the most recent session with device info if available
-    if (message.user?.id) {
-      await updateSessionWithDeviceInfo(message.user.id);
+    console.log('🔐 SignIn event triggered for user:', message.user?.id)
+    
+    try {
+      // Update the most recent session with device info and location if available
+      if (message.user?.id) {
+        // Get the most recent session for this user
+        const session = await prisma.session.findFirst({
+          where: { 
+            userId: message.user.id,
+            expires: { gt: new Date() }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        
+        if (session) {
+          console.log('📱 Found session to update:', session.id)
+          
+          // Parse user agent for device info
+          const userAgent = session.userAgent || '';
+          const deviceInfo = parseDeviceInfo(userAgent);
+          
+          // Get IP address from session
+          const ipAddress = session.ipAddress;
+          
+          // Get location data if we have an IP address
+          let locationData: { city?: string; country?: string; latitude?: number; longitude?: number } = {};
+          if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
+            console.log('🌍 Getting location data for IP:', ipAddress)
+            locationData = await getLocationFromIP(ipAddress);
+            console.log('📍 Location data received:', locationData)
+          } else if (ipAddress) {
+            console.log('🏠 Local IP detected, using localhost location')
+            locationData = {
+              city: 'Localhost',
+              country: 'Development',
+              latitude: undefined,
+              longitude: undefined
+            }
+          }
+
+          // Update the session with device info and location
+          await prisma.session.update({
+            where: { id: session.id },
+            data: {
+              deviceType: capitalizeDeviceType(deviceInfo.deviceType),
+              deviceModel: deviceInfo.deviceModel || '',
+              city: locationData.city || null,
+              country: locationData.country || null,
+              latitude: locationData.latitude || null,
+              longitude: locationData.longitude || null,
+              updatedAt: new Date()
+            }
+          });
+          
+          console.log('✅ Session updated with device info and location')
+        } else {
+          console.log('⚠️ No active session found for user')
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error updating session in signIn event:', error)
     }
   },
   
   async signOut(message: any) {
     // Handle sign out events if needed
+    console.log('🚪 SignOut event triggered for user:', message.session?.userId)
   }
-}; 
+};
+
+// Helper functions (copied from session-manager.ts to avoid circular imports)
+function parseDeviceInfo(userAgent: string) {
+  if (!userAgent) {
+    return { deviceType: 'Unknown', deviceModel: '' };
+  }
+
+  const ua = userAgent.toLowerCase();
+  
+  // Mobile detection
+  if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('ipad')) {
+    if (ua.includes('iphone')) {
+      return { deviceType: 'Mobile', deviceModel: 'iPhone' };
+    } else if (ua.includes('ipad')) {
+      return { deviceType: 'Tablet', deviceModel: 'iPad' };
+    } else if (ua.includes('android')) {
+      return { deviceType: 'Mobile', deviceModel: 'Android' };
+    } else {
+      return { deviceType: 'Mobile', deviceModel: 'Mobile Device' };
+    }
+  }
+  
+  // Desktop detection
+  if (ua.includes('windows')) {
+    return { deviceType: 'Desktop', deviceModel: 'Windows PC' };
+  } else if (ua.includes('macintosh') || ua.includes('mac os')) {
+    return { deviceType: 'Desktop', deviceModel: 'Mac' };
+  } else if (ua.includes('linux')) {
+    return { deviceType: 'Desktop', deviceModel: 'Linux PC' };
+  }
+  
+  return { deviceType: 'Desktop', deviceModel: 'Desktop' };
+}
+
+function capitalizeDeviceType(deviceType: string): string {
+  if (!deviceType) return 'Unknown';
+  return deviceType.charAt(0).toUpperCase() + deviceType.slice(1).toLowerCase();
+} 

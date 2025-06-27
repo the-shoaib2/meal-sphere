@@ -10,14 +10,33 @@ export * from './config'
 // Providers
 export * from './providers'
 
-// Utilities
-export * from './utils'
-
-// Session management
-export * from './session-manager'
-
 // Callbacks
 export * from './callbacks'
 
 // Helpers
-export * from './helpers' 
+export * from './helpers'
+
+// Utils functions (excluding isCurrentSession to avoid conflict)
+export { 
+  extractClientInfo,
+  getCurrentSessionToken,
+  getCurrentSessionTokenFromBrowser,
+  parseDeviceInfo,
+  capitalizeDeviceType,
+  formatLocation,
+  formatIpAddress,
+  getBrowserInfo,
+  isCurrentSession
+} from './utils'
+
+// Session manager functions (excluding isCurrentSession)
+export {
+  getCurrentSessionInfo,
+  getAllActiveSessions,
+  updateSessionInfo,
+  revokeSession,
+  revokeMultipleSessions,
+  revokeAllSessions,
+  isCurrentSessionById,
+  updateSessionWithDeviceInfo
+} from './session-manager' 

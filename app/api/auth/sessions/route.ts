@@ -20,15 +20,41 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get user agent and IP from request headers
+    // Get user agent and IP from request headers with better detection
     const userAgent = request.headers.get('user-agent') || ''
-    const ipAddress =
-      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-      request.headers.get('x-real-ip') ||
-      request.headers.get('cf-connecting-ip') || // Cloudflare
-      request.headers.get('x-client-ip') ||
-      (request as any).ip || // Next.js edge runtime may provide this
-      ''
+    
+    // Enhanced IP address detection
+    let ipAddress = ''
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    const realIp = request.headers.get('x-real-ip')
+    const cfConnectingIp = request.headers.get('cf-connecting-ip')
+    const xClientIp = request.headers.get('x-client-ip')
+    
+    if (forwardedFor) {
+      ipAddress = forwardedFor.split(',')[0].trim()
+    } else if (realIp) {
+      ipAddress = realIp
+    } else if (cfConnectingIp) {
+      ipAddress = cfConnectingIp
+    } else if (xClientIp) {
+      ipAddress = xClientIp
+    } else if ((request as any).ip) {
+      ipAddress = (request as any).ip
+    }
+
+    // Clean up IP address (remove IPv6 prefix if present)
+    if (ipAddress && ipAddress.startsWith('::ffff:')) {
+      ipAddress = ipAddress.substring(7)
+    }
+
+    console.log('🔍 IP Detection Debug:', {
+      forwardedFor,
+      realIp,
+      cfConnectingIp,
+      xClientIp,
+      finalIp: ipAddress,
+      userAgent: userAgent.substring(0, 100) + '...'
+    })
 
     // Get current session token from cookies
     const currentSessionToken = request.cookies.get('next-auth.session-token')?.value ||
@@ -42,19 +68,31 @@ export async function GET(request: NextRequest) {
       try {
         // Get location data if we have an IP address
         let locationData = {}
-        if (ipAddress) {
+        if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
+          console.log('🌍 Fetching location data for IP:', ipAddress)
           locationData = await getLocationFromIP(ipAddress)
+          console.log('📍 Location data received:', locationData)
+        } else if (ipAddress) {
+          console.log('🏠 Local IP detected, using localhost location')
+          locationData = {
+            city: 'Localhost',
+            country: 'Development',
+            latitude: null,
+            longitude: null
+          }
         }
 
-        await updateSessionInfo(
+        const updateResult = await updateSessionInfo(
           currentSessionToken, 
           userAgent, 
           ipAddress, 
           session.user.id,
           locationData
         )
+        
+        console.log('✅ Session update result:', updateResult)
       } catch (error) {
-        console.error('Error updating session info:', error)
+        console.error('❌ Error updating session info:', error)
         // Continue with fetching sessions even if update fails
       }
     }
@@ -83,6 +121,14 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { updatedAt: 'desc' }
     })
+
+    console.log('📊 Final sessions data:', updatedSessions.map(s => ({
+      id: s.id,
+      ipAddress: s.ipAddress,
+      city: s.city,
+      country: s.country,
+      deviceType: s.deviceType
+    })))
 
     return NextResponse.json(updatedSessions)
   } catch (error) {

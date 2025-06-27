@@ -31,13 +31,27 @@ function isPrivateIP(ip: string): boolean {
 
 export async function detectLocation(): Promise<LocationData> {
   try {
+    console.log('🌍 Starting location detection...')
+    
     // Get IP address from a public service
-    const ipResponse = await fetch('https://api.ipify.org?format=json')
+    const ipResponse = await fetch('https://api.ipify.org?format=json', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LocationDetector/1.0)'
+      }
+    })
+    
+    if (!ipResponse.ok) {
+      throw new Error(`IP service responded with ${ipResponse.status}`)
+    }
+    
     const ipData = await ipResponse.json()
     const ipAddress = ipData.ip
+    
+    console.log('📡 Detected IP:', ipAddress)
 
     // Check if it's a private IP
     if (isPrivateIP(ipAddress)) {
+      console.log('🏠 Private IP detected, using development location')
       return {
         ipAddress,
         city: 'Local Development',
@@ -47,48 +61,122 @@ export async function detectLocation(): Promise<LocationData> {
       }
     }
 
-    // Get location data from IP
-    const locationResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`)
+    // Get location data from IP with timeout and retry
+    console.log('🌍 Fetching location data from IP...')
+    const locationResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LocationDetector/1.0)'
+      },
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    })
+    
+    if (!locationResponse.ok) {
+      throw new Error(`Location service responded with ${locationResponse.status}`)
+    }
+    
     const locationData = await locationResponse.json()
+    console.log('📍 Raw location data:', locationData)
 
-    return {
+    const result = {
       ipAddress,
       city: locationData.city || undefined,
-      country: locationData.country_name || undefined,
+      country: locationData.country_name || locationData.country || undefined,
       latitude: locationData.latitude || undefined,
       longitude: locationData.longitude || undefined,
     }
+    
+    console.log('✅ Processed location data:', result)
+    return result
   } catch (error) {
-    console.error('Error detecting location:', error)
+    console.error('❌ Error detecting location:', error)
     return {}
   }
 }
 
 export async function getLocationFromIP(ipAddress: string): Promise<LocationData> {
   try {
+    console.log('🌍 Getting location for IP:', ipAddress)
+    
     // Check if it's a private IP
     if (isPrivateIP(ipAddress)) {
+      console.log('🏠 Private IP detected, using localhost location')
       return {
         ipAddress,
-        city: 'Local Development',
-        country: 'Development Environment',
+        city: 'Localhost',
+        country: 'Development',
         latitude: undefined,
         longitude: undefined,
       }
     }
 
-    const response = await fetch(`https://ipapi.co/${ipAddress}/json/`)
-    const data = await response.json()
+    // Try multiple location services for better reliability
+    const services = [
+      `https://ipapi.co/${ipAddress}/json/`,
+      `https://ip-api.com/json/${ipAddress}`,
+      `https://api.ipgeolocation.io/ipgeo?apiKey=free&ip=${ipAddress}`
+    ]
 
-    return {
-      ipAddress,
-      city: data.city || undefined,
-      country: data.country_name || undefined,
-      latitude: data.latitude || undefined,
-      longitude: data.longitude || undefined,
+    for (const serviceUrl of services) {
+      try {
+        console.log(`🌍 Trying service: ${serviceUrl}`)
+        const response = await fetch(serviceUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; LocationDetector/1.0)'
+          },
+          signal: AbortSignal.timeout(5000) // 5 second timeout per service
+        })
+        
+        if (!response.ok) {
+          console.log(`❌ Service ${serviceUrl} failed with ${response.status}`)
+          continue
+        }
+        
+        const data = await response.json()
+        console.log('📍 Raw data from service:', data)
+        
+        // Handle different service response formats
+        let city, country, latitude, longitude
+        
+        if (serviceUrl.includes('ipapi.co')) {
+          city = data.city
+          country = data.country_name || data.country
+          latitude = data.latitude
+          longitude = data.longitude
+        } else if (serviceUrl.includes('ip-api.com')) {
+          city = data.city
+          country = data.country
+          latitude = data.lat
+          longitude = data.lon
+        } else if (serviceUrl.includes('ipgeolocation.io')) {
+          city = data.city
+          country = data.country_name
+          latitude = data.latitude
+          longitude = data.longitude
+        }
+        
+        const result = {
+          ipAddress,
+          city: city || undefined,
+          country: country || undefined,
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
+        }
+        
+        console.log('✅ Successfully got location data:', result)
+        return result
+        
+      } catch (serviceError) {
+        console.log(`❌ Service ${serviceUrl} error:`, serviceError)
+        continue
+      }
     }
+    
+    // If all services fail, return IP only
+    console.log('❌ All location services failed, returning IP only')
+    return { ipAddress }
+    
   } catch (error) {
-    console.error('Error getting location from IP:', error)
+    console.error('❌ Error getting location from IP:', error)
     return { ipAddress }
   }
 }

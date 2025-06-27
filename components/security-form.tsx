@@ -25,7 +25,9 @@ import {
   capitalizeDeviceType, 
   formatLocation, 
   formatIpAddress, 
-  getBrowserInfo 
+  getBrowserInfo,
+  getCurrentSessionTokenFromBrowser,
+  isCurrentSession
 } from "@/lib/auth/utils"
 
 const passwordFormSchema = z
@@ -122,15 +124,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
       if (response.ok) {
         const data = await response.json()
         
-        // Get current session token from cookies to identify current session
-        const currentSessionToken = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('next-auth.session-token='))
-          ?.split('=')[1] || 
-          document.cookie
-          .split('; ')
-          .find(row => row.startsWith('__Secure-next-auth.session-token='))
-          ?.split('=')[1]
+        // Get current session token using the utility function
+        const currentSessionToken = getCurrentSessionTokenFromBrowser()
         
         // Mark current session
         const sessionsWithCurrent = data.map((session: Session) => ({
@@ -382,6 +377,26 @@ export function SecurityForm({ user }: SecurityFormProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            {/* Session Summary */}
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Session Summary</h4>
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                    <span>Total Active Sessions: {sessions.length}</span>
+                    <span>Current Session: {sessions.filter(s => s.isCurrent).length}</span>
+                    <span>Other Sessions: {sessions.filter(s => !s.isCurrent).length}</span>
+                  </div>
+                </div>
+                {sessions.filter(s => s.isCurrent).length > 0 && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <span className="text-blue-700 font-medium">You are currently logged in</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Button
@@ -435,7 +450,9 @@ export function SecurityForm({ user }: SecurityFormProps) {
                     <div 
                       key={session.id} 
                       className={`p-4 border rounded-lg space-y-3 ${
-                        session.isCurrent ? 'bg-blue-50 border-blue-200' : ''
+                        session.isCurrent 
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm' 
+                          : ''
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -454,11 +471,16 @@ export function SecurityForm({ user }: SecurityFormProps) {
                             disabled={session.isCurrent}
                           />
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate max-w-[120px]">
-                              {session.deviceModel || session.deviceType || 'Unknown Device'}
+                            <span className={`text-sm font-medium truncate max-w-[120px] ${
+                              session.isCurrent ? 'text-blue-900' : ''
+                            }`}>
+                              {session.deviceModel || capitalizeDeviceType(session.deviceType) || 'Unknown Device'}
                             </span>
                             {session.isCurrent && (
-                              <Badge variant="default" className="bg-blue-600 text-xs">Current</Badge>
+                              <Badge variant="default" className="bg-blue-600 text-white text-xs font-medium px-2 py-1">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Current Session
+                              </Badge>
                             )}
                           </div>
                         </div>
@@ -509,6 +531,15 @@ export function SecurityForm({ user }: SecurityFormProps) {
                           </div>
                         )}
                       </div>
+                      
+                      {session.isCurrent && (
+                        <div className="pt-2 border-t border-blue-200">
+                          <div className="flex items-center gap-2 text-xs text-blue-700">
+                            <AlertCircle className="h-3 w-3" />
+                            <span>This is your current session. You cannot revoke it.</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -549,7 +580,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                           <TableSkeleton />
                         ) : (
                           sessions.map((session) => (
-                            <TableRow key={session.id} className={session.isCurrent ? 'bg-blue-50' : ''}>
+                            <TableRow key={session.id} className={session.isCurrent ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500' : ''}>
                               <TableCell>
                                 <Checkbox
                                   checked={selectedSessions.includes(session.id)}
@@ -566,8 +597,10 @@ export function SecurityForm({ user }: SecurityFormProps) {
                                 />
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[120px] truncate" title={session.deviceModel || session.deviceType || 'N/A'}>
-                                  {session.deviceModel || session.deviceType || 'N/A'}
+                                <div className="max-w-[120px] truncate" title={session.deviceModel || capitalizeDeviceType(session.deviceType) || 'N/A'}>
+                                  <span className={session.isCurrent ? 'font-medium text-blue-900' : ''}>
+                                    {session.deviceModel || capitalizeDeviceType(session.deviceType) || 'N/A'}
+                                  </span>
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -599,7 +632,10 @@ export function SecurityForm({ user }: SecurityFormProps) {
                               </TableCell>
                               <TableCell>
                                 {session.isCurrent ? (
-                                  <Badge variant="default" className="bg-blue-600 text-xs">Current</Badge>
+                                  <Badge variant="default" className="bg-blue-600 text-white text-xs font-medium px-2 py-1">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Current
+                                  </Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-xs">Active</Badge>
                                 )}
