@@ -5,6 +5,7 @@ import { sendVerificationEmail } from "@/lib/email-utils"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
 import { validateCaptcha } from '@/lib/auth/captcha'
+import { UAParser } from 'ua-parser-js'
 
 const registerSchema = z.object({
   name: z.string().min(2).max(50),
@@ -17,6 +18,19 @@ const registerSchema = z.object({
   message: "Passwords don't match",
   path: ["confirmPassword"]
 })
+
+// Helper function to extract client info
+function extractClientInfo(request: NextRequest) {
+  const userAgent = request.headers.get('user-agent') || '';
+  const ipAddress =
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    request.headers.get('x-real-ip') ||
+    request.headers.get('cf-connecting-ip') || // Cloudflare
+    request.headers.get('x-client-ip') ||
+    '';
+
+  return { userAgent, ipAddress };
+}
 
 export async function POST(request: Request) {
   try {
@@ -52,14 +66,51 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
-    // Create user
+    // Extract client info for session tracking
+    const { userAgent, ipAddress } = extractClientInfo(request as NextRequest);
+    const parser = new UAParser(userAgent);
+    const device = parser.getDevice();
+    const os = parser.getOS();
+    const browser = parser.getBrowser();
+    
+    // Device type detection
+    const deviceType = device.type || 
+                      (userAgent.toLowerCase().includes('mobile') ? 'mobile' : 
+                       userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
+    
+    // Device model detection
+    let deviceModel = '';
+    if (device.vendor && device.model) {
+      deviceModel = `${device.vendor} ${device.model}`.trim();
+    } else if (device.model) {
+      deviceModel = device.model;
+    } else if (os.name) {
+      deviceModel = `${os.name} ${os.version || ''}`.trim();
+    } else if (browser.name) {
+      deviceModel = `${browser.name} ${browser.version || ''}`.trim();
+    }
+
+    // Create user with initial session
     const user = await prisma.user.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
         role: "MEMBER",
+        sessions: {
+          create: {
+            sessionToken: '', // Will be set when user first logs in
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            userAgent,
+            ipAddress,
+            deviceType,
+            deviceModel
+          }
+        }
       },
+      include: {
+        sessions: true
+      }
     });
 
     // Create verification token

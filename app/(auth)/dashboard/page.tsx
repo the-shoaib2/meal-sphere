@@ -42,36 +42,36 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8 p-6">
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
         {/* Enhanced Header with title and buttons */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="space-y-1">
-            <Skeleton className="h-9 w-48 rounded-md" />
-            <Skeleton className="h-4 w-64 rounded-md" />
+            <Skeleton className="h-7 sm:h-9 w-40 sm:w-48 rounded-md" />
+            <Skeleton className="h-3 sm:h-4 w-56 sm:w-64 rounded-md" />
           </div>
           <div className="flex gap-2">
-            <Skeleton className="h-10 w-10 rounded-md" />
-            <Skeleton className="h-10 w-36 rounded-md" />
+            <Skeleton className="h-8 sm:h-10 w-8 sm:w-10 rounded-md" />
+            <Skeleton className="h-8 sm:h-10 w-28 sm:w-36 rounded-md" />
           </div>
         </div>
         
         {/* Summary Cards Section */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <Skeleton className="h-6 w-32 rounded-md" />
-            <Skeleton className="h-5 w-20 rounded-md" />
+            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <Skeleton className="h-5 sm:h-6 w-24 sm:w-32 rounded-md" />
+            <Skeleton className="h-4 sm:h-5 w-16 sm:w-20 rounded-md" />
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
             {[...Array(8)].map((_, i) => (
               <Card key={`skeleton-card-${i}`}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-6 w-6" />
+                  <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+                  <Skeleton className="h-5 w-5 sm:h-6 sm:w-6" />
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-8 w-24 mb-2" />
-                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-6 sm:h-8 w-20 sm:w-24 mb-1 sm:mb-2" />
+                  <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
                 </CardContent>
               </Card>
             ))}
@@ -79,28 +79,28 @@ export default function DashboardPage() {
         </div>
         
         {/* Main Content Section */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5 text-primary" />
-            <Skeleton className="h-6 w-48 rounded-md" />
+            <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <Skeleton className="h-5 sm:h-6 w-36 sm:w-48 rounded-md" />
           </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
             {/* Chart Section */}
-            <div className="col-span-4 lg:col-span-4">
-              <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-                <CardHeader className="pb-4">
+            <div className="lg:col-span-4">
+              <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
+                <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex items-center gap-2">
-                    <Skeleton className="h-5 w-5 rounded-md" />
-                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-4 sm:h-5 sm:w-5 rounded-md" />
+                    <Skeleton className="h-5 sm:h-6 w-36 sm:w-48" />
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 lg:gap-4 text-sm">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:gap-4 text-xs sm:text-sm">
                     {[...Array(4)].map((_, i) => (
                       <Card key={`chart-stat-${i}`} className="p-2 border-0 bg-muted/50">
                         <div className="flex items-center gap-2">
                           <Skeleton className="w-2 h-2 rounded-full" />
                           <div className="min-w-0">
-                            <Skeleton className="h-3 w-8 mb-1" />
-                            <Skeleton className="h-4 w-12" />
+                            <Skeleton className="h-2.5 sm:h-3 w-6 sm:w-8 mb-1" />
+                            <Skeleton className="h-3 sm:h-4 w-8 sm:w-12" />
                           </div>
                         </div>
                       </Card>
@@ -108,29 +108,29 @@ export default function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-[300px] w-full" />
+                  <Skeleton className=" w-full" />
                 </CardContent>
               </Card>
             </div>
             
             {/* Recent Activities */}
-            <div className="col-span-3 lg:col-span-3">
-              <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-                <CardHeader className="pb-4">
+            <div className="lg:col-span-3">
+              <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
+                <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex items-center gap-2">
-                    <Skeleton className="h-5 w-5 rounded-md" />
-                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-4 sm:h-5 sm:w-5 rounded-md" />
+                    <Skeleton className="h-5 sm:h-6 w-24 sm:w-32" />
                   </div>
-                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {[...Array(6)].map((_, i) => (
                       <div key={i} className="flex items-center">
-                        <Skeleton className="h-10 w-10 rounded-full mr-3" />
-                        <div className="space-y-2 flex-1">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full mr-2 sm:mr-3" />
+                        <div className="space-y-1.5 sm:space-y-2 flex-1">
+                          <Skeleton className="h-3.5 sm:h-4 w-24 sm:w-32" />
+                          <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
                         </div>
                       </div>
                     ))}
@@ -142,20 +142,20 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions Section */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <Skeleton className="h-6 w-32 rounded-md" />
+            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <Skeleton className="h-5 sm:h-6 w-24 sm:w-32 rounded-md" />
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
               <Card key={`quick-action-${i}`} className="group hover:shadow-md transition-all duration-200 cursor-pointer">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-9 w-9 rounded-full" />
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Skeleton className="h-7 w-7 sm:h-9 sm:w-9 rounded-full" />
                     <div>
-                      <Skeleton className="h-5 w-24 mb-1" />
-                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 sm:h-5 w-16 sm:w-24 mb-1" />
+                      <Skeleton className="h-3 sm:h-4 w-20 sm:w-32" />
                     </div>
                   </div>
                 </CardContent>
@@ -168,38 +168,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
-      {/* Enhanced Header */}
-      {/* <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {session.user.name || 'User'}! Here's what's happening with your meals.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => refreshDashboard()}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button size="sm">
-            <Bell className="h-4 w-4 mr-2" />
-            <span className="sr-only sm:not-sr-only sm:inline">Notifications</span>
-          </Button>
-        </div>
-      </div> */}
-      
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+     
       {/* Summary Cards Section */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Overview</h2>
-          <Badge variant="secondary" className="ml-2">
+          <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <h2 className="text-lg sm:text-xl font-semibold">Overview</h2>
+          <Badge variant="secondary" className="ml-2 text-xs">
             {dashboardData ? 'Live Data' : 'Loading...'}
           </Badge>
         </div>
@@ -214,16 +190,16 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <h2 className="text-lg sm:text-xl font-semibold">Analytics & Activities</h2>
+            <h2 className="text-base sm:text-lg lg:text-xl font-semibold">Analytics & Activities</h2>
           </div>
           <Button 
             variant="outline" 
             size="sm" 
-            className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+            className="text-xs sm:text-sm h-7 sm:h-8 lg:h-9 px-2 sm:px-3 w-full sm:w-auto"
             onClick={() => refreshDashboard()}
             disabled={isRefreshing}
           >
@@ -231,74 +207,74 @@ export default function DashboardPage() {
             Refresh Data
           </Button>
         </div>
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-7">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
           <div className="lg:col-span-4">
             <MealChart />
           </div>
-          <div className="lg:col-span-3 mt-4 lg:mt-0">
+          <div className="lg:col-span-3">
             <RecentActivities />
           </div>
         </div>
       </div>
 
       {/* Quick Actions Section */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold">Quick Actions</h2>
+          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <h2 className="text-lg sm:text-xl font-semibold">Quick Actions</h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-green-100 group-hover:bg-green-200 transition-colors">
-                  <Utensils className="h-5 w-5 text-green-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-full bg-green-100 group-hover:bg-green-200 transition-colors">
+                  <Utensils className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Add Meal</h3>
-                  <p className="text-sm text-muted-foreground">Record today's meal</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Add Meal</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Record today's meal</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-colors">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-full bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Make Payment</h3>
-                  <p className="text-sm text-muted-foreground">Add payment record</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Make Payment</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Add payment record</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
-                  <ShoppingBag className="h-5 w-5 text-purple-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                  <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Shopping List</h3>
-                  <p className="text-sm text-muted-foreground">Manage shopping items</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Shopping List</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Manage shopping items</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-orange-100 group-hover:bg-orange-200 transition-colors">
-                  <Users className="h-5 w-5 text-orange-600" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 rounded-full bg-orange-100 group-hover:bg-orange-200 transition-colors">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Group Settings</h3>
-                  <p className="text-sm text-muted-foreground">Manage group preferences</p>
+                  <h3 className="font-semibold text-sm sm:text-base">Group Settings</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Manage group preferences</p>
                 </div>
               </div>
             </CardContent>

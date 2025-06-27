@@ -91,22 +91,22 @@ export default function RecentActivities() {
 
   if (isLoading) {
     return (
-      <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-4">
+      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
+        <CardHeader className="pb-3 sm:pb-4">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <Skeleton className="h-6 w-32" />
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <Skeleton className="h-5 sm:h-6 w-24 sm:w-32" />
           </div>
-          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center">
-                <Skeleton className="h-10 w-10 rounded-full mr-3" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full mr-2 sm:mr-3" />
+                <div className="space-y-1.5 sm:space-y-2 flex-1">
+                  <Skeleton className="h-3.5 sm:h-4 w-24 sm:w-32" />
+                  <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
                 </div>
               </div>
             ))}
@@ -118,19 +118,19 @@ export default function RecentActivities() {
 
   if (error) {
     return (
-      <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-4">
+      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
+        <CardHeader className="pb-3 sm:pb-4">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <CardTitle>Recent Activities</CardTitle>
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Recent Activities</CardTitle>
           </div>
-          <CardDescription>Your recent meal and payment activities</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Your recent meal and payment activities</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[300px] border rounded-md bg-muted/20">
+          <div className="flex items-center justify-center h-[250px] sm:h-[300px] border rounded-md bg-muted/20">
             <div className="text-center">
-              <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Failed to load activities</p>
+              <Activity className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs sm:text-sm text-muted-foreground">Failed to load activities</p>
             </div>
           </div>
         </CardContent>
@@ -140,20 +140,20 @@ export default function RecentActivities() {
 
   if (!activities || activities.length === 0) {
     return (
-      <Card className="h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-4">
+      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
+        <CardHeader className="pb-3 sm:pb-4">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <CardTitle>Recent Activities</CardTitle>
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Recent Activities</CardTitle>
           </div>
-          <CardDescription>Your recent meal and payment activities</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Your recent meal and payment activities</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[300px] border rounded-md bg-muted/20">
+          <div className="flex items-center justify-center h-[250px] sm:h-[300px] border rounded-md bg-muted/20">
             <div className="text-center">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No recent activities</p>
-              <p className="text-xs text-muted-foreground mt-1">Activities will appear here as they happen</p>
+              <Clock className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2" />
+              <p className="text-xs sm:text-sm text-muted-foreground">No recent activities</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Activities will appear here as they happen</p>
             </div>
           </div>
         </CardContent>
@@ -162,12 +162,12 @@ export default function RecentActivities() {
   }
 
   return (
-    <Card className="overflow-hidden h-[400px] lg:h-[450px] xl:h-[500px] flex flex-col">
-      <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6 border-b z-10 bg-background/95 backdrop-blur-sm sticky top-0">
+    <Card className="overflow-hidden h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] flex flex-col">
+      <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-4 lg:px-6 border-b z-10 bg-background/95 backdrop-blur-sm sticky top-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <CardTitle className="text-base sm:text-lg font-semibold">
+            <CardTitle className="text-sm sm:text-base lg:text-lg font-semibold">
               Recent Activities
             </CardTitle>
           </div>
@@ -181,7 +181,7 @@ export default function RecentActivities() {
       </CardHeader>
       <CardContent className="p-0 flex-grow overflow-hidden">
         <ScrollArea className="h-full w-full">
-          <div className="space-y-3 p-4">
+          <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
             {activities.map((activity) => {
               const IconComponent = getActivityIcon(activity.type);
               const iconColor = getActivityColor(activity.type);
@@ -194,19 +194,19 @@ export default function RecentActivities() {
                 >
                   <div className="mt-0.5 flex-shrink-0">
                     <div className={`p-1.5 sm:p-2 rounded-full ${iconColor.split(' ')[0]}/10`}>
-                      <IconComponent className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${iconColor.split(' ')[0]}`} />
+                      <IconComponent className={`h-3 w-3 sm:h-3.5 sm:w-3.5 lg:h-4 lg:w-4 ${iconColor.split(' ')[0]}`} />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium leading-tight line-clamp-1 text-ellipsis">
+                      <p className="text-xs sm:text-sm font-medium leading-tight line-clamp-1 text-ellipsis">
                         {activity.title}
                       </p>
-                      <Badge variant="outline" className={`text-[10px] ${badge.color} px-1.5 py-0.5`}>
+                      <Badge variant="outline" className={`text-[10px] sm:text-xs ${badge.color} px-1.5 py-0.5`}>
                         {badge.text}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-2">
                       {activity.description}
                     </p>
                     <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground mt-1">

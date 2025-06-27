@@ -1,20 +1,23 @@
 import { MealType } from '@prisma/client';
 import prisma from '../lib/prisma';
 
+
+// npx tsx scripts/manage-meals.ts
+
 const usersToMeals = [
   {
     email: 'ratulkmsc@gmail.com',
-    days: [25,26],
+    days: [26,27],
     types: ['LUNCH', 'DINNER']
   },
   {
     email: 'abrohoman019@gmail.com',
-    days: [25,26],
+    days: [26,27],
     types: ['LUNCH', 'DINNER']
   },
   {
     email: 'khan23105101484@diu.edu.bd',
-    days: [25,26],
+    days: [26,27],
     types: ['LUNCH', 'DINNER']
   },
 ];

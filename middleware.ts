@@ -84,7 +84,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  return NextResponse.next()
+  // For authenticated users on protected routes, trigger session update
+  if (isProtectedRoute && token) {
+    // Add a header to indicate this is a protected route request
+    // This can be used by API routes to update session info
+    const response = NextResponse.next()
+    response.headers.set('x-session-update', 'true')
+    return response
+  }
+
+  // Ensure proper cookie handling for OAuth
+  const response = NextResponse.next()
+  
+  // Set SameSite attribute for cookies in development
+  if (process.env.NODE_ENV === 'development') {
+    response.headers.set('Set-Cookie', 'SameSite=Lax')
+  }
+
+  return response
 }
 
 export const config = {

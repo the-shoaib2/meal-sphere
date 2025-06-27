@@ -71,16 +71,16 @@ export default function SummaryCards({
   // Show skeleton loading while data is being fetched
   if (isLoadingSummary) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         {[...Array(8)].map((_, i) => (
           <Card key={`skeleton-${i}`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-6 w-6" />
+              <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+              <Skeleton className="h-4 w-4 sm:h-6 sm:w-6" />
             </CardHeader>
             <CardContent>
-              <Skeleton className="h-8 w-24 mb-2" />
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-6 sm:h-8 w-20 sm:w-24 mb-1 sm:mb-2" />
+              <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
             </CardContent>
           </Card>
         ))}
@@ -92,13 +92,13 @@ export default function SummaryCards({
   // Show error message if there's an error
   if (summaryError) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="col-span-full">
           <CardHeader>
-            <CardTitle className="text-center text-red-600">Error Loading Dashboard</CardTitle>
+            <CardTitle className="text-center text-red-600 text-sm sm:text-base">Error Loading Dashboard</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {summaryError.message === 'You are not a member of this group' 
                 ? 'You are not a member of the selected group. Please select a different group.'
                 : 'Failed to load dashboard data. Please try again.'
@@ -111,15 +111,15 @@ export default function SummaryCards({
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Meals</CardTitle>
-          <Utensils className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Total Meals</CardTitle>
+          <Utensils className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalUserMeals} / {totalAllMeals}</div>
-          <p className="text-xs text-muted-foreground">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold">{totalUserMeals} / {totalAllMeals}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             My meals / Total meals
           </p>
         </CardContent>
@@ -127,12 +127,12 @@ export default function SummaryCards({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Current Meal Rate</CardTitle>
-          <Calculator className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Current Meal Rate</CardTitle>
+          <Calculator className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">৳{currentRate.toFixed(2)}</div>
-          <p className="text-xs text-muted-foreground">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold">৳{currentRate.toFixed(2)}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Average per meal
           </p>
         </CardContent>
@@ -140,14 +140,14 @@ export default function SummaryCards({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Current Balance</CardTitle>
-          <Wallet className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Current Balance</CardTitle>
+          <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
             ৳{currentBalance.toFixed(2)}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Total money in account
           </p>
         </CardContent>
@@ -155,14 +155,14 @@ export default function SummaryCards({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Available Balance</CardTitle>
+          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             ৳{availableBalance.toFixed(2)}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             After meal expenses
           </p>
         </CardContent>
@@ -170,14 +170,14 @@ export default function SummaryCards({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Spent on Meals</CardTitle>
-          <Receipt className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Total Spent on Meals</CardTitle>
+          <Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
             ৳{totalCost.toFixed(2)}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             Total meal expenses
           </p>
         </CardContent>
@@ -185,12 +185,12 @@ export default function SummaryCards({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Groups</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-xs sm:text-sm font-medium">Active Groups</CardTitle>
+          <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{userActiveRooms} / {totalActiveGroups}</div>
-          <p className="text-xs text-muted-foreground">
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold">{userActiveRooms} / {totalActiveGroups}</div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
             My groups / Total active groups
           </p>
         </CardContent>
@@ -201,14 +201,14 @@ export default function SummaryCards({
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Group Total Balance</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-xs sm:text-sm font-medium">Group Total Balance</CardTitle>
+              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${groupData.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 ৳{groupData.groupTotalBalance.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 {activeGroup.name}
               </p>
             </CardContent>
@@ -216,14 +216,14 @@ export default function SummaryCards({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Group Expenses</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-xs sm:text-sm font-medium">Group Expenses</CardTitle>
+              <Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
                 ৳{groupData.totalExpenses.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Total expenses
               </p>
             </CardContent>
@@ -231,14 +231,14 @@ export default function SummaryCards({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Group Meal Rate</CardTitle>
-              <Calculator className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-xs sm:text-sm font-medium">Group Meal Rate</CardTitle>
+              <Calculator className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
                 ৳{groupData.mealRate.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 {groupData.totalMeals} total meals
               </p>
             </CardContent>
@@ -246,14 +246,14 @@ export default function SummaryCards({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Group Balance</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-xs sm:text-sm font-medium">Net Group Balance</CardTitle>
+              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${groupData.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`}>
                 ৳{groupData.netGroupBalance.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 {groupData.netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
               </p>
             </CardContent>

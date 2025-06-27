@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth/auth'
+import { authOptions, updateSessionInfo, getCurrentSessionInfo } from '@/lib/auth/auth'
+import { getLocationFromIP } from '@/lib/location-utils'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -13,6 +14,17 @@ export async function GET() {
       })
     }
 
+    // Get user agent and IP from request headers
+    const userAgent = request.headers.get('user-agent') || ''
+    const ipAddress =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('x-real-ip') ||
+      request.headers.get('cf-connecting-ip') || // Cloudflare
+      request.headers.get('x-client-ip') ||
+      (request as any).ip || // Next.js edge runtime may provide this
+      ''
+
+    // Find all sessions for the user
     const userSessions = await prisma.session.findMany({
       where: {
         userId: session.user.id,
@@ -22,12 +34,66 @@ export async function GET() {
         sessionToken: true,
         userId: true,
         expires: true,
+        ipAddress: true,
+        userAgent: true,
+        deviceType: true,
+        deviceModel: true,
+        city: true,
+        country: true,
+        latitude: true,
+        longitude: true,
       },
     })
 
-    return NextResponse.json(userSessions)
+    // Get current session info more reliably
+    const currentSession = await getCurrentSessionInfo(session.user.id)
+
+    // Always update the current session with the latest device info and location
+    if (currentSession && (userAgent || ipAddress)) {
+      try {
+        // Get location data if we have an IP address
+        let locationData = {}
+        if (ipAddress) {
+          locationData = await getLocationFromIP(ipAddress)
+        }
+
+        await updateSessionInfo(
+          currentSession.sessionToken, 
+          userAgent, 
+          ipAddress, 
+          session.user.id,
+          locationData
+        )
+      } catch (error) {
+        // console.error('Error updating session info:', error)
+        // Continue with fetching sessions even if update fails
+      }
+    }
+
+    // Re-fetch sessions to get updated info
+    const updatedSessions = await prisma.session.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        id: true,
+        sessionToken: true,
+        userId: true,
+        expires: true,
+        ipAddress: true,
+        userAgent: true,
+        deviceType: true,
+        deviceModel: true,
+        city: true,
+        country: true,
+        latitude: true,
+        longitude: true,
+      },
+    })
+
+    return NextResponse.json(updatedSessions)
   } catch (error) {
-    console.error('Error fetching sessions:', error)
+    // console.error('Error fetching sessions:', error)
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
     })
@@ -44,28 +110,68 @@ export async function DELETE(request: Request) {
       })
     }
 
-    const { ids } = await request.json()
-
-    if (!ids || !Array.isArray(ids)) {
-      return new NextResponse(JSON.stringify({ error: 'Invalid session IDs' }), {
+    let ids: string[] = []
+    
+    try {
+      const body = await request.json()
+      ids = body?.ids || []
+    } catch (parseError) {
+      // console.error('Error parsing request body:', parseError)
+      return new NextResponse(JSON.stringify({ error: 'Invalid request body format' }), {
         status: 400,
       })
     }
 
-    await prisma.session.deleteMany({
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return new NextResponse(JSON.stringify({ error: 'Session IDs array is required and must not be empty' }), {
+        status: 400,
+      })
+    }
+
+    // Validate that all IDs are valid ObjectId format
+    const validIds = ids.filter(id => /^[0-9a-fA-F]{24}$/.test(id))
+    
+    if (validIds.length !== ids.length) {
+      return new NextResponse(JSON.stringify({ error: 'Some session IDs are invalid' }), {
+        status: 400,
+      })
+    }
+
+    // Get current session to check if it's being deleted
+    const currentSession = await getCurrentSessionInfo(session.user.id)
+    const isCurrentSessionDeleted = currentSession && validIds.includes(currentSession.id)
+
+    const result = await prisma.session.deleteMany({
       where: {
         id: {
-          in: ids,
+          in: validIds,
         },
         userId: session.user.id,
       },
     })
 
-    return new NextResponse(null, { status: 204 })
+    // If current session was deleted, return special response to trigger logout
+    if (isCurrentSessionDeleted) {
+      return NextResponse.json({ 
+        success: true, 
+        deletedCount: result.count,
+        message: `Successfully deleted ${result.count} session(s)`,
+        logoutRequired: true,
+        reason: 'Current session was revoked'
+      })
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      deletedCount: result.count,
+      message: `Successfully deleted ${result.count} session(s)`
+    })
   } catch (error) {
-    console.error('Error revoking sessions:', error)
+    // console.error('Error revoking sessions:', error)
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
     })
   }
 }
+
+// Frontend usage: Call fetch('/api/auth/sessions') after login or on first page load after authentication to ensure device info is updated.
