@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +25,7 @@ import { useGroupAccess } from "@/hooks/use-group-access"
 import GuestMealForm from "@/components/guest-meal-form"
 import GuestMealManager from "@/components/guest-meal-manager"
 import MealCalendar from "@/components/meal-calendar"
+import type { ReadonlyURLSearchParams } from "next/navigation"
 
 interface MealWithUser {
   id: string
@@ -44,18 +45,44 @@ interface MealWithUser {
 interface MealManagementProps {
   roomId: string
   groupName?: string
+  searchParams?: ReadonlyURLSearchParams | null
 }
 
-export default function MealManagement({ roomId, groupName }: MealManagementProps) {
+export default function MealManagement({ roomId, groupName, searchParams: propSearchParams }: MealManagementProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
+  const searchParams = propSearchParams || useSearchParams()
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [activeTab, setActiveTab] = useState("calendar")
+  
+  // Get the active tab from URL search params, default to 'calendar'
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    return tabFromUrl && ['calendar', 'list'].includes(tabFromUrl) 
+      ? tabFromUrl 
+      : 'calendar';
+  });
+  
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [autoSettingsOpen, setAutoSettingsOpen] = useState(false)
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', value);
+    router.push(`/meals?${params.toString()}`, { scroll: false });
+  };
+
+  // Sync with URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    if (tabFromUrl && ['calendar', 'list'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
   
   // Check user permissions
   const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: roomId })
@@ -498,7 +525,7 @@ export default function MealManagement({ roomId, groupName }: MealManagementProp
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="list">Meal List</TabsTrigger>

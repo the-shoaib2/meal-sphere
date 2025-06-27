@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,7 @@ type GroupWithMembers = {
 
 export default function GroupPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const groupId = typeof params?.id === 'string' ? params.id : '';
   const router = useRouter();
   const { data: session } = useSession();
@@ -66,9 +67,33 @@ export default function GroupPage() {
 
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('members');
+  
+  // Get the active tab from URL search params, default to 'members'
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    return tabFromUrl && ['members', 'join-requests', 'activity', 'settings'].includes(tabFromUrl) 
+      ? tabFromUrl 
+      : 'members';
+  });
+  
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', value);
+    router.push(`/groups/${groupId}?${params.toString()}`, { scroll: false });
+  };
+
+  // Sync with URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    if (tabFromUrl && ['members', 'join-requests', 'activity', 'settings'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,7 +119,7 @@ export default function GroupPage() {
       try {
         const errorData = JSON.parse(error.message);
         if (errorData.requiresApproval) {
-          setActiveTab('join-requests');
+          handleTabChange('join-requests');
           return;
         }
         toast.error(errorData.message || 'Failed to load group details');
@@ -148,7 +173,7 @@ export default function GroupPage() {
           </div>
 
           {/* Tabs Skeleton */}
-          <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs defaultValue="members" value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid grid-cols-4 sm:rounded-md">
               <TabsTrigger value="members" className="flex items-center gap-2">
                 <Users className="h-4 w-4 hidden sm:block" />
@@ -309,7 +334,7 @@ export default function GroupPage() {
       <Tabs
         defaultValue="members"
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="w-full"
       >
         <TabsList className="grid grid-cols-4 sm:rounded-md">

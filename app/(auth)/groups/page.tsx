@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,15 +18,39 @@ import type { Group } from '@/hooks/use-groups';
 
 export default function GroupsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('all-groups');
+  
+  // Get the active tab from URL search params, default to 'all-groups'
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    return tabFromUrl && ['all-groups', 'my-groups', 'discover'].includes(tabFromUrl) 
+      ? tabFromUrl 
+      : 'all-groups';
+  });
 
   const {
     data: groups = [],
     isLoading,
     error
   } = useGroups();
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', value);
+    router.push(`/groups?${params.toString()}`, { scroll: false });
+  };
+
+  // Sync with URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    if (tabFromUrl && ['all-groups', 'my-groups', 'discover'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
 
   // Filter groups based on active tab
   const filteredGroups = (groups || []).filter((group: Group) => {
@@ -106,7 +130,7 @@ export default function GroupsPage() {
 
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={handleTabChange}
         className="w-full"
       >
         <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
@@ -147,7 +171,7 @@ export default function GroupsPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setActiveTab('discover');
+                      handleTabChange('discover');
                       setSearchQuery('');
                     }}
                   >

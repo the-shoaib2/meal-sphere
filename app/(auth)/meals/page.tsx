@@ -5,6 +5,7 @@ import { useActiveGroup } from "@/contexts/group-context"
 import MealManagement from "@/components/meal-management"
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 
 export default function MealsPage() {
   return (
@@ -18,6 +19,7 @@ export default function MealsPage() {
 
 function MealsContent() {
   const { activeGroup } = useActiveGroup()
+  const searchParams = useSearchParams()
 
   if (!activeGroup) {
     return (
@@ -31,6 +33,7 @@ function MealsContent() {
     <MealManagement 
       roomId={activeGroup.id} 
       groupName={activeGroup.name}
+      searchParams={searchParams}
     />
   )
 }

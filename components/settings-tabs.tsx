@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileForm } from "@/components/profile-form"
@@ -17,26 +17,29 @@ export function SettingsTabs({ user }: SettingsTabsProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   
-  // Get initial tab from URL or default to "profile"
-  const getInitialTab = () => {
-    if (searchParams) {
-      const tabFromUrl = searchParams.get("tab")
-      if (tabFromUrl && ["profile", "appearance", "language", "security"].includes(tabFromUrl)) {
-        return tabFromUrl
-      }
-    }
-    return "profile"
-  }
-  
-  const [activeTab, setActiveTab] = useState(getInitialTab())
+  // Get the active tab from URL search params, default to 'profile'
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    return tabFromUrl && ['profile', 'appearance', 'language', 'security'].includes(tabFromUrl) 
+      ? tabFromUrl 
+      : 'profile';
+  });
 
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
-    setActiveTab(value)
-    const params = new URLSearchParams(searchParams?.toString() || "")
-    params.set("tab", value)
-    router.push(`?${params.toString()}`, { scroll: false })
-  }
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', value);
+    router.push(`/settings?${params.toString()}`, { scroll: false });
+  };
+
+  // Sync with URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const tabFromUrl = searchParams?.get('tab');
+    if (tabFromUrl && ['profile', 'appearance', 'language', 'security'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
