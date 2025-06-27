@@ -16,7 +16,7 @@ function cleanupExpiredCaptchas() {
 
 // Generate a random string for CAPTCHA
 function generateRandomString(length: number): string {
-  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   let result = '';
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));

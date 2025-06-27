@@ -255,12 +255,11 @@ export function SecurityForm({ user }: SecurityFormProps) {
 
     try {
       setIsLoading(true)
-      const response = await fetch('/api/auth/sessions', {
-        method: 'DELETE',
+      const response = await fetch('/api/auth/sessions/revoke-all', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ids: sessions.map(s => s.id) }),
       })
 
       if (!response.ok) {

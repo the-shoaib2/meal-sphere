@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth/next'
-import { authOptions, updateSessionInfo, getCurrentSessionInfo, getAllActiveSessions } from '@/lib/auth/auth'
+import { authOptions } from '@/lib/auth/auth'
+import { 
+  updateSessionInfo, 
+  getCurrentSessionInfo, 
+  getAllActiveSessions,
+  revokeMultipleSessions
+} from '@/lib/auth/session-manager'
 import { getLocationFromIP } from '@/lib/location-utils'
 
 export async function GET(request: NextRequest) {
@@ -48,7 +54,7 @@ export async function GET(request: NextRequest) {
           locationData
         )
       } catch (error) {
-        // console.error('Error updating session info:', error)
+        console.error('Error updating session info:', error)
         // Continue with fetching sessions even if update fails
       }
     }
@@ -80,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(updatedSessions)
   } catch (error) {
-    // console.error('Error fetching sessions:', error)
+    console.error('Error fetching sessions:', error)
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
     })
@@ -103,7 +109,7 @@ export async function DELETE(request: Request) {
       const body = await request.json()
       ids = body?.ids || []
     } catch (parseError) {
-      // console.error('Error parsing request body:', parseError)
+      console.error('Error parsing request body:', parseError)
       return new NextResponse(JSON.stringify({ error: 'Invalid request body format' }), {
         status: 400,
       })
@@ -124,25 +130,25 @@ export async function DELETE(request: Request) {
       })
     }
 
-    // Get current session to check if it's being deleted
+    // Check if current session is being deleted
     const currentSession = await getCurrentSessionInfo(session.user.id)
     const isCurrentSessionDeleted = currentSession && validIds.includes(currentSession.id)
 
-    const result = await prisma.session.deleteMany({
-      where: {
-        id: {
-          in: validIds,
-        },
-        userId: session.user.id,
-      },
-    })
+    // Revoke the sessions using the session manager
+    const deletedCount = await revokeMultipleSessions(validIds, session.user.id)
+
+    if (deletedCount === 0) {
+      return new NextResponse(JSON.stringify({ error: 'No sessions were deleted' }), {
+        status: 404,
+      })
+    }
 
     // If current session was deleted, return special response to trigger logout
     if (isCurrentSessionDeleted) {
       return NextResponse.json({ 
         success: true, 
-        deletedCount: result.count,
-        message: `Successfully deleted ${result.count} session(s)`,
+        deletedCount,
+        message: `Successfully deleted ${deletedCount} session(s)`,
         logoutRequired: true,
         reason: 'Current session was revoked'
       })
@@ -150,11 +156,11 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      deletedCount: result.count,
-      message: `Successfully deleted ${result.count} session(s)`
+      deletedCount,
+      message: `Successfully deleted ${deletedCount} session(s)`
     })
   } catch (error) {
-    // console.error('Error revoking sessions:', error)
+    console.error('Error revoking sessions:', error)
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
     })
