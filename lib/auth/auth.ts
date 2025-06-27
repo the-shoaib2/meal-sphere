@@ -24,8 +24,6 @@ if (!process.env.NEXTAUTH_URL) {
   // console.warn('NEXTAUTH_URL is not set. This may cause issues in production.');
 }
 
-
-
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
@@ -35,7 +33,7 @@ declare module "next-auth" {
       image?: string;
       role: Role;
     } & DefaultSession["user"];
-    
+
     // Extended session properties
     userAgent?: string;
     ipAddress?: string | null;
@@ -91,7 +89,7 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Please enter email and password');
         }
@@ -132,7 +130,7 @@ export const authOptions: AuthOptions = {
     })
   ],
   session: {
-    strategy: "jwt",
+    strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   cookies: {
@@ -195,113 +193,16 @@ export const authOptions: AuthOptions = {
     }
   },
   callbacks: {
-    async jwt({ token, user, account, trigger, session: sessionData }) {
-      if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.picture = user.image ?? null;
-        token.role = user.role;
-      }
-      
-      // Update session info when a new session is created
-      if (account?.provider === 'google' && trigger === 'signIn') {
-        try {
-          // Get request details for device info
-          const req = (account as any).request;
-          const { userAgent, ipAddress } = extractClientInfo(req);
-          
-          // Parse user agent for device info
-          const parser = new UAParser(userAgent);
-          const device = parser.getDevice();
-          const os = parser.getOS();
-          const browser = parser.getBrowser();
-          
-          // Better device type detection
-          const deviceType = device.type || 
-                            (userAgent.toLowerCase().includes('mobile') ? 'mobile' : 
-                             userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
-          
-          // Better device model detection with fallbacks
-          let deviceModel = '';
-          if (device.vendor && device.model) {
-            deviceModel = `${device.vendor} ${device.model}`.trim();
-          } else if (device.model) {
-            deviceModel = device.model;
-          } else if (os.name) {
-            deviceModel = `${os.name} ${os.version || ''}`.trim();
-          } else if (browser.name) {
-            deviceModel = `${browser.name} ${browser.version || ''}`.trim();
-          }
-
-          // Store device info in token for later use
-          token.userAgent = userAgent;
-          token.ipAddress = ipAddress;
-          token.deviceType = deviceType;
-          token.deviceModel = deviceModel;
-          
-          // console.log('🔧 JWT callback - Device info stored:', {
-          //   deviceType,
-          //   deviceModel,
-          //   ipAddress: ipAddress ? ipAddress.substring(0, 10) + '...' : 'N/A'
-          // });
-        } catch (error) {
-          console.error('Error updating JWT with device data:', error);
-        }
-      }
-      
-      return token;
-    },
     async session({ session, token, user }) {
       // Add user info to the session
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-        session.user.image = token.picture as string;
-        session.user.role = token.role as Role;
-        
-        // Add device and IP info to session
-        if (token.ipAddress || token.userAgent) {
-          (session as any).ipAddress = token.ipAddress || '';
-          (session as any).userAgent = token.userAgent || '';
-          (session as any).deviceType = token.deviceType || 'desktop';
-          (session as any).deviceModel = token.deviceModel || '';
-          
-          // Update the session in database with device info
-          try {
-            // Find the current session by user ID and update it
-            const currentSession = await prisma.session.findFirst({
-              where: {
-                userId: token.id as string,
-                expires: { gt: new Date() }
-              },
-              orderBy: { updatedAt: 'desc' }
-            });
-            
-            if (currentSession) {
-              await prisma.session.update({
-                where: { id: currentSession.id },
-                data: {
-                  ipAddress: token.ipAddress || '',
-                  userAgent: token.userAgent || '',
-                  deviceType: token.deviceType || 'desktop',
-                  deviceModel: token.deviceModel || '',
-                  updatedAt: new Date()
-                }
-              });
-              
-              // console.log('✅ Session updated with device info:', {
-              //   sessionId: currentSession.id,
-              //   deviceType: token.deviceType,
-              //   deviceModel: token.deviceModel
-              // });
-            }
-          } catch (error) {
-            console.error('Error updating session in database:', error);
-          }
-        }
+      if (user) {
+        session.user.id = user.id;
+        session.user.name = user.name || undefined;
+        session.user.email = user.email || undefined;
+        session.user.image = user.image || undefined;
+        session.user.role = user.role;
       }
+      
       return session;
     },
     async signIn(params) {
@@ -440,6 +341,58 @@ export const authOptions: AuthOptions = {
       //   provider: message.account?.provider,
       //   userId: message.user?.id
       // });
+      
+      // Update the most recent session with device info if available
+      if (message.user?.id) {
+        try {
+          // Get the most recent session for this user and update it with device info
+          const session = await prisma.session.findFirst({
+            where: { 
+              userId: message.user.id,
+              expires: { gt: new Date() }
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+          
+          if (session) {
+            // Parse user agent for device info
+            const userAgent = session.userAgent || '';
+            const parser = new UAParser(userAgent);
+            const device = parser.getDevice();
+            const os = parser.getOS();
+            const browser = parser.getBrowser();
+            
+            // Better device type detection
+            const deviceType = device.type || 
+                              (userAgent.toLowerCase().includes('mobile') ? 'mobile' : 
+                               userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
+            
+            // Better device model detection with fallbacks
+            let deviceModel = '';
+            if (device.vendor && device.model) {
+              deviceModel = `${device.vendor} ${device.model}`.trim();
+            } else if (device.model) {
+              deviceModel = device.model;
+            } else if (os.name) {
+              deviceModel = `${os.name} ${os.version || ''}`.trim();
+            } else if (browser.name) {
+              deviceModel = `${browser.name} ${browser.version || ''}`.trim();
+            }
+
+            // Update the session with device info
+            await prisma.session.update({
+              where: { id: session.id },
+              data: {
+                deviceType: deviceType || 'desktop',
+                deviceModel: deviceModel || '',
+                updatedAt: new Date()
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error updating session with device info:', error);
+        }
+      }
     },
     async signOut(message) {
       // console.log('👋 User signed out event:', {
@@ -452,30 +405,30 @@ export const authOptions: AuthOptions = {
 // Helper function to get session with device info (for API routes)
 const getServerAuthSessionForApi = async (req: NextApiRequest, res: NextApiResponse) => {
   const session = await getServerSession(req, res, authOptions);
-  
+
   if (session) {
     const userAgent = req.headers['user-agent'] || '';
     const parser = new UAParser(userAgent);
     const device = parser.getDevice();
     const browser = parser.getBrowser();
     const os = parser.getOS();
-    
+
     // Update session with device info
     (session as any).userAgent = userAgent || '';
-    (session as any).ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() || 
-                                req.headers['x-real-ip']?.toString() ||
-                                (req.socket as any)?.remoteAddress || '';
+    (session as any).ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ||
+      req.headers['x-real-ip']?.toString() ||
+      (req.socket as any)?.remoteAddress || '';
     (session as any).deviceType = device.type || 'desktop';
     (session as any).deviceModel = `${device.vendor || ''} ${device.model || ''}`.trim() || '';
     (session as any).browser = `${browser.name || ''} ${browser.version || ''}`.trim() || '';
     (session as any).os = `${os.name || ''} ${os.version || ''}`.trim() || '';
-    
+
     // Update the session in the database
     try {
       await prisma.session.updateMany({
-        where: { 
+        where: {
           sessionToken: (session as any).sessionToken,
-          userId: session.user.id 
+          userId: session.user.id
         },
         data: {
           userAgent: (session as any).userAgent || '',
@@ -489,7 +442,7 @@ const getServerAuthSessionForApi = async (req: NextApiRequest, res: NextApiRespo
       // console.error('Error updating session info:', error);
     }
   }
-  
+
   return session;
 };
 
@@ -507,25 +460,25 @@ export const getApiAuthSession = async (req: NextApiRequest, res: NextApiRespons
 function extractClientInfo(req: any) {
   let userAgent = '';
   let ipAddress = '';
-  
+
   if (req) {
     userAgent = req.headers?.['user-agent'] || '';
-    
+
     // Try multiple headers for IP address
     ipAddress = req.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
-                req.headers?.['x-real-ip'] ||
-                req.headers?.['cf-connecting-ip'] || // Cloudflare
-                req.headers?.['x-client-ip'] ||
-                req.socket?.remoteAddress ||
-                req.connection?.remoteAddress ||
-                '';
+      req.headers?.['x-real-ip'] ||
+      req.headers?.['cf-connecting-ip'] || // Cloudflare
+      req.headers?.['x-client-ip'] ||
+      req.socket?.remoteAddress ||
+      req.connection?.remoteAddress ||
+      '';
   }
-  
+
   // Clean up IP address (remove IPv6 prefix if present)
   if (ipAddress && ipAddress.startsWith('::ffff:')) {
     ipAddress = ipAddress.substring(7);
   }
-  
+
   // if (!userAgent || !ipAddress) {
   //   console.warn('User agent or IP address missing in extractClientInfo', { 
   //     userAgent: userAgent || 'missing', 
@@ -533,15 +486,15 @@ function extractClientInfo(req: any) {
   //     headers: req?.headers ? Object.keys(req.headers) : 'no headers'
   //   });
   // }
-  
+
   return { userAgent, ipAddress };
 }
 
 // Helper function to get current session token from request
 export function getCurrentSessionToken(request: any): string | null {
   return request.cookies?.get('next-auth.session-token')?.value ||
-         request.cookies?.get('__Secure-next-auth.session-token')?.value ||
-         null;
+    request.cookies?.get('__Secure-next-auth.session-token')?.value ||
+    null;
 }
 
 // Helper function to get current session info
@@ -560,6 +513,24 @@ export async function getCurrentSessionInfo(userId: string) {
   } catch (error) {
     console.error('Error getting current session info:', error);
     return null;
+  }
+}
+
+// Helper function to get all active sessions for a user
+export async function getAllActiveSessions(userId: string) {
+  try {
+    const sessions = await prisma.session.findMany({
+      where: {
+        userId,
+        expires: { gt: new Date() }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+    
+    return sessions;
+  } catch (error) {
+    console.error('Error getting all active sessions:', error);
+    return [];
   }
 }
 

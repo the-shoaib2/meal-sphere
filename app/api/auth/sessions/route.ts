@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth/next'
-import { authOptions, updateSessionInfo, getCurrentSessionInfo } from '@/lib/auth/auth'
+import { authOptions, updateSessionInfo, getCurrentSessionInfo, getAllActiveSessions } from '@/lib/auth/auth'
 import { getLocationFromIP } from '@/lib/location-utils'
 
 export async function GET(request: NextRequest) {
@@ -24,32 +24,15 @@ export async function GET(request: NextRequest) {
       (request as any).ip || // Next.js edge runtime may provide this
       ''
 
-    // Find all sessions for the user
-    const userSessions = await prisma.session.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      select: {
-        id: true,
-        sessionToken: true,
-        userId: true,
-        expires: true,
-        ipAddress: true,
-        userAgent: true,
-        deviceType: true,
-        deviceModel: true,
-        city: true,
-        country: true,
-        latitude: true,
-        longitude: true,
-      },
-    })
+    // Get current session token from cookies
+    const currentSessionToken = request.cookies.get('next-auth.session-token')?.value ||
+                               request.cookies.get('__Secure-next-auth.session-token')?.value
 
-    // Get current session info more reliably
-    const currentSession = await getCurrentSessionInfo(session.user.id)
+    // Get all active sessions for the user
+    const allSessions = await getAllActiveSessions(session.user.id)
 
-    // Always update the current session with the latest device info and location
-    if (currentSession && (userAgent || ipAddress)) {
+    // Update the current session with the latest device info and location
+    if (currentSessionToken && (userAgent || ipAddress)) {
       try {
         // Get location data if we have an IP address
         let locationData = {}
@@ -58,7 +41,7 @@ export async function GET(request: NextRequest) {
         }
 
         await updateSessionInfo(
-          currentSession.sessionToken, 
+          currentSessionToken, 
           userAgent, 
           ipAddress, 
           session.user.id,
@@ -74,6 +57,7 @@ export async function GET(request: NextRequest) {
     const updatedSessions = await prisma.session.findMany({
       where: {
         userId: session.user.id,
+        expires: { gt: new Date() }
       },
       select: {
         id: true,
@@ -88,7 +72,10 @@ export async function GET(request: NextRequest) {
         country: true,
         latitude: true,
         longitude: true,
+        createdAt: true,
+        updatedAt: true,
       },
+      orderBy: { updatedAt: 'desc' }
     })
 
     return NextResponse.json(updatedSessions)

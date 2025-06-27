@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { getToken } from "next-auth/jwt"
 import type { NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
@@ -53,26 +52,19 @@ export async function middleware(request: NextRequest) {
     pathname === page || pathname.startsWith(page + '/')
   )
 
-  // Get the session token
-  let token = null
-  try {
-    token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    })
-  } catch (error) {
-    console.error('Error getting token:', error)
-  }
+  // Check for session token in cookies
+  const sessionToken = request.cookies.get('next-auth.session-token')?.value ||
+                      request.cookies.get('__Secure-next-auth.session-token')?.value
 
   // Handle protected routes - redirect to login with callbackUrl
-  if (isProtectedRoute && !token) {
+  if (isProtectedRoute && !sessionToken) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
   // Redirect authenticated users away from auth pages
-  if (isAuthPage && token) {
+  if (isAuthPage && sessionToken) {
     const callbackUrl = request.nextUrl.searchParams.get('callbackUrl') || '/dashboard'
     const redirectUrl = new URL(callbackUrl, request.url)
     
@@ -85,7 +77,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // For authenticated users on protected routes, trigger session update
-  if (isProtectedRoute && token) {
+  if (isProtectedRoute && sessionToken) {
     // Add a header to indicate this is a protected route request
     // This can be used by API routes to update session info
     const response = NextResponse.next()

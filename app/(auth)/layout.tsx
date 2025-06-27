@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { Header } from "@/components/header"
 import { GroupProvider } from "@/contexts/group-context"
+import { redirect } from "next/navigation"
 
 export default async function AuthLayout({
   children,
@@ -16,10 +17,10 @@ export default async function AuthLayout({
 }>) {
   const session = await getServerSession(authOptions)
   
-  // If no session, the middleware should have already redirected
-  // This is just a safety check
+  // If no session, redirect to login instead of throwing error
+  // This handles the transition from JWT to database sessions
   if (!session) {
-    throw new Error('Unauthorized - Session not found')
+    redirect('/login?error=session_expired')
   }
 
   return (

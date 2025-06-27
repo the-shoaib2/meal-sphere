@@ -62,6 +62,8 @@ interface Session {
   latitude?: number
   longitude?: number
   isCurrent?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Helper function to extract browser info from user agent
@@ -480,7 +482,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                           />
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium truncate max-w-[120px]">
-                              {session.device || 'Unknown Device'}
+                              {session.deviceModel || session.deviceType || 'Unknown Device'}
                             </span>
                             {session.isCurrent && (
                               <Badge variant="default" className="bg-blue-600 text-xs">Current</Badge>
@@ -508,7 +510,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">Last Active:</span>
                           <div className="truncate">
-                            {session.lastActive || new Date(session.expires).toLocaleDateString()}
+                            {session.updatedAt ? new Date(session.updatedAt).toLocaleString() : 
+                             new Date(session.expires).toLocaleDateString()}
                           </div>
                         </div>
                         {session.deviceModel && (
@@ -565,7 +568,6 @@ export function SecurityForm({ user }: SecurityFormProps) {
                           <TableHead>Last Active</TableHead>
                           <TableHead>IP Address</TableHead>
                           <TableHead>Device Type</TableHead>
-                          <TableHead>Device Model</TableHead>
                           <TableHead>User Agent</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
@@ -592,8 +594,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                                 />
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[120px] truncate" title={session.device || 'N/A'}>
-                                  {session.device || 'N/A'}
+                                <div className="max-w-[120px] truncate" title={session.deviceModel || session.deviceType || 'N/A'}>
+                                  {session.deviceModel || session.deviceType || 'N/A'}
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -603,8 +605,9 @@ export function SecurityForm({ user }: SecurityFormProps) {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[140px] truncate" title={session.lastActive || new Date(session.expires).toLocaleString()}>
-                                  {session.lastActive || new Date(session.expires).toLocaleString()}
+                                <div className="max-w-[140px] truncate" title={session.updatedAt ? new Date(session.updatedAt).toLocaleString() : new Date(session.expires).toLocaleString()}>
+                                  {session.updatedAt ? new Date(session.updatedAt).toLocaleString() : 
+                                   new Date(session.expires).toLocaleString()}
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -617,11 +620,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                                   {session.deviceType || 'N/A'}
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                <div className="max-w-[120px] truncate" title={session.deviceModel || 'N/A'}>
-                                  {session.deviceModel || 'N/A'}
-                                </div>
-                              </TableCell>
+
                               <TableCell>
                                 <div className="max-w-[200px] truncate" title={session.userAgent || 'N/A'}>
                                   {session.userAgent ? getBrowserInfo(session.userAgent) : 'N/A'}
