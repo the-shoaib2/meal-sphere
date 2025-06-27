@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { parseDeviceInfo } from './utils';
+import { parseDeviceInfo, capitalizeDeviceType } from './utils';
 import { LocationData } from './types';
 
 const prisma = new PrismaClient();
@@ -90,8 +90,8 @@ export async function updateSessionInfo(
       data: {
         userAgent: userAgent || '',
         ipAddress: cleanIpAddress || '',
-        deviceType: deviceInfo.deviceType,
-        deviceModel: deviceInfo.deviceModel,
+        deviceType: capitalizeDeviceType(deviceInfo.deviceType),
+        deviceModel: deviceInfo.deviceModel || '',
         city: locationData?.city || null,
         country: locationData?.country || null,
         latitude: locationData?.latitude || null,
@@ -192,8 +192,8 @@ export async function updateSessionWithDeviceInfo(userId: string) {
       await prisma.session.update({
         where: { id: session.id },
         data: {
-          deviceType: deviceInfo.deviceType,
-          deviceModel: deviceInfo.deviceModel,
+          deviceType: capitalizeDeviceType(deviceInfo.deviceType),
+          deviceModel: deviceInfo.deviceModel || '',
           updatedAt: new Date()
         }
       });

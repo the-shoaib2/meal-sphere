@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -21,21 +21,21 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { 
+  capitalizeDeviceType, 
+  formatLocation, 
+  formatIpAddress, 
+  getBrowserInfo 
+} from "@/lib/auth/utils"
 
 const passwordFormSchema = z
   .object({
-    currentPassword: z.string().min(8, {
-      message: "Password must be at least 8 characters.",
-    }),
-    newPassword: z.string().min(8, {
-      message: "Password must be at least 8 characters.",
-    }),
-    confirmPassword: z.string().min(8, {
-      message: "Password must be at least 8 characters.",
-    }),
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
+    message: "Passwords don't match",
     path: ["confirmPassword"],
   })
 
@@ -66,29 +66,6 @@ interface Session {
   updatedAt?: string
 }
 
-// Helper function to extract browser info from user agent
-const getBrowserInfo = (userAgent: string): string => {
-  if (!userAgent) return 'N/A'
-  
-  // Extract browser name
-  let browser = 'Unknown'
-  if (userAgent.includes('Chrome')) browser = 'Chrome'
-  else if (userAgent.includes('Firefox')) browser = 'Firefox'
-  else if (userAgent.includes('Safari')) browser = 'Safari'
-  else if (userAgent.includes('Edge')) browser = 'Edge'
-  else if (userAgent.includes('Opera')) browser = 'Opera'
-  
-  // Extract OS
-  let os = 'Unknown'
-  if (userAgent.includes('Windows')) os = 'Windows'
-  else if (userAgent.includes('Mac OS X')) os = 'macOS'
-  else if (userAgent.includes('iPhone')) os = 'iOS'
-  else if (userAgent.includes('Android')) os = 'Android'
-  else if (userAgent.includes('Linux')) os = 'Linux'
-  
-  return `${browser} on ${os}`
-}
-
 // Skeleton component for table rows
 const TableSkeleton = () => (
   <>
@@ -117,9 +94,6 @@ const TableSkeleton = () => (
         </TableCell>
         <TableCell>
           <Skeleton className="h-4 w-24" />
-        </TableCell>
-        <TableCell>
-          <Skeleton className="h-4 w-16" />
         </TableCell>
       </TableRow>
     ))}
@@ -494,17 +468,16 @@ export function SecurityForm({ user }: SecurityFormProps) {
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">Location:</span>
                           <div className="truncate">
-                            {session.city && session.country ? `${session.city}, ${session.country}` : 
-                             session.city || session.country || 'Unknown'}
+                            {formatLocation(session.city, session.country, session.ipAddress)}
                           </div>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">IP Address:</span>
-                          <div className="truncate font-mono">{session.ipAddress || 'N/A'}</div>
+                          <div className="truncate font-mono">{formatIpAddress(session.ipAddress)}</div>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">Device Type:</span>
-                          <div className="truncate">{session.deviceType || 'N/A'}</div>
+                          <div className="truncate">{capitalizeDeviceType(session.deviceType)}</div>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">Last Active:</span>
@@ -598,9 +571,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[100px] truncate" title={session.city && session.country ? `${session.city}, ${session.country}` : session.city || session.country || 'Unknown Location'}>
-                                  {session.city && session.country ? `${session.city}, ${session.country}` : 
-                                   session.city || session.country || 'Unknown Location'}
+                                <div className="max-w-[100px] truncate" title={formatLocation(session.city, session.country, session.ipAddress)}>
+                                  {formatLocation(session.city, session.country, session.ipAddress)}
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -610,13 +582,13 @@ export function SecurityForm({ user }: SecurityFormProps) {
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[100px] truncate font-mono" title={session.ipAddress || 'N/A'}>
-                                  {session.ipAddress || 'N/A'}
+                                <div className="max-w-[100px] truncate font-mono" title={formatIpAddress(session.ipAddress)}>
+                                  {formatIpAddress(session.ipAddress)}
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[100px] truncate" title={session.deviceType || 'N/A'}>
-                                  {session.deviceType || 'N/A'}
+                                <div className="max-w-[100px] truncate" title={capitalizeDeviceType(session.deviceType)}>
+                                  {capitalizeDeviceType(session.deviceType)}
                                 </div>
                               </TableCell>
 

@@ -64,4 +64,93 @@ export function parseDeviceInfo(userAgent: string): DeviceInfo {
     browser: browser.name ? `${browser.name} ${browser.version || ''}`.trim() : undefined,
     os: os.name ? `${os.name} ${os.version || ''}`.trim() : undefined
   };
+}
+
+// Capitalize first character of device type
+export function capitalizeDeviceType(deviceType: string | null | undefined): string {
+  if (!deviceType) return 'N/A';
+  
+  return deviceType.charAt(0).toUpperCase() + deviceType.slice(1).toLowerCase();
+}
+
+// Format location display with proper handling for localhost
+export function formatLocation(city?: string | null, country?: string | null, ipAddress?: string | null): string {
+  // Check if it's localhost or local IP
+  if (ipAddress && (
+    ipAddress === '127.0.0.1' || 
+    ipAddress === 'localhost' || 
+    ipAddress.startsWith('192.168.') || 
+    ipAddress.startsWith('10.') || 
+    ipAddress.startsWith('172.') ||
+    ipAddress === '::1'
+  )) {
+    return 'Localhost';
+  }
+  
+  // If we have both city and country
+  if (city && country) {
+    return `${city}, ${country}`;
+  }
+  
+  // If we have only city
+  if (city) {
+    return city;
+  }
+  
+  // If we have only country
+  if (country) {
+    return country;
+  }
+  
+  // If we have IP but no location data
+  if (ipAddress) {
+    return 'Unknown Location';
+  }
+  
+  return 'N/A';
+}
+
+// Format IP address display
+export function formatIpAddress(ipAddress?: string | null): string {
+  if (!ipAddress) return 'N/A';
+  
+  // Handle localhost cases
+  if (ipAddress === '127.0.0.1' || ipAddress === 'localhost' || ipAddress === '::1') {
+    return '127.0.0.1 (Localhost)';
+  }
+  
+  // Handle local network IPs
+  if (ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.') || ipAddress.startsWith('172.')) {
+    return `${ipAddress} (Local Network)`;
+  }
+  
+  return ipAddress;
+}
+
+// Get browser and OS information from user agent
+export function getBrowserInfo(userAgent: string): string {
+  if (!userAgent) return 'N/A';
+  
+  const parser = new UAParser(userAgent);
+  const browser = parser.getBrowser();
+  const os = parser.getOS();
+  
+  let browserName = 'Unknown';
+  let osName = 'Unknown';
+  
+  if (browser.name) {
+    browserName = browser.name;
+    if (browser.version) {
+      browserName += ` ${browser.version}`;
+    }
+  }
+  
+  if (os.name) {
+    osName = os.name;
+    if (os.version) {
+      osName += ` ${os.version}`;
+    }
+  }
+  
+  return `${browserName} on ${osName}`;
 } 

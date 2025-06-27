@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { UAParser } from 'ua-parser-js';
 import { PrismaClient } from "@prisma/client";
 import { authOptions } from './auth';
-import { extractClientInfo } from './utils';
+import { extractClientInfo, capitalizeDeviceType } from './utils';
 
 const prisma = new PrismaClient();
 
@@ -23,7 +23,7 @@ export const getServerAuthSessionForApi = async (req: NextApiRequest, res: NextA
     (session as any).ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() ||
       req.headers['x-real-ip']?.toString() ||
       (req.socket as any)?.remoteAddress || '';
-    (session as any).deviceType = device.type || 'desktop';
+    (session as any).deviceType = capitalizeDeviceType(device.type || 'desktop');
     (session as any).deviceModel = `${device.vendor || ''} ${device.model || ''}`.trim() || '';
     (session as any).browser = `${browser.name || ''} ${browser.version || ''}`.trim() || '';
     (session as any).os = `${os.name || ''} ${os.version || ''}`.trim() || '';
@@ -38,7 +38,7 @@ export const getServerAuthSessionForApi = async (req: NextApiRequest, res: NextA
         data: {
           userAgent: (session as any).userAgent || '',
           ipAddress: (session as any).ipAddress || '',
-          deviceType: (session as any).deviceType || 'desktop',
+          deviceType: (session as any).deviceType || 'Desktop',
           deviceModel: (session as any).deviceModel || '',
           updatedAt: new Date()
         }
