@@ -2,7 +2,7 @@
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 import {
   Collapsible,
@@ -35,6 +35,7 @@ export function NavMain({
   }[]
 }) {
   const pathname = usePathname()
+  const router = useRouter()
 
   // Find the active item based on current path
   const getIsActive = (item: typeof items[0]) => {
@@ -45,6 +46,15 @@ export function NavMain({
       return currentPath === item.url
     }
     return currentPath.startsWith(item.url)
+  }
+
+  // Handle navigation with loading bar
+  const handleNavigation = (url: string) => {
+    // Dispatch custom event to trigger loading bar
+    window.dispatchEvent(new CustomEvent('routeChangeStart'))
+    
+    // Navigate to the new page
+    router.push(url)
   }
 
   return (
@@ -60,30 +70,27 @@ export function NavMain({
               className="group/collapsible"
             >
               <SidebarMenuItem>
-                <Link href={item.url} className="w-full block">
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton 
-                      tooltip={item.title}
-                      className={`w-full px-3 transition-all duration-200 ${
-                        isActive 
-                          ? 'bg-primary/10 text-foreground font-medium' 
-                          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                <SidebarMenuButton 
+                  tooltip={item.title}
+                  className={`w-full px-3 transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-primary/10 text-foreground font-medium' 
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  }`}
+                  data-active={isActive}
+                  onClick={() => handleNavigation(item.url)}
+                >
+                  {item.icon && (
+                    <item.icon 
+                      className={`h-4 w-4 transition-colors ${
+                        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
                       }`}
-                      data-active={isActive}
-                    >
-                      {item.icon && (
-                        <item.icon 
-                          className={`h-4 w-4 transition-colors ${
-                            isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
-                          }`}
-                        />
-                      )}
-                      <span className="ml-2">
-                        {item.title}
-                      </span>
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                </Link>
+                    />
+                  )}
+                  <span className="ml-2">
+                    {item.title}
+                  </span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </Collapsible>
           )

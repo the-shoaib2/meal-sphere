@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { Header } from "@/components/header"
 import { GroupProvider } from "@/contexts/group-context"
+import { LoadingBar } from "@/components/loading-bar"
 import { redirect } from "next/navigation"
 
 export default async function AuthLayout({
@@ -25,6 +26,7 @@ export default async function AuthLayout({
 
   return (
     <GroupProvider>
+      <LoadingBar />
       <div className="flex h-screen w-full overflow-hidden">
         <SidebarProvider>
           <AppSidebar />

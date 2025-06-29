@@ -1,31 +1,69 @@
-'use client';
+"use client"
 
-import { useEffect, useState } from 'react';
-import { useLoading } from '@/hooks/use-loading';
+import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 
-export const LoadingBar = () => {
-  const { isLoading } = useLoading();
-  const [progress, setProgress] = useState(0);
+export function LoadingBar() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    // When pathname changes, navigation is complete
+    if (isLoading) {
+      setProgress(100)
+      setTimeout(() => {
+        setIsLoading(false)
+        setProgress(0)
+      }, 500)
+    }
+  }, [pathname, isLoading])
 
   useEffect(() => {
     if (isLoading) {
+      // Simulate smooth progress with easing
       const timer = setInterval(() => {
-        setProgress((prev) => (prev >= 100 ? 0 : prev + 1));
-      }, 100);
-      return () => clearInterval(timer);
-    }
-  }, [isLoading]);
+        setProgress((prev) => {
+          if (prev >= 80) {
+            clearInterval(timer)
+            return 80
+          }
+          // Slower progress as it gets higher for smoother feel
+          const increment = Math.max(2, 12 - (prev / 10))
+          return prev + increment
+        })
+      }, 60)
 
-  if (!isLoading) return null;
+      return () => clearInterval(timer)
+    }
+  }, [isLoading])
+
+  // Listen for navigation start
+  useEffect(() => {
+    const handleStart = () => {
+      setIsLoading(true)
+      setProgress(0)
+    }
+
+    // Listen for custom route change events
+    const handleRouteChangeStart = () => handleStart()
+
+    // Add custom event listeners
+    window.addEventListener('routeChangeStart', handleRouteChangeStart)
+
+    return () => {
+      window.removeEventListener('routeChangeStart', handleRouteChangeStart)
+    }
+  }, [])
+
+  if (!isLoading && progress === 0) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-[100]">
-      <div 
-        className="h-full bg-teal-500 transition-all duration-100 ease-in-out" 
-        style={{
-          width: `${progress}%`,
-        }} 
+    <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-background">
+      <div
+        className="h-full bg-primary transition-all duration-500 ease-out"
+        style={{ width: `${progress}%` }}
       />
     </div>
-  );
-};
+  )
+}
