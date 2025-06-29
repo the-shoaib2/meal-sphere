@@ -18,6 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavMain({
@@ -36,6 +37,7 @@ export function NavMain({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   // Find the active item based on current path
   const getIsActive = (item: typeof items[0]) => {
@@ -52,6 +54,11 @@ export function NavMain({
   const handleNavigation = (url: string) => {
     // Dispatch custom event to trigger loading bar
     window.dispatchEvent(new CustomEvent('routeChangeStart'))
+    
+    // Close mobile sidebar if on mobile
+    if (isMobile) {
+      setOpenMobile(false)
+    }
     
     // Navigate to the new page
     router.push(url)
