@@ -16,8 +16,9 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "react-hot-toast"
-import { Loader2, Plus, Settings, Clock, Users, Calendar as CalendarIcon, Utensils, Minus, Zap } from "lucide-react"
+import { Plus, Settings, Clock, Users, Calendar as CalendarIcon, Utensils, Minus, Zap } from "lucide-react"
 import { format, startOfMonth, endOfMonth, isToday, isSameDay, addDays, subDays, eachDayOfInterval } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType } from "@/hooks/use-meal"
@@ -95,6 +96,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     guestMeals,
     mealSettings,
     autoMealSettings,
+    userMealStats,
     isLoading, 
     useMealsByDate, 
     useGuestMealsByDate,
@@ -108,6 +110,148 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     shouldAutoAddMeal,
     isAutoMealTime
   } = useMeal(roomId)
+
+  // Optimized skeleton components
+  const MealCardSkeleton = () => (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card">
+      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
+        <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full" />
+        <div className="flex-1 min-w-0">
+          <Skeleton className="h-4 w-20 mb-2" />
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <Skeleton className="h-5 w-12" />
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-14" />
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-end sm:justify-start">
+        <Skeleton className="h-8 w-20 sm:h-9 sm:w-24 rounded-full" />
+      </div>
+    </div>
+  )
+
+  const MealListSkeleton = () => (
+    <div className="space-y-6">
+      {[1, 2, 3].map((typeIndex) => (
+        <div key={typeIndex} className="space-y-3">
+          <div className="flex items-center gap-3 pb-2 border-b">
+            <Skeleton className="h-6 w-6 rounded-full" />
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-5 w-12 ml-auto" />
+          </div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((mealIndex) => (
+              <div key={mealIndex} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div>
+                    <Skeleton className="h-4 w-24 mb-1" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-8" />
+                  <Skeleton className="h-7 w-7 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  const UserMealSummarySkeleton = () => (
+    <Card className="mb-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <div className="p-1.5 bg-blue-100 rounded-full">
+            <Users className="h-4 w-4 text-blue-600" />
+          </div>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-12 ml-auto" />
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="text-center space-y-1 p-2 bg-muted/30 rounded-lg">
+              <Skeleton className="h-3 w-12 mx-auto" />
+              <Skeleton className="h-5 w-6 mx-auto" />
+              <Skeleton className="h-2 w-16 mx-auto" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  // Show loading state if access is still loading
+  if (isAccessLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-9" />
+            <Skeleton className="h-9 w-9" />
+            <Skeleton className="h-9 w-9" />
+          </div>
+        </div>
+        <UserMealSummarySkeleton />
+        <div className="space-y-4">
+          <div className="flex space-x-1 bg-muted p-1 rounded-lg w-full max-w-md">
+            <Skeleton className="h-9 flex-1" />
+            <Skeleton className="h-9 flex-1" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-64 w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <MealCardSkeleton />
+                  <MealCardSkeleton />
+                  <MealCardSkeleton />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if user doesn't have access to the group
+  if (!isMember) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+          <Users className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-4">
+          You don't have access to manage meals for this group.
+        </p>
+        <Button onClick={() => router.push('/groups')}>
+          Go to Groups
+        </Button>
+      </div>
+    )
+  }
 
   // Get meals for the selected date
   const mealsForDate = useMealsByDate(selectedDate) as MealWithUser[]
@@ -174,40 +318,125 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     const totalMeals = breakfastCount + lunchCount + dinnerCount
 
     return (
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <div className="p-2 bg-primary/10 rounded-full">
-              <Utensils className="h-5 w-5 text-primary" />
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="p-1.5 bg-primary/10 rounded-full">
+              <Utensils className="h-4 w-4 text-primary" />
             </div>
             Meal Summary
-            <Badge variant="secondary" className="ml-auto">
+            <Badge variant="secondary" className="ml-auto text-xs">
               {totalMeals} total
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-lg">🌅</span>
-                <span className="text-sm font-medium text-muted-foreground">Breakfast</span>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="text-center space-y-1 p-2 sm:p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-sm sm:text-base">🌅</span>
+                <span className="text-xs font-medium text-orange-700 hidden sm:inline">Breakfast</span>
+                <span className="text-xs font-medium text-orange-700 sm:hidden">B</span>
               </div>
-              <div className="text-2xl font-bold">{breakfastCount}</div>
+              <div className="text-lg sm:text-xl font-bold text-orange-800">{breakfastCount}</div>
             </div>
-            <div className="text-center space-y-2 border-x border-border">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-lg">☀️</span>
-                <span className="text-sm font-medium text-muted-foreground">Lunch</span>
+            <div className="text-center space-y-1 p-2 sm:p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border-x border-border">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-sm sm:text-base">☀️</span>
+                <span className="text-xs font-medium text-yellow-700 hidden sm:inline">Lunch</span>
+                <span className="text-xs font-medium text-yellow-700 sm:hidden">L</span>
               </div>
-              <div className="text-2xl font-bold">{lunchCount}</div>
+              <div className="text-lg sm:text-xl font-bold text-yellow-800">{lunchCount}</div>
             </div>
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-lg">🌙</span>
-                <span className="text-sm font-medium text-muted-foreground">Dinner</span>
+            <div className="text-center space-y-1 p-2 sm:p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-sm sm:text-base">🌙</span>
+                <span className="text-xs font-medium text-blue-700 hidden sm:inline">Dinner</span>
+                <span className="text-xs font-medium text-blue-700 sm:hidden">D</span>
               </div>
-              <div className="text-2xl font-bold">{dinnerCount}</div>
+              <div className="text-lg sm:text-xl font-bold text-blue-800">{dinnerCount}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Render user meal summary
+  const renderUserMealSummary = () => {
+    if (!userMealStats) {
+      return <UserMealSummarySkeleton />
+    }
+
+    const { totals, byType } = userMealStats
+    const currentMonth = format(new Date(), 'MMMM yyyy')
+
+    return (
+      <Card className="mb-3">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="p-1.5 bg-blue-100 rounded-full">
+              <Users className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="hidden sm:inline">Your Meal Summary - {currentMonth}</span>
+            <span className="sm:hidden">Your Summary</span>
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {totals.total} total
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {/* Total Meals */}
+            <div className="text-center space-y-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-xs">📊</span>
+                <span className="text-xs font-medium text-blue-700 hidden sm:inline">Total</span>
+                <span className="text-xs font-medium text-blue-700 sm:hidden">T</span>
+              </div>
+              <div className="text-lg font-bold text-blue-800">{totals.total}</div>
+              <div className="text-xs text-blue-600 hidden sm:block">
+                {totals.regularMeals} + {totals.guestMeals}
+              </div>
+            </div>
+
+            {/* Breakfast */}
+            <div className="text-center space-y-1 p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-xs">🌅</span>
+                <span className="text-xs font-medium text-orange-700 hidden sm:inline">Breakfast</span>
+                <span className="text-xs font-medium text-orange-700 sm:hidden">B</span>
+              </div>
+              <div className="text-lg font-bold text-orange-800">{byType.breakfast.total}</div>
+              <div className="text-xs text-orange-600 hidden sm:block">
+                {byType.breakfast.regular} + {byType.breakfast.guest}
+              </div>
+            </div>
+
+            {/* Lunch */}
+            <div className="text-center space-y-1 p-2 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-xs">☀️</span>
+                <span className="text-xs font-medium text-yellow-700 hidden sm:inline">Lunch</span>
+                <span className="text-xs font-medium text-yellow-700 sm:hidden">L</span>
+              </div>
+              <div className="text-lg font-bold text-yellow-800">{byType.lunch.total}</div>
+              <div className="text-xs text-yellow-600 hidden sm:block">
+                {byType.lunch.regular} + {byType.lunch.guest}
+              </div>
+            </div>
+
+            {/* Dinner */}
+            <div className="text-center space-y-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-xs">🌙</span>
+                <span className="text-xs font-medium text-blue-700 hidden sm:inline">Dinner</span>
+                <span className="text-xs font-medium text-blue-700 sm:hidden">D</span>
+              </div>
+              <div className="text-lg font-bold text-blue-800">{byType.dinner.total}</div>
+              <div className="text-xs text-blue-600 hidden sm:block">
+                {byType.dinner.regular} + {byType.dinner.guest}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -218,11 +447,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Render meal list
   const renderMealList = () => {
     if (isLoading) {
-      return (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      )
+      return <MealListSkeleton />
     }
 
     const allMeals = [...mealsForDate, ...guestMealsForDate]
@@ -515,15 +740,31 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         <div className="flex items-center gap-2">
           <GuestMealForm roomId={roomId} onSuccess={() => {}} />
           {canManageMealSettings && (
-            <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)}>
-              <Settings className="h-4 w-4" />
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => setSettingsOpen(true)}
+                title="Meal Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+
+            </>
           )}
-          <Button variant="outline" size="icon" onClick={() => setAutoSettingsOpen(true)}>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setAutoSettingsOpen(true)}
+            title="Auto Meal Settings"
+          >
             <Clock className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {/* User Meal Summary at the top */}
+      {renderUserMealSummary()}
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
@@ -555,70 +796,77 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               <CardContent>
                 <div className="space-y-3 sm:space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                    {(['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
-                      const hasMealSelected = userHasMeal(mealType)
-                      const mealCount = useMealCount(selectedDate, mealType)
-                      const mealTypeIcon = mealType === 'BREAKFAST' ? '🌅' : mealType === 'LUNCH' ? '☀️' : '🌙'
-                      const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' : 
-                                           mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' : 
-                                           'bg-blue-100 text-blue-700'
-                      const shouldAutoAdd = shouldAutoAddForUser(mealType)
-                      const isAutoTime = isAutoTimeForMeal(mealType)
-                      
-                      return (
-                        <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
-                          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
-                            <div className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}>
-                              <span className="text-base sm:text-lg">{mealTypeIcon}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
-                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
-                                <Badge variant="secondary" className="text-xs sm:text-sm">{mealCount} total</Badge>
-                                {hasMealSelected && (
-                                  <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm">
-                                    ✓ You're in
-                                  </Badge>
-                                )}
-                                {shouldAutoAdd && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs sm:text-sm flex items-center gap-1">
-                                    <Zap className="h-3 w-3" />
-                                    Auto
-                                  </Badge>
-                                )}
-                                {isAutoTime && (
-                                  <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs sm:text-sm flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    Time
-                                  </Badge>
-                                )}
+                    {isLoading ? (
+                      // Skeleton for meal cards
+                      (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => (
+                        <MealCardSkeleton key={mealType} />
+                      ))
+                    ) : (
+                      (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
+                        const hasMealSelected = userHasMeal(mealType)
+                        const mealCount = useMealCount(selectedDate, mealType)
+                        const mealTypeIcon = mealType === 'BREAKFAST' ? '🌅' : mealType === 'LUNCH' ? '☀️' : '🌙'
+                        const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' : 
+                                             mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' : 
+                                             'bg-blue-100 text-blue-700'
+                        const shouldAutoAdd = shouldAutoAddForUser(mealType)
+                        const isAutoTime = isAutoTimeForMeal(mealType)
+                        
+                        return (
+                          <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
+                              <div className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}>
+                                <span className="text-base sm:text-lg">{mealTypeIcon}</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
+                                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
+                                  <Badge variant="secondary" className="text-xs sm:text-sm">{mealCount} total</Badge>
+                                  {hasMealSelected && (
+                                    <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm">
+                                      ✓ You're in
+                                    </Badge>
+                                  )}
+                                  {shouldAutoAdd && (
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs sm:text-sm flex items-center gap-1">
+                                      <Zap className="h-3 w-3" />
+                                      Auto
+                                    </Badge>
+                                  )}
+                                  {isAutoTime && (
+                                    <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs sm:text-sm flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      Time
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
+                            <div className="flex items-center justify-end sm:justify-start">
+                              <Button
+                                variant={hasMealSelected ? 'destructive' : 'default'}
+                                size="sm"
+                                className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto"
+                                onClick={() => handleToggleMeal(mealType)}
+                                disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
+                              >
+                                {hasMealSelected ? (
+                                  <>
+                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                    Remove
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                    Add
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-end sm:justify-start">
-                            <Button
-                              variant={hasMealSelected ? 'destructive' : 'default'}
-                              size="sm"
-                              className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto"
-                              onClick={() => handleToggleMeal(mealType)}
-                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
-                            >
-                              {hasMealSelected ? (
-                                <>
-                                  <Minus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                  Remove
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                  Add
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -635,9 +883,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               </CardHeader>
               <CardContent>
                 {isLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
+                  <MealListSkeleton />
                 ) : (
                   renderMealList()
                 )}
@@ -651,6 +897,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                 // Trigger a refresh of the meal data
                 queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
                 queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+                queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
               }}
             />
           </div>

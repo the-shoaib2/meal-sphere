@@ -13,54 +13,95 @@ type GroupContextType = {
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
 
+// In-memory cache for groups data
+const groupsCache = new Map<string, Group[]>();
+
 export function GroupProvider({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
   // Load active group from localStorage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && status !== 'loading') {
       const savedGroup = localStorage.getItem('activeGroup');
       if (savedGroup) {
         try {
-          setActiveGroup(JSON.parse(savedGroup));
+          const parsedGroup = JSON.parse(savedGroup);
+          // Validate that the saved group has the required fields
+          if (parsedGroup && parsedGroup.id && parsedGroup.name) {
+            setActiveGroup(parsedGroup);
+          } else {
+            // Clear invalid data
+            localStorage.removeItem('activeGroup');
+          }
         } catch (e) {
           console.error('Failed to parse active group from localStorage', e);
+          localStorage.removeItem('activeGroup');
         }
       }
       setIsLoading(false);
     }
-  }, []);
+  }, [status]);
 
   // Save active group to localStorage when it changes
   useEffect(() => {
-    if (activeGroup) {
+    if (activeGroup && typeof window !== 'undefined') {
       localStorage.setItem('activeGroup', JSON.stringify(activeGroup));
+    } else if (!activeGroup && typeof window !== 'undefined') {
+      localStorage.removeItem('activeGroup');
     }
   }, [activeGroup]);
 
   // Clear active group when user logs out
   useEffect(() => {
-    if (!session) {
+    if (status === 'unauthenticated') {
       setActiveGroup(null);
       if (typeof window !== 'undefined') {
         localStorage.removeItem('activeGroup');
       }
+      // Clear all group-related queries from cache
+      queryClient.removeQueries({ queryKey: ['user-groups'] });
+      queryClient.removeQueries({ queryKey: ['group'] });
+      // Clear in-memory cache
+      groupsCache.clear();
     }
-  }, [session]);
+  }, [status, queryClient]);
 
   // Invalidate dashboard queries when active group changes
   useEffect(() => {
     if (activeGroup?.id) {
-      console.log('Active group changed, invalidating dashboard queries:', activeGroup.id);
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
     }
   }, [activeGroup?.id, queryClient]);
 
+  // Pre-populate cache with localStorage data if available
+  useEffect(() => {
+    if (session?.user?.id && typeof window !== 'undefined') {
+      const savedGroups = localStorage.getItem(`groups-${session.user.id}`);
+      if (savedGroups) {
+        try {
+          const groups = JSON.parse(savedGroups);
+          if (Array.isArray(groups) && groups.length > 0) {
+            // Set the data in React Query cache
+            queryClient.setQueryData(['user-groups', session.user.id], groups);
+            // Also set in our in-memory cache
+            groupsCache.set(session.user.id, groups);
+          }
+        } catch (e) {
+          console.error('Failed to parse cached groups from localStorage', e);
+          localStorage.removeItem(`groups-${session.user.id}`);
+        }
+      }
+    }
+  }, [session?.user?.id, queryClient]);
+
+  // Set loading state based on session status
+  const contextIsLoading = status === 'loading' || isLoading;
+
   return (
-    <GroupContext.Provider value={{ activeGroup, setActiveGroup, isLoading }}>
+    <GroupContext.Provider value={{ activeGroup, setActiveGroup, isLoading: contextIsLoading }}>
       {children}
     </GroupContext.Provider>
   );

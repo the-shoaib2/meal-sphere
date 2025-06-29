@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { z } from "zod"
 import { createNotification } from "@/lib/notification-utils"
 import { NotificationType } from "@prisma/client"
@@ -16,55 +16,164 @@ const guestMealSchema = z.object({
   count: z.number().min(1).max(10),
 })
 
-export async function POST(request: Request) {
-  try {
-    const session = await getServerSession(authOptions)
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const roomId = searchParams.get("roomId")
+  const startDate = searchParams.get("startDate")
+  const endDate = searchParams.get("endDate")
+
+  if (!roomId) {
+    return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
+  }
+
+  // Check if user is a member of the room
+  const roomMember = await prisma.roomMember.findUnique({
+    where: {
+      userId_roomId: {
+        userId: session.user.id,
+        roomId: roomId,
+      },
+    },
+  })
+
+  if (!roomMember) {
+    return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
+  }
+
+  // Build query filters
+  const dateFilter: any = {}
+
+  if (startDate) {
+    dateFilter.gte = new Date(startDate)
+  }
+
+  if (endDate) {
+    dateFilter.lte = new Date(endDate)
+  }
+
+  const whereClause: any = {
+    roomId: roomId,
+  }
+
+  if (Object.keys(dateFilter).length > 0) {
+    whereClause.date = dateFilter
+  }
+
+  try {
+    const guestMeals = await prisma.guestMeal.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+      },
+      orderBy: {
+        date: "desc",
+      },
+    })
+
+    return NextResponse.json(guestMeals)
+  } catch (error) {
+    console.error("Error fetching guest meals:", error)
+    return NextResponse.json({ error: "Failed to fetch guest meals" }, { status: 500 })
+  }
+}
+
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const body = await request.json()
+    const { roomId, date, type, count = 1 } = body
+
+    if (!roomId || !date || !type) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const body = await request.json()
-    const validatedData = guestMealSchema.parse(body)
-
     // Check if user is a member of the room
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        rooms: {
-          where: { roomId: validatedData.roomId },
+    const roomMember = await prisma.roomMember.findUnique({
+      where: {
+        userId_roomId: {
+          userId: session.user.id,
+          roomId: roomId,
         },
       },
     })
 
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
+    if (!roomMember) {
+      return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
-    if (user.rooms.length === 0) {
-      return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
+    // Check meal settings to see if guest meals are allowed
+    const mealSettings = await prisma.mealSettings.findUnique({
+      where: { roomId: roomId },
+    })
+
+    if (mealSettings && !mealSettings.allowGuestMeals) {
+      return NextResponse.json({ error: "Guest meals are not allowed in this room" }, { status: 403 })
+    }
+
+    // Check guest meal limit
+    const todayGuestMeals = await prisma.guestMeal.findMany({
+      where: {
+        userId: session.user.id,
+        roomId: roomId,
+        date: new Date(date),
+      },
+    })
+
+    const totalGuestMeals = todayGuestMeals.reduce((sum, meal) => sum + meal.count, 0)
+    const guestMealLimit = mealSettings?.guestMealLimit || 5
+
+    if (totalGuestMeals + count > guestMealLimit) {
+      return NextResponse.json({ 
+        error: `Guest meal limit exceeded. You can only add ${guestMealLimit - totalGuestMeals} more guest meals today.` 
+      }, { status: 400 })
     }
 
     // Create guest meal
     const guestMeal = await prisma.guestMeal.create({
       data: {
-        date: validatedData.date,
-        type: validatedData.type,
-        count: validatedData.count,
-        userId: user.id,
-        roomId: validatedData.roomId,
+        userId: session.user.id,
+        roomId: roomId,
+        date: new Date(date),
+        type: type,
+        count: count,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
       },
     })
 
     // Get room details for notification
     const room = await prisma.room.findUnique({
-      where: { id: validatedData.roomId },
+      where: { id: roomId },
     })
 
     // Create notification for room manager
     const roomManagers = await prisma.roomMember.findMany({
       where: {
-        roomId: validatedData.roomId,
+        roomId: roomId,
         role: "MANAGER",
       },
       include: {
@@ -76,88 +185,13 @@ export async function POST(request: Request) {
       await createNotification({
         userId: manager.user.id,
         type: NotificationType.MEAL_CREATED,
-        message: `${user.name} has requested ${validatedData.count} guest meal(s) for ${validatedData.type.toLowerCase()} on ${validatedData.date.toLocaleDateString()} in ${room?.name}.`,
+        message: `${session.user.name} has requested ${count} guest meal(s) for ${type.toLowerCase()} on ${date.toLocaleDateString()} in ${room?.name}.`,
       })
     }
 
-    return NextResponse.json({
-      message: "Guest meal requested successfully",
-      guestMeal,
-    })
+    return NextResponse.json(guestMeal)
   } catch (error) {
-    console.error("Error requesting guest meal:", error)
-    return NextResponse.json({ message: "Failed to request guest meal" }, { status: 500 })
-  }
-}
-
-export async function GET(request: Request) {
-  try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const roomId = searchParams.get("roomId")
-    const startDate = searchParams.get("startDate")
-    const endDate = searchParams.get("endDate")
-
-    if (!roomId) {
-      return NextResponse.json({ message: "Room ID is required" }, { status: 400 })
-    }
-
-    // Check if user is a member of the room
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        rooms: {
-          where: { roomId },
-        },
-      },
-    })
-
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
-    }
-
-    if (user.rooms.length === 0) {
-      return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
-    }
-
-    // Build query
-    const query: any = {
-      where: {
-        roomId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-      },
-      orderBy: {
-        date: "desc",
-      },
-    }
-
-    // Add date filter if provided
-    if (startDate && endDate) {
-      query.where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      }
-    }
-
-    const guestMeals = await prisma.guestMeal.findMany(query)
-
-    return NextResponse.json(guestMeals)
-  } catch (error) {
-    console.error("Error fetching guest meals:", error)
-    return NextResponse.json({ message: "Failed to fetch guest meals" }, { status: 500 })
+    console.error("Error creating guest meal:", error)
+    return NextResponse.json({ error: "Failed to create guest meal" }, { status: 500 })
   }
 }

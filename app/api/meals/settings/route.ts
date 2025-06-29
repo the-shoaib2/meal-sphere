@@ -32,33 +32,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Check if mealSettings model exists
-    if (!prisma.mealSettings) {
-      return NextResponse.json({
-        id: "default",
-        roomId: roomId,
-        breakfastTime: "08:00",
-        lunchTime: "13:00",
-        dinnerTime: "20:00",
-        autoMealEnabled: false,
-        mealCutoffTime: "22:00",
-        maxMealsPerDay: 3,
-        allowGuestMeals: true,
-        guestMealLimit: 5,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
-    }
-
-    // Get or create meal settings
+    // Get or create meal settings for the room
     let mealSettings = await prisma.mealSettings.findUnique({
-      where: {
-        roomId: roomId,
-      },
+      where: { roomId: roomId },
     })
 
     if (!mealSettings) {
-      // Create default settings
+      // Create default meal settings
       mealSettings = await prisma.mealSettings.create({
         data: {
           roomId: roomId,
@@ -97,7 +77,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
     }
 
-    // Check if user is an admin or owner of the room
+    // Check if user is a member of the room
     const roomMember = await prisma.roomMember.findUnique({
       where: {
         userId_roomId: {
@@ -111,38 +91,19 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Only allow admins, owners, or meal managers to update settings
-    if (!['OWNER', 'ADMIN', 'MEAL_MANAGER'].includes(roomMember.role)) {
+    // Check if user has permission to update meal settings
+    const canUpdateSettings = ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(roomMember.role)
+    if (!canUpdateSettings) {
       return NextResponse.json({ error: "You don't have permission to update meal settings" }, { status: 403 })
-    }
-
-    // Check if mealSettings model exists
-    if (!prisma.mealSettings) {
-      return NextResponse.json({
-        id: "default",
-        roomId: roomId,
-        breakfastTime: "08:00",
-        lunchTime: "13:00",
-        dinnerTime: "20:00",
-        autoMealEnabled: false,
-        mealCutoffTime: "22:00",
-        maxMealsPerDay: 3,
-        allowGuestMeals: true,
-        guestMealLimit: 5,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
     }
 
     // Get or create meal settings
     let mealSettings = await prisma.mealSettings.findUnique({
-      where: {
-        roomId: roomId,
-      },
+      where: { roomId: roomId },
     })
 
     if (!mealSettings) {
-      // Create default settings
+      // Create default settings first
       mealSettings = await prisma.mealSettings.create({
         data: {
           roomId: roomId,
@@ -158,12 +119,15 @@ export async function PATCH(request: Request) {
       })
     }
 
-    // Update settings
+    // Update the settings
     const updatedSettings = await prisma.mealSettings.update({
       where: {
-        roomId: roomId,
+        id: mealSettings.id,
       },
-      data: body,
+      data: {
+        ...body,
+        updatedAt: new Date(),
+      },
     })
 
     return NextResponse.json(updatedSettings)

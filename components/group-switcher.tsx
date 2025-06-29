@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Users, Check } from "lucide-react"
+import { ChevronsUpDown, Plus, Users, Check, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import {
@@ -28,7 +28,7 @@ export function GroupSwitcher() {
   const router = useRouter()
   const { data: session } = useSession()
   const { data: groups = [], isLoading } = useGroups()
-  const { activeGroup, setActiveGroup } = useActiveGroup()
+  const { activeGroup, setActiveGroup, isLoading: isActiveGroupLoading } = useActiveGroup()
   const hasGroups = groups.length > 0
 
   // Set the first group as active when groups are loaded and no group is selected
@@ -52,16 +52,20 @@ export function GroupSwitcher() {
     router.push('/groups/create')
   }
 
-  if (isLoading) {
+  // Show loading state while groups are loading or active group is loading
+  if (isLoading || isActiveGroupLoading) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" className="justify-start">
-            <div className="h-8 w-8 rounded-lg bg-muted animate-pulse" />
-            <div className="ml-3 space-y-1 text-left">
-              <div className="h-4 w-24 bg-muted rounded animate-pulse"></div>
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="h-4 w-24 bg-muted rounded animate-pulse mb-1"></div>
               <div className="h-3 w-16 bg-muted rounded animate-pulse"></div>
             </div>
+            <ChevronsUpDown className="ml-auto opacity-50" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

@@ -7,17 +7,17 @@ import prisma from '../lib/prisma';
 const usersToMeals = [
   {
     email: 'ratulkmsc@gmail.com',
-    days: [26,27],
+    days: [26,27,28,29,30],
     types: ['LUNCH', 'DINNER']
   },
   {
     email: 'abrohoman019@gmail.com',
-    days: [26,27],
+    days: [26,27,28,29,30],
     types: ['LUNCH', 'DINNER']
   },
   {
     email: 'khan23105101484@diu.edu.bd',
-    days: [26,27],
+    days: [26,27,28,29,30],
     types: ['LUNCH', 'DINNER']
   },
 ];

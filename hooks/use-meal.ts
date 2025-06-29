@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
+import { format, isSameDay, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 
@@ -78,12 +78,58 @@ export interface MealSummary {
   total: number;
 }
 
+export interface UserMealStats {
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+  period: {
+    startDate: string;
+    endDate: string;
+    month: string;
+  };
+  totals: {
+    regularMeals: number;
+    guestMeals: number;
+    total: number;
+  };
+  byType: {
+    breakfast: {
+      regular: number;
+      guest: number;
+      total: number;
+    };
+    lunch: {
+      regular: number;
+      guest: number;
+      total: number;
+    };
+    dinner: {
+      regular: number;
+      guest: number;
+      total: number;
+    };
+  };
+  daily: Array<{
+    date: string;
+    breakfast: number;
+    lunch: number;
+    dinner: number;
+    guestBreakfast: number;
+    guestLunch: number;
+    guestDinner: number;
+    total: number;
+  }>;
+}
+
 interface UseMealReturn {
   // Data
   meals: Meal[];
   guestMeals: GuestMeal[];
   mealSettings: MealSettings | null;
   autoMealSettings: AutoMealSettings | null;
+  userMealStats: UserMealStats | null;
   isLoading: boolean;
   error: Error | null;
   
@@ -92,6 +138,7 @@ interface UseMealReturn {
   useGuestMealsByDate: (date: Date) => GuestMeal[];
   useMealSummary: (startDate: Date, endDate: Date) => MealSummary[];
   useMealCount: (date: Date, type: MealType) => number;
+  useUserMealStats: (month?: string) => UserMealStats | null;
   
   // Mutations
   toggleMeal: (date: Date, type: MealType, userId: string) => Promise<void>;
@@ -113,6 +160,7 @@ interface UseMealReturn {
   canAddMeal: (date: Date, type: MealType) => boolean;
   getUserGuestMeals: (date: Date, userId?: string) => GuestMeal[];
   getUserGuestMealCount: (date: Date, userId?: string) => number;
+  getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
 }
 
 export function useMeal(roomId?: string): UseMealReturn {
@@ -171,6 +219,19 @@ export function useMeal(roomId?: string): UseMealReturn {
     refetchOnWindowFocus: false
   });
 
+  // Fetch user meal statistics
+  const { data: userMealStats = null, isLoading: isLoadingUserStats } = useQuery<UserMealStats | null>({
+    queryKey: ['user-meal-stats', roomId, session?.user?.id],
+    queryFn: async () => {
+      if (!roomId || !session?.user?.id) return null;
+      const { data } = await axios.get<UserMealStats>(`/api/meals/user-stats?roomId=${roomId}&userId=${session.user.id}`);
+      return data;
+    },
+    enabled: !!roomId && !!session?.user?.id,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
   // Toggle meal mutation
   const toggleMealMutation = useMutation({
     mutationFn: async ({ date, type, userId }: { date: Date; type: MealType; userId: string }) => {
@@ -184,6 +245,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
     },
     onError: (error: any) => {
       console.error('Error toggling meal:', error);
@@ -205,6 +267,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
     },
     onError: (error: any) => {
@@ -221,6 +284,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
       toast.success('Guest meal updated successfully');
     },
     onError: (error: any) => {
@@ -237,6 +301,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
       toast.success('Guest meal deleted successfully');
     },
     onError: (error: any) => {
@@ -421,6 +486,39 @@ export function useMeal(roomId?: string): UseMealReturn {
     return userGuestMeals.reduce((sum, meal) => sum + meal.count, 0);
   }, [getUserGuestMeals]);
 
+  // Get user's meal count for a specific date and type
+  const getUserMealCount = useCallback((date: Date, type: MealType, userId?: string): number => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const targetUserId = userId || session?.user?.id;
+    
+    if (!targetUserId) return 0;
+    
+    const regularMeals = meals.filter(meal => 
+      meal.date.startsWith(dateStr) && 
+      meal.type === type && 
+      meal.userId === targetUserId
+    ).length;
+    
+    const guestMealsCount = guestMeals.filter(meal => 
+      meal.date.startsWith(dateStr) && 
+      meal.type === type && 
+      meal.userId === targetUserId
+    ).reduce((sum, meal) => sum + meal.count, 0);
+    
+    return regularMeals + guestMealsCount;
+  }, [meals, guestMeals, session?.user?.id]);
+
+  // Get user meal stats for a specific month
+  const useUserMealStats = useCallback((month?: string): UserMealStats | null => {
+    if (!userMealStats) return null;
+    
+    // If no month specified, return current stats
+    if (!month) return userMealStats;
+    
+    // For now, return current stats. In the future, we could implement month-specific fetching
+    return userMealStats;
+  }, [userMealStats]);
+
   // Mutation wrappers
   const toggleMeal = useCallback(async (date: Date, type: MealType, userId: string) => {
     await toggleMealMutation.mutateAsync({ date, type, userId });
@@ -456,7 +554,8 @@ export function useMeal(roomId?: string): UseMealReturn {
     guestMeals,
     mealSettings,
     autoMealSettings,
-    isLoading: isLoadingMeals || isLoadingGuestMeals || isLoadingSettings || isLoadingAutoSettings,
+    userMealStats,
+    isLoading: isLoadingMeals || isLoadingGuestMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats,
     error: mealsError || guestMealsError || null,
     
     // Queries
@@ -464,6 +563,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     useGuestMealsByDate,
     useMealSummary,
     useMealCount,
+    useUserMealStats,
     
     // Mutations
     toggleMeal,
@@ -485,6 +585,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     canAddMeal,
     getUserGuestMeals,
     getUserGuestMealCount,
+    getUserMealCount,
   };
 }
 

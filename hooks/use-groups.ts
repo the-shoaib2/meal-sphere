@@ -104,32 +104,80 @@ interface UseGroupsReturn {
 }
 
 export function useGroups(): UseGroupsReturn {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const queryClient = useQueryClient();
   const router = useRouter();
 
   // Get user's groups - always define the query, but use enabled to control execution
   const { data: userGroups = [], isLoading: isLoadingGroups, error } = useQuery<Group[], Error>({
-    queryKey: ['user-groups'],
+    queryKey: ['user-groups', session?.user?.id],
     queryFn: async () => {
       // This check is still needed for TypeScript, but the query won't run if enabled is false
       if (!session?.user?.id) return [];
+      
+      // Check if we have cached data first
+      const cachedData = queryClient.getQueryData<Group[]>(['user-groups', session.user.id]);
+      if (cachedData && cachedData.length > 0) {
+        console.log('Using cached groups data:', cachedData.length, 'groups');
+        return cachedData;
+      }
+      
+      // Check localStorage for cached data
+      if (typeof window !== 'undefined') {
+        const savedGroups = localStorage.getItem(`groups-${session.user.id}`);
+        if (savedGroups) {
+          try {
+            const groups = JSON.parse(savedGroups);
+            if (Array.isArray(groups) && groups.length > 0) {
+              // Set the data in React Query cache for future use
+              queryClient.setQueryData(['user-groups', session.user.id], groups);
+              return groups;
+            }
+          } catch (e) {
+            console.error('Failed to parse cached groups from localStorage', e);
+            localStorage.removeItem(`groups-${session.user.id}`);
+          }
+        }
+      }
+      
       try {
         const { data } = await axios.get<Group[]>('/api/groups');
+        console.log('Fetched user groups from API:', data.length, 'groups');
+        
+        // Save to localStorage for future use
+        if (typeof window !== 'undefined' && data.length > 0) {
+          localStorage.setItem(`groups-${session.user.id}`, JSON.stringify(data));
+        }
+        
         return data;
       } catch (error: unknown) {
         console.error('Error fetching user groups:', error);
         throw new Error('Failed to fetch groups');
       }
     },
-    enabled: !!session?.user?.id, // This controls whether the query runs
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false
+    enabled: !!session?.user?.id && status === 'authenticated', // Don't run while session is loading
+    staleTime: Infinity, // Never consider data stale - use cache indefinitely
+    gcTime: Infinity, // Never garbage collect - keep in memory forever
+    refetchOnWindowFocus: false,
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: (failureCount, error) => {
+      // Don't retry too many times
+      if (failureCount >= 1) return false;
+      // Don't retry on 401/403 errors
+      if (error?.message?.includes('Unauthorized') || error?.message?.includes('Forbidden')) {
+        return false;
+      }
+      return true;
+    }
   });
+
+  // Determine if we should show loading state
+  const isLoading = status === 'loading' || isLoadingGroups;
 
   // Get groups list based on filter
   const useGroupsList = ({ filter }: { filter: 'my' | 'public' }) => {
-    const { data: groups = [], isLoading, error: listError } = useQuery<Group[], Error>({
+    const { data: groupsList = [], isLoading: listLoading, error: listError } = useQuery<Group[], Error>({
       queryKey: ['groups', filter],
       queryFn: async () => {
         if (!session?.user?.id) return [];
@@ -149,8 +197,8 @@ export function useGroups(): UseGroupsReturn {
     });
 
     return {
-      data: groups,
-      isLoading,
+      data: groupsList,
+      isLoading: listLoading,
       error: listError || null,
     };
   };
@@ -254,7 +302,11 @@ export function useGroups(): UseGroupsReturn {
       return data;
     },
     onSuccess: (data: Group) => {
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
+      // Clear localStorage cache to force fresh data
+      if (typeof window !== 'undefined' && session?.user?.id) {
+        localStorage.removeItem(`groups-${session.user.id}`);
+      }
       toast.success('Group created successfully');
       router.push(`/groups/${data.id}`);
     },
@@ -282,7 +334,11 @@ export function useGroups(): UseGroupsReturn {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group'] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
+      // Clear localStorage cache to force fresh data
+      if (typeof window !== 'undefined' && session?.user?.id) {
+        localStorage.removeItem(`groups-${session.user.id}`);
+      }
       toast.success('Successfully joined the group!');
     },
     onError: (error) => {
@@ -301,7 +357,7 @@ export function useGroups(): UseGroupsReturn {
     },
     onSuccess: (data: Group) => {
       queryClient.invalidateQueries({ queryKey: ['group', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
       toast.success('Group updated successfully');
     },
     onError: (error: AxiosError<{ message: string }>) => {
@@ -325,7 +381,7 @@ export function useGroups(): UseGroupsReturn {
     onMutate: async (groupId: string): Promise<LeaveGroupContext> => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['group', groupId] });
-      await queryClient.cancelQueries({ queryKey: ['user-groups'] });
+      await queryClient.cancelQueries({ queryKey: ['user-groups', session?.user?.id] });
       await queryClient.cancelQueries({ queryKey: ['groups', 'my'] });
       await queryClient.cancelQueries({ queryKey: ['groups', 'public'] });
       await queryClient.cancelQueries({ queryKey: ['join-requests', groupId] });
@@ -333,7 +389,7 @@ export function useGroups(): UseGroupsReturn {
       
       // Snapshot the previous value
       const previousGroup = queryClient.getQueryData<Group>(['group', groupId]);
-      const previousGroups = queryClient.getQueryData<Group[]>(['user-groups']);
+      const previousGroups = queryClient.getQueryData<Group[]>(['user-groups', session?.user?.id]);
       
       // Optimistically update the UI
       if (previousGroup) {
@@ -344,7 +400,7 @@ export function useGroups(): UseGroupsReturn {
       }
       
       if (Array.isArray(previousGroups)) {
-        queryClient.setQueryData(['user-groups'], 
+        queryClient.setQueryData(['user-groups', session?.user?.id], 
           (previousGroups as Group[]).filter(g => g.id !== groupId)
         );
       }
@@ -353,7 +409,7 @@ export function useGroups(): UseGroupsReturn {
     },
     onSuccess: (_, groupId) => {
       // Comprehensive cache invalidation and clearing
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'public'] });
       
@@ -366,6 +422,11 @@ export function useGroups(): UseGroupsReturn {
       
       // Clear any join request status for this group
       queryClient.setQueryData(['join-request-status', groupId], null);
+      
+      // Clear localStorage cache to force fresh data
+      if (typeof window !== 'undefined' && session?.user?.id) {
+        localStorage.removeItem(`groups-${session.user.id}`);
+      }
       
       toast.success('You have left the group successfully');
       router.push('/groups');
@@ -387,13 +448,13 @@ export function useGroups(): UseGroupsReturn {
         queryClient.setQueryData(['group', groupId], context.previousGroup);
       }
       if (context?.previousGroups) {
-        queryClient.setQueryData(['user-groups'], context.previousGroups);
+        queryClient.setQueryData(['user-groups', session?.user?.id], context.previousGroups);
       }
     },
     onSettled: (data, error, groupId) => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'public'] });
       queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
@@ -407,15 +468,15 @@ export function useGroups(): UseGroupsReturn {
     },
     onMutate: async (groupId: string) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['user-groups'] });
+      await queryClient.cancelQueries({ queryKey: ['user-groups', session?.user?.id] });
       await queryClient.cancelQueries({ queryKey: ['group', groupId] });
 
       // Snapshot the previous value
-      const previousGroups = queryClient.getQueryData<Group[]>(['user-groups']);
+      const previousGroups = queryClient.getQueryData<Group[]>(['user-groups', session?.user?.id]);
 
       // Optimistically update the groups list
       if (Array.isArray(previousGroups)) {
-        queryClient.setQueryData(['user-groups'], 
+        queryClient.setQueryData(['user-groups', session?.user?.id], 
           previousGroups.filter(g => g.id !== groupId)
         );
       }
@@ -427,7 +488,11 @@ export function useGroups(): UseGroupsReturn {
     },
     onSuccess: () => {
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
+      // Clear localStorage cache to force fresh data
+      if (typeof window !== 'undefined' && session?.user?.id) {
+        localStorage.removeItem(`groups-${session.user.id}`);
+      }
       toast.success('Group deleted successfully');
       router.push('/groups');
     },
@@ -436,14 +501,14 @@ export function useGroups(): UseGroupsReturn {
       
       // Rollback on error
       if (context?.previousGroups) {
-        queryClient.setQueryData(['user-groups'], context.previousGroups);
+        queryClient.setQueryData(['user-groups', session?.user?.id], context.previousGroups);
       }
       
       toast.error(error.response?.data?.message || 'Failed to delete group');
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
     },
   });
 
@@ -502,7 +567,7 @@ export function useGroups(): UseGroupsReturn {
 
   return {
     data: userGroups,
-    isLoading: isLoadingGroups,
+    isLoading,
     error: error || null,
     useGroupsList,
     useGroupDetails,
