@@ -47,6 +47,8 @@ export function NavMain({
     if (item.exact) {
       return currentPath === item.url
     }
+    // For non-exact items, check if path starts with the URL
+    // This allows /groups to be active when on /groups/[id]
     return currentPath.startsWith(item.url)
   }
 

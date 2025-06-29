@@ -55,7 +55,7 @@ const navMain = [
       title: "Groups",
       url: "/groups",
       icon: Users,
-      exact: true,
+      exact: false,
     },
     {
       title: "Meals",
