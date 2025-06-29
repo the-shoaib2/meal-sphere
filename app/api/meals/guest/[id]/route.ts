@@ -5,9 +5,10 @@ import prisma from "@/lib/prisma"
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
+  const { id } = await params
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -16,7 +17,7 @@ export async function PATCH(
   try {
     const body = await request.json()
     const { count } = body
-    const guestMealId = params.id
+    const guestMealId = id
 
     if (!count || count < 1) {
       return NextResponse.json({ error: "Count must be at least 1" }, { status: 400 })
@@ -113,16 +114,17 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
+  const { id } = await params
 
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   try {
-    const guestMealId = params.id
+    const guestMealId = id
 
     // Get the guest meal
     const guestMeal = await prisma.guestMeal.findUnique({
