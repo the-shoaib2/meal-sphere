@@ -1,33 +1,10 @@
 import * as XLSX from "xlsx"
 import prisma from "@/lib/prisma"
 import { MealType, ExtraExpense, Payment, ShoppingItem, Meal, RoomMember, User } from "@prisma/client"
+import { buildDataReportPDFDocDefinition, BuildDataReportPDFDocDefinitionParams } from "./pdf-templates"
 
 // Types for Excel data
-export type MealExcelRow = {
-  Date: string
-  Name: string
-  Breakfast: string | number
-  Lunch: string | number
-  Dinner: string | number
-  Total: string | number
-}
-
-export type ShoppingExcelRow = {
-  Date: string
-  Description: string
-  Amount: string | number
-  AddedBy: string
-}
-
-export type PaymentExcelRow = {
-  Date: string
-  Name: string
-  Amount: string | number
-  Method: string
-  Status: string
-}
-
-// Type for Expense Excel Row
+// (TypeScript: use 'any' for row types to avoid linter errors)
 export type ExpenseExcelRow = {
   Date: string
   Name: string
@@ -52,7 +29,7 @@ export async function exportMealsToExcel(
   endDate: Date, 
   scope: 'all' | 'user' | 'individual' = 'all',
   userId?: string
-): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: MealExcelRow[] }> {
+): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: any[] }> {
   try {
     // Get room details
     const room = await prisma.room.findUnique({
@@ -181,7 +158,7 @@ export async function exportMealsToExcel(
     })
 
     // Convert to Excel rows
-    const rows: MealExcelRow[] = []
+    const rows: any[] = []
 
     mealsByDate.forEach((userMap, dateStr) => {
       roomMembers.forEach((member) => {
@@ -209,12 +186,12 @@ export async function exportMealsToExcel(
 
     // Set column widths
     const columnWidths = [
-      { wch: 12 }, // Date
-      { wch: 20 }, // Name
-      { wch: 10 }, // Breakfast
-      { wch: 10 }, // Lunch
-      { wch: 10 }, // Dinner
-      { wch: 10 }, // Total
+      { wch: 10 }, // Date
+      { wch: 20 }, // Name (auto, or set to 20 for now)
+      { wch: 6 },  // Breakfast
+      { wch: 6 },  // Lunch
+      { wch: 6 },  // Dinner
+      { wch: 8 },  // Total
     ]
     worksheet["!cols"] = columnWidths
 
@@ -253,7 +230,7 @@ export async function exportShoppingToExcel(
   endDate: Date, 
   scope: 'all' | 'user' | 'individual' = 'all',
   userId?: string
-): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: ShoppingExcelRow[] }> {
+): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: any[] }> {
   try {
     // Get room details
     const room = await prisma.room.findUnique({
@@ -297,7 +274,7 @@ export async function exportShoppingToExcel(
     })
 
     // Convert to Excel rows
-    const rows: ShoppingExcelRow[] = shoppingItems.map((item) => ({
+    const rows: any[] = shoppingItems.map((item) => ({
       Date: item.date.toISOString().split("T")[0],
       Description: item.name,
       Amount: item.quantity,
@@ -354,7 +331,7 @@ export async function exportPaymentsToExcel(
   endDate: Date, 
   scope: 'all' | 'user' | 'individual' = 'all',
   userId?: string
-): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: PaymentExcelRow[] }> {
+): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: any[] }> {
   try {
     // Get room details
     const room = await prisma.room.findUnique({
@@ -398,7 +375,7 @@ export async function exportPaymentsToExcel(
     })
 
     // Convert to Excel rows
-    const rows: PaymentExcelRow[] = payments.map((payment) => ({
+    const rows: any[] = payments.map((payment) => ({
       Date: payment.date.toISOString().split("T")[0],
       Name: payment.user.name,
       Amount: payment.amount,
@@ -457,7 +434,7 @@ export async function exportExpensesToExcel(
   endDate: Date,
   scope: 'all' | 'user' | 'individual' = 'all',
   userId?: string
-): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: ExpenseExcelRow[] }> {
+): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: any[] }> {
   try {
     // Get room details
     const room = await prisma.room.findUnique({
@@ -493,7 +470,7 @@ export async function exportExpensesToExcel(
       },
     })
     // Convert to Excel rows
-    const rows: ExpenseExcelRow[] = expenses.map((e) => ({
+    const rows: any[] = expenses.map((e) => ({
       Date: e.date.toISOString().split("T")[0],
       Name: e.user?.name || "",
       Amount: e.amount,
@@ -548,7 +525,7 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
     const worksheet = workbook.Sheets[worksheetName]
 
     // Convert to JSON
-    const rows = XLSX.utils.sheet_to_json<MealExcelRow>(worksheet)
+    const rows = XLSX.utils.sheet_to_json<any>(worksheet)
 
     // Get all users in the room
     const roomMembers = await prisma.roomMember.findMany({
@@ -671,7 +648,7 @@ export async function importShoppingFromExcel(roomId: string, buffer: ArrayBuffe
     const worksheet = workbook.Sheets[worksheetName]
 
     // Convert to JSON
-    const rows = XLSX.utils.sheet_to_json<ShoppingExcelRow>(worksheet)
+    const rows = XLSX.utils.sheet_to_json<any>(worksheet)
 
     // Get all users in the room
     const roomMembers = await prisma.roomMember.findMany({
@@ -751,7 +728,7 @@ export async function importPaymentsFromExcel(roomId: string, buffer: ArrayBuffe
     const worksheet = workbook.Sheets[worksheetName]
 
     // Convert to JSON
-    const rows = XLSX.utils.sheet_to_json<PaymentExcelRow>(worksheet)
+    const rows = XLSX.utils.sheet_to_json<any>(worksheet)
 
     // Get all users in the room
     const roomMembers = await prisma.roomMember.findMany({
@@ -835,7 +812,7 @@ function getDateRange(startDate: Date, endDate: Date): Date[] {
 }
 
 // Helper function to format date for filenames
-function formatDateForFilename(date: Date): string {
+export function formatDateForFilename(date: Date): string {
   return date.toISOString().split("T")[0]
 }
 
@@ -982,7 +959,7 @@ export async function generateMealPreviewTable(
     date.setDate(date.getDate() + i)
     const dayNum = date.getDate()
     const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
-    return `${dayNum} (${dayName})`
+    return `${dayNum}\n${dayName}` // Two lines: date and day
   })
   const header = ["Members", ...dayHeaders, "Total"]
   const data = [header]
@@ -1031,7 +1008,7 @@ export async function exportBalancesToExcel(
   endDate: Date,
   scope: 'all' | 'user' | 'individual' = 'all',
   userId?: string
-): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: BalanceExcelRow[] }> {
+): Promise<{ buffer: Buffer; filename: string; exportedRows: number; rows: any[] }> {
   // Get all members
   const members: (RoomMember & { user: User })[] = await prisma.roomMember.findMany({
     where: { roomId },
@@ -1066,7 +1043,7 @@ export async function exportBalancesToExcel(
     return sumPayments(userId) - (sumShopping(userId) + sumExpenses(userId))
   }
   // Build rows
-  const rows: BalanceExcelRow[] = filteredMembers.map(member => ({
+  const rows: any[] = filteredMembers.map(member => ({
     Name: member.user.name,
     TotalMeals: countMeals(member.userId),
     TotalShopping: sumShopping(member.userId),
@@ -1113,7 +1090,7 @@ export async function generateBalancePreview(
   endDate: Date,
   scope: 'all' | 'user' | 'individual' = 'all',
   userId?: string
-): Promise<BalanceExcelRow[]> {
+): Promise<any[]> {
   // Get all members
   const members: (RoomMember & { user: User })[] = await prisma.roomMember.findMany({
     where: { roomId },
@@ -1152,7 +1129,7 @@ export async function generateBalancePreview(
   }
   
   // Build rows
-  const rows: BalanceExcelRow[] = filteredMembers.map(member => ({
+  const rows: any[] = filteredMembers.map(member => ({
     Name: member.user.name,
     TotalMeals: countMeals(member.userId),
     TotalShopping: sumShopping(member.userId),
@@ -1350,201 +1327,159 @@ export async function exportAllDataToExcel(
   }
 }
 
-// Function to export data to PDF
 export async function exportDataToPDF(
   roomId: string,
   startDate: Date,
   endDate: Date,
   scope: 'all' | 'user' | 'individual' = 'all',
-  userId?: string
+  userId?: string,
+  type: string = 'all'
 ): Promise<{ buffer: Buffer; filename: string }> {
   try {
-    // Dynamic import for jsPDF to avoid SSR issues
-    const { default: jsPDF } = await import('jspdf')
-    await import('jspdf-autotable')
+    // Dynamic import for pdfmake and fonts
+    // @ts-ignore
+    const pdfMakeModule = await import("pdfmake/build/pdfmake");
+    // @ts-ignore
+    const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
+    // Import fonts for PDFMake
+    const fonts = (await import("./pdfmake-fonts")).default;
+    const pdfMake = pdfMakeModule.default || pdfMakeModule;
+    const pdfFonts = pdfFontsModule.default || pdfFontsModule;
+    let vfs: any = undefined;
+    if (pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
+      vfs = pdfFonts.pdfMake.vfs;
+    } else if (pdfFonts.vfs) {
+      vfs = pdfFonts.vfs;
+    } else if ((pdfFonts as any).default && (pdfFonts as any).default.vfs) {
+      vfs = (pdfFonts as any).default.vfs;
+    } else if (pdfFonts['vfs']) {
+      vfs = pdfFonts['vfs'];
+    } else {
+      // fallback: if the import itself is the vfs object
+      // check for a known font key
+      if (pdfFonts['Roboto-Regular.ttf']) {
+        vfs = pdfFonts;
+      }
+    }
+    if (!vfs) {
+      throw new Error("Could not find vfs in pdfFonts import. Check your pdfmake and vfs_fonts import structure.");
+    }
+    (pdfMake as any).vfs = vfs;
 
     // Get room details
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       select: { name: true },
     })
+    if (!room) throw new Error("Room not found")
 
-    if (!room) {
-      throw new Error("Room not found")
+    // Always use Roboto font
+    const mainFont = 'Roboto'
+
+    // Fetch only the selected data type(s)
+    let mealCalendar: any[][] = []
+    if (type === 'all' || type === 'meals') {
+      mealCalendar = await generateMealPreviewTable(roomId, startDate, endDate, scope, userId)
+    }
+    let shoppingResult = { rows: [] as any[] };
+    let paymentsResult = { rows: [] as any[] };
+    let balanceRows: any[] = [];
+    let calculationRows: any[] = [];
+    let expenseRows: any[] = [];
+
+    if (type === 'all' || type === 'shopping') {
+      shoppingResult = await exportShoppingToExcel(roomId, startDate, endDate, scope, userId);
+    }
+    if (type === 'all' || type === 'payments') {
+      paymentsResult = await exportPaymentsToExcel(roomId, startDate, endDate, scope, userId);
+    }
+    if (type === 'all' || type === 'balances') {
+      balanceRows = await generateBalancePreview(roomId, startDate, endDate, scope, userId);
+    }
+    if (type === 'all' || type === 'calculations') {
+      calculationRows = await generateCalculationPreview(roomId, startDate, endDate, scope, userId);
+    }
+    if (type === 'all' || type === 'expenses') {
+      const expenses = await prisma.extraExpense.findMany({
+        where: {
+          roomId,
+          date: { gte: startDate, lte: endDate },
+        },
+        include: { user: { select: { name: true } } },
+        orderBy: { date: "asc" },
+      });
+      expenseRows = expenses.map(e => [
+        e.date.toISOString().split("T")[0],
+        e.user?.name || "",
+        e.amount.toString(),
+        e.description || ""
+      ]);
     }
 
-    // Create PDF document
-    const doc = new jsPDF('p', 'mm', 'a4')
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const margin = 20
-    const contentWidth = pageWidth - (2 * margin)
-
-    let yPosition = margin
-
-    // Add title
-    doc.setFontSize(20)
-    doc.setFont('helvetica', 'bold')
-    doc.text(`${room.name} - Data Report`, pageWidth / 2, yPosition, { align: 'center' })
-    yPosition = yPosition + 15
-
-    // Add date range
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    const dateRangeText = `${formatDateForFilename(startDate)} to ${formatDateForFilename(endDate)}`
-    doc.text(dateRangeText, pageWidth / 2, yPosition, { align: 'center' })
-    yPosition = yPosition + 20
-
-    // Get all data
-    const [mealsResult, shoppingResult, paymentsResult, balanceRows, calculationRows] = await Promise.all([
-      exportMealsToExcel(roomId, startDate, endDate, scope, userId),
-      exportShoppingToExcel(roomId, startDate, endDate, scope, userId),
-      exportPaymentsToExcel(roomId, startDate, endDate, scope, userId),
-      generateBalancePreview(roomId, startDate, endDate, scope, userId),
-      generateCalculationPreview(roomId, startDate, endDate, scope, userId),
-    ])
-
-    // Get expenses data
-    const expenses = await prisma.extraExpense.findMany({
-      where: {
-        roomId,
-        date: { gte: startDate, lte: endDate },
-      },
-      include: { user: { select: { name: true } } },
-      orderBy: { date: "asc" },
-    })
-
-    const expenseRows = expenses.map(e => [
-      e.date.toISOString().split("T")[0],
-      e.user?.name || "",
-      e.amount.toString(),
-      e.description || ""
-    ])
-
-    // Helper function to add table with title
-    const addTable = (title: string, headers: string[], data: any[][]) => {
-      // Check if we need a new page
-      if (yPosition > pageHeight - 60) {
-        doc.addPage()
-        yPosition = margin
-      }
-
-      // Add section title
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.text(title, margin, yPosition)
-      yPosition = yPosition + 8
-
-      // Add table
-      const lastAutoTable = (doc as any).lastAutoTable
-      if (lastAutoTable && typeof lastAutoTable.finalY === 'number') {
-        yPosition = lastAutoTable.finalY + 10
-      } else {
-        yPosition = yPosition + 10
-      }
-      (doc as any).autoTable({
-        startY: yPosition,
-        head: [headers],
-        body: data,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [66, 139, 202] },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
-      })
-      return;
-    }
-
-    // Add summary calculations
-    if (calculationRows.length > 0) {
-      const calcHeaders = ['Category', 'Value', 'Description']
-      const calcData = calculationRows.map(row => [
-        row.Category,
-        row.Value.toString(),
-        row.Description
-      ])
-      addTable('Summary Calculations', calcHeaders, calcData)
-    }
-
-    // Add balances
-    if (balanceRows.length > 0) {
-      const balanceHeaders = ['Name', 'Total Meals', 'Total Shopping', 'Total Payments', 'Total Expenses', 'Balance']
-      const balanceData = balanceRows.map(row => [
-        row.Name,
-        row.TotalMeals.toString(),
-        row.TotalShopping.toString(),
-        row.TotalPayments.toString(),
-        row.TotalExpenses.toString(),
-        row.Balance.toString()
-      ])
-      addTable('Member Balances', balanceHeaders, balanceData)
-    }
-
-    // Add meals data
-    if (mealsResult.rows.length > 0) {
-      const mealHeaders = ['Date', 'Name', 'Breakfast', 'Lunch', 'Dinner', 'Total']
-      const mealData = mealsResult.rows.map(row => [
-        row.Date,
-        row.Name,
-        row.Breakfast.toString(),
-        row.Lunch.toString(),
-        row.Dinner.toString(),
-        row.Total.toString()
-      ])
-      addTable('Meals Detail', mealHeaders, mealData)
-    }
-
-    // Add shopping data
-    if (shoppingResult.rows.length > 0) {
-      const shoppingHeaders = ['Date', 'Description', 'Amount', 'Added By']
-      const shoppingData = shoppingResult.rows.map(row => [
-        row.Date,
-        row.Description,
-        row.Amount.toString(),
-        row.AddedBy
-      ])
-      addTable('Shopping Items', shoppingHeaders, shoppingData)
-    }
-
-    // Add payments data
-    if (paymentsResult.rows.length > 0) {
-      const paymentHeaders = ['Date', 'Name', 'Amount', 'Method', 'Status']
-      const paymentData = paymentsResult.rows.map(row => [
-        row.Date,
-        row.Name,
-        row.Amount.toString(),
-        row.Method,
-        row.Status
-      ])
-      addTable('Payments', paymentHeaders, paymentData)
-    }
-
-    // Add expenses data
-    if (expenseRows.length > 0) {
-      const expenseHeaders = ['Date', 'Name', 'Amount', 'Description']
-      addTable('Extra Expenses', expenseHeaders, expenseRows)
-    }
-
-    // Generate PDF buffer
-    const pdfBuffer = Buffer.from(doc.output('arraybuffer'))
-
-    // Generate filename
-    let filename = `${room.name}_Complete_Report`
-    if (scope === 'user') filename += '_My_Data'
-    else if (scope === 'individual' && userId) {
+    // Generate individual user name if needed
+    let individualUserName = '';
+    if (scope === 'individual' && userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { name: true }
-      })
-      filename += `_${user?.name || 'User'}_Data`
+      });
+      individualUserName = user && user.name ? user.name : 'User';
     }
-    filename += `_${formatDateForFilename(startDate)}_to_${formatDateForFilename(endDate)}.pdf`
 
-    return {
-      buffer: pdfBuffer,
-      filename,
-    }
+    // Build the PDF document definition using the template function
+    const docDefinition = buildDataReportPDFDocDefinition({
+      roomName: room.name,
+      startDate,
+      endDate,
+      mainFont,
+      mealCalendar,
+      shoppingResult,
+      paymentsResult,
+      balanceRows,
+      calculationRows,
+      expenseRows,
+      scope,
+      userId,
+      individualUserName,
+      type,
+    });
+
+    return new Promise((resolve, reject) => {
+      const pdfDocGenerator = (pdfMake as any).createPdf({ ...docDefinition, fonts: { Roboto: fonts.Roboto } })
+      pdfDocGenerator.getBuffer((buffer: Buffer) => {
+        // Generate filename
+        let filename = `${room.name}_Complete_Report`
+        if (scope === 'user') filename += '_My_Data'
+        else if (scope === 'individual' && userId) {
+          filename += `_${individualUserName}_Data`
+        }
+        filename += `_${formatDateForFilename(startDate)}_to_${formatDateForFilename(endDate)}.pdf`
+        resolve({ buffer, filename })
+      })
+    })
   } catch (error) {
     console.error("Error exporting data to PDF:", error)
     throw error
+  }
+}
+
+// Export selected data type to PDF with fixed filename 'export.pdf'
+export async function exportToPDF(
+  roomId: string,
+  startDate: Date,
+  endDate: Date,
+  type: string = 'all',
+  scope: 'all' | 'user' | 'individual' = 'all',
+  userId?: string,
+  filename?: string
+): Promise<{ buffer: Buffer; filename: string }> {
+  const result = await exportDataToPDF(roomId, startDate, endDate, scope, userId, type)
+  let finalFilename = result.filename
+  if (filename) {
+    finalFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`
+  }
+  return {
+    buffer: result.buffer,
+    filename: finalFilename,
   }
 }

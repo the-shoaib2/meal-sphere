@@ -226,7 +226,7 @@ export default function AnalyticsPage() {
         </Card>
       )}
 
-      {isLoading && <p>Loading analytics data...</p>}
+      {isLoading}
       {!isLoading && data && renderContent(data)}
       {!isLoading && !data && <p>No data available for the selected view.</p>}
     </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { exportMealsToExcel, exportShoppingToExcel, exportPaymentsToExcel, generateMealPreviewTable, exportExpensesToExcel, exportBalancesToExcel, generateBalancePreview, generateCalculationPreview } from "@/lib/excel-utils"
+import { exportMealsToExcel, exportShoppingToExcel, exportPaymentsToExcel, generateMealPreviewTable, exportExpensesToExcel, exportBalancesToExcel, generateBalancePreview, generateCalculationPreview, exportDataToPDF } from "@/lib/excel-utils"
 import { getExcelPermissions, validateExportOptions } from "@/lib/excel-permissions"
 import { ExcelExportType, ExcelExportScope, ExcelDateRange } from "@/types/excel"
 import prisma from "@/lib/prisma"
@@ -98,6 +98,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get requested format (excel or pdf)
+    const format = searchParams.get("format") || "excel"
+
     // Handle different export types and scopes
     let result: any
 
@@ -163,25 +166,29 @@ export async function GET(request: NextRequest) {
         },
       }
     } else {
-      // Export specific type
-      switch (type) {
-        case "meals":
-          result = await exportMealsToExcel(roomId, startDate, endDate, scope, userId || undefined)
-          break
-        case "shopping":
-          result = await exportShoppingToExcel(roomId, startDate, endDate, scope, userId || undefined)
-          break
-        case "payments":
-          result = await exportPaymentsToExcel(roomId, startDate, endDate, scope, userId || undefined)
-          break
-        case "expenses":
-          result = await exportExpensesToExcel(roomId, startDate, endDate, scope, userId || undefined)
-          break
-        case "balances":
-          result = await exportBalancesToExcel(roomId, startDate, endDate, scope, userId || undefined)
-          break
-        default:
-          return NextResponse.json({ error: "Invalid export type" }, { status: 400 })
+      // If PDF, use exportDataToPDF
+      if (format === 'pdf') {
+        result = await exportDataToPDF(roomId, startDate, endDate, scope, userId || undefined, type)
+      } else {
+        switch (type) {
+          case "meals":
+            result = await exportMealsToExcel(roomId, startDate, endDate, scope, userId || undefined)
+            break
+          case "shopping":
+            result = await exportShoppingToExcel(roomId, startDate, endDate, scope, userId || undefined)
+            break
+          case "payments":
+            result = await exportPaymentsToExcel(roomId, startDate, endDate, scope, userId || undefined)
+            break
+          case "expenses":
+            result = await exportExpensesToExcel(roomId, startDate, endDate, scope, userId || undefined)
+            break
+          case "balances":
+            result = await exportBalancesToExcel(roomId, startDate, endDate, scope, userId || undefined)
+            break
+          default:
+            return NextResponse.json({ error: "Invalid export type" }, { status: 400 })
+        }
       }
     }
 
@@ -209,19 +216,40 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Convert buffer to base64
-    const base64 = Buffer.from(result.buffer).toString("base64")
-
-    return NextResponse.json({
-      success: true,
-      filename: result.filename,
-      data: base64,
-      exportedRows: result.exportedRows || 0,
-      dateRange: {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-      },
-    })
+    // --- FIX: Return binary file for download ---
+    let buffer: Buffer;
+    if (Buffer.isBuffer(result.buffer)) {
+      buffer = result.buffer;
+    } else if (result.buffer instanceof ArrayBuffer) {
+      buffer = Buffer.from(new Uint8Array(result.buffer));
+    } else if (Array.isArray(result.buffer)) {
+      buffer = Buffer.from(result.buffer);
+    } else if (result.buffer && result.buffer.buffer instanceof ArrayBuffer) {
+      // Handle Uint8Array or similar
+      buffer = Buffer.from(result.buffer);
+    } else {
+      throw new Error('Invalid buffer type returned from export function');
+    }
+    if (format === 'pdf') {
+      // Debug: print first bytes of buffer
+      console.log('PDF buffer preview:', buffer.slice(0, 32));
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(result.filename)}`,
+        },
+      })
+    } else {
+      // Excel
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(result.filename)}`,
+        },
+      })
+    }
   } catch (error) {
     console.error("Error exporting data to Excel:", error)
     return NextResponse.json({ error: "Failed to export data to Excel" }, { status: 500 })

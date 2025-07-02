@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast"
 import ExportDataSelection from "@/components/excel/export-data-selection"
 import { Progress } from "@/components/ui/progress"
 import PreviewTable from "@/components/excel/template/preview-table"
+import DownloadProgressDialog from "@/components/excel/DownloadProgressDialog"
 
 export default function ExcelImportExport() {
   const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
@@ -37,6 +38,9 @@ export default function ExcelImportExport() {
   const [downloadFormat, setDownloadFormat] = useState<'excel' | 'pdf'>('excel')
   const [previewData, setPreviewData] = useState<any>(null)
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [isDownloadInProgress, setIsDownloadInProgress] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [downloadType, setDownloadType] = useState<'excel' | 'pdf' | null>(null)
 
   const {
     isExporting,
@@ -119,15 +123,72 @@ export default function ExcelImportExport() {
   const handleDownload = async (format: 'excel' | 'pdf') => {
     setIsDownloading(true)
     setDownloadFormat(format)
-    await exportToExcel({
-      type: exportType,
-      scope: exportScope,
-      dateRange,
-      startDate,
-      endDate,
-      userId: selectedUserId || undefined
-    })
-    setIsDownloading(false)
+    setIsDownloadInProgress(true)
+    setDownloadType(format)
+    setDownloadProgress(0)
+
+    // Simulate progress
+    let progress = 0
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 10 + 5 // 5-15%
+      if (progress < 90) {
+        setDownloadProgress(Math.floor(progress))
+      }
+    }, 300)
+
+    try {
+      if (!activeGroup) throw new Error('No active group')
+      const params = new URLSearchParams({
+        roomId: activeGroup.id,
+        type: exportType,
+        scope: exportScope,
+        dateRange,
+      })
+      if (startDate) params.append('startDate', startDate.toISOString())
+      if (endDate) params.append('endDate', endDate.toISOString())
+      if (selectedUserId) params.append('userId', selectedUserId)
+      params.append('format', format)
+      const response = await fetch(`/api/excel/export?${params.toString()}`)
+      if (!response.ok) throw new Error('Failed to generate file')
+      const disposition = response.headers.get('content-disposition')
+      let filename = `export.${format === 'excel' ? 'xlsx' : 'pdf'}`
+      if (disposition) {
+        // Support both filename="..." and filename*=UTF-8''... formats
+        let match = disposition.match(/filename\*=UTF-8''([^;\n\r]*)/)
+        if (match) {
+          filename = decodeURIComponent(match[1])
+        } else {
+          match = disposition.match(/filename="([^"]+)"/)
+          if (match) filename = match[1]
+        }
+      }
+      const blob = await response.blob()
+      setDownloadProgress(100)
+      clearInterval(progressInterval)
+      // Wait a bit for UI
+      setTimeout(() => {
+        setIsDownloadInProgress(false)
+        setIsDownloading(false)
+        setDownloadType(null)
+        setDownloadProgress(0)
+        // Trigger download
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(url)
+      }, 500)
+    } catch (error) {
+      setIsDownloadInProgress(false)
+      setIsDownloading(false)
+      setDownloadType(null)
+      setDownloadProgress(0)
+      toast({ title: 'Download failed', description: 'Failed to generate file', variant: 'destructive' })
+      clearInterval(progressInterval)
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,7 +382,7 @@ export default function ExcelImportExport() {
                       <Button
                         variant="default"
                         onClick={() => handleDownload('excel')}
-                        disabled={isDownloading}
+                        disabled={isDownloading || isDownloadInProgress}
                       >
                         {isDownloading && downloadFormat === 'excel' ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -333,7 +394,7 @@ export default function ExcelImportExport() {
                       <Button
                         variant="outline"
                         onClick={() => handleDownload('pdf')}
-                        disabled={isDownloading}
+                        disabled={isDownloading || isDownloadInProgress}
                       >
                         {isDownloading && downloadFormat === 'pdf' ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -447,6 +508,12 @@ export default function ExcelImportExport() {
           </Card>
         </TabsContent>
       </Tabs>
+      <DownloadProgressDialog
+        open={isDownloadInProgress}
+        progress={downloadProgress}
+        type={downloadType || 'excel'}
+        onClose={() => setIsDownloadInProgress(false)}
+      />
     </div>
   )
 }
