@@ -10,18 +10,24 @@ function sendNotification(groupId: string, message: string) {
   console.log(`[Notification][Group ${groupId}]: ${message}`);
 }
 
+function getGroupIdFromUrl(req: NextRequest) {
+  // /api/groups/[id]/votes
+  const match = req.nextUrl.pathname.match(/groups\/(.*?)\//);
+  return match ? match[1] : undefined;
+}
+
 // GET: List all votes for a group
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
-  const groupId = params.id;
+export async function GET(req: NextRequest) {
+  const groupId = getGroupIdFromUrl(req);
+  if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
   const votes = votesStore[groupId] || [];
   return NextResponse.json({ votes });
 }
 
 // POST: Create a new vote for a group
-export async function POST(req: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
-  const groupId = params.id;
+export async function POST(req: NextRequest) {
+  const groupId = getGroupIdFromUrl(req);
+  if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
   const data = await req.json();
   const newVote = {
     ...data,
@@ -42,9 +48,9 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
 }
 
 // PATCH: Cast a vote (voteId, candidateId in body)
-export async function PATCH(req: NextRequest, context: { params: { id: string } }) {
-  const { params } = context;
-  const groupId = params.id;
+export async function PATCH(req: NextRequest) {
+  const groupId = getGroupIdFromUrl(req);
+  if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
   const { voteId, candidateId } = await req.json();
   const votes = votesStore[groupId] || [];
   const vote = votes.find((v: any) => v.id === voteId);
