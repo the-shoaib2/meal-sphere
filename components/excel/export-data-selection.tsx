@@ -8,6 +8,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, User, Users, Shield } from "lucide-react"
 import { format } from "date-fns"
 import { ExcelExportType, ExcelExportScope, ExcelDateRange } from "@/types/excel"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface ExcelExportDataSelectionCardProps {
   exportType: ExcelExportType
@@ -58,17 +59,17 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
   exportScopeValue,
   selectedUserIdValue,
 }) => (
-  <Card>
+  <Card className="w-full">
     <CardHeader>
-      <CardTitle>Data Selection</CardTitle>
-      <CardDescription>Select the export options and date range</CardDescription>
+      <CardTitle className="text-base sm:text-lg">Data Selection</CardTitle>
+      <CardDescription className="text-xs sm:text-sm">Select the export options and date range</CardDescription>
     </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <CardContent className="space-y-4 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
         <div className="space-y-2">
           <Label>Export Type</Label>
           <Select value={exportType} onValueChange={setExportType}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select export type" />
             </SelectTrigger>
             <SelectContent>
@@ -83,7 +84,7 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
         <div className="space-y-2">
           <Label>Export Scope</Label>
           <Select value={exportScope} onValueChange={setExportScope}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select export scope" />
             </SelectTrigger>
             <SelectContent>
@@ -109,11 +110,11 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         <div className="space-y-2">
           <Label>Date Range</Label>
           <Select value={dateRange} onValueChange={handleDateRangeChange}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
@@ -167,13 +168,19 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
         <div className="space-y-2">
           <Label>Select User</Label>
           <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a user" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-60 w-full overflow-y-auto">
               {activeGroup?.members?.map((member: any) => (
                 <SelectItem key={member.userId} value={member.userId}>
-                  {member.user.name}
+                  <span className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={member.user.image || undefined} alt={member.user.name} />
+                      <AvatarFallback>{member.user.name?.[0] || '?'}</AvatarFallback>
+                    </Avatar>
+                    <span>{member.user.name}</span>
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -181,7 +188,7 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
         </div>
       )}
       {/* Export Button */}
-      <div className="pt-2">
+      <div className="pt-2 w-full">
         <Button
           onClick={onExport}
           disabled={isExporting || !canExport || (exportScopeValue === "individual" && !selectedUserIdValue)}
@@ -193,7 +200,7 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
               Exporting...
             </>
           ) : (
-            <>Export Data</>
+            <>Export</>
           )}
         </Button>
       </div>
