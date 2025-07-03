@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { exportMealsToExcel, exportShoppingToExcel, exportPaymentsToExcel, generateMealPreviewTable, exportExpensesToExcel, exportBalancesToExcel, generateBalancePreview, generateCalculationPreview, exportDataToPDF } from "@/lib/excel-utils"
+import { exportMealsToExcel, exportShoppingToExcel, exportPaymentsToExcel, generateMealPreviewTable, exportExpensesToExcel, exportBalancesToExcel, generateBalancePreview, generateCalculationPreview, exportDataToPDF, exportAllDataToExcel } from "@/lib/excel-utils"
 import { getExcelPermissions, validateExportOptions } from "@/lib/excel-permissions"
 import { ExcelExportType, ExcelExportScope, ExcelDateRange } from "@/types/excel"
 import prisma from "@/lib/prisma"
@@ -101,22 +101,131 @@ export async function GET(request: NextRequest) {
     // Get requested format (excel or pdf)
     const format = searchParams.get("format") || "excel"
 
+    // --- PREVIEW LOGIC: Always build preview data if preview=true ---
+    if (preview) {
+      // Build preview data for all types
+      if (type === "all") {
+        const [mealsResult, shoppingResult, paymentsResult] = await Promise.all([
+          exportMealsToExcel(roomId, startDate, endDate, scope, userId || undefined),
+          exportShoppingToExcel(roomId, startDate, endDate, scope, userId || undefined),
+          exportPaymentsToExcel(roomId, startDate, endDate, scope, userId || undefined),
+        ])
+        const mealPreviewTable = await generateMealPreviewTable(roomId, startDate, endDate, scope, userId || undefined)
+        const [header, ...rows] = mealPreviewTable
+        const mealPreviewRows = rows.map(row => Object.fromEntries(header.map((key, i) => [key, row[i]])))
+        const expenses = await prisma.extraExpense.findMany({
+          where: {
+            roomId,
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          include: {
+            user: { select: { name: true } },
+          },
+          orderBy: { date: "asc" },
+        })
+        const expenseRows = expenses.map(e => ({
+          Date: e.date.toISOString().split("T")[0],
+          Name: e.user?.name || "",
+          Amount: e.amount,
+          Description: e.description || "",
+        }))
+        const [balanceRows, calculationRows] = await Promise.all([
+          generateBalancePreview(roomId, startDate, endDate, scope, userId || undefined),
+          generateCalculationPreview(roomId, startDate, endDate, scope, userId || undefined),
+        ])
+        return NextResponse.json({
+          success: true,
+          preview: {
+            meals: mealPreviewRows,
+            shopping: shoppingResult.rows,
+            payments: paymentsResult.rows,
+            expenses: expenseRows,
+            balances: balanceRows,
+            calculations: calculationRows,
+          },
+        })
+      } else if (type === "meals") {
+        const previewTable = await generateMealPreviewTable(roomId, startDate, endDate, scope, userId || undefined)
+        const [header, ...rows] = previewTable
+        const previewRows = rows.map(row => Object.fromEntries(header.map((key, i) => [key, row[i]])))
+        return NextResponse.json({
+          success: true,
+          preview: previewRows,
+        })
+      } else if (type === "shopping") {
+        const shoppingResult = await exportShoppingToExcel(roomId, startDate, endDate, scope, userId || undefined)
+        return NextResponse.json({
+          success: true,
+          preview: shoppingResult.rows,
+        })
+      } else if (type === "payments") {
+        const paymentsResult = await exportPaymentsToExcel(roomId, startDate, endDate, scope, userId || undefined)
+        return NextResponse.json({
+          success: true,
+          preview: paymentsResult.rows,
+        })
+      } else if (type === "expenses") {
+        const expenses = await prisma.extraExpense.findMany({
+          where: {
+            roomId,
+            date: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          include: {
+            user: { select: { name: true } },
+          },
+          orderBy: { date: "asc" },
+        })
+        const expenseRows = expenses.map(e => ({
+          Date: e.date.toISOString().split("T")[0],
+          Name: e.user?.name || "",
+          Amount: e.amount,
+          Description: e.description || "",
+        }))
+        return NextResponse.json({
+          success: true,
+          preview: expenseRows,
+        })
+      } else if (type === "balances") {
+        const balanceRows = await generateBalancePreview(roomId, startDate, endDate, scope, userId || undefined)
+        return NextResponse.json({
+          success: true,
+          preview: balanceRows,
+        })
+      } else {
+        return NextResponse.json({
+          success: true,
+          preview: [],
+        })
+      }
+    }
+    // --- END PREVIEW LOGIC ---
+
     // Handle different export types and scopes
     let result: any
 
-    if (type === "all") {
-      // Export all data types
+    if (type === "all" && format === "excel") {
+      // Use the correct function to export all data to Excel (multi-sheet)
+      result = await exportAllDataToExcel(roomId, startDate, endDate, scope, userId || undefined);
+    } else if (type === "all" && format === "pdf") {
+      // Use the correct function to export all data to PDF
+      result = await exportDataToPDF(roomId, startDate, endDate, scope, userId || undefined, type);
+    } else if (type === "all") {
+      // fallback for preview and other cases (keep existing logic)
       const [mealsResult, shoppingResult, paymentsResult] = await Promise.all([
         exportMealsToExcel(roomId, startDate, endDate, scope, userId || undefined),
         exportShoppingToExcel(roomId, startDate, endDate, scope, userId || undefined),
         exportPaymentsToExcel(roomId, startDate, endDate, scope, userId || undefined),
       ])
-
       // Generate meal preview table (calendar format) for better display
       const mealPreviewTable = await generateMealPreviewTable(roomId, startDate, endDate, scope, userId || undefined)
       const [header, ...rows] = mealPreviewTable
       const mealPreviewRows = rows.map(row => Object.fromEntries(header.map((key, i) => [key, row[i]])))
-
       // Fetch extra expenses
       const expenses = await prisma.extraExpense.findMany({
         where: {
@@ -137,24 +246,13 @@ export async function GET(request: NextRequest) {
         Amount: e.amount,
         Description: e.description || "",
       }))
-
       // Generate balance and calculation previews
       const [balanceRows, calculationRows] = await Promise.all([
         generateBalancePreview(roomId, startDate, endDate, scope, userId || undefined),
         generateCalculationPreview(roomId, startDate, endDate, scope, userId || undefined),
       ])
-
-      // Debug logging for empty results
-      if (mealPreviewRows.length === 0) console.log("[Excel Export] No meals data found for filters", { roomId, startDate, endDate, scope, userId })
-      if (shoppingResult.rows.length === 0) console.log("[Excel Export] No shopping data found for filters", { roomId, startDate, endDate, scope, userId })
-      if (paymentsResult.rows.length === 0) console.log("[Excel Export] No payments data found for filters", { roomId, startDate, endDate, scope, userId })
-      if (expenseRows.length === 0) console.log("[Excel Export] No expenses data found for filters", { roomId, startDate, endDate, scope, userId })
-      if (balanceRows.length === 0) console.log("[Excel Export] No balance data found for filters", { roomId, startDate, endDate, scope, userId })
-      if (calculationRows.length === 0) console.log("[Excel Export] No calculation data found for filters", { roomId, startDate, endDate, scope, userId })
-
-      // Combine all data into one Excel file
       result = {
-        buffer: mealsResult.buffer, // For now, just return meals as the main export
+        buffer: mealsResult.buffer, // fallback for preview
         filename: `${roomMember.room.name}_All_Data_${formatDateForFilename(startDate)}_to_${formatDateForFilename(endDate)}.xlsx`,
         preview: {
           meals: mealPreviewRows,
@@ -189,30 +287,6 @@ export async function GET(request: NextRequest) {
           default:
             return NextResponse.json({ error: "Invalid export type" }, { status: 400 })
         }
-      }
-    }
-
-    if (preview) {
-      // Return preview data only
-      if (type === "all") {
-        return NextResponse.json({
-          success: true,
-          preview: result.preview,
-        })
-      } else if (type === "meals") {
-        const previewTable = await generateMealPreviewTable(roomId, startDate, endDate, scope, userId || undefined)
-        // Convert 2D array to array of objects
-        const [header, ...rows] = previewTable
-        const previewRows = rows.map(row => Object.fromEntries(header.map((key, i) => [key, row[i]])))
-        return NextResponse.json({
-          success: true,
-          preview: previewRows,
-        })
-      } else {
-        return NextResponse.json({
-          success: true,
-          preview: result.rows,
-        })
       }
     }
 
