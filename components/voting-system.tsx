@@ -120,20 +120,13 @@ export default function VotingSystem() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Voting System</h2>
           <p className="text-muted-foreground">Participate in room votes and elections</p>
+          {activeGroup && (
+            <div className="mt-1 text-lg font-semibold text-primary">
+              Group: {activeGroup.name}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Select value={selectedRoom} onValueChange={handleRoomChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select Room" />
-            </SelectTrigger>
-            <SelectContent>
-              {groups.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Dialog open={showCreateDialog} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button>
