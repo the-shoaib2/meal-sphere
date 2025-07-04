@@ -97,13 +97,8 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
     const userRole = member?.role || null;
     const isCreator = group.createdByUser.id === userId;
     
-    // Determine admin status
-    const isAdmin = isMember && (
-      userRole === Role.ADMIN || 
-      userRole === Role.MANAGER || 
-      userRole === Role.OWNER ||
-      isCreator
-    );
+    // Determine admin status (only ADMIN role)
+    const isAdmin = isMember && userRole === Role.ADMIN;
 
     // Determine access based on group privacy
     let canAccess = false;
@@ -148,7 +143,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
  */
 export async function checkGroupPermission(
   groupId: string, 
-  requiredRoles: Role[] = [Role.ADMIN, Role.MANAGER, Role.OWNER]
+  requiredRoles: Role[] = [Role.ADMIN]
 ): Promise<GroupPermissionResult> {
   const authResult = await checkGroupAccess(groupId);
   
@@ -202,7 +197,7 @@ export async function validateGroupAccess(groupId: string) {
  * Middleware function to validate admin permissions
  */
 export async function validateAdminAccess(groupId: string) {
-  const authResult = await checkGroupPermission(groupId);
+  const authResult = await checkGroupPermission(groupId, [Role.ADMIN]);
   
   if (!authResult.isAuthenticated) {
     return {

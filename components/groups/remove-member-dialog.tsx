@@ -41,7 +41,7 @@ export function RemoveMemberDialog({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/groups/${groupId}/members/${member.userId}`, {
+      const response = await fetch(`/api/groups/${groupId}/members/${member.id}`, {
         method: 'DELETE',
       });
 
@@ -58,7 +58,7 @@ export function RemoveMemberDialog({
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to remove member',
+        description: error instanceof Error ? error.message : 'Failed to remove member',
         variant: 'destructive',
       });
     } finally {
