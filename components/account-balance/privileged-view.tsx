@@ -14,7 +14,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils } from 'lucide-react';
+import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, ArrowRight } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
 
@@ -148,10 +148,11 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-primary"
+                        className="text-primary flex items-center gap-1 group overflow-hidden"
                         onClick={() => handleViewDetails(member.userId)}
                       >
-                        View Details
+                        <span>Details</span>
+                        <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
                       </Button>
                     </TableCell>
                   </TableRow>
