@@ -119,6 +119,14 @@ export function useGroups(): UseGroupsReturn {
       const cachedData = queryClient.getQueryData<Group[]>(['user-groups', session.user.id]);
       if (cachedData && cachedData.length > 0) {
         console.log('Using cached groups data:', cachedData.length, 'groups');
+        cachedData.forEach(group => {
+          console.log('[useGroups] Cached group:', {
+            groupName: group.name,
+            userRole: group.userRole,
+            userName: session?.user?.name,
+            userEmail: session?.user?.email
+          });
+        });
         return cachedData;
       }
       
@@ -148,6 +156,15 @@ export function useGroups(): UseGroupsReturn {
         if (typeof window !== 'undefined' && data.length > 0) {
           localStorage.setItem(`groups-${session.user.id}`, JSON.stringify(data));
         }
+        
+        data.forEach(group => {
+          // console.log('[useGroups] API group:', {
+          //   groupName: group.name,
+          //   userRole: group.userRole,
+          //   userName: session?.user?.name,
+          //   userEmail: session?.user?.email
+          // });
+        });
         
         return data;
       } catch (error: unknown) {

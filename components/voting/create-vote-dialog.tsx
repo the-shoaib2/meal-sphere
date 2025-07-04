@@ -89,7 +89,7 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
         Create Vote
       </Button>
     </DialogTrigger>
-    <DialogContent className="sm:max-w-[95vw] w-full">
+    <DialogContent className="w-full max-w-[95vw] sm:max-w-[420px] overflow-y-auto max-h-[90vh]">
       <DialogHeader>
         <DialogTitle>Create New Vote</DialogTitle>
         <DialogDescription>Start a new vote in your room</DialogDescription>

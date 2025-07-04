@@ -94,8 +94,13 @@ export function GroupSwitcher() {
                     <span className="truncate font-semibold">
                       {activeGroup?.name || 'Select a group'}
                     </span>
-                    <span className="truncate text-xs">
-                      {activeGroup?.members?.length || 0} members • {activeGroup?.userRole || 'Member'}
+                    <span className="truncate text-xs flex items-center gap-1">
+                      {activeGroup?.members?.length || 0} members •
+                      {activeGroup?.userRole && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                          {activeGroup.userRole.charAt(0).toUpperCase() + activeGroup.userRole.slice(1).toLowerCase()}
+                        </span>
+                      )}
                     </span>
                   </>
                 ) : (
@@ -128,9 +133,9 @@ export function GroupSwitcher() {
                 >
                   <div className="flex items-center">
                     <span className="truncate max-w-[180px]">{group.name}</span>
-                    {group.userRole === 'ADMIN' && (
+                    {group.userRole && (
                       <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                        Admin
+                        {group.userRole.charAt(0).toUpperCase() + group.userRole.slice(1).toLowerCase()}
                       </span>
                     )}
                   </div>

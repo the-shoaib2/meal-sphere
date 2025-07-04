@@ -2,6 +2,7 @@ import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Voter {
   id: string;
@@ -44,10 +45,14 @@ const VoterStack: React.FC<VoterStackProps> = ({
             <Tooltip key={`voter-${voter.id || index}-${index}`}>
               <TooltipTrigger asChild>
                 <Avatar className={`${avatarSize} border-2 border-background hover:z-10 transition-all duration-200`}>
-                  <AvatarImage 
-                    src={voter.image || "/placeholder-user.jpg"} 
-                    alt={voter.name} 
-                  />
+                  {voter.image ? (
+                    <AvatarImage 
+                      src={voter.image} 
+                      alt={voter.name} 
+                    />
+                  ) : (
+                    <Skeleton className={`${avatarSize} rounded-full`} />
+                  )}
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {voter.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
                   </AvatarFallback>

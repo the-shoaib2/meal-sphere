@@ -151,11 +151,12 @@ export default function VotingSystem() {
     }
   }
 
-  const handleVote = (voteId: string) => {
-    castVote(voteId, selectedCandidate)
-    setShowVoteDialog(false)
-    setSelectedCandidate("")
-  }
+  const handleVote = async (voteId: string) => {
+    await castVote(voteId, selectedCandidate);
+    await refreshVotes();
+    setShowVoteDialog(false);
+    setSelectedCandidate("");
+  };
 
   // Keep selectedRoom in sync with activeGroup
   if (activeGroup && selectedRoom !== activeGroup.id) {
@@ -255,32 +256,8 @@ export default function VotingSystem() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {loading ? (
-          <Card aria-busy="true" aria-label="Loading votes" className="animate-pulse md:col-span-2">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-6 w-32 mb-2" />
-                <Skeleton className="h-5 w-16" />
-              </div>
-              <Skeleton className="h-4 w-40" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[1, 2].map((j) => (
-                  <div key={j} className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="flex-1">
-                      <Skeleton className="h-4 w-24 mb-1" />
-                      <Skeleton className="h-2 w-32" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Skeleton className="h-10 w-full rounded" />
-            </CardFooter>
-          </Card>
+        {initialLoading || !activeGroup ? (
+          <LoadingSkeletons />
         ) : activeVotes.length > 0 ? (
           activeVotes.map((voteRaw) => {
             const vote = voteRaw as VoteType;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Vote, Loader2, Calendar, Users, Timer, Plus } from "lucide-react";
+import { Clock, Vote, Loader2, Calendar, Users, Timer, Plus, MoreVertical } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -188,9 +188,9 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
               <div className="z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="p-1 rounded-full hover:bg-muted focus:outline-none" disabled={actionLoading}>
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>
-                    </button>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => setEditOpen(true)} disabled={actionLoading}>Edit</DropdownMenuItem>

@@ -84,6 +84,7 @@ enum NotificationType {
   PAYMENT_DELETED
   JOIN_REQUEST_APPROVED
   JOIN_REQUEST_REJECTED
+  GENERAL
 }
 
 enum ExpenseType {

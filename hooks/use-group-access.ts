@@ -77,6 +77,12 @@ export function useGroupAccess({
           setUserRole(tokenData.data.role || null);
           setCanAccess(true); // If we can fetch token data, we have access
           onGroupData?.(tokenData.data);
+          // console.log('[useGroupAccess] Invite token group:', {
+          //   groupName: tokenData.data.group?.name,
+          //   userRole: tokenData.data.role,
+          //   userName: session?.user?.name,
+          //   userEmail: session?.user?.email
+          // });
         }
         
         return;
@@ -103,6 +109,12 @@ export function useGroupAccess({
       setUserRole(groupData.userRole);
       setCanAccess(groupData.canAccess);
       onGroupData?.(groupData);
+      console.log('[useGroupAccess] Group access:', {
+        groupName: groupData.group?.name || groupData.name,
+        userRole: groupData.userRole,
+        userName: session?.user?.name,
+        userEmail: session?.user?.email
+      });
     } catch (error) {
       console.error('Error checking group access:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to check group access';
