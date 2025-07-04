@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Role } from '@prisma/client';
-import { Shield, UserCog } from 'lucide-react';
+import { Shield, UserCog, Users, ChefHat, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -27,6 +27,13 @@ interface ChangeRoleDialogProps {
   onSuccess: () => void;
 }
 
+const ROLE_OPTIONS = [
+  { role: Role.ADMIN, label: 'Admin', icon: Shield },
+  { role: Role.MODERATOR, label: 'Moderator', icon: UserCog },
+  { role: Role.MEMBER, label: 'Member', icon: Users },
+  { role: Role.MEAL_MANAGER, label: 'Meal Manager', icon: ChefHat },
+];
+
 export function ChangeRoleDialog({
   isOpen,
   onClose,
@@ -36,11 +43,12 @@ export function ChangeRoleDialog({
 }: ChangeRoleDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingRole, setLoadingRole] = useState<Role | null>(null);
 
   const handleRoleChange = async (newRole: Role) => {
     if (!member) return;
-
     setIsLoading(true);
+    setLoadingRole(newRole);
     try {
       const response = await fetch(`/api/groups/${groupId}/members/${member.userId}/role`, {
         method: 'PATCH',
@@ -49,17 +57,15 @@ export function ChangeRoleDialog({
         },
         body: JSON.stringify({ role: newRole }),
       });
-
       if (!response.ok) {
         throw new Error('Failed to update member role');
       }
-
       toast({
-        title: 'Success',
-        description: `Member role updated to ${newRole}`,
+        title: 'Role Updated',
+        description: `${member.user.name} is now ${newRole.replace('_', ' ').toLowerCase()}.`,
       });
       onSuccess();
-      onClose();
+      setTimeout(onClose, 500); // Auto-close after toast
     } catch (error) {
       toast({
         title: 'Error',
@@ -68,57 +74,47 @@ export function ChangeRoleDialog({
       });
     } finally {
       setIsLoading(false);
+      setLoadingRole(null);
     }
   };
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent>
+      <AlertDialogContent className="max-w-xs p-4">
         <AlertDialogHeader>
-          <AlertDialogTitle>Change Member Role</AlertDialogTitle>
-          <AlertDialogDescription>
-            Select a new role for {member?.user.name}
+          <AlertDialogTitle className="text-base">Change Role</AlertDialogTitle>
+          <AlertDialogDescription className="text-xs">
+            Select a new role for <span className="font-semibold">{member?.user.name}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="grid gap-2 py-4">
-          <Button
-            variant="outline"
-            className="justify-start"
-            onClick={() => handleRoleChange(Role.ADMIN)}
-            disabled={isLoading}
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            Admin
-          </Button>
-          <Button
-            variant="outline"
-            className="justify-start"
-            onClick={() => handleRoleChange(Role.MODERATOR)}
-            disabled={isLoading}
-          >
-            <UserCog className="h-4 w-4 mr-2" />
-            Moderator
-          </Button>
-          <Button
-            variant="outline"
-            className="justify-start"
-            onClick={() => handleRoleChange(Role.MEMBER)}
-            disabled={isLoading}
-          >
-            Member
-          </Button>
-          <Button
-            variant="outline"
-            className="justify-start"
-            onClick={() => handleRoleChange(Role.MEAL_MANAGER)}
-            disabled={isLoading}
-          >
-            <UserCog className="h-4 w-4 mr-2" />
-            Meal Manager
-          </Button>
+        {/* Centered loader */}
+        {isLoading && (
+          <div className="flex justify-center my-2">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+        {/* Vertical role buttons */}
+        <div className="flex flex-col gap-2 py-2">
+          {ROLE_OPTIONS.map(({ role, label, icon: Icon }) => (
+            <Button
+              key={role}
+              variant={member?.role === role ? 'default' : 'outline'}
+              className="flex items-center gap-2 justify-center text-xs py-2 transition-all duration-150 hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-primary"
+              onClick={() => handleRoleChange(role)}
+              disabled={isLoading || member?.role === role}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Button>
+          ))}
         </div>
         <AlertDialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isLoading}
+            className="w-full text-xs font-semibold border-2 border-muted-foreground/20 hover:bg-muted/60 transition-colors duration-150"
+          >
             Cancel
           </Button>
         </AlertDialogFooter>

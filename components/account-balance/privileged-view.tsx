@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
+import { Button } from '@/components/ui/button';
 
 // Using the same PRIVILEGED_ROLES from the main panel
 const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'];
@@ -31,6 +33,12 @@ interface PrivilegedViewProps {
 export default function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
   const { members, groupTotalBalance, totalExpenses, mealRate, totalMeals, netGroupBalance } = groupData;
   const activeBalancesCount = members.filter(m => m.balance !== 0).length;
+  const router = useRouter();
+
+  const handleViewDetails = (userId: string) => {
+    window.dispatchEvent(new CustomEvent('routeChangeStart'));
+    router.push(`/account-balance/${userId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -137,9 +145,14 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/account-balance/${member.userId}`} className="text-primary hover:underline text-sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-primary"
+                        onClick={() => handleViewDetails(member.userId)}
+                      >
                         View Details
-                      </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
-import { Search, Plus, Users, Lock, AlertCircle } from 'lucide-react';
+import { Search, Plus, Users, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -270,6 +270,12 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
   // Get the admin (first member with ADMIN role or first member if no admin found)
   const admin = group.members?.find(member => member.role === 'ADMIN') || group.members?.[0];
 
+  const router = useRouter();
+  const handleViewGroup = () => {
+    window.dispatchEvent(new CustomEvent('routeChangeStart'));
+    router.push(`/groups/${group.id}`);
+  };
+
   return (
     <Card className="group hover:shadow-md transition-shadow flex flex-col h-full">
       <CardHeader className="pb-3">
@@ -359,10 +365,13 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
         <div className="text-xs text-muted-foreground">
           Created {format(new Date(group.createdAt), 'MMM d, yyyy')}
         </div>
-        <Button size="sm" asChild>
-          <Link href={`/groups/${group.id}`}>
-            View Group
-          </Link>
+        <Button
+          size="sm"
+          className="group/button flex items-center gap-1 overflow-hidden"
+          onClick={handleViewGroup}
+        >
+          <span>View Group</span>
+          <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover/button:translate-x-1 group-focus-visible/button:translate-x-1" />
         </Button>
       </CardFooter>
     </Card>
