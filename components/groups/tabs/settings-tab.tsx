@@ -238,9 +238,6 @@ export function SettingsTab({
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
-      setIsLoading(true);
-
-      // Call the update API
       await updateGroup.mutateAsync({
         groupId,
         data: {
@@ -252,16 +249,11 @@ export function SettingsTab({
           features: data.features,
         }
       });
-
-      // Refresh the group data
       await refetch();
-
       onUpdate();
       toast.success('Group settings updated successfully');
     } catch (error) {
       toast.error('Failed to update group. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -269,14 +261,12 @@ export function SettingsTab({
     try {
       const newFeatures = { ...formFeatures, [featureId]: checked };
       setValue(`features.${featureId}`, checked);
-      
       await updateGroup.mutateAsync({
         groupId,
         data: {
           features: newFeatures,
         }
       });
-
       await refetch();
       onUpdate();
       toast.success(`${GROUP_FEATURES[featureId].name} ${checked ? 'enabled' : 'disabled'}`);
@@ -607,8 +597,8 @@ export function SettingsTab({
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={updateGroup.isPending}>
+                {updateGroup.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Saving...
