@@ -13,3 +13,9 @@ export function cn(...inputs: ClassValue[]) {
 export function isValidObjectId(id: string): boolean {
   return /^[0-9a-fA-F]{24}$/.test(id);
 }
+
+export function assertOnline() {
+  if (typeof window !== 'undefined' && (window as any).__APP_OFFLINE) {
+    throw new Error('No internet connection');
+  }
+}

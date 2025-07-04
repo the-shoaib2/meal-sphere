@@ -32,12 +32,12 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
           // Validate that the saved group has the required fields
           if (parsedGroup && parsedGroup.id && parsedGroup.name) {
             setActiveGroup(parsedGroup);
-            console.log('[GroupContext] Loaded active group:', {
-              groupName: parsedGroup.name,
-              userRole: parsedGroup.userRole,
-              userName: session?.user?.name,
-              userEmail: session?.user?.email
-            });
+            // console.log('[GroupContext] Loaded active group:', {
+            //   groupName: parsedGroup.name,
+            //   userRole: parsedGroup.userRole,
+            //   userName: session?.user?.name,
+            //   userEmail: session?.user?.email
+            // });
           } else {
             // Clear invalid data
             localStorage.removeItem('activeGroup');
@@ -55,12 +55,12 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (activeGroup && typeof window !== 'undefined') {
       localStorage.setItem('activeGroup', JSON.stringify(activeGroup));
-      console.log('[GroupContext] Active group changed:', {
-        groupName: activeGroup.name,
-        userRole: activeGroup.userRole,
-        userName: session?.user?.name,
-        userEmail: session?.user?.email
-      });
+      // console.log('[GroupContext] Active group changed:', {
+      //   groupName: activeGroup.name,
+      //   userRole: activeGroup.userRole,
+      //   userName: session?.user?.name,
+      //   userEmail: session?.user?.email
+      // });
     } else if (!activeGroup && typeof window !== 'undefined') {
       localStorage.removeItem('activeGroup');
     }

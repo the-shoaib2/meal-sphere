@@ -3,6 +3,7 @@ import { useActiveGroup } from "@/contexts/group-context";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
+import { assertOnline } from "@/lib/utils";
 
 export interface Candidate {
   id: string;
@@ -46,6 +47,7 @@ export function useVoting() {
 
   // Function to fetch votes
   const fetchVotes = useCallback(async (isInitial = false) => {
+    assertOnline();
     if (!activeGroup) {
       setActiveVotes([]);
       setPastVotes([]);
@@ -58,6 +60,7 @@ export function useVoting() {
       setLoading(true);
     }
     try {
+      assertOnline();
       const res = await axios.get<VotesResponse>(`/api/groups/${activeGroup.id}/votes`);
       const votes = res.data.votes || [];
       setActiveVotes(votes.filter((v) => v.isActive));
@@ -105,9 +108,11 @@ export function useVoting() {
 
   const createVote = useCallback(
     async (voteData: Partial<Vote> & { candidates: Candidate[]; startDate?: string; endDate?: string }) => {
+      assertOnline();
       if (!activeGroup) return;
       setLoading(true);
       try {
+        assertOnline();
         const res = await axios.post<CreateVoteResponse>(`/api/groups/${activeGroup.id}/votes`, voteData);
         const newVote = res.data.vote;
         setActiveVotes((prev) => [newVote, ...prev]);
@@ -123,9 +128,11 @@ export function useVoting() {
 
   const castVote = useCallback(
     async (voteId: string, candidateId: string) => {
+      assertOnline();
       if (!activeGroup || !userId) return;
       setIsSubmitting(true);
       try {
+        assertOnline();
         const res = await axios.patch<CastVoteResponse>(`/api/groups/${activeGroup.id}/votes`, { voteId, candidateId, userId });
         const updatedVote = res.data.vote;
         

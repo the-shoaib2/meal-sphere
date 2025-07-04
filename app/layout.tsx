@@ -9,6 +9,7 @@ import { getServerAuthSession } from "@/lib/auth/auth"
 import { LanguageProvider } from "@/contexts/language-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
+import InternetStatusBanner from "@/components/internet-status-card"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -32,6 +33,7 @@ export default async function RootLayout({
               <LanguageProvider>
                 <NotificationProvider>
                   <>
+                    <InternetStatusBanner />
                     <div className="flex-1 flex flex-col">
                       {children}
                     </div>
