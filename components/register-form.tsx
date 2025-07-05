@@ -86,13 +86,16 @@ export default function RegisterForm() {
         throw new Error('Failed to load CAPTCHA');
       }
       
-      const blob = await response.blob();
-      const sessionId = response.headers.get('x-session-id');
-      const url = URL.createObjectURL(blob);
+      const svgText = await response.text();
+      const captchaId = response.headers.get('X-Captcha-ID');
+      const captchaText = response.headers.get('X-Captcha-Text');
+      const url = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
       
       setCaptchaImage(url);
-      if (sessionId) {
-        setCaptchaSessionId(sessionId);
+      if (captchaId && captchaText) {
+        setCaptchaSessionId(captchaId);
+        // Store the CAPTCHA text in sessionStorage for validation
+        sessionStorage.setItem(`captcha_${captchaId}`, captchaText);
       }
       
       return true;
@@ -117,19 +120,30 @@ export default function RegisterForm() {
     const toastId = toast.loading('Creating account...');
 
     try {
+      // Get the stored CAPTCHA text
+      const storedCaptchaText = sessionStorage.getItem(`captcha_${captchaSessionId}`);
+      
+      if (!storedCaptchaText) {
+        toast.error('CAPTCHA session expired. Please refresh and try again.');
+        return false;
+      }
+      
+      const requestBody = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        captchaSessionId,
+        captchaText: captchaText.trim(),
+        storedCaptchaText: storedCaptchaText,
+      };
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          confirmPassword: formData.confirmPassword,
-          captchaSessionId,
-          captchaText: captchaText.trim(),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -183,7 +197,7 @@ export default function RegisterForm() {
       }
 
       // Registration successful
-      toast.success('Account created successfully! Redirecting to login...', { id: toastId });
+      toast.success('Account created successfully!', { id: toastId });
       
       // Redirect to login after a short delay
       setTimeout(() => {

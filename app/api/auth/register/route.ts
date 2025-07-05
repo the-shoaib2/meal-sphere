@@ -4,8 +4,10 @@ import { createVerificationToken } from "@/lib/email-utils"
 import { sendVerificationEmail } from "@/lib/email-utils"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
-import { validateCaptcha } from '@/lib/auth/captcha'
+
 import { UAParser } from 'ua-parser-js'
+
+
 
 const registerSchema = z.object({
   name: z.string().min(2).max(50),
@@ -13,7 +15,8 @@ const registerSchema = z.object({
   password: z.string().min(6),
   confirmPassword: z.string(),
   captchaSessionId: z.string().min(1, 'CAPTCHA session ID is required'),
-  captchaText: z.string().min(1, 'CAPTCHA text is required')
+  captchaText: z.string().min(1, 'CAPTCHA text is required'),
+  storedCaptchaText: z.string().min(1, 'Stored CAPTCHA text is required')
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
@@ -39,11 +42,9 @@ export async function POST(request: Request) {
     // Validate request body
     const validatedData = registerSchema.parse(body);
 
-    // Validate CAPTCHA
-    const isValidCaptcha = await validateCaptcha(
-      validatedData.captchaSessionId,
-      validatedData.captchaText
-    );
+    // Validate CAPTCHA directly
+    const isValidCaptcha = validatedData.captchaText.toUpperCase() === validatedData.storedCaptchaText.toUpperCase();
+    
     if (!isValidCaptcha) {
       return NextResponse.json(
         { message: "Invalid CAPTCHA" },
@@ -90,26 +91,13 @@ export async function POST(request: Request) {
       deviceModel = `${browser.name} ${browser.version || ''}`.trim();
     }
 
-    // Create user with initial session
+    // Create user without initial session (session will be created on first login)
     const user = await prisma.user.create({
       data: {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: "MEMBER",
-        sessions: {
-          create: {
-            sessionToken: '', // Will be set when user first logs in
-            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-            userAgent,
-            ipAddress,
-            deviceType,
-            deviceModel
-          }
-        }
-      },
-      include: {
-        sessions: true
+        role: "MEMBER"
       }
     });
 

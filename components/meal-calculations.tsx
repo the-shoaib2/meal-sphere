@@ -143,7 +143,7 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[180px] justify-start text-left font-normal">
+                <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(startDate, "MMMM yyyy")}
                 </Button>

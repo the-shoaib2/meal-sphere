@@ -152,6 +152,16 @@ type GroupWithExtras = {
   category?: string;
 };
 
+// Store previous group values for comparison
+type PreviousGroupSettings = {
+  name: string;
+  description: string | null;
+  isPrivate: boolean;
+  maxMembers: number | null | undefined;
+  tags: string[];
+  features: Record<string, boolean>;
+};
+
 export function SettingsTab({
   groupId,
   onUpdate,
@@ -170,6 +180,8 @@ export function SettingsTab({
   const [tagError, setTagError] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
   const [isDeleteNameValid, setIsDeleteNameValid] = useState(false);
+  // Store previous group values for comparison
+  const prevGroupRef = useState<PreviousGroupSettings | null>(null);
 
   const form = useForm<GroupSettingsFormValues>({
     resolver: zodResolver(groupSettingsSchema),
@@ -204,29 +216,48 @@ export function SettingsTab({
     setIsDeleteNameValid(deleteGroupName === group?.name);
   }, [deleteGroupName, group?.name]);
 
+  // Store previous group values for comparison
+  useEffect(() => {
+    if (group) {
+      prevGroupRef[1]({
+        name: group.name,
+        description: group.description || '',
+        isPrivate: group.isPrivate,
+        maxMembers: group.maxMembers,
+        tags: (group as GroupWithExtras).tags || [],
+        features: (group as GroupWithExtras).features || {},
+      });
+    }
+  }, [group]);
+
   const handleAddTag = () => {
     if (!newTag.trim()) {
       setTagError('Tag cannot be empty');
+      toast.error('Tag cannot be empty');
       return;
     }
 
     if (formTags.includes(newTag.trim())) {
       setTagError('Tag already exists');
+      toast.error('Tag already exists');
       return;
     }
 
     if (formTags.length >= 5) {
       setTagError('Maximum 5 tags allowed');
+      toast.error('Maximum 5 tags allowed');
       return;
     }
 
     setValue('tags', [...formTags, newTag.trim()]);
     setNewTag('');
     setTagError('');
+    toast.success(`Tag '${newTag.trim()}' added`);
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
     setValue('tags', formTags.filter(tag => tag !== tagToRemove));
+    toast.success(`Tag '${tagToRemove}' removed`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -238,6 +269,7 @@ export function SettingsTab({
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
+      const prev = prevGroupRef[0];
       await updateGroup.mutateAsync({
         groupId,
         data: {
@@ -251,7 +283,26 @@ export function SettingsTab({
       });
       await refetch();
       onUpdate();
-      toast.success('Group settings updated successfully');
+      // Show specific toasts for changed fields
+      if (prev) {
+        if (prev.name !== data.name) toast.success('Group name updated');
+        if ((prev.description || '') !== (data.description || '')) toast.success('Description updated');
+        if (prev.isPrivate !== data.isPrivate) toast.success(`Privacy set to ${data.isPrivate ? 'Private' : 'Public'}`);
+        if (prev.maxMembers !== (data.maxMembers ?? null)) toast.success('Max members updated');
+        // Tags
+        const addedTags = data.tags.filter(t => !prev.tags.includes(t));
+        const removedTags = prev.tags.filter(t => !data.tags.includes(t));
+        addedTags.forEach(tag => toast.success(`Tag '${tag}' added`));
+        removedTags.forEach(tag => toast.success(`Tag '${tag}' removed`));
+        // Features
+        Object.keys(data.features).forEach(key => {
+          if (prev.features[key] !== data.features[key]) {
+            toast.success(`${GROUP_FEATURES[key]?.name || key} ${data.features[key] ? 'enabled' : 'disabled'}`);
+          }
+        });
+      } else {
+        toast.success('Group settings updated successfully');
+      }
     } catch (error) {
       toast.error('Failed to update group. Please try again.');
     }
@@ -273,7 +324,7 @@ export function SettingsTab({
     } catch (error) {
       // Revert the switch if the update fails
       setValue(`features.${featureId}`, !checked);
-      toast.error('Failed to update feature. Please try again.');
+      toast.error(`Failed to update feature '${GROUP_FEATURES[featureId].name}'. Please try again.`);
     }
   };
 
@@ -284,15 +335,12 @@ export function SettingsTab({
 
     try {
       setIsLeaving(true);
-      
-      // Use the leaveGroup mutation from useGroups hook
       await leaveGroup.mutateAsync(groupId);
-      
-      // The mutation will handle the toast and navigation automatically
       setIsLeaveDialogOpen(false);
+      toast.success('You have left the group');
     } catch (error) {
       console.error('Error leaving group:', error);
-      // The mutation will handle error toasts automatically
+      toast.error('Failed to leave group. Please try again.');
     } finally {
       setIsLeaving(false);
     }
@@ -311,9 +359,11 @@ export function SettingsTab({
     try {
       setIsDeleting(true);
       await deleteGroup.mutateAsync(groupId);
+      toast.success('Group deleted successfully');
       // Dialog will be closed by the mutation's onSuccess handler
     } catch (error) {
       console.error('Error deleting group:', error);
+      toast.error('Failed to delete group. Please try again.');
     } finally {
       setIsDeleting(false);
     }

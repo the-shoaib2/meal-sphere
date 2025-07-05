@@ -50,8 +50,6 @@ export default function LoginForm() {
         redirect: false,
         callbackUrl
       })
-
-      console.log('Sign in result:', result)
       
       if (!result) {
         throw new Error('No response from server')
@@ -65,14 +63,31 @@ export default function LoginForm() {
       // If we get here, login was successful
       toast.success('Login successful!', { id: toastId })
       
-      // Use window.location.href for a full page reload to ensure session is set
-      window.location.href = callbackUrl
+      // Use router.push for proper navigation
+      router.push(callbackUrl)
       
     } catch (error) {
-      console.error("Login failed:", error)
       toast.error('An error occurred. Please try again.', { id: toastId })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsGoogleLoading(true)
+      const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard'
+      
+      // For OAuth providers, we should use redirect: true to let NextAuth handle the flow
+      await signIn("google", { 
+        callbackUrl,
+        redirect: true
+      })
+      
+    } catch (error) {
+      toast.error("Failed to sign in with Google")
+    } finally {
+      setIsGoogleLoading(false)
     }
   }
 
@@ -97,28 +112,7 @@ export default function LoginForm() {
               variant="outline"
               className="w-full"
               disabled={isGoogleLoading}
-              onClick={async () => {
-                try {
-                  setIsGoogleLoading(true)
-                  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard'
-                  const result = await signIn("google", { 
-                    redirect: false,
-                    callbackUrl 
-                  })
-                  
-                  if (result?.error) {
-                    throw new Error(result.error)
-                  }
-                  
-                  // If we get here, the OAuth flow should handle the redirect
-                  // No need to do anything else here
-                } catch (error) {
-                  console.error("Google sign in error:", error)
-                  toast.error(error instanceof Error ? error.message : "Failed to sign in with Google")
-                } finally {
-                  setIsGoogleLoading(false)
-                }
-              }}
+              onClick={handleGoogleSignIn}
             >
               {isGoogleLoading ? (
                 <>
@@ -171,6 +165,7 @@ export default function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -189,11 +184,13 @@ export default function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="pr-10"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -203,7 +200,7 @@ export default function LoginForm() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
