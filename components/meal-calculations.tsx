@@ -130,22 +130,22 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Meal Calculations</h2>
-          <p className="text-muted-foreground">View and manage meal costs and balances</p>
+          <h2 className="text-xl font-bold tracking-tight">Meal Calculations</h2>
+          <p className="text-muted-foreground text-sm">View and manage meal costs and balances</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => navigateMonth("prev")}>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={() => navigateMonth("prev")}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[150px] justify-start text-left font-normal">
+                <Button variant="outline" size="sm" className="w-[120px] justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(startDate, "MMMM yyyy")}
+                  {format(startDate, "MMM yyyy")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -162,7 +162,7 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
                 />
               </PopoverContent>
             </Popover>
-            <Button variant="outline" size="icon" onClick={() => navigateMonth("next")}>
+            <Button variant="outline" size="sm" onClick={() => navigateMonth("next")}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -170,11 +170,11 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
-            <CardTitle>Monthly Summary</CardTitle>
-            <CardDescription>
-              {format(startDate, "MMMM d, yyyy")} - {format(endDate, "MMMM d, yyyy")}
+            <CardTitle className="text-lg">Monthly Summary</CardTitle>
+            <CardDescription className="text-sm">
+              {format(startDate, "MMM d, yyyy")} - {format(endDate, "MMM d, yyyy")}
             </CardDescription>
           </div>
           <Button variant="outline" size="sm">
@@ -184,22 +184,22 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center items-center h-40">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : summary ? (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-                  <div className="text-2xl font-bold">{summary.totalMeals}</div>
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="flex flex-col items-center justify-center rounded-lg border p-3">
+                  <div className="text-xl font-bold">{summary.totalMeals}</div>
                   <p className="text-xs text-muted-foreground">Total Meals</p>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-                  <div className="text-2xl font-bold">{formatCurrency(summary.totalCost)}</div>
+                <div className="flex flex-col items-center justify-center rounded-lg border p-3">
+                  <div className="text-xl font-bold">{formatCurrency(summary.totalCost)}</div>
                   <p className="text-xs text-muted-foreground">Total Cost</p>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-lg border p-4">
-                  <div className="text-2xl font-bold">{formatCurrency(summary.mealRate)}</div>
+                <div className="flex flex-col items-center justify-center rounded-lg border p-3">
+                  <div className="text-xl font-bold">{formatCurrency(summary.mealRate)}</div>
                   <p className="text-xs text-muted-foreground">Per Meal Rate</p>
                 </div>
               </div>
@@ -207,41 +207,41 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead className="text-right">Meals</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Paid</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-sm">Member</TableHead>
+                    <TableHead className="text-right text-sm">Meals</TableHead>
+                    <TableHead className="text-right text-sm">Cost</TableHead>
+                    <TableHead className="text-right text-sm">Paid</TableHead>
+                    <TableHead className="text-right text-sm">Balance</TableHead>
+                    <TableHead className="text-center text-sm">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {summary.userSummaries.map((user: any) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
                             <AvatarImage src={user.image || "/placeholder.svg"} alt={user.name} />
-                            <AvatarFallback>
+                            <AvatarFallback className="text-xs">
                               {user.name
                                 .split(" ")
                                 .map((n: string) => n[0])
                                 .join("")}
                             </AvatarFallback>
                           </Avatar>
-                          <div>{user.name}</div>
+                          <div className="text-sm">{user.name}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{user.mealCount}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(user.cost)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(user.paid)}</TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right text-sm">{user.mealCount}</TableCell>
+                      <TableCell className="text-right text-sm">{formatCurrency(user.cost)}</TableCell>
+                      <TableCell className="text-right text-sm">{formatCurrency(user.paid)}</TableCell>
+                      <TableCell className="text-right font-medium text-sm">
                         <span className={user.balance >= 0 ? "text-green-600" : "text-red-600"}>
                           {formatCurrency(user.balance)}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={user.balance >= 0 ? "default" : "destructive"}>
+                        <Badge variant={user.balance >= 0 ? "default" : "destructive"} className="text-xs">
                           {user.balance >= 0 ? "Paid" : "Due"}
                         </Badge>
                       </TableCell>
@@ -251,8 +251,8 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
               </Table>
             </div>
           ) : (
-            <div className="flex justify-center items-center h-40">
-              <p className="text-muted-foreground">No data available</p>
+            <div className="flex justify-center items-center h-32">
+              <p className="text-muted-foreground text-sm">No data available</p>
             </div>
           )}
         </CardContent>

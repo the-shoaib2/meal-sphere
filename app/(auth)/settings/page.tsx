@@ -22,8 +22,13 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto space-y-8">
-      <h1 className="text-3xl font-bold">Profile Settings</h1>
+    <div className="container mx-auto space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold">Profile Settings</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Manage your account information, appearance preferences, language settings, and security options.
+        </p>
+      </div>
       <SettingsTabs user={user} />
     </div>
   )

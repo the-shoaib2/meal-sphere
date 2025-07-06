@@ -43,7 +43,7 @@ export function SettingsTabs({ user }: SettingsTabsProps) {
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="grid grid-cols-4 mb-8">
+      <TabsList className="grid grid-cols-4 mb-4">
         <TabsTrigger value="profile">Profile</TabsTrigger>
         <TabsTrigger value="appearance">Appearance</TabsTrigger>
         <TabsTrigger value="language">Language</TabsTrigger>

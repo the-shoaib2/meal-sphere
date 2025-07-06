@@ -181,7 +181,6 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
             <TimePicker
               value={startTimeStr}
               onChange={setStartTimeStr}
-              className="w-full"
             />
           </div>
         </div>
@@ -198,7 +197,6 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
             <TimePicker
               value={endTimeStr}
               onChange={setEndTimeStr}
-              className="w-full"
             />
           </div>
         </div>

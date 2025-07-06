@@ -78,13 +78,13 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Profile Information</CardTitle>
-        <CardDescription>Update your profile information and email address.</CardDescription>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">Profile Information</CardTitle>
+        <CardDescription className="text-sm">Update your profile information and email address.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center space-x-4 mb-6">
-          <Avatar className="h-20 w-20">
+        <div className="flex items-center space-x-3 mb-4">
+          <Avatar className="h-16 w-16">
             {isLoaded && image ? (
               <AvatarImage src={image} alt={user.name || "User"} />
             ) : (
@@ -92,12 +92,12 @@ export function ProfileForm({ user }: ProfileFormProps) {
             )}
           </Avatar>
           <div>
-            <h3 className="text-lg font-medium">{user.name}</h3>
+            <h3 className="text-base font-medium">{user.name}</h3>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -120,7 +120,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                   <FormControl>
                     <Input placeholder="Your email" {...field} />
                   </FormControl>
-                  <FormDescription>Changing your email will require verification.</FormDescription>
+                  <FormDescription className="text-xs">Changing your email will require verification.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -145,7 +145,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} size="sm">
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </form>
