@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { db } from '@/lib/db';
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-import { Room, Prisma } from '@prisma/client';
-
-type RoomCreateInput = Prisma.RoomCreateInput;
+import { prisma } from '@/lib/prisma';
 
 // Schema for creating a new group
 const createGroupSchema = z.object({
