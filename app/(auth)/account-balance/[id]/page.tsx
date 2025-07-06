@@ -105,9 +105,12 @@ export default function UserAccountBalancePage() {
   const { data: transactions, isLoading: isLoadingTransactions, refetch: refetchTransactions } = useGetTransactions(activeGroup?.id || '', userId);
 
   // Filter transactions to only those involving this user (as receiver or self-transactions)
-  const filteredTransactions = transactions?.filter(
+  const allFilteredTransactions = transactions?.filter(
     t => t.targetUserId === userId || (t.userId === userId && t.targetUserId === userId)
   ) || [];
+  
+  // Filter out negative amounts for display in the list (but keep them for calculations)
+  const filteredTransactions = allFilteredTransactions.filter(t => t.amount > 0);
 
   const addTransactionMutation = useAddTransaction();
   const updateTransactionMutation = useUpdateTransaction();
@@ -194,9 +197,9 @@ export default function UserAccountBalancePage() {
     return <UserBalanceSkeleton />;
   }
 
-  const totalReceived = filteredTransactions.filter(t => t.targetUserId === userId && t.amount > 0)?.reduce((sum, t) => sum + t.amount, 0) || 0;
-  const totalSpent = filteredTransactions.filter(t => t.userId === userId && t.amount < 0)?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
-  const totalTransactions = filteredTransactions.length || 0;
+  const totalReceived = allFilteredTransactions.filter(t => t.targetUserId === userId && t.amount > 0)?.reduce((sum, t) => sum + t.amount, 0) || 0;
+  const totalSpent = allFilteredTransactions.filter(t => t.userId === userId && t.amount < 0)?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+  const totalTransactions = allFilteredTransactions.length || 0;
   const availableBalance = userBalance?.balance || 0;
 
   return (
