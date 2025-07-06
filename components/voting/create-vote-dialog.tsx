@@ -83,16 +83,14 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
   activeVotesCount,
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogTrigger asChild>
-      <Button>
-        <Plus className="mr-2 h-4 w-4" />
-        Create Vote
-      </Button>
-    </DialogTrigger>
-    <DialogContent className="w-full max-w-[95vw] sm:max-w-[420px] overflow-y-auto max-h-[90vh]">
-      <DialogHeader>
-        <DialogTitle>Create New Vote</DialogTitle>
-        <DialogDescription>Start a new vote in your room</DialogDescription>
+    <DialogContent className="sm:max-w-[450px] w-[calc(100%-2rem)] mx-auto sm:w-full rounded-lg sm:rounded-lg">
+      <DialogHeader className="space-y-1">
+        <DialogTitle className="text-lg sm:text-xl">
+          Create New Vote
+        </DialogTitle>
+        <DialogDescription className="text-sm">
+          Set up a new vote for your room members.
+        </DialogDescription>
       </DialogHeader>
       {activeVotesCount && activeVotesCount > 0 && (
         <div className="text-amber-600 text-sm mb-2 p-2 bg-amber-50 border border-amber-200 rounded">
@@ -105,7 +103,7 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
           {createVoteError}
         </div>
       )}
-      <div className="grid gap-4 py-4">
+      <div className="grid gap-3 py-2">
         <div className="grid gap-2">
           <Label htmlFor="vote-type">Vote Type</Label>
           <Select value={selectedVoteType} onValueChange={setSelectedVoteType}>
@@ -126,112 +124,95 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
               const selectedMember = nonAdminMembers.find(m => m.userId === userId)
               return (
                 <div key={idx} className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full flex items-center justify-start px-2 py-1"
-                      >
-                        {selectedMember ? (
-                          <>
-                            <Avatar className="h-6 w-6 mr-2">
-                              <AvatarImage src={selectedMember.user.image || "/placeholder-user.jpg"} alt={selectedMember.user.name || "User"} />
+                  <Select value={userId} onValueChange={(value) => handleCandidateChange(idx, value)}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select a candidate" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMembers.map(member => (
+                        <SelectItem key={member.userId} value={member.userId}>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={member.user.image || "/placeholder.svg"} alt={member.user.name || "User"} />
                               <AvatarFallback>
-                                {selectedMember.user.name?.split(" ").map(n => n[0]).join("") || "?"}
+                                {(member.user.name ? member.user.name.split(" ").map((n: string) => n[0]).join("") : "?")}
                               </AvatarFallback>
                             </Avatar>
-                            <span>{selectedMember.user.name || selectedMember.user.email || selectedMember.userId}</span>
-                          </>
-                        ) : (
-                          <span>Select member</span>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-full min-w-[200px]">
-                      {availableMembers.concat(selectedMember ? [selectedMember] : []).map(m => (
-                        (!selectedCandidateIds.includes(m.userId) || m.userId === userId) && (
-                          <DropdownMenuItem
-                            key={m.userId}
-                            onClick={() => handleCandidateChange(idx, m.userId)}
-                            className="flex items-center gap-2"
-                          >
-                            <Avatar className="h-6 w-6 mr-2">
-                              <AvatarImage src={m.user.image || "/placeholder-user.jpg"} alt={m.user.name || "User"} />
-                              <AvatarFallback>
-                                {m.user.name?.split(" ").map(n => n[0]).join("") || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{m.user.name || m.user.email || m.userId}</span>
-                          </DropdownMenuItem>
-                        )
+                            <span>{member.user.name || "Unnamed"}</span>
+                          </div>
+                        </SelectItem>
                       ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {selectedCandidateIds.length > 1 && (
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveCandidate(idx)}>
-                      Remove
-                    </Button>
-                  )}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveCandidate(idx)}
+                    disabled={selectedCandidateIds.length === 1}
+                  >
+                    Remove
+                  </Button>
                 </div>
               )
             })}
-            <Button variant="outline" className="w-full" onClick={handleAddCandidate}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddCandidate}
+              className="w-full"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Candidate
             </Button>
           </div>
         </div>
         <div className="grid gap-2">
-          <Label>Start Time</Label>
-          <div className="flex gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start">
-                  {startDate ? format(startDate, "PPP") : "Pick date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="p-0">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={d => d && setStartDate(d)}
-                  initialFocus
-                  disabled={date => isBefore(date, startOfDay(new Date()))}
-                />
-              </PopoverContent>
-            </Popover>
-            <TimePicker value={startTimeStr} onChange={setStartTimeStr} />
+          <Label>Start Date & Time</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Calendar
+              mode="single"
+              selected={startDate}
+              onSelect={(date) => date && setStartDate(date)}
+              disabled={(date) => date < new Date()}
+              className="rounded-md border"
+            />
+            <TimePicker
+              value={startTimeStr}
+              onChange={setStartTimeStr}
+              className="w-full"
+            />
           </div>
         </div>
         <div className="grid gap-2">
-          <Label>End Time</Label>
-          <div className="flex gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start">
-                  {endDate ? format(endDate, "PPP") : "Pick date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="p-0">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={d => d && setEndDate(d)}
-                  initialFocus
-                  disabled={date => isBefore(date, startDate) || isAfter(date, addDays(startDate, 2))}
-                />
-              </PopoverContent>
-            </Popover>
-            <TimePicker value={endTimeStr} onChange={setEndTimeStr} />
+          <Label>End Date & Time</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Calendar
+              mode="single"
+              selected={endDate}
+              onSelect={(date) => date && setEndDate(date)}
+              disabled={(date) => date < startDate}
+              className="rounded-md border"
+            />
+            <TimePicker
+              value={endTimeStr}
+              onChange={setEndTimeStr}
+              className="w-full"
+            />
           </div>
         </div>
       </div>
-      <DialogFooter>
+      <DialogFooter className="flex flex-col sm:flex-row gap-2">
         <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="w-full sm:w-auto">
           Cancel
         </Button>
-        <Button onClick={handleCreateVote} disabled={selectedCandidateIds.filter(Boolean).length === 0} className="w-full sm:w-auto">
+        <Button
+          onClick={handleCreateVote}
+          disabled={selectedCandidateIds.length === 0 || selectedCandidateIds.some(id => !id)}
+          className="w-full sm:w-auto"
+          size="sm"
+        >
           Create Vote
         </Button>
       </DialogFooter>

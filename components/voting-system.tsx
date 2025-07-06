@@ -205,19 +205,19 @@ export default function VotingSystem() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground mb-1">Voting System</h2>
-          <div className="mb-2">
-            <p className="text-muted-foreground text-base">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Voting System</h2>
+          <div className="mb-1">
+            <p className="text-muted-foreground text-sm">
               Participate in room votes and elections for
               <span className="ml-1 font-semibold text-primary">{activeGroup.name}</span>
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleRefreshVotes} title="Refresh votes">
+          <Button variant="outline" size="sm" onClick={handleRefreshVotes} title="Refresh votes">
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -255,7 +255,7 @@ export default function VotingSystem() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {initialLoading || !activeGroup ? (
           <LoadingSkeletons />
         ) : activeVotes.length > 0 ? (

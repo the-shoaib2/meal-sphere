@@ -220,7 +220,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
                   {/* Status Indicator */}
                   {isPending && (
                     <div className="absolute top-2 right-2">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                      <div className="w-2 h-2 0 rounded-full animate-pulse"></div>
                     </div>
                   )}
                 </div>

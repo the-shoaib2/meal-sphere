@@ -180,7 +180,7 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
 
         {/* Warning */}
         {!isSystemEnabled && (
-          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div className="flex items-center gap-2 p-3  border rounded-md">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <span className="text-sm text-yellow-800">
               Auto meal system is disabled for this group. Contact an administrator to enable it.

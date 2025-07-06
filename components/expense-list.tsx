@@ -213,14 +213,14 @@ export function ExpenseList() {
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1">
               <label className="text-sm font-medium">Expense Type</label>
               <Select value={selectedType || 'ALL_TYPES'} onValueChange={setSelectedType}>
                 <SelectTrigger>
@@ -236,12 +236,13 @@ export function ExpenseList() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label className="text-sm font-medium">From</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    size="sm"
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !startDate && "text-muted-foreground"
@@ -262,12 +263,13 @@ export function ExpenseList() {
               </Popover>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label className="text-sm font-medium">To</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    size="sm"
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !endDate && "text-muted-foreground"
@@ -292,14 +294,14 @@ export function ExpenseList() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
-            <CardTitle>Expenses</CardTitle>
+            <CardTitle className="text-lg">Expenses</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
-              {/* <Badge variant="outline" className="text-sm font-normal"> */}
+              <span className="text-sm text-muted-foreground">
                 {filteredExpenses.length} expense{filteredExpenses.length !== 1 ? 's' : ''}
-              {/* </Badge> */}
-              <Badge  className="text-sm font-medium">
+              </span>
+              <Badge className="text-sm font-medium">
                 Total: ৳{expenses
                   .reduce((sum, exp) => sum + exp.amount, 0)
                   .toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -309,8 +311,8 @@ export function ExpenseList() {
         </CardHeader>
         <CardContent>
           {filteredExpenses.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+            <div className="text-center py-6">
+              <FileText className="mx-auto h-8 w-8 text-muted-foreground" />
               <h3 className="mt-2 text-sm font-medium">No expenses found</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Get started by adding a new expense.
@@ -342,18 +344,18 @@ export function ExpenseList() {
                           <Image
                             src={expense.user.image}
                             alt={expense.user?.name || 'User'}
-                            width={24}
-                            height={24}
+                            width={20}
+                            height={20}
                             className="rounded-full"
                           />
                         )}
-                        <span>{expense.user?.name || 'Unknown'}</span>
+                        <span className="text-sm">{expense.user?.name || 'Unknown'}</span>
                       </TableCell>
                       <TableCell>
                         {expense.receiptUrl ? (
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="sm">
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>

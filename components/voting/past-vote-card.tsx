@@ -24,76 +24,45 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
     }
   };
 
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return format(date, 'h:mm a');
-    } catch {
-      return '';
-    }
-  };
-
-  const formatTimeAgo = (dateString?: string) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return formatDistanceToNow(date, { addSuffix: true });
-    } catch {
-      return '';
-    }
-  };
-
   return (
-    <Card >
-      <CardHeader className="pb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <Card className="col-span-full">
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-green-600" />
-            <CardTitle className="text-lg">{vote.title}</CardTitle>
+            <Trophy className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-base">Recent Vote Results</CardTitle>
           </div>
-          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200 w-fit">
-            Completed
+          <Badge variant="outline" className="text-xs">
+            <Clock className="mr-1 h-3 w-3" />
+            Ended {formatDistanceToNow(new Date(vote.endDate || ''), { addSuffix: true })}
           </Badge>
         </div>
-        <div className="space-y-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span>Started: {formatDate(vote.startDate)}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>Ended: {formatDate(vote.endDate)}</span>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {vote.endDate && `Completed ${formatTimeAgo(vote.endDate)}`}
-          </div>
-        </div>
+        <CardDescription className="text-sm">
+          {vote.title} • {formatDate(vote.startDate)} - {formatDate(vote.endDate)}
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="pt-2">
+        <div className="space-y-2">
           {Array.isArray((vote as any).options)
             ? ((vote as any).options as Candidate[]).map((candidate) => {
                                  const votersForCandidate = Array.isArray((vote as any).results?.[candidate.id]) ? (vote as any).results[candidate.id] : [];
                  const votesForCandidate = votersForCandidate.length;
                  const isWinner = candidate.id === vote.winner?.id;
                  return (
-                   <div key={candidate.id} className={`flex items-center gap-3 transition-colors`}>
-                     <Avatar className="h-10 w-10">
+                   <div key={candidate.id} className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${isWinner ? '' : 'bg-card'}`}>
+                     <Avatar className="h-8 w-8">
                        <AvatarImage src={candidate.image || "/placeholder.svg"} alt={candidate.name} />
                        <AvatarFallback >
                          {(candidate.name ? candidate.name.split(" ").map((n: string) => n[0]).join("") : "?")}
                        </AvatarFallback>
                      </Avatar>
                      <div className="flex-1 min-w-0">
-                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
-                         <div className="text-sm font-medium flex items-center gap-2 truncate">
-                           {candidate.name}
+                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-1">
+                         <div className="flex items-center gap-2">
+                           <p className="text-sm font-medium truncate">{candidate.name}</p>
                            {isWinner && (
-                             <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 text-xs flex-shrink-0">
-                               <Trophy className="h-3 w-3 mr-1" />
+                             <Badge variant="default" className="text-xs bg-yellow-600 hover:bg-yellow-700">
+                               <Trophy className="mr-1 h-3 w-3" />
                                Winner
                              </Badge>
                            )}
@@ -105,44 +74,25 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
                        </div>
                        <Progress 
                          value={((votesForCandidate / (activeGroupMembersCount || 1)) * 100)} 
-                         className={`h-2 ${isWinner ? 'bg-green-100' : ''}`}
+                         className="h-1.5"
                        />
+                       <div className="text-xs text-muted-foreground mt-1">
+                         {((votesForCandidate / (activeGroupMembersCount || 1)) * 100).toFixed(1)}% of total votes
+                       </div>
                        {votesForCandidate > 0 && (
-                         <div className="mt-2">
+                         <div className="mt-1">
                            <VoterStack 
                              voters={votersForCandidate} 
                              size="sm" 
-                             maxVisible={4}
+                             maxVisible={3}
                            />
                          </div>
                        )}
                      </div>
                    </div>
                  );
-              })
-            : (
-              <div className="flex items-center gap-3 p-3 rounded-lg border">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={vote.winner?.image || "/placeholder.svg"} alt={vote.winner?.name || 'Winner'} />
-                  <AvatarFallback className="bg-green-100 text-green-700">
-                    {(vote.winner?.name ? vote.winner.name.split(" ").map((n: string) => n[0]).join("") : "?")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                                     <div className="text-sm font-medium flex items-center gap-2">
-                     {vote.winner?.name ?? 'Unknown'}
-                     <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 text-xs">
-                       <Trophy className="h-3 w-3 mr-1" />
-                       Winner
-                     </Badge>
-                   </div>
-                   <div className="text-xs text-muted-foreground flex items-center gap-1">
-                     <Users className="h-3 w-3" />
-                     {vote.totalVotes ?? 0} total votes
-                   </div>
-                </div>
-              </div>
-            )}
+               })
+            : null}
         </div>
       </CardContent>
     </Card>

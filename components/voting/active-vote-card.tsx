@@ -173,14 +173,14 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
 
   return (
     <Card className="relative">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Vote className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">{vote.title}</CardTitle>
+            <Vote className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">{vote.title}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={isExpiringSoon(vote.endDate) ? "destructive" : "secondary"} className="w-fit">
+            <Badge variant={isExpiringSoon(vote.endDate) ? "destructive" : "secondary"} className="w-fit text-xs">
               <Clock className="mr-1 h-3 w-3" />
               {isExpiringSoon(vote.endDate) ? "Expiring Soon" : "Active"}
             </Badge>
@@ -188,7 +188,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
               <div className="z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="sm">
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -234,7 +234,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
           </div>
         </div>
         <div className="space-y-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               <span>Started: {formatDate(vote.startDate)}</span>
@@ -257,49 +257,49 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-muted/50 rounded-lg border">
+      <CardContent className="pt-2">
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-muted/50 rounded-lg border">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Vote Progress</span>
+              <Users className="h-3 w-3 text-primary" />
+              <span className="text-xs font-medium">Vote Progress</span>
             </div>
             <div className="text-xs text-muted-foreground">
               {totalVotes} / {totalMembers} members have voted
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {options.map((candidate: Candidate) => {
               const votersForCandidate = Array.isArray(results[candidate.id]) ? results[candidate.id] : [];
               const votesForCandidate = votersForCandidate.length;
               const percentage = ((votesForCandidate / (totalMembers || 1)) * 100);
               return (
-                <div key={candidate.id} className="p-3 rounded-lg border bg-card">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                <div key={candidate.id} className="p-2 rounded-lg border bg-card">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
                       <AvatarImage src={candidate.image || "/placeholder.svg"} alt={candidate.name} />
                       <AvatarFallback>
                         {candidate.name.split(" ").map((n: string) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-1">
                         <p className="text-sm font-medium truncate">{candidate.name}</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Users className="h-3 w-3 flex-shrink-0" />
                           <span>{votesForCandidate} votes</span>
                         </div>
                       </div>
-                      <Progress value={percentage} className="h-2" />
+                      <Progress value={percentage} className="h-1.5" />
                       <div className="text-xs text-muted-foreground mt-1">
                         {percentage.toFixed(1)}% of total votes
                       </div>
                       {votesForCandidate > 0 && (
-                        <div className="mt-2">
+                        <div className="mt-1">
                           <VoterStack 
                             voters={votersForCandidate} 
                             size="sm" 
-                            maxVisible={4}
+                            maxVisible={3}
                           />
                         </div>
                       )}
@@ -311,10 +311,10 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="pt-2">
         <Dialog open={showVoteDialog} onOpenChange={setShowVoteDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full" disabled={hasVoted(vote)}>
+            <Button className="w-full" size="sm" disabled={hasVoted(vote)}>
               <Vote className="mr-2 h-4 w-4" />
               {hasVoted(vote) ? "Already Voted" : "Cast Your Vote"}
             </Button>

@@ -16,20 +16,19 @@ export default function ExpensesPage() {
     setOpen(false);
   };
 
-
-
   return (
-    <div className="container mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="container mx-auto space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <h1 className="text-3xl font-bold">Extra Expenses</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold">Extra Expenses</h1>
+          <p className="text-muted-foreground text-sm">
             Track additional expenses like utilities, rent, internet, and more for {activeGroup?.name}.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             onClick={() => setOpen(true)}
+            size="sm"
             className="gap-2">
             <Plus className="h-4 w-4" />
             Add Expense

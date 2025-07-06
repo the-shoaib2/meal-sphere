@@ -232,7 +232,7 @@ export default function BkashPayment({ roomId, roomName, onSuccess, onCancel }: 
           <div className="space-y-4">
             {paymentStatus === "created" && (
               <>
-                <div className="bg-yellow-50 p-4 rounded-md">
+                <div className=" p-4 rounded-md">
                   <p className="text-sm text-yellow-800">
                     Your payment has been initiated. Please complete the payment using the Bkash app or website.
                   </p>
@@ -259,7 +259,7 @@ export default function BkashPayment({ roomId, roomName, onSuccess, onCancel }: 
               </div>
             )}
             {paymentStatus === "timeout" && (
-              <div className="bg-yellow-50 p-4 rounded-md">
+              <div className=" p-4 rounded-md">
                 <p className="text-sm text-yellow-800">
                   We couldn't confirm your payment status. If you completed the payment, it will be reflected in your
                   account soon.

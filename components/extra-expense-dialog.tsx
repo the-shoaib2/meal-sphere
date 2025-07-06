@@ -164,18 +164,18 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] w-[calc(100%-2rem)] mx-auto sm:w-full rounded-lg sm:rounded-lg">
-        <DialogHeader className="space-y-2">
-          <DialogTitle className="text-xl sm:text-2xl">
+      <DialogContent className="sm:max-w-[400px] w-[calc(100%-2rem)] mx-auto sm:w-full rounded-lg sm:rounded-lg">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-lg sm:text-xl">
             {isEditMode ? 'Edit Expense' : 'Add New Expense'}
           </DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
+          <DialogDescription className="text-sm">
             {isEditMode ? 'Update the expense details below.' : 'Fill out the form to add a new expense.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid gap-3 sm:gap-4 py-2 sm:py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid gap-3 py-2">
               <FormField
                 control={form.control}
                 name="description"
@@ -225,8 +225,6 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                   )}
                 />
 
-
-
                 <FormField
                   control={form.control}
                   name="type"
@@ -264,8 +262,9 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                         <FormControl>
                           <Button
                             variant={"outline"}
+                            size="sm"
                             className={cn(
-                              "w-full pl-3 text-left font-normal h-10 sm:h-auto",
+                              "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                             disabled={isLoading}
@@ -315,7 +314,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                         disabled={isLoading}
                       />
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="text-xs">
                       Upload a receipt or invoice (max 5MB).
                     </FormDescription>
                     <FormMessage />
@@ -324,7 +323,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                           <img
                             src={previewUrl}
                             alt="Receipt preview"
-                            className="max-h-48 w-auto max-w-full rounded-md object-contain"
+                            className="max-h-32 w-auto max-w-full rounded-md object-contain"
                           />
                       </div>
                     )}
@@ -338,7 +337,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                 type="submit"
                 className="w-full sm:w-auto"
                 disabled={isLoading}
-                size="lg"
+                size="sm"
               >
                 {isEditMode ? (
                   isLoading ? (
