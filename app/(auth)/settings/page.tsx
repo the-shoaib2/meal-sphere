@@ -22,7 +22,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-8">
+    <div className="container mx-auto space-y-8">
       <h1 className="text-3xl font-bold">Profile Settings</h1>
       <SettingsTabs user={user} />
     </div>

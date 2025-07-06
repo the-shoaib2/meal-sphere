@@ -80,7 +80,7 @@ export default function GroupsPage() {
 
   if (isLoadingState) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto ">
         <div className="flex items-center justify-between mb-8">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-32" />
@@ -96,7 +96,7 @@ export default function GroupsPage() {
 
   if (errorState) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto ">
         <EmptyState
           icon={<AlertCircle />}
           title="Error loading groups"
@@ -112,11 +112,11 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto ">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Join existing groups or create your own to start planning meals together.
           </p>
         </div>
