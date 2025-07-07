@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { PeriodSummary } from '@/hooks/use-periods';
 import { PeriodStatus } from '@prisma/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PeriodSummaryCardProps {
   period: any;
@@ -16,21 +17,8 @@ interface PeriodSummaryCardProps {
 export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
   if (!period) return null;
 
-  const getStatusBadge = (status: PeriodStatus, isLocked: boolean) => {
-    if (isLocked) {
-      return <Badge variant="destructive">Locked</Badge>;
-    }
-    
-    switch (status) {
-      case PeriodStatus.ACTIVE:
+  const getStatusBadge = () => {
         return <Badge variant="default">Active</Badge>;
-      case PeriodStatus.ENDED:
-        return <Badge variant="secondary">Ended</Badge>;
-      case PeriodStatus.ARCHIVED:
-        return <Badge variant="outline">Archived</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
   };
 
   const totalExpenses = (summary?.totalShoppingAmount || 0) + (summary?.totalExtraExpenses || 0);
@@ -50,7 +38,7 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
               {format(new Date(period.startDate), 'MMM dd, yyyy')} - {format(new Date(period.endDate), 'MMM dd, yyyy')}
             </CardDescription>
           </div>
-          {getStatusBadge(period.status, period.isLocked)}
+          {getStatusBadge()}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -137,6 +125,56 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
               </div>
             )}
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function PeriodSummaryCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center space-x-2">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <Skeleton className="h-6 w-32" />
+            </CardTitle>
+            <CardDescription>
+              <Skeleton className="h-4 w-40 mt-2" />
+            </CardDescription>
+          </div>
+          <Skeleton className="h-6 w-16 rounded" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-12" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-8 w-12" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-32" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-32" />
         </div>
       </CardContent>
     </Card>

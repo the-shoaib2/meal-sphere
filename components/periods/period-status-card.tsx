@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCurrentPeriod, useStartPeriod } from '@/hooks/use-periods';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useSession } from 'next-auth/react';
-import { CreatePeriodDialog } from './periods/create-period-dialog';
+import { CreatePeriodDialog } from './create-period-dialog';
 import { PeriodStatus } from '@prisma/client';
 
 const PRIVILEGED_ROLES = [

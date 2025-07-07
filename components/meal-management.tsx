@@ -33,7 +33,7 @@ import MealListSkeleton from "@/components/meal/meal-list-skeleton"
 import UserMealSummarySkeleton from "@/components/meal/user-meal-summary-skeleton"
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
-import { PeriodStatusCard } from "@/components/period-status-card"
+import { PeriodStatusCard } from "@/components/periods/period-status-card"
 
 interface MealWithUser {
   id: string

@@ -23,9 +23,11 @@ import { EndPeriodDialog } from './periods/end-period-dialog';
 import { PeriodSummaryCard } from './periods/period-summary-card';
 import { PeriodArchiveDialog } from './periods/period-archive-dialog';
 import { RestartPeriodDialog } from './periods/restart-period-dialog';
-import { PeriodManagementSkeleton } from './period-management-skeleton';
 import { PeriodsListSection } from './periods/periods-list-section';
 import { PeriodReportsSection } from './periods/period-reports-section';
+import { useSession } from 'next-auth/react';
+import { PeriodManagementSkeleton, PeriodSummaryCardSkeleton } from './periods/periods-skeleton';
+import { CurrentPeriodStatusCard, CurrentPeriodStatusCardSkeleton } from './periods/current-period-status-card';
 
 export function PeriodManagement() {
   const {
@@ -55,6 +57,11 @@ export function PeriodManagement() {
     handleRestartPeriod,
     restartPeriodMutation,
   } = usePeriodManagement();
+
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
+  const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
+  const isPrivileged = ["OWNER", "ADMIN", "MODERATOR"].includes(currentMember?.role ?? "");
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showRestartDialog, setShowRestartDialog] = useState(false);
@@ -86,31 +93,7 @@ export function PeriodManagement() {
     setUnlockLoading(false);
   };
 
-  // Show skeleton for all loading and no-group cases
-  if (!activeGroup || !activeGroup.id || periodsLoading || currentPeriodLoading) {
-    return <PeriodManagementSkeleton groupName={activeGroup?.name} />;
-  }
 
-  if (periodsError) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-bold tracking-tight">Period Management</h2>
-            <p className="text-muted-foreground">
-              Manage meal periods for {activeGroup.name}
-            </p>
-          </div>
-        </div>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Error loading periods: {periodsError.message}
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   const getStatusBadge = (status: PeriodStatus, isLocked: boolean) => {
     if (isLocked) {
@@ -136,10 +119,11 @@ export function PeriodManagement() {
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Period Management</h2>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Manage meal periods for {activeGroup.name}
+            Manage meal periods for {activeGroup?.name}
           </p>
         </div>
-        <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+        {isPrivileged && (
+          <div className="flex items-center space-x-2 mt-2 sm:mt-0">
           <CreatePeriodDialog
             open={showCreateDialog}
             onOpenChange={setShowCreateDialog}
@@ -147,67 +131,25 @@ export function PeriodManagement() {
             disabled={!!currentPeriod}
           />
         </div>
+        )}
       </div>
 
       {/* Current Period Status */}
-      {currentPeriod && (
-        <Card className="bg-muted">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-              <Calendar className="h-5 w-5 sm:h-5 sm:w-5 text-green-600" />
-              <span>Current Active Period</span>
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              {currentPeriod.name} • {format(new Date(currentPeriod.startDate), 'MMM dd, yyyy')}{currentPeriod.endDate ? ` - ${format(new Date(currentPeriod.endDate), 'MMM dd, yyyy')}` : ''}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs sm:text-sm text-muted-foreground">
-                    {activeGroup?.members?.length || 0} members
-                  </span>
-                </div>
-                {getStatusBadge(currentPeriod.status, currentPeriod.isLocked)}
-              </div>
-              <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                <EndPeriodDialog
-                  open={showEndDialog}
-                  onOpenChange={setShowEndDialog}
-                  onConfirm={handleEndPeriod}
-                  period={currentPeriod}
-                />
-                {currentPeriod.isLocked ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setUnlockTargetPeriod(currentPeriod);
-                      setUnlockToActive(currentPeriod.status === 'ACTIVE');
-                      setShowUnlockDialog(true);
-                    }}
-                    className="w-full sm:w-auto"
-                  >
-                    <Unlock className="h-4 w-4 mr-2" />
-                    Unlock
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleLockPeriod(currentPeriod.id)}
-                    className="w-full sm:w-auto"
-                  >
-                    <Lock className="h-4 w-4 mr-2" />
-                    Lock
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {currentPeriodLoading || !currentPeriod ? (
+        <CurrentPeriodStatusCardSkeleton />
+      ) : (
+        <CurrentPeriodStatusCard
+          currentPeriod={currentPeriod}
+          activeGroup={activeGroup}
+          isPrivileged={isPrivileged}
+          showEndDialog={showEndDialog}
+          setShowEndDialog={setShowEndDialog}
+          handleEndPeriod={handleEndPeriod}
+          setUnlockTargetPeriod={setUnlockTargetPeriod}
+          setUnlockToActive={setUnlockToActive}
+          setShowUnlockDialog={setShowUnlockDialog}
+          handleLockPeriod={handleLockPeriod}
+        />
       )}
 
       {/* No Current Period State */}
@@ -225,78 +167,83 @@ export function PeriodManagement() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            No periods created yet. Create your first period to start managing meals and expenses for {activeGroup.name}.
+            No periods created yet. Create your first period to start managing meals and expenses for {activeGroup?.name}.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Overview Section */}
       <div className="space-y-4">
-        {/* Period Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Total Periods</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">{periods?.length || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {periods?.filter((p: MealPeriod) => p.status === PeriodStatus.ACTIVE).length || 0} active
-              </p>
-            </CardContent>
-          </Card>
+        {/* Period Summary Cards Skeleton */}
+        {summaryLoading ? (
+          null
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Total Periods</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">{periods?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {periods?.filter((p: MealPeriod) => p.status === PeriodStatus.ACTIVE).length || 0} active
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Current Period Meals</CardTitle>
+                <Utensils className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  {currentPeriod ? (periodSummary?.totalMeals || 0) : 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {currentPeriod ? (periodSummary?.totalGuestMeals || 0) : 0} guest meals
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Current Period Expenses</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  ${currentPeriod ? (periodSummary?.totalShoppingAmount || 0).toFixed(2) : '0.00'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  + ${currentPeriod ? (periodSummary?.totalExtraExpenses || 0).toFixed(2) : '0.00'} extra
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium">Current Period Payments</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold">
+                  ${currentPeriod ? (periodSummary?.totalPayments || 0).toFixed(2) : '0.00'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {activeGroup?.members?.length || 0} active members
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Current Period Meals</CardTitle>
-              <Utensils className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
-                {currentPeriod ? (periodSummary?.totalMeals || 0) : 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {currentPeriod ? (periodSummary?.totalGuestMeals || 0) : 0} guest meals
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Current Period Expenses</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
-                ${currentPeriod ? (periodSummary?.totalShoppingAmount || 0).toFixed(2) : '0.00'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                + ${currentPeriod ? (periodSummary?.totalExtraExpenses || 0).toFixed(2) : '0.00'} extra
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Current Period Payments</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
-                ${currentPeriod ? (periodSummary?.totalPayments || 0).toFixed(2) : '0.00'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {activeGroup?.members?.length || 0} active members
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Selected Period Details */}
+        {/* Selected Period Details Skeleton */}
         {selectedPeriod && (
           <div className="grid gap-4 md:grid-cols-1">
-            <PeriodSummaryCard period={selectedPeriod} summary={periodSummary ?? undefined} />
+            {summaryLoading ? (
+              <PeriodSummaryCardSkeleton />
+            ) : (
+              <PeriodSummaryCard period={selectedPeriod} summary={periodSummary ?? undefined} />
+            )}
           </div>
         )}
 
@@ -330,10 +277,11 @@ export function PeriodManagement() {
         setShowRestartDialog={setShowRestartDialog}
         setShowCreateDialog={setShowCreateDialog}
         setShowArchiveDialog={setShowArchiveDialog}
+        isPrivileged={isPrivileged}
       />
 
       {/* Reports Section */}
-      <PeriodReportsSection groupName={activeGroup.name} />
+      <PeriodReportsSection groupName={activeGroup?.name ?? ''} />
 
       {/* Archive Dialog */}
       <PeriodArchiveDialog
