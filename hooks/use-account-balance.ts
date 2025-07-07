@@ -32,7 +32,15 @@ export type UserBalance = {
   totalSpent?: number;
   mealCount?: number;
   mealRate?: number;
-}
+  currentPeriod?: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    isLocked: boolean;
+  } | null;
+};
 
 export type GroupBalanceSummary = {
   members: MemberWithBalance[];
@@ -92,11 +100,16 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
   });
 }
 
-export function useGetTransactions(roomId: string, userId: string) {
+export function useGetTransactions(roomId: string, userId: string, periodId?: string) {
   return useQuery<AccountTransaction[]>({
-    queryKey: ['user-transactions', roomId, userId],
+    queryKey: ['user-transactions', roomId, userId, periodId],
     queryFn: async () => {
-      const res = await fetch(`/api/account-balance/transactions?roomId=${roomId}&userId=${userId}`);
+      const params = new URLSearchParams({
+        roomId,
+        userId,
+        ...(periodId && { periodId }),
+      });
+      const res = await fetch(`/api/account-balance/transactions?${params}`);
       if (!res.ok) throw new Error('Failed to fetch transactions');
       return res.json();
     },

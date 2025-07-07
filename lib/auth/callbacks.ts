@@ -26,8 +26,7 @@ export async function signInCallback(params: any) {
     if (account?.provider === 'google') {
       if (!user.email) {
         console.error('❌ No email found in user object from Google OAuth');
-        console.log('User object:', user);
-        console.log('Account object:', account);
+        
         return false; 
       }
 
@@ -115,7 +114,7 @@ export async function signInCallback(params: any) {
 // Events callbacks
 export const eventsCallbacks = {
   async signIn(message: any) {
-    console.log('🔐 SignIn event triggered for user:', message.user?.id)
+
     
     try {
       // Update the most recent session with device info and location if available
@@ -130,7 +129,7 @@ export const eventsCallbacks = {
         });
         
         if (session) {
-          console.log('📱 Found session to update:', session.id)
+  
           
           // Parse user agent for device info
           const userAgent = session.userAgent || '';
@@ -142,11 +141,8 @@ export const eventsCallbacks = {
           // Get location data if we have an IP address
           let locationData: { city?: string; country?: string; latitude?: number; longitude?: number } = {};
           if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
-            console.log('🌍 Getting location data for IP:', ipAddress)
             locationData = await getLocationFromIP(ipAddress);
-            console.log('📍 Location data received:', locationData)
           } else if (ipAddress) {
-            console.log('🏠 Local IP detected, using localhost location')
             locationData = {
               city: 'Localhost',
               country: 'Development',
@@ -169,19 +165,18 @@ export const eventsCallbacks = {
             }
           });
           
-          console.log('✅ Session updated with device info and location')
+
         } else {
-          console.log('⚠️ No active session found for user')
+
         }
       }
     } catch (error) {
-      console.error('❌ Error updating session in signIn event:', error)
+      // Error updating session in signIn event
     }
   },
   
   async signOut(message: any) {
     // Handle sign out events if needed
-    console.log('🚪 SignOut event triggered for user:', message.session?.userId)
   }
 };
 

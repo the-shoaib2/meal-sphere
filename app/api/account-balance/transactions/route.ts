@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const roomId = searchParams.get('roomId');
     const userId = searchParams.get('userId');
+    const periodId = searchParams.get('periodId');
 
     if (!roomId || !userId) {
       return NextResponse.json({ error: 'Room ID and User ID are required' }, { status: 400 });
@@ -45,14 +46,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const transactions = await prisma.accountTransaction.findMany({
+    // Get current period to check if it's ended
+    const currentPeriod = await prisma.mealPeriod.findFirst({
       where: {
         roomId,
-        OR: [
-          { userId: targetUserId },
-          { targetUserId: targetUserId },
-        ],
+        status: 'ACTIVE'
       },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // If no active period exists, return empty array (no transactions for ended periods)
+    if (!currentPeriod) {
+      return NextResponse.json([]);
+    }
+
+    const whereClause: any = {
+      roomId,
+      periodId: currentPeriod.id, // Always filter by current period
+      OR: [
+        { userId: targetUserId },
+        { targetUserId: targetUserId },
+      ],
+    };
+
+    const transactions = await prisma.accountTransaction.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {

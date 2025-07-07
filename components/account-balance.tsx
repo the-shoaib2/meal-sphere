@@ -4,6 +4,7 @@ import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupBalances, useGetBalance, useGetTransactions } from '@/hooks/use-account-balance';
+import { useCurrentPeriod } from '@/hooks/use-periods';
 import PrivilegedView from '@/components/account-balance/privileged-view';
 import MemberView from '@/components/account-balance/member-view';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,9 +24,10 @@ export default function AccountBalancePanel() {
   const userRole = member?.role;
   const hasPrivilege = isPrivileged(userRole);
 
+  const { data: currentPeriod } = useCurrentPeriod();
   const { data: groupData, isLoading: isLoadingBalances } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);
   const { data: ownBalance, isLoading: isLoadingOwnBalance } = useGetBalance(activeGroup?.id!, session?.user?.id!, true);
-  const { data: ownTransactions, isLoading: isLoadingTransactions } = useGetTransactions(activeGroup?.id!, session?.user?.id!);
+  const { data: ownTransactions, isLoading: isLoadingTransactions } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id);
 
   if (!activeGroup) {
     return <BalanceSkeleton hasPrivilege={false} />;

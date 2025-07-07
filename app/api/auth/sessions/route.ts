@@ -47,14 +47,7 @@ export async function GET(request: NextRequest) {
       ipAddress = ipAddress.substring(7)
     }
 
-    console.log('🔍 IP Detection Debug:', {
-      forwardedFor,
-      realIp,
-      cfConnectingIp,
-      xClientIp,
-      finalIp: ipAddress,
-      userAgent: userAgent.substring(0, 100) + '...'
-    })
+
 
     // Get current session token from cookies
     const currentSessionToken = request.cookies.get('next-auth.session-token')?.value ||
@@ -69,11 +62,8 @@ export async function GET(request: NextRequest) {
         // Get location data if we have an IP address
         let locationData = {}
         if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
-          console.log('🌍 Fetching location data for IP:', ipAddress)
           locationData = await getLocationFromIP(ipAddress)
-          console.log('📍 Location data received:', locationData)
         } else if (ipAddress) {
-          console.log('🏠 Local IP detected, using localhost location')
           locationData = {
             city: 'Localhost',
             country: 'Development',
@@ -90,9 +80,8 @@ export async function GET(request: NextRequest) {
           locationData
         )
         
-        console.log('✅ Session update result:', updateResult)
+
       } catch (error) {
-        console.error('❌ Error updating session info:', error)
         // Continue with fetching sessions even if update fails
       }
     }
@@ -122,17 +111,10 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' }
     })
 
-    console.log('📊 Final sessions data:', updatedSessions.map(s => ({
-      id: s.id,
-      ipAddress: s.ipAddress,
-      city: s.city,
-      country: s.country,
-      deviceType: s.deviceType
-    })))
+
 
     return NextResponse.json(updatedSessions)
   } catch (error) {
-    console.error('Error fetching sessions:', error)
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
     })
@@ -155,7 +137,6 @@ export async function DELETE(request: Request) {
       const body = await request.json()
       ids = body?.ids || []
     } catch (parseError) {
-      console.error('Error parsing request body:', parseError)
       return new NextResponse(JSON.stringify({ error: 'Invalid request body format' }), {
         status: 400,
       })
@@ -206,7 +187,6 @@ export async function DELETE(request: Request) {
       message: `Successfully deleted ${deletedCount} session(s)`
     })
   } catch (error) {
-    console.error('Error revoking sessions:', error)
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
     })

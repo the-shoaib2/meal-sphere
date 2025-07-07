@@ -25,6 +25,7 @@ import {
   useDeleteTransaction,
   type AccountTransaction
 } from '@/hooks/use-account-balance';
+import { useCurrentPeriod } from '@/hooks/use-periods';
 import { 
   Dialog, 
   DialogContent, 
@@ -101,8 +102,9 @@ export default function UserAccountBalancePage() {
   const userRole = activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role || 'MEMBER';
   const hasPrivilege = isPrivileged(userRole);
 
+  const { data: currentPeriod } = useCurrentPeriod();
   const { data: userBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useGetBalance(activeGroup?.id || '', userId);
-  const { data: transactions, isLoading: isLoadingTransactions, refetch: refetchTransactions } = useGetTransactions(activeGroup?.id || '', userId);
+  const { data: transactions, isLoading: isLoadingTransactions, refetch: refetchTransactions } = useGetTransactions(activeGroup?.id || '', userId, currentPeriod?.id);
 
   // Filter transactions to only those involving this user (as receiver or self-transactions)
   const allFilteredTransactions = transactions?.filter(

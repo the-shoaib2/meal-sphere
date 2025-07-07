@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { createCustomNotification } from "@/lib/notification-utils"
 import { uploadReceipt } from "@/lib/upload-utils"
 import { ExpenseType, NotificationType } from '@prisma/client'
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/period-utils"
 
 export async function POST(request: Request) {
   try {
@@ -52,19 +53,28 @@ export async function POST(request: Request) {
       receiptUrl = await uploadReceipt(receiptFile, user.id, roomId)
     }
 
+    // Validate that there's an active period
+    try {
+      await validateActivePeriod(roomId)
+    } catch (error: any) {
+      return NextResponse.json({ message: error.message }, { status: 400 })
+    }
+
     // Create expense and account transaction in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create expense
+      // Create expense with period ID
+      const expenseData = await addPeriodIdToData(roomId, {
+        description,
+        amount,
+        date,
+        type: type as ExpenseType,
+        receiptUrl,
+        userId: user.id,
+        roomId,
+      })
+
       const expense = await tx.extraExpense.create({
-        data: {
-          description,
-          amount,
-          date,
-          type: type as ExpenseType,
-          receiptUrl,
-          userId: user.id,
-          roomId,
-        },
+        data: expenseData,
       })
 
       // Create account transaction to decrease group balance
@@ -155,11 +165,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Build query
-    const query: any = {
-      where: {
-        roomId,
-      },
+    // Get period-aware where clause
+    const whereClause = await getPeriodAwareWhereClause(roomId, {
+      roomId,
+    })
+
+    // If no active period, return empty array
+    if (whereClause.id === null) {
+      return NextResponse.json([])
+    }
+
+    // Add date filter if provided
+    if (startDate && endDate) {
+      whereClause.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      }
+    }
+
+    // Add type filter if provided
+    if (type) {
+      whereClause.type = type
+    }
+
+    const expenses = await prisma.extraExpense.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {
@@ -173,22 +203,7 @@ export async function GET(request: Request) {
       orderBy: {
         date: "desc",
       },
-    }
-
-    // Add date filter if provided
-    if (startDate && endDate) {
-      query.where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      }
-    }
-
-    // Add type filter if provided
-    if (type) {
-      query.where.type = type
-    }
-
-    const expenses = await prisma.extraExpense.findMany(query)
+    })
 
     return NextResponse.json(expenses)
   } catch (error) {

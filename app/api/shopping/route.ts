@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { createNotification } from "@/lib/notification-utils"
 import { uploadReceipt } from "@/lib/upload-utils"
 import { NotificationType } from "@prisma/client"
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/period-utils"
 
 export async function POST(request: Request) {
   try {
@@ -51,17 +52,26 @@ export async function POST(request: Request) {
       receiptUrl = await uploadReceipt(receiptFile, user.id, roomId)
     }
 
-    // Create shopping item
+    // Validate that there's an active period
+    try {
+      await validateActivePeriod(roomId)
+    } catch (error: any) {
+      return NextResponse.json({ message: error.message }, { status: 400 })
+    }
+
+    // Create shopping item with period ID
+    const shoppingData = await addPeriodIdToData(roomId, {
+      name: description?.substring(0, 50) || 'Shopping Item', // Required field
+      description,
+      quantity: amount,
+      date,
+      receiptUrl,
+      userId: user.id,
+      roomId,
+    })
+
     const shoppingItem = await prisma.shoppingItem.create({
-      data: {
-        name: description?.substring(0, 50) || 'Shopping Item', // Required field
-        description,
-        quantity: amount,
-        date,
-        receiptUrl,
-        userId: user.id,
-        roomId,
-      },
+      data: shoppingData,
     })
 
     // Get room details for notification
@@ -135,11 +145,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Build query
-    const query: any = {
-      where: {
-        roomId,
-      },
+    // Get period-aware where clause
+    const whereClause = await getPeriodAwareWhereClause(roomId, {
+      roomId,
+    })
+
+    // If no active period, return empty array
+    if (whereClause.id === null) {
+      return NextResponse.json([])
+    }
+
+    // Add date filter if provided
+    if (startDate && endDate) {
+      whereClause.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      }
+    }
+
+    const shoppingItems = await prisma.shoppingItem.findMany({
+      where: whereClause,
       include: {
         user: {
           select: {
@@ -153,17 +178,7 @@ export async function GET(request: Request) {
       orderBy: {
         date: "desc",
       },
-    }
-
-    // Add date filter if provided
-    if (startDate && endDate) {
-      query.where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      }
-    }
-
-    const shoppingItems = await prisma.shoppingItem.findMany(query)
+    })
 
     return NextResponse.json(shoppingItems)
   } catch (error) {

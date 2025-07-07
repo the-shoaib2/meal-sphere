@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { format, isSameDay, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
+import { useCurrentPeriod } from './use-periods';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 
@@ -131,6 +132,7 @@ interface UseMealReturn {
   autoMealSettings: AutoMealSettings | null;
   userMealStats: UserMealStats | null;
   isLoading: boolean;
+  isLoadingUserStats: boolean;
   error: Error | null;
   
   // Queries
@@ -166,6 +168,44 @@ interface UseMealReturn {
 export function useMeal(roomId?: string): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const { data: currentPeriod } = useCurrentPeriod();
+  
+  // Get the most recent period (including ENDED ones) if no active period
+  const { data: mostRecentPeriod } = useQuery({
+    queryKey: ['mostRecentPeriod', roomId],
+    queryFn: async () => {
+      if (!roomId) return null;
+      
+      try {
+        // First try to get current (active) period
+        const currentResponse = await fetch(`/api/periods/current?groupId=${roomId}`);
+        if (currentResponse.ok) {
+          const currentData = await currentResponse.json();
+          if (currentData.currentPeriod) {
+            return currentData.currentPeriod;
+          }
+        }
+        
+        // If no active period, get the most recent period
+        const periodsResponse = await fetch(`/api/periods?groupId=${roomId}`);
+        if (periodsResponse.ok) {
+          const periodsData = await periodsResponse.json();
+          if (periodsData.periods && periodsData.periods.length > 0) {
+            return periodsData.periods[0]; // Most recent period
+          }
+        }
+        
+        return null;
+      } catch (error) {
+        console.error('Error fetching most recent period:', error);
+        return null;
+      }
+    },
+    enabled: !!roomId && !currentPeriod,
+  });
+  
+  // Use current period if available, otherwise use most recent period
+  const periodToUse = currentPeriod || mostRecentPeriod;
 
   // Fetch meals
   const { data: meals = [], isLoading: isLoadingMeals, error: mealsError } = useQuery<Meal[]>({
@@ -221,13 +261,28 @@ export function useMeal(roomId?: string): UseMealReturn {
 
   // Fetch user meal statistics
   const { data: userMealStats = null, isLoading: isLoadingUserStats } = useQuery<UserMealStats | null>({
-    queryKey: ['user-meal-stats', roomId, session?.user?.id],
+    queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id],
     queryFn: async () => {
       if (!roomId || !session?.user?.id) return null;
-      const { data } = await axios.get<UserMealStats>(`/api/meals/user-stats?roomId=${roomId}&userId=${session.user.id}`);
+      
+      // Only make the API call if we have a period
+      if (!periodToUse?.id) {
+        console.log('No period available, returning null for user stats');
+        return null;
+      }
+      
+      const params = new URLSearchParams({
+        roomId,
+        userId: session.user.id,
+        periodId: periodToUse.id
+      });
+      
+      console.log('Using period for stats:', periodToUse.name, periodToUse.id, 'Status:', periodToUse.status);
+      
+      const { data } = await axios.get<UserMealStats>(`/api/meals/user-stats?${params.toString()}`);
       return data;
     },
-    enabled: !!roomId && !!session?.user?.id,
+    enabled: !!roomId && !!session?.user?.id && !!periodToUse?.id,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false
   });
@@ -245,7 +300,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
     },
     onError: (error: any) => {
       console.error('Error toggling meal:', error);
@@ -267,7 +322,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
     },
     onError: (error: any) => {
@@ -284,7 +339,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
       toast.success('Guest meal updated successfully');
     },
     onError: (error: any) => {
@@ -301,7 +356,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
       toast.success('Guest meal deleted successfully');
     },
     onError: (error: any) => {
@@ -556,6 +611,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     autoMealSettings,
     userMealStats,
     isLoading: isLoadingMeals || isLoadingGuestMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats,
+    isLoadingUserStats,
     error: mealsError || guestMealsError || null,
     
     // Queries

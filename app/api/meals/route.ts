@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/prisma"
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod } from "@/lib/period-utils"
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions)
@@ -44,15 +45,22 @@ export async function GET(request: Request) {
     dateFilter.lte = new Date(endDate)
   }
 
-  const whereClause: any = {
-    roomId: roomId,
-  }
-
-  if (Object.keys(dateFilter).length > 0) {
-    whereClause.date = dateFilter
-  }
-
   try {
+    // Get period-aware where clause
+    const whereClause = await getPeriodAwareWhereClause(roomId, {
+      roomId: roomId,
+    })
+
+    // If no active period, return empty array
+    if (whereClause.id === null) {
+      return NextResponse.json([])
+    }
+
+    // Add date filter if provided
+    if (Object.keys(dateFilter).length > 0) {
+      whereClause.date = dateFilter
+    }
+
     const meals = await prisma.meal.findMany({
       where: whereClause,
       include: {
@@ -105,15 +113,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Check if meal already exists
-    const existingMeal = await prisma.meal.findUnique({
+    // Validate that there's an active period
+    try {
+      await validateActivePeriod(roomId)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    // Check if meal already exists (within the current period)
+    const currentPeriod = await getCurrentPeriod(roomId)
+    const existingMeal = await prisma.meal.findFirst({
       where: {
-        userId_roomId_date_type: {
-          userId: session.user.id,
-          roomId: roomId,
-          date: new Date(date),
-          type: type,
-        },
+        userId: session.user.id,
+        roomId: roomId,
+        date: new Date(date),
+        type: type,
+        periodId: currentPeriod?.id,
       },
     })
 
@@ -127,14 +142,16 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ message: "Meal removed successfully" })
     } else {
-      // Create new meal
+      // Create new meal with period ID
+      const mealData = await addPeriodIdToData(roomId, {
+        userId: session.user.id,
+        roomId: roomId,
+        date: new Date(date),
+        type: type,
+      })
+
       const meal = await prisma.meal.create({
-        data: {
-          userId: session.user.id,
-          roomId: roomId,
-          date: new Date(date),
-          type: type,
-        },
+        data: mealData,
       })
 
       return NextResponse.json(meal)

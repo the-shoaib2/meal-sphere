@@ -24,7 +24,8 @@ import {
   Utensils,
   Users,
   Vote,
-  Bell
+  Bell,
+  Calendar
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -58,11 +59,18 @@ const navMain = [
       exact: false,
     },
     {
+      title: "Periods",
+      url: "/periods",
+      icon: Calendar,
+      exact: false,
+    },
+    {
       title: "Meals",
       url: "/meals",
       icon: Utensils,
       exact: false, 
     },
+
     {
       title: "Shopping",
       url: "/shopping",

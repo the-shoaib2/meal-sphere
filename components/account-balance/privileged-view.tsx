@@ -31,8 +31,8 @@ interface PrivilegedViewProps {
 }
 
 export default function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
-  const { members, groupTotalBalance, totalExpenses, mealRate, totalMeals, netGroupBalance } = groupData;
-  const activeBalancesCount = members.filter(m => m.balance !== 0).length;
+  const { members, groupTotalBalance, totalExpenses, mealRate, totalMeals, netGroupBalance, currentPeriod } = groupData as any;
+  const activeBalancesCount = members.filter((m: any) => m.balance !== 0).length;
   const router = useRouter();
 
   const handleViewDetails = (userId: string) => {
@@ -44,8 +44,15 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Account Balances</h1>
-          <p className="text-muted-foreground text-sm">Manage all user balances and transactions.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <h1 className="text-2xl font-bold">Account Balances</h1>
+            {currentPeriod && (
+              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit">
+                {currentPeriod.name} {currentPeriod.isLocked ? "(Locked)" : ""}
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground text-sm mt-1">Manage all user balances and transactions.</p>
         </div>
         <Badge variant="outline">{userRole}</Badge>
       </div>
@@ -109,7 +116,7 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.map((member) => (
+                {members.map((member: any) => (
                   <TableRow key={member.userId}>
                     <TableCell>
                       <div className="flex items-center gap-3">

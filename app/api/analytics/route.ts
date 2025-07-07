@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { generateMealCountData, generateExpenseData, generateMealRateTrendData, generateMonthlyExpenseData } from '@/lib/chart-utils';
+import { getPeriodAwareWhereClause, validateActivePeriod } from '@/lib/period-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,53 +44,86 @@ export async function GET(request: NextRequest) {
       roomIds = [groupId];
     }
 
-    // Fetch meals
-    const meals = await prisma.meal.findMany({
-      where: {
-        roomId: { in: roomIds },
-      },
-      include: {
-        room: {
-          select: { id: true, name: true },
+    // Fetch meals with period filtering
+    const mealsPromises = roomIds.map(async (roomId) => {
+      const whereClause = await getPeriodAwareWhereClause(roomId, {
+        roomId: roomId,
+      });
+      
+      if (whereClause.id === null) {
+        return [];
+      }
+      
+      return prisma.meal.findMany({
+        where: whereClause,
+        include: {
+          room: {
+            select: { id: true, name: true },
+          },
+          user: {
+            select: { id: true, name: true },
+          },
         },
-        user: {
-          select: { id: true, name: true },
-        },
-      },
-      orderBy: { date: 'desc' },
+        orderBy: { date: 'desc' },
+      });
     });
+    
+    const mealsArrays = await Promise.all(mealsPromises);
+    const meals = mealsArrays.flat();
 
-    // Fetch expenses
-    const expenses = await prisma.extraExpense.findMany({
-      where: {
-        roomId: { in: roomIds },
-      },
-      include: {
-        room: {
-          select: { id: true, name: true },
+    // Fetch expenses with period filtering
+    const expensesPromises = roomIds.map(async (roomId) => {
+      const whereClause = await getPeriodAwareWhereClause(roomId, {
+        roomId: roomId,
+      });
+      
+      if (whereClause.id === null) {
+        return [];
+      }
+      
+      return prisma.extraExpense.findMany({
+        where: whereClause,
+        include: {
+          room: {
+            select: { id: true, name: true },
+          },
+          user: {
+            select: { id: true, name: true },
+          },
         },
-        user: {
-          select: { id: true, name: true },
-        },
-      },
-      orderBy: { date: 'desc' },
+        orderBy: { date: 'desc' },
+      });
     });
+    
+    const expensesArrays = await Promise.all(expensesPromises);
+    const expenses = expensesArrays.flat();
 
-    // Fetch shopping items
-    const shoppingItems = await prisma.shoppingItem.findMany({
-      where: {
-        roomId: { in: roomIds },
-      },
-      include: {
-        room: {
-          select: { id: true, name: true },
+    // Fetch shopping items with period filtering
+    const shoppingPromises = roomIds.map(async (roomId) => {
+      const whereClause = await getPeriodAwareWhereClause(roomId, {
+        roomId: roomId,
+      });
+      
+      if (whereClause.id === null) {
+        return [];
+      }
+      
+      return prisma.shoppingItem.findMany({
+        where: whereClause,
+        include: {
+          room: {
+            select: { id: true, name: true },
+          },
+          user: {
+            select: { id: true, name: true },
+          },
         },
-        user: {
-          select: { id: true, name: true },
-        },
-      },
-      orderBy: { date: 'desc' },
+        orderBy: { date: 'desc' },
+      });
     });
+    
+    const shoppingArrays = await Promise.all(shoppingPromises);
+    const shoppingItems = shoppingArrays.flat();
 
     // Get room member counts
     const roomMembers = await prisma.roomMember.findMany({

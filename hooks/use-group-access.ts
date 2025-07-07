@@ -109,14 +109,7 @@ export function useGroupAccess({
       setUserRole(groupData.userRole);
       setCanAccess(groupData.canAccess);
       onGroupData?.(groupData);
-      console.log('[useGroupAccess] Group access:', {
-        groupName: groupData.group?.name || groupData.name,
-        userRole: groupData.userRole,
-        userName: session?.user?.name,
-        userEmail: session?.user?.email
-      });
     } catch (error) {
-      console.error('Error checking group access:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to check group access';
       setError(errorMessage);
       onError?.(errorMessage);

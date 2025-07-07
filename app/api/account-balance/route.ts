@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
+import { getPeriodAwareWhereClause, validateActivePeriod, getCurrentPeriod } from '@/lib/period-utils';
 
 const PRIVILEGED_ROLES = [
   'OWNER',
@@ -14,9 +15,18 @@ function isPrivileged(role?: string) {
 }
 
 async function calculateBalance(userId: string, roomId: string): Promise<number> {
+  // Get current period for filtering
+  const currentPeriod = await getCurrentPeriod(roomId);
+  
+  // If no active period exists, return 0 (no balance for ended periods)
+  if (!currentPeriod || currentPeriod.status !== 'ACTIVE') {
+    return 0;
+  }
+
   const transactions = await prisma.accountTransaction.findMany({
     where: {
       roomId,
+      periodId: currentPeriod.id,
       OR: [
         { targetUserId: userId },                    // User is the receiver
         { 
@@ -44,8 +54,19 @@ async function calculateBalance(userId: string, roomId: string): Promise<number>
 
 async function calculateGroupTotalBalance(roomId: string): Promise<number> {
   try {
+    // Get current period for filtering
+    const currentPeriod = await getCurrentPeriod(roomId);
+    
+    // If no active period exists, return 0 (no balance for ended periods)
+    if (!currentPeriod || currentPeriod.status !== 'ACTIVE') {
+      return 0;
+    }
+
     const transactions = await prisma.accountTransaction.findMany({
-      where: { roomId },
+      where: { 
+        roomId,
+        periodId: currentPeriod.id,
+      },
       select: {
         userId: true,
         targetUserId: true,
@@ -67,8 +88,19 @@ async function calculateGroupTotalBalance(roomId: string): Promise<number> {
 
 async function calculateTotalExpenses(roomId: string): Promise<number> {
   try {
+    // Get period-aware where clause
+    const periodFilter = await getPeriodAwareWhereClause(roomId, {});
+    
+    // If no active period, return 0
+    if (periodFilter.id === null) {
+      return 0;
+    }
+
     const expenses = await prisma.extraExpense.findMany({
-      where: { roomId },
+      where: { 
+        roomId,
+        periodId: periodFilter.periodId,
+      },
       select: { amount: true },
     });
 
@@ -81,9 +113,20 @@ async function calculateTotalExpenses(roomId: string): Promise<number> {
 
 async function calculateMealRate(roomId: string): Promise<{ mealRate: number; totalMeals: number; totalExpenses: number }> {
   try {
-    // Get total meals in the room
+    // Get period-aware where clause for meals
+    const periodFilter = await getPeriodAwareWhereClause(roomId, {});
+    
+    // If no active period, return 0
+    if (periodFilter.id === null) {
+      return { mealRate: 0, totalMeals: 0, totalExpenses: 0 };
+    }
+
+    // Get total meals in the room for current period
     const totalMeals = await prisma.meal.count({
-      where: { roomId },
+      where: { 
+        roomId,
+        periodId: periodFilter.periodId,
+      },
     });
 
     // Get total expenses
@@ -101,8 +144,20 @@ async function calculateMealRate(roomId: string): Promise<{ mealRate: number; to
 
 async function calculateUserMealCount(userId: string, roomId: string): Promise<number> {
   try {
+    // Get period-aware where clause
+    const periodFilter = await getPeriodAwareWhereClause(roomId, {});
+    
+    // If no active period, return 0
+    if (periodFilter.id === null) {
+      return 0;
+    }
+
     return await prisma.meal.count({
-      where: { userId, roomId },
+      where: { 
+        userId, 
+        roomId,
+        periodId: periodFilter.periodId,
+      },
     });
   } catch (error) {
     console.error('Error calculating user meal count:', error);
@@ -208,14 +263,25 @@ export async function GET(request: NextRequest) {
         })
       );
 
-      const response: any = {
-        members: membersWithBalances,
-        groupTotalBalance,
-        totalExpenses,
-        mealRate,
-        totalMeals,
-        netGroupBalance: groupTotalBalance - totalExpenses,
-      };
+          // Get current period info
+    const currentPeriod = await getCurrentPeriod(roomId);
+    
+    const response: any = {
+      members: membersWithBalances,
+      groupTotalBalance,
+      totalExpenses,
+      mealRate,
+      totalMeals,
+      netGroupBalance: groupTotalBalance - totalExpenses,
+      currentPeriod: currentPeriod ? {
+        id: currentPeriod.id,
+        name: currentPeriod.name,
+        startDate: currentPeriod.startDate,
+        endDate: currentPeriod.endDate,
+        status: currentPeriod.status,
+        isLocked: currentPeriod.isLocked,
+      } : null,
+    };
       
       return NextResponse.json(response);
     }
@@ -225,10 +291,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const [targetUser, balance, availableBalanceData] = await Promise.all([
+    const [targetUser, balance, availableBalanceData, currentPeriod] = await Promise.all([
       prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, name: true, image: true, email: true } }),
       calculateBalance(targetUserId, roomId),
       includeDetails ? calculateAvailableBalance(targetUserId, roomId) : null,
+      getCurrentPeriod(roomId),
     ]);
     
     if (!targetUser) {
@@ -238,6 +305,14 @@ export async function GET(request: NextRequest) {
     const response: any = {
       user: targetUser,
       balance,
+      currentPeriod: currentPeriod ? {
+        id: currentPeriod.id,
+        name: currentPeriod.name,
+        startDate: currentPeriod.startDate,
+        endDate: currentPeriod.endDate,
+        status: currentPeriod.status,
+        isLocked: currentPeriod.isLocked,
+      } : null,
     };
 
     if (includeDetails && availableBalanceData) {
@@ -290,6 +365,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get current period for the room
+    const currentPeriod = await getCurrentPeriod(roomId);
+    
     const newTransaction = await prisma.accountTransaction.create({
       data: {
         roomId,
@@ -299,6 +377,7 @@ export async function POST(request: NextRequest) {
         type,
         description,
         createdBy: session.user.id, // Audit field
+        periodId: currentPeriod?.id, // Associate with current period
       },
     });
 

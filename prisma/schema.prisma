@@ -84,6 +84,9 @@ enum NotificationType {
   PAYMENT_DELETED
   JOIN_REQUEST_APPROVED
   JOIN_REQUEST_REJECTED
+  PERIOD_STARTED
+  PERIOD_ENDED
+  PERIOD_LOCKED
   GENERAL
 }
 
@@ -96,6 +99,13 @@ enum ExpenseType {
   INTERNET
   CLEANING
   MAINTENANCE
+}
+
+enum PeriodStatus {
+  ACTIVE
+  ENDED
+  LOCKED
+  ARCHIVED
 }
 
 
@@ -142,6 +152,7 @@ model User {
   accountTransactionsSent AccountTransaction[] @relation("TransactionUser")
   accountTransactionsReceived AccountTransaction[] @relation("TransactionTarget")
   accountTransactionsCreated AccountTransaction[] @relation("TransactionCreator")
+  createdPeriods MealPeriod[] @relation("CreatedPeriods")
 
   @@index([role, isActive])
   @@index([resetToken])
@@ -187,6 +198,7 @@ model Room {
   mealSettings  MealSettings?
   autoMealSettings AutoMealSettings[]
   accountTransactions AccountTransaction[]
+  mealPeriods MealPeriod[]
 
   @@index([isActive])
   @@index([createdAt])
@@ -285,9 +297,11 @@ model Meal {
   updatedAt DateTime @updatedAt
   userId    String   @db.ObjectId
   roomId    String   @db.ObjectId
+  periodId  String?  @db.ObjectId
 
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period    MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@unique([userId, roomId, date, type])
   @@index([roomId, date])
@@ -305,9 +319,11 @@ model GuestMeal {
   updatedAt DateTime @updatedAt
   userId    String   @db.ObjectId
   roomId    String   @db.ObjectId
+  periodId  String?  @db.ObjectId
 
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period    MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId, date])
   @@index([userId, date])
@@ -327,9 +343,11 @@ model ShoppingItem {
   updatedAt   DateTime @updatedAt
   userId      String   @db.ObjectId
   roomId      String   @db.ObjectId
+  periodId    String?  @db.ObjectId
 
   room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period      MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId])
   @@index([purchased])
@@ -348,10 +366,12 @@ model Payment {
   updatedAt    DateTime      @updatedAt
   userId       String        @db.ObjectId
   roomId       String        @db.ObjectId
+  periodId     String?       @db.ObjectId
   bkashPayment BkashPayment?
 
   room         Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period       MealPeriod?   @relation(fields: [periodId], references: [id])
 
   @@index([roomId, status, date])
   @@index([userId, status, date])
@@ -389,9 +409,11 @@ model MarketDate {
   updatedAt DateTime     @updatedAt
   userId    String       @db.ObjectId
   roomId    String       @db.ObjectId
+  periodId  String?      @db.ObjectId
 
   room      Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period    MealPeriod?  @relation(fields: [periodId], references: [id])
 }
 
 /// EXTRA EXPENSE MODEL
@@ -406,9 +428,11 @@ model ExtraExpense {
   updatedAt   DateTime    @updatedAt
   userId      String      @db.ObjectId
   roomId      String      @db.ObjectId
+  periodId    String?     @db.ObjectId
 
   room        Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period      MealPeriod? @relation(fields: [periodId], references: [id])
 }
 
 model Invitation {
@@ -631,17 +655,57 @@ model AccountTransaction {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   createdBy    String   @db.ObjectId
+  periodId     String?  @db.ObjectId
 
   // Relations
   user         User     @relation("TransactionUser", fields: [userId], references: [id], onDelete: Cascade)
   targetUser   User     @relation("TransactionTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
   room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   creator      User     @relation("TransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  period       MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId])
   @@index([userId])
   @@index([targetUserId])
   @@index([createdAt])
   @@index([type])
+  @@index([periodId])
 }
+
+/// MEAL PERIOD MODEL
+model MealPeriod {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  name            String       // e.g., "January 2024", "Q1 2024"
+  startDate       DateTime
+  endDate         DateTime?
+  status          PeriodStatus @default(ACTIVE)
+  isLocked        Boolean      @default(false)
+  openingBalance  Float        @default(0)
+  closingBalance  Float?
+  carryForward    Boolean      @default(false)
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  roomId          String       @db.ObjectId
+  createdBy       String       @db.ObjectId
+
+  // Relations
+  room            Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdByUser   User         @relation("CreatedPeriods", fields: [createdBy], references: [id], onDelete: Cascade)
+  meals           Meal[]
+  guestMeals      GuestMeal[]
+  shoppingItems   ShoppingItem[]
+  payments        Payment[]
+  extraExpenses   ExtraExpense[]
+  marketDates     MarketDate[]
+  accountTransactions AccountTransaction[]
+
+  @@unique([roomId, name]) 
+  @@index([startDate, endDate])
+  @@index([createdAt])
+  @@index([isLocked])
+  @@index([roomId, status])
+}
+
+
 

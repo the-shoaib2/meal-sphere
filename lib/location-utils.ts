@@ -31,7 +31,6 @@ function isPrivateIP(ip: string): boolean {
 
 export async function detectLocation(): Promise<LocationData> {
   try {
-    console.log('🌍 Starting location detection...')
     
     // Get IP address from a public service
     const ipResponse = await fetch('https://api.ipify.org?format=json', {
@@ -46,12 +45,9 @@ export async function detectLocation(): Promise<LocationData> {
     
     const ipData = await ipResponse.json()
     const ipAddress = ipData.ip
-    
-    console.log('📡 Detected IP:', ipAddress)
 
     // Check if it's a private IP
     if (isPrivateIP(ipAddress)) {
-      console.log('🏠 Private IP detected, using development location')
       return {
         ipAddress,
         city: 'Local Development',
@@ -62,7 +58,6 @@ export async function detectLocation(): Promise<LocationData> {
     }
 
     // Get location data from IP with timeout and retry
-    console.log('🌍 Fetching location data from IP...')
     const locationResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; LocationDetector/1.0)'
@@ -75,7 +70,6 @@ export async function detectLocation(): Promise<LocationData> {
     }
     
     const locationData = await locationResponse.json()
-    console.log('📍 Raw location data:', locationData)
 
     const result = {
       ipAddress,
@@ -85,21 +79,17 @@ export async function detectLocation(): Promise<LocationData> {
       longitude: locationData.longitude || undefined,
     }
     
-    console.log('✅ Processed location data:', result)
     return result
   } catch (error) {
-    console.error('❌ Error detecting location:', error)
     return {}
   }
 }
 
 export async function getLocationFromIP(ipAddress: string): Promise<LocationData> {
   try {
-    console.log('🌍 Getting location for IP:', ipAddress)
     
     // Check if it's a private IP
     if (isPrivateIP(ipAddress)) {
-      console.log('🏠 Private IP detected, using localhost location')
       return {
         ipAddress,
         city: 'Localhost',
@@ -118,7 +108,6 @@ export async function getLocationFromIP(ipAddress: string): Promise<LocationData
 
     for (const serviceUrl of services) {
       try {
-        console.log(`🌍 Trying service: ${serviceUrl}`)
         const response = await fetch(serviceUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; LocationDetector/1.0)'
@@ -127,12 +116,10 @@ export async function getLocationFromIP(ipAddress: string): Promise<LocationData
         })
         
         if (!response.ok) {
-          console.log(`❌ Service ${serviceUrl} failed with ${response.status}`)
           continue
         }
         
         const data = await response.json()
-        console.log('📍 Raw data from service:', data)
         
         // Handle different service response formats
         let city, country, latitude, longitude
@@ -162,21 +149,17 @@ export async function getLocationFromIP(ipAddress: string): Promise<LocationData
           longitude: longitude || undefined,
         }
         
-        console.log('✅ Successfully got location data:', result)
         return result
         
       } catch (serviceError) {
-        console.log(`❌ Service ${serviceUrl} error:`, serviceError)
         continue
       }
     }
     
     // If all services fail, return IP only
-    console.log('❌ All location services failed, returning IP only')
     return { ipAddress }
     
   } catch (error) {
-    console.error('❌ Error getting location from IP:', error)
     return { ipAddress }
   }
 }

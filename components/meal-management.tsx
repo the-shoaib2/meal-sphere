@@ -1,4 +1,4 @@
-"use client"
+  "use client"
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -23,10 +23,13 @@ import { format, startOfMonth, endOfMonth, isToday, isSameDay, addDays, subDays,
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
+import { useCurrentPeriod } from "@/hooks/use-periods"
+import { canEditMealsForDate, isPeriodLocked } from "@/lib/period-utils"
 import GuestMealForm from "@/components/guest-meal-form"
 import GuestMealManager from "@/components/guest-meal-manager"
 import MealCalendar from "@/components/meal-calendar"
 import type { ReadonlyURLSearchParams } from "next/navigation"
+import { PeriodStatusCard } from "@/components/period-status-card"
 
 interface MealWithUser {
   id: string
@@ -88,6 +91,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Check user permissions
   const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: roomId })
   
+  // Get current period
+  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
+  
   // Check if user can manage meal settings (only when not loading)
   const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
   
@@ -97,7 +103,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     mealSettings,
     autoMealSettings,
     userMealStats,
-    isLoading, 
+    isLoading,
+    isLoadingUserStats, 
     useMealsByDate, 
     useGuestMealsByDate,
     useMealCount,
@@ -187,21 +194,67 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     </Card>
   )
 
-  // Show loading state if access is still loading
-  if (isAccessLoading) {
+  // Header (always visible)
+  const header = (
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Meal Management</h1>
+        <div className="text-muted-foreground">
+          Manage meals for {groupName || "your group"}
+          {userRole && (
+            <span className="ml-2">
+              • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs">{userRole}</Badge>
+            </span>
+          )}
+          {currentPeriod && (
+            <span className="ml-2">
+              • <Badge variant={isPeriodLocked(currentPeriod) ? "destructive" : "default"} className="text-xs">
+                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "(Locked)" : ""}
+              </Badge>
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <GuestMealForm roomId={roomId} onSuccess={() => {}} />
+        {canManageMealSettings && (
+          <>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setSettingsOpen(true)}
+              title="Meal Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => setAutoSettingsOpen(true)}
+          title="Auto Meal Settings"
+        >
+          <Clock className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  // If there is no period, show only the PeriodStatusCard below the header
+  if (!currentPeriod && !isPeriodLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-72" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-9 w-9" />
-            <Skeleton className="h-9 w-9" />
-            <Skeleton className="h-9 w-9" />
-          </div>
-        </div>
+        {header}
+        <PeriodStatusCard />
+      </div>
+    );
+  }
+
+  // Show loading state if access, period, or user stats is still loading
+  if (isAccessLoading || isPeriodLoading || isLoadingUserStats) {
+    return (
+      <div className="space-y-6">
         <UserMealSummarySkeleton />
         <div className="space-y-4">
           <div className="flex space-x-1 bg-muted p-1 rounded-lg w-full max-w-md">
@@ -365,7 +418,28 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Render user meal summary
   const renderUserMealSummary = () => {
     if (!userMealStats) {
-      return <UserMealSummarySkeleton />
+      return (
+        <Card className="mb-3">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="p-1.5 bg-blue-100 rounded-full">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              <span className="hidden sm:inline">Your Meal Summary</span>
+              <span className="sm:hidden">Your Summary</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-center py-8">
+              <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <Users className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground font-medium">No Active Period</p>
+              <p className="text-sm text-muted-foreground">Meal statistics are only available during active periods</p>
+            </div>
+          </CardContent>
+        </Card>
+      )
     }
 
     const { totals, byType } = userMealStats
@@ -709,6 +783,17 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Helper: check if user can edit meal for a type (not after meal time unless privileged)
   const canEditMeal = (type: MealType) => {
     if (!session?.user?.id) return false
+    
+    // Check if period is locked
+    if (isPeriodLocked(currentPeriod)) {
+      return false
+    }
+    
+    // Check if date is within current period
+    if (!canEditMealsForDate(selectedDate, currentPeriod)) {
+      return false
+    }
+    
     // Only allow edit if current time is before meal time, or user is admin/manager/meal manager
     const now = new Date()
     let mealTimeStr = ''
@@ -725,47 +810,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Meal Management</h1>
-          <div className="text-muted-foreground">
-            Manage meals for {groupName || "your group"}
-            {userRole && (
-              <span className="ml-2">
-                • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs">{userRole}</Badge>
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <GuestMealForm roomId={roomId} onSuccess={() => {}} />
-          {canManageMealSettings && (
-            <>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => setSettingsOpen(true)}
-                title="Meal Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-
-            </>
-          )}
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setAutoSettingsOpen(true)}
-            title="Auto Meal Settings"
-          >
-            <Clock className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* User Meal Summary at the top */}
-      {renderUserMealSummary()}
-
+      {header}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
