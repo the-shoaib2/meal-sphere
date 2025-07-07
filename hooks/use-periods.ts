@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { PeriodStatus } from '@prisma/client';
 import { useActiveGroup } from '@/contexts/group-context';
+import { PeriodStatus } from '@prisma/client';
 
 export interface CreatePeriodData {
   name: string;
@@ -337,7 +337,7 @@ export function useUnlockPeriod() {
   const { activeGroup } = useActiveGroup();
 
   return useMutation({
-    mutationFn: async (periodId: string) => {
+    mutationFn: async ({ periodId, status }: { periodId: string, status: PeriodStatus }) => {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
@@ -349,6 +349,7 @@ export function useUnlockPeriod() {
         body: JSON.stringify({
           action: 'unlock',
           groupId: activeGroup.id,
+          status,
         }),
       });
 
@@ -567,8 +568,8 @@ export function usePeriodManagement() {
     await lockPeriodMutation.mutateAsync(periodId);
   }, [lockPeriodMutation]);
 
-  const handleUnlockPeriod = useCallback(async (periodId: string) => {
-    await unlockPeriodMutation.mutateAsync(periodId);
+  const handleUnlockPeriod = useCallback(async (periodId: string, status: PeriodStatus) => {
+    await unlockPeriodMutation.mutateAsync({ periodId, status });
   }, [unlockPeriodMutation]);
 
   const handleArchivePeriod = useCallback(async (periodId: string) => {

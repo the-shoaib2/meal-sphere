@@ -367,7 +367,7 @@ export async function POST(request: NextRequest) {
 
     // Get current period for the room
     const currentPeriod = await getCurrentPeriod(roomId);
-    
+
     const newTransaction = await prisma.accountTransaction.create({
       data: {
         roomId,

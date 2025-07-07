@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
     const whereClause: any = {
       roomId,
       periodId: currentPeriod.id, // Always filter by current period
-      OR: [
-        { userId: targetUserId },
-        { targetUserId: targetUserId },
-      ],
+        OR: [
+          { userId: targetUserId },
+          { targetUserId: targetUserId },
+        ],
     };
 
     const transactions = await prisma.accountTransaction.findMany({

@@ -289,7 +289,7 @@ export class PeriodService {
   /**
    * Unlock a period to allow edits
    */
-  static async unlockPeriod(roomId: string, userId: string, periodId: string) {
+  static async unlockPeriod(roomId: string, userId: string, periodId: string, status: PeriodStatus = PeriodStatus.ENDED) {
     // Check if user has admin permissions
     const member = await prisma.roomMember.findUnique({
       where: {
@@ -325,7 +325,7 @@ export class PeriodService {
       where: { id: periodId },
       data: {
         isLocked: false,
-        status: PeriodStatus.ENDED,
+        status,
       },
     });
 
@@ -466,7 +466,8 @@ export class PeriodService {
     // Calculate totals
     const totalMeals = meals.length;
     const totalGuestMeals = guestMeals.reduce((sum, gm) => sum + gm.count, 0);
-    const totalShoppingAmount = shoppingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    // If you add a price or amount field to ShoppingItem, sum that here instead of quantity
+    const totalShoppingAmount = shoppingItems.reduce((sum, item) => sum + (item.quantity || 1), 0); // TODO: Use item.amount or item.price if available
     const totalPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
     const totalExtraExpenses = extraExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 

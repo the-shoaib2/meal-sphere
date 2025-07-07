@@ -2,7 +2,7 @@ import { PeriodManagement } from '@/components/period-management';
 
 export default function PeriodsPage() {
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto">
       <PeriodManagement />
     </div>
   );

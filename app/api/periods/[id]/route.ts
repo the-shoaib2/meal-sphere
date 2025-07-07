@@ -103,7 +103,12 @@ export async function PATCH(
           result = await PeriodService.lockPeriod(groupId, session.user.id, resolvedParams.id);
           break;
         case 'unlock':
-          result = await PeriodService.unlockPeriod(groupId, session.user.id, resolvedParams.id);
+          result = await PeriodService.unlockPeriod(
+            groupId,
+            session.user.id,
+            resolvedParams.id,
+            body.status || 'ENDED'
+          );
           break;
         case 'archive':
           result = await PeriodService.archivePeriod(groupId, session.user.id, resolvedParams.id);

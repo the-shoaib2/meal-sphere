@@ -1,6 +1,6 @@
 "use client"
 
-import MealCalculations from "@/components/meal-calculations"
+import MealCalculations from "@/components/meal/meal-calculations"
 import { useActiveGroup } from "@/contexts/group-context"
 import { Loader2 } from "lucide-react"
 

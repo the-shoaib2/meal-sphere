@@ -34,7 +34,7 @@ export async function POST(
 
 
     const newPeriod = await PeriodService.restartPeriod(groupId, session.user.id, periodId, newName, withData);
-    
+
     return NextResponse.json({ 
       message: 'Period restarted successfully',
       period: newPeriod 
