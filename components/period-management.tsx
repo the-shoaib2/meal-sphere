@@ -27,6 +27,7 @@ import { PeriodReportsSection } from './periods/period-reports-section';
 import { PeriodOverviewSection } from './periods/period-overview-section';
 import { useSession } from 'next-auth/react';
 import { CurrentPeriodStatusCard } from './periods/current-period-status-card';
+import { PeriodManagementSkeleton } from './periods/period-management-skeleton';
 
 export function PeriodManagement() {
   const {
@@ -95,8 +96,6 @@ export function PeriodManagement() {
     setUnlockLoading(false);
   };
 
-
-
   const getStatusBadge = (status: PeriodStatus, isLocked: boolean) => {
     if (isLocked) {
       return <Badge variant="destructive">Locked</Badge>;
@@ -117,72 +116,41 @@ export function PeriodManagement() {
   return (
     <>
       {isLoading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            {/* <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" /> */}
-          </div>
-        </div>
+        <PeriodManagementSkeleton />
       ) : (
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-            <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Period Management</h2>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Manage meal periods for {activeGroup?.name}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">Period Management</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage your periods and their statuses.
               </p>
             </div>
             {isPrivileged && (
-              <div className="flex items-center space-x-2 mt-2 sm:mt-0">
               <CreatePeriodDialog
                 open={showCreateDialog}
                 onOpenChange={setShowCreateDialog}
                 onSubmit={handleStartPeriod}
                 disabled={!!currentPeriod}
               />
-            </div>
             )}
           </div>
 
-          {/* Current Period Status */}
-          {currentPeriod ? (
-            <CurrentPeriodStatusCard
-              currentPeriod={currentPeriod}
-              activeGroup={activeGroup}
-              isPrivileged={isPrivileged}
-              showEndDialog={showEndDialog}
-              setShowEndDialog={setShowEndDialog}
-              handleEndPeriod={handleEndPeriod}
-              setUnlockTargetPeriod={setUnlockTargetPeriod}
-              setUnlockToActive={setUnlockToActive}
-              setShowUnlockDialog={setShowUnlockDialog}
-              handleLockPeriod={handleLockPeriod}
-            />
-          ) : (
-            <>
-              {/* No Current Period State */}
-              {periods && periods.length > 0 && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No active period. All periods are either ended or archived. Create a new period to start tracking meals and expenses.
-                  </AlertDescription>
-                </Alert>
-              )}
+          {/* Current Period Summary (should be first) */}
+          <CurrentPeriodStatusCard
+            currentPeriod={currentPeriod}
+            activeGroup={activeGroup}
+            isPrivileged={isPrivileged}
+            showEndDialog={showEndDialog}
+            setShowEndDialog={setShowEndDialog}
+            handleEndPeriod={handleEndPeriod}
+            setUnlockTargetPeriod={setUnlockTargetPeriod}
+            setUnlockToActive={setUnlockToActive}
+            setShowUnlockDialog={setShowUnlockDialog}
+            handleLockPeriod={handleLockPeriod}
+          />
 
-              {/* No Periods State */}
-              {periods && periods.length === 0 && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    No periods created yet. Create your first period to start managing meals and expenses for {activeGroup?.name}.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </>
-          )}
-
-          {/* Overview Section */}
+          {/* Overview Cards */}
           <PeriodOverviewSection
             periods={periods}
             currentPeriod={currentPeriod}
