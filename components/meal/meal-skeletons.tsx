@@ -54,57 +54,6 @@ export const MealListSkeleton = () => (
   </div>
 );
 
-// User Meal Summary Skeleton
-export const UserMealSummarySkeleton = () => (
-  <Card className="mb-3">
-    <CardHeader className="pb-2">
-      <CardTitle className="text-base flex items-center gap-2">
-        <div className="p-1.5 bg-blue-100 rounded-full">
-          <Users className="h-4 w-4 text-blue-600" />
-        </div>
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-4 w-12 ml-auto" />
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="pt-0">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="text-center space-y-1 p-2 bg-muted/30 rounded-lg">
-            <Skeleton className="h-3 w-12 mx-auto" />
-            <Skeleton className="h-5 w-6 mx-auto" />
-            <Skeleton className="h-2 w-16 mx-auto" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
-
-// Meal Summary Skeleton
-export const MealSummarySkeleton = () => (
-  <Card className="mb-3">
-    <CardHeader className="pb-2">
-      <CardTitle className="text-base flex items-center gap-2">
-        <div className="p-1.5 bg-blue-100 rounded-full">
-          <Users className="h-4 w-4 text-blue-600" />
-        </div>
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-4 w-12 ml-auto" />
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="pt-0">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="text-center space-y-1 p-2 bg-muted/30 rounded-lg">
-            <Skeleton className="h-3 w-12 mx-auto" />
-            <Skeleton className="h-5 w-6 mx-auto" />
-            <Skeleton className="h-2 w-16 mx-auto" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
 
 // Meal Management Skeleton (full page skeleton for meal-management.tsx)
 export const MealManagementSkeleton = () => (
@@ -122,7 +71,28 @@ export const MealManagementSkeleton = () => (
       </div>
     </div>
     {/* User Meal Summary Skeleton */}
-    <UserMealSummarySkeleton />
+    <Card className="mb-3">
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <div className="p-1.5 bg-blue-100 rounded-full">
+          <Users className="h-4 w-4 text-blue-600" />
+        </div>
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-12 ml-auto" />
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="pt-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="text-center space-y-1 p-2 bg-muted/30 rounded-lg">
+            <Skeleton className="h-3 w-12 mx-auto" />
+            <Skeleton className="h-5 w-6 mx-auto" />
+            <Skeleton className="h-2 w-16 mx-auto" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
     {/* Tabs skeleton */}
     <div className="space-y-4">
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-full max-w-md">
@@ -153,7 +123,28 @@ export const MealManagementSkeleton = () => (
       </div>
     </div>
     {/* Meal Summary Skeleton */}
-    <MealSummarySkeleton />
+    <Card className="mb-3">
+    <CardHeader className="pb-2">
+      <CardTitle className="text-base flex items-center gap-2">
+        <div className="p-1.5 bg-blue-100 rounded-full">
+          <Users className="h-4 w-4 text-blue-600" />
+        </div>
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-4 w-12 ml-auto" />
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="pt-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="text-center space-y-1 p-2 bg-muted/30 rounded-lg">
+            <Skeleton className="h-3 w-12 mx-auto" />
+            <Skeleton className="h-5 w-6 mx-auto" />
+            <Skeleton className="h-2 w-16 mx-auto" />
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
   </div>
 );
 
@@ -161,6 +152,5 @@ export const MealManagementSkeleton = () => (
 export default {
   MealCardSkeleton,
   MealListSkeleton,
-  UserMealSummarySkeleton,
   MealManagementSkeleton,
 }; 
