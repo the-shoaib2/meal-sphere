@@ -10,10 +10,9 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns"
-import { CalendarIcon, Download, ChevronLeft, ChevronRight } from "lucide-react"
+import { CalendarIcon, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { formatCurrency } from "@/lib/meal-calculations"
 import { useMeal } from "@/hooks/use-meal"
-import { LoadingSpinner } from "@/components/meal/meal-skeletons";
 
 interface MealCalculationsProps {
   roomId: string
@@ -186,7 +185,7 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center items-center h-32">
-              <LoadingSpinner size={24} />
+              <Loader2 className="h-4 w-4 animate-spin" />
             </div>
           ) : summary ? (
             <div className="space-y-4">

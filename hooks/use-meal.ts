@@ -1,3 +1,11 @@
+// Prefetch related queries example (call in a useEffect in component):
+// useEffect(() => {
+//   if (roomId) {
+//     queryClient.prefetchQuery(['meals', roomId]);
+//     queryClient.prefetchQuery(['guest-meals', roomId]);
+//   }
+// }, [roomId]);
+
 import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import axios from 'axios';
@@ -242,8 +250,9 @@ export function useMeal(roomId?: string): UseMealReturn {
       return data;
     },
     enabled: !!roomId && !!session?.user?.id,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: false
+    staleTime: 30 * 60 * 1000, // 30 minutes (was 10)
+    refetchOnWindowFocus: false,
+    select: (data) => data, // placeholder for shape reduction if needed
   });
 
   // Fetch auto meal settings
@@ -255,9 +264,18 @@ export function useMeal(roomId?: string): UseMealReturn {
       return data;
     },
     enabled: !!roomId && !!session?.user?.id,
-    staleTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false
+    staleTime: 30 * 60 * 1000, // 30 minutes (was 10)
+    refetchOnWindowFocus: false,
+    select: (data) => data, // placeholder for shape reduction if needed
   });
+
+  // Prefetch related queries example (call in a useEffect in component):
+  // useEffect(() => {
+  //   if (roomId) {
+  //     queryClient.prefetchQuery(['meals', roomId]);
+  //     queryClient.prefetchQuery(['guest-meals', roomId]);
+  //   }
+  // }, [roomId]);
 
   // Fetch user meal statistics
   const { data: userMealStats = null, isLoading: isLoadingUserStats } = useQuery<UserMealStats | null>({

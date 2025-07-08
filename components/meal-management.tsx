@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
@@ -114,7 +114,41 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     isAutoMealTime
   } = useMeal(roomId)
 
+  // Memoized and callback hooks (must be before any early return)
+  const mealsForDate = useMemo(() => useMealsByDate(selectedDate) as MealWithUser[], [useMealsByDate, selectedDate])
+  const guestMealsForDate = useMemo(() => useGuestMealsByDate(selectedDate), [useGuestMealsByDate, selectedDate])
 
+  const handleToggleMeal = useCallback(async (type: MealType) => {
+    if (!session?.user?.id) return
+    try {
+      await toggleMeal(selectedDate, type, session.user.id)
+    } catch (error) {
+      console.error("Error toggling meal:", error)
+      toast.error("Failed to update meal")
+    }
+  }, [session?.user?.id, selectedDate, toggleMeal])
+
+  const handleTriggerAutoMeals = useCallback(async () => {
+    try {
+      await triggerAutoMeals(selectedDate)
+    } catch (error) {
+      console.error("Error triggering auto meals:", error)
+      toast.error("Failed to trigger auto meals")
+    }
+  }, [selectedDate, triggerAutoMeals])
+
+  const userHasMeal = useCallback((type: MealType) => {
+    if (!session?.user?.id) return false
+    return hasMeal(selectedDate, type, session.user.id)
+  }, [session?.user?.id, selectedDate, hasMeal])
+
+  const shouldAutoAddForUser = useCallback((type: MealType) => {
+    return shouldAutoAddMeal(selectedDate, type)
+  }, [selectedDate, shouldAutoAddMeal])
+
+  const isAutoTimeForMeal = useCallback((type: MealType) => {
+    return isAutoMealTime(selectedDate, type)
+  }, [selectedDate, isAutoMealTime])
 
   // Header (always visible)
   const header = (
@@ -202,48 +236,6 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </Button>
       </div>
     )
-  }
-
-  // Get meals for the selected date
-  const mealsForDate = useMealsByDate(selectedDate) as MealWithUser[]
-  const guestMealsForDate = useGuestMealsByDate(selectedDate)
-
-  // Handle toggling a meal
-  const handleToggleMeal = async (type: MealType) => {
-    if (!session?.user?.id) return
-
-    try {
-      await toggleMeal(selectedDate, type, session.user.id)
-    } catch (error) {
-      console.error("Error toggling meal:", error)
-      toast.error("Failed to update meal")
-    }
-  }
-
-  // Handle triggering auto meals
-  const handleTriggerAutoMeals = async () => {
-    try {
-      await triggerAutoMeals(selectedDate)
-    } catch (error) {
-      console.error("Error triggering auto meals:", error)
-      toast.error("Failed to trigger auto meals")
-    }
-  }
-
-  // Check if current user has a meal of a specific type on the selected date
-  const userHasMeal = (type: MealType) => {
-    if (!session?.user?.id) return false
-    return hasMeal(selectedDate, type, session.user.id)
-  }
-
-  // Check if auto meal should be added for current user
-  const shouldAutoAddForUser = (type: MealType) => {
-    return shouldAutoAddMeal(selectedDate, type)
-  }
-
-  // Check if it's auto meal time for a specific meal type
-  const isAutoTimeForMeal = (type: MealType) => {
-    return isAutoMealTime(selectedDate, type)
   }
 
   // Get meal counts for calendar display
