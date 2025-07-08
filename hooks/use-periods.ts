@@ -79,6 +79,10 @@ export function useCurrentPeriod() {
         throw new Error('Failed to fetch current period');
       }
       const data = await response.json();
+      // Save to localStorage if currentPeriod exists
+      if (typeof window !== 'undefined' && data.currentPeriod) {
+        localStorage.setItem(`current-period-${activeGroup.id}`, JSON.stringify(data.currentPeriod));
+      }
       return data.currentPeriod; // This can be null if no period exists or schema not updated
     },
     enabled: !!activeGroup?.id,

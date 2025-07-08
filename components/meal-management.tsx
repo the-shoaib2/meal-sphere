@@ -1,4 +1,4 @@
-  "use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
@@ -62,17 +62,17 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   const isMobile = useIsMobile()
   const queryClient = useQueryClient()
   const searchParams = propSearchParams || useSearchParams()
-  
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  
+
   // Get the active tab from URL search params, default to 'calendar'
   const [activeTab, setActiveTab] = useState(() => {
     const tabFromUrl = searchParams?.get('tab');
-    return tabFromUrl && ['calendar', 'list'].includes(tabFromUrl) 
-      ? tabFromUrl 
+    return tabFromUrl && ['calendar', 'list'].includes(tabFromUrl)
+      ? tabFromUrl
       : 'calendar';
   });
-  
+
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [autoSettingsOpen, setAutoSettingsOpen] = useState(false)
 
@@ -91,25 +91,25 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
-  
+
   // Check user permissions
   const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: roomId })
-  
+
   // Get current period
   const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
-  
+
   // Check if user can manage meal settings (only when not loading)
   const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
-  
-  const { 
-    meals, 
+
+  const {
+    meals,
     guestMeals,
     mealSettings,
     autoMealSettings,
     userMealStats,
-    isLoading, 
-    isLoadingUserStats, 
-    useMealsByDate, 
+    isLoading,
+    isLoadingUserStats,
+    useMealsByDate,
     useGuestMealsByDate,
     useMealCount,
     toggleMeal,
@@ -125,7 +125,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Header (always visible)
   const header = (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
+      <div>
         <h1 className="text-2xl font-bold tracking-tight">Meal Management</h1>
         <div className="text-muted-foreground">
           Manage meals for {groupName || "your group"}
@@ -141,15 +141,15 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               </Badge>
             </span>
           )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-        <GuestMealForm roomId={roomId} onSuccess={() => {}} />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <GuestMealForm roomId={roomId} onSuccess={() => { }} />
         {canManageMealSettings && (
           <>
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => setSettingsOpen(true)}
               title="Meal Settings"
             >
@@ -157,16 +157,16 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             </Button>
           </>
         )}
-        <Button 
-          variant="outline" 
-          size="icon" 
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => setAutoSettingsOpen(true)}
           title="Auto Meal Settings"
         >
           <Clock className="h-4 w-4" />
         </Button>
-                </div>
-              </div>
+      </div>
+    </div>
   );
 
   // If there is no period, show only the PeriodStatusCard below the header
@@ -175,7 +175,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       <div className="space-y-6">
         {header}
         <PeriodStatusCard />
-          </div>
+      </div>
     );
   }
 
@@ -183,7 +183,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   if (isAccessLoading || isPeriodLoading || isLoadingUserStats) {
     return (
       <div className="space-y-6">
-        <UserMealSummarySkeleton />
+        {/* <UserMealSummarySkeleton /> */}
         <div className="space-y-4">
           <div className="flex space-x-1 bg-muted p-1 rounded-lg w-full max-w-md">
             <Skeleton className="h-9 flex-1" />
@@ -241,7 +241,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Handle toggling a meal
   const handleToggleMeal = async (type: MealType) => {
     if (!session?.user?.id) return
-    
+
     try {
       await toggleMeal(selectedDate, type, session.user.id)
     } catch (error) {
@@ -281,7 +281,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     const start = startOfMonth(selectedDate)
     const end = endOfMonth(selectedDate)
     const days = eachDayOfInterval({ start, end })
-    
+
     return days.map(day => ({
       date: day,
       breakfast: useMealCount(day, 'BREAKFAST'),
@@ -453,7 +453,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     }
 
     const allMeals = [...mealsForDate, ...guestMealsForDate]
-    
+
     if (allMeals.length === 0) {
       return (
         <div className="text-center py-12">
@@ -498,7 +498,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                   {totalMeals} total
                 </Badge>
               </div>
-              
+
               <div className="space-y-2">
                 {typeMeals.map((meal: any) => (
                   <div key={meal.id} className="group flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
@@ -518,7 +518,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {meal.count && (
                         <Badge variant="outline" className="text-xs">
@@ -557,7 +557,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             Configure meal times and settings for the group
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -585,9 +585,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               />
             </div>
           </div>
-          
+
           <Separator />
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -601,7 +601,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                 onCheckedChange={(checked) => updateMealSettings({ autoMealEnabled: checked })}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Guest Meals</Label>
@@ -615,7 +615,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Max Meals Per Day</Label>
@@ -653,7 +653,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             Configure your automatic meal preferences
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -711,17 +711,17 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Helper: check if user can edit meal for a type (not after meal time unless privileged)
   const canEditMeal = (type: MealType) => {
     if (!session?.user?.id) return false
-    
+
     // Check if period is locked
     if (isPeriodLocked(currentPeriod)) {
       return false
     }
-    
+
     // Check if date is within current period
     if (!canEditMealsForDate(selectedDate, currentPeriod)) {
       return false
     }
-    
+
     // Only allow edit if current time is before meal time, or user is admin/manager/meal manager
     const now = new Date()
     let mealTimeStr = ''
@@ -739,6 +739,13 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   return (
     <div className="space-y-6">
       {header}
+
+      {/* User Meal Summary */}
+      {renderUserMealSummary()}
+
+   
+
+      {/* Meal Calendar */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -779,12 +786,12 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                         const hasMealSelected = userHasMeal(mealType)
                         const mealCount = useMealCount(selectedDate, mealType)
                         const mealTypeIcon = mealType === 'BREAKFAST' ? '🌅' : mealType === 'LUNCH' ? '☀️' : '🌙'
-                        const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' : 
-                                             mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' : 
-                                             'bg-blue-100 text-blue-700'
+                        const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' :
+                          mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-blue-100 text-blue-700'
                         const shouldAutoAdd = shouldAutoAddForUser(mealType)
                         const isAutoTime = isAutoTimeForMeal(mealType)
-                        
+
                         return (
                           <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
                             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
@@ -862,10 +869,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                 )}
               </CardContent>
             </Card>
-            
-            <GuestMealManager 
-              roomId={roomId} 
-              date={selectedDate} 
+
+            <GuestMealManager
+              roomId={roomId}
+              date={selectedDate}
               onUpdate={() => {
                 // Trigger a refresh of the meal data
                 queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });

@@ -93,7 +93,7 @@ interface UseGroupsReturn {
   updateGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>>;
   joinGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>>;
   leaveGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, string>>;
-  deleteGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, string>>;
+  deleteGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { previousGroups: Group[] | undefined }>>;
   useJoinRequests: (groupId: string) => {
     data: JoinRequest[];
     isLoading: boolean;
@@ -112,76 +112,30 @@ export function useGroups(): UseGroupsReturn {
   const { data: userGroups = [], isLoading: isLoadingGroups, error } = useQuery<Group[], Error>({
     queryKey: ['user-groups', session?.user?.id],
     queryFn: async () => {
-      // This check is still needed for TypeScript, but the query won't run if enabled is false
       if (!session?.user?.id) return [];
-      
-      // Check if we have cached data first
-      const cachedData = queryClient.getQueryData<Group[]>(['user-groups', session.user.id]);
-      if (cachedData && cachedData.length > 0) {
-        console.log('Using cached groups data:', cachedData.length, 'groups');
-        cachedData.forEach(group => {
-          console.log('[useGroups] Cached group:', {
-            groupName: group.name,
-            userRole: group.userRole,
-            userName: session?.user?.name,
-            userEmail: session?.user?.email
-          });
-        });
-        return cachedData;
-      }
-      
-      // Check localStorage for cached data
-      if (typeof window !== 'undefined') {
-        const savedGroups = localStorage.getItem(`groups-${session.user.id}`);
-        if (savedGroups) {
-          try {
-            const groups = JSON.parse(savedGroups);
-            if (Array.isArray(groups) && groups.length > 0) {
-              // Set the data in React Query cache for future use
-              queryClient.setQueryData(['user-groups', session.user.id], groups);
-              return groups;
-            }
-          } catch (e) {
-            console.error('Failed to parse cached groups from localStorage', e);
-            localStorage.removeItem(`groups-${session.user.id}`);
-          }
-        }
-      }
-      
+      // Always fetch from API on reload
       try {
         const { data } = await axios.get<Group[]>('/api/groups');
-        console.log('Fetched user groups from API:', data.length, 'groups');
-        
         // Save to localStorage for future use
         if (typeof window !== 'undefined' && data.length > 0) {
           localStorage.setItem(`groups-${session.user.id}`, JSON.stringify(data));
         }
-        
-        data.forEach(group => {
-          // console.log('[useGroups] API group:', {
-          //   groupName: group.name,
-          //   userRole: group.userRole,
-          //   userName: session?.user?.name,
-          //   userEmail: session?.user?.email
-          // });
-        });
-        
+        // Set the data in React Query cache for future use
+        queryClient.setQueryData(['user-groups', session.user.id], data);
         return data;
       } catch (error: unknown) {
         console.error('Error fetching user groups:', error);
         throw new Error('Failed to fetch groups');
       }
     },
-    enabled: !!session?.user?.id && status === 'authenticated', // Don't run while session is loading
-    staleTime: Infinity, // Never consider data stale - use cache indefinitely
-    gcTime: Infinity, // Never garbage collect - keep in memory forever
+    enabled: !!session?.user?.id && status === 'authenticated',
+    staleTime: Infinity,
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // Don't refetch on mount if data exists
-    refetchOnReconnect: false, // Don't refetch on reconnect
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     retry: (failureCount, error) => {
-      // Don't retry too many times
       if (failureCount >= 1) return false;
-      // Don't retry on 401/403 errors
       if (error?.message?.includes('Unauthorized') || error?.message?.includes('Forbidden')) {
         return false;
       }
@@ -319,13 +273,20 @@ export function useGroups(): UseGroupsReturn {
       return data;
     },
     onSuccess: (data: Group) => {
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      // Clear localStorage cache to force fresh data
+      // Optimistically add the new group to the cache
+      queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => [data, ...old]);
+      // Also update localStorage
       if (typeof window !== 'undefined' && session?.user?.id) {
-        localStorage.removeItem(`groups-${session.user.id}`);
+        const prev = localStorage.getItem(`groups-${session.user.id}`);
+        let groups: Group[] = [];
+        if (prev) {
+          try { groups = JSON.parse(prev); } catch {}
+        }
+        localStorage.setItem(`groups-${session.user.id}`, JSON.stringify([data, ...groups]));
       }
-      toast.success('Group created successfully');
+      // Optionally, redirect to the new group page
       router.push(`/groups/${data.id}`);
+      toast.success('Group created successfully');
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error creating group:', error);
@@ -479,11 +440,11 @@ export function useGroups(): UseGroupsReturn {
     },
   });
   // Delete group
-  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, string, { previousGroups: Group[] | undefined }>({
-    mutationFn: async (groupId: string) => {
+  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { previousGroups: Group[] | undefined }>({
+    mutationFn: async ({ groupId }) => {
       await axios.delete(`/api/groups/${groupId}`);
     },
-    onMutate: async (groupId: string) => {
+    onMutate: async ({ groupId }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['user-groups', session?.user?.id] });
       await queryClient.cancelQueries({ queryKey: ['group', groupId] });
@@ -513,14 +474,12 @@ export function useGroups(): UseGroupsReturn {
       toast.success('Group deleted successfully');
       router.push('/groups');
     },
-    onError: (error: AxiosError<{ message: string }>, groupId: string, context) => {
+    onError: (error: AxiosError<{ message: string }>, variables, context) => {
       console.error('Error deleting group:', error);
-      
       // Rollback on error
       if (context?.previousGroups) {
         queryClient.setQueryData(['user-groups', session?.user?.id], context.previousGroups);
       }
-      
       toast.error(error.response?.data?.message || 'Failed to delete group');
     },
     onSettled: () => {

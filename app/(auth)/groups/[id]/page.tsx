@@ -151,7 +151,7 @@ export default function GroupPage() {
 
   if (isLoading || isLeaving || !group) {
     return (
-      <div className="container mx-auto px-0 sm:px-4 py-4 sm:py-8">
+      <div className="container mx-auto px-0">
         <div className="flex flex-col gap-4 sm:gap-6">
           {/* Header Skeleton */}
           <div className="flex items-center gap-4 px-4 sm:px-0">

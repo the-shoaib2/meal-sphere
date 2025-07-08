@@ -68,7 +68,7 @@ export default function GroupsPage() {
   // Apply search filter with type safety
   const searchedGroups = filteredGroups.filter((group: Group) => {
     if (!group) return false;
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase(); 
     return (
       group.name?.toLowerCase().includes(query) ||
       (group.description?.toLowerCase().includes(query) ?? false)

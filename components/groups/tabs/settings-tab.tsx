@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Trash2, Save, Lock, ShieldAlert, Loader2, Check, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from '../invite-card';
@@ -172,7 +173,6 @@ export function SettingsTab({
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
   const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
@@ -355,17 +355,11 @@ export function SettingsTab({
 
   const handleDeleteGroup = async () => {
     if (!groupId || !isDeleteNameValid) return;
-
     try {
-      setIsDeleting(true);
-      await deleteGroup.mutateAsync(groupId);
-      toast.success('Group deleted successfully');
-      // Dialog will be closed by the mutation's onSuccess handler
+      await deleteGroup.mutateAsync({ groupId });
+      setIsDeleteDialogOpen(false); // Only close after success
     } catch (error) {
-      console.error('Error deleting group:', error);
-      toast.error('Failed to delete group. Please try again.');
-    } finally {
-      setIsDeleting(false);
+      // error toast is already handled in the mutation
     }
   };
 
@@ -750,61 +744,58 @@ export function SettingsTab({
               </div>
             </div>
 
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Group</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    <div className="space-y-4">
-                      <div>
-                        This action cannot be undone. This will permanently delete the group
-                        and all associated data including:
-                      </div>
-                      <ul className="list-disc list-inside space-y-1 text-sm">
-                        <li>All group messages and announcements</li>
-                        <li>Member roles and permissions</li>
-                        <li>Activity logs and history</li>
-                        <li>Meal plans and shopping lists</li>
-                        <li>Payment records and transactions</li>
-                      </ul>
-                      <div className="space-y-2 pt-4">
-                        <div className="font-medium">
-                          To confirm, please type <span className="font-bold text-destructive">{group?.name}</span>:
-                        </div>
-                        <Input
-                          placeholder="Enter group name"
-                          value={deleteGroupName}
-                          onChange={(e) => setDeleteGroupName(e.target.value)}
-                          className={`${
-                            isDeleteNameValid 
-                              ? "border-green-500 focus-visible:ring-green-500" 
-                              : deleteGroupName 
-                                ? "border-destructive focus-visible:ring-destructive" 
-                                : ""
-                          }`}
-                          disabled={isDeleting}
-                        />
-                        {deleteGroupName && !isDeleteNameValid && (
-                          <p className="text-sm text-destructive">
-                            The name doesn't match the group name
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel 
-                    disabled={isDeleting}
-                  >
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
+            <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete Group</DialogTitle>
+                  <DialogDescription>
+                    This action cannot be undone. This will permanently delete the group and all associated data including.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="mt-2">
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>All group messages and announcements</li>
+                    <li>Member roles and permissions</li>
+                    <li>Activity logs and history</li>
+                    <li>Meal plans and shopping lists</li>
+                    <li>Payment records and transactions</li>
+                  </ul>
+                  <span className="font-medium block pt-4">
+                    To confirm, please type <span className="font-bold text-destructive">{group?.name}</span>:
+                  </span>
+                  <Input
+                    placeholder="Enter group name"
+                    value={deleteGroupName}
+                    onChange={(e) => setDeleteGroupName(e.target.value)}
+                    className={`${
+                      isDeleteNameValid 
+                        ? "border-green-500 focus-visible:ring-green-500" 
+                        : deleteGroupName 
+                          ? "border-destructive focus-visible:ring-destructive" 
+                          : ""
+                    }`}
+                    disabled={deleteGroup.isPending}
+                  />
+                  {deleteGroupName && !isDeleteNameValid && (
+                    <span className="text-sm text-destructive block">
+                      The name doesn't match the group name
+                    </span>
+                  )}
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline" disabled={deleteGroup.isPending}>
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    type="button"
+                    variant="destructive"
                     onClick={handleDeleteGroup}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    disabled={isDeleting || !isDeleteNameValid}
+                    disabled={deleteGroup.isPending || !isDeleteNameValid}
                   >
-                    {isDeleting ? (
+                    {deleteGroup.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Deleting...
@@ -815,31 +806,31 @@ export function SettingsTab({
                         Delete Group
                       </>
                     )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <AlertDialog open={isLeaveDialogOpen} onOpenChange={handleLeaveDialogOpenChange}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Leave Group</AlertDialogTitle>
                   <AlertDialogDescription>
-                    <div className="space-y-4">
-                      <p>Are you sure you want to leave this group?</p>
-                      <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                        <p className="text-sm font-medium">This action will:</p>
-                        <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                          <li>Remove you from all group activities</li>
-                          <li>Revoke your access to group content</li>
-                          <li>Cancel any pending meal registrations</li>
-                          <li>Remove you from group notifications</li>
-                        </ul>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        You won't be able to access this group again unless you're re-invited.
-                      </p>
-                    </div>
+                    Are you sure you want to leave this group?
+                    <br />
+                    <span className="bg-muted/50 p-3 rounded-md block my-2">
+                      <span className="text-sm font-medium block">This action will:</span>
+                      <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                        <li>Remove you from all group activities</li>
+                        <li>Revoke your access to group content</li>
+                        <li>Cancel any pending meal registrations</li>
+                        <li>Remove you from group notifications</li>
+                      </ul>
+                    </span>
+                    <br />
+                    <span className="text-sm text-muted-foreground block">
+                      You won't be able to access this group again unless you're re-invited.
+                    </span>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
