@@ -1,33 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { Plus, Lock, Unlock, Archive, Eye, Users, AlertCircle, RefreshCw, MoreHorizontal, Loader2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePeriodManagement } from '@/hooks/use-periods';
 import { PeriodStatus, MealPeriod } from '@prisma/client';
-import { CreatePeriodDialog } from './periods/create-period-dialog';
-import { EndPeriodDialog } from './periods/end-period-dialog';
-import { PeriodArchiveDialog } from './periods/period-archive-dialog';
-import { RestartPeriodDialog } from './periods/restart-period-dialog';
-import { PeriodsListSection } from './periods/periods-list-section';
-import { PeriodReportsSection } from './periods/period-reports-section';
-import { PeriodOverviewSection } from './periods/period-overview-section';
+import { CreatePeriodDialog } from '@/components/periods/create-period-dialog';
+import { PeriodArchiveDialog } from '@/components/periods/period-archive-dialog';
+import { RestartPeriodDialog } from '@/components/periods/restart-period-dialog';
+import { PeriodsListSection } from '@/components/periods/periods-list-section';
+import { PeriodReportsSection } from '@/components/periods/period-reports-section';
+import { PeriodOverviewSection } from '@/components/periods/period-overview-section';
 import { useSession } from 'next-auth/react';
-import { CurrentPeriodStatusCard } from './periods/current-period-status-card';
-import { PeriodManagementSkeleton } from './periods/period-management-skeleton';
+import { CurrentPeriodStatusCard } from '@/components/periods/current-period-status-card';
+import { PeriodManagementSkeleton } from '@/components/periods/period-management-skeleton';
 
 export function PeriodManagement() {
   const {
@@ -96,22 +84,7 @@ export function PeriodManagement() {
     setUnlockLoading(false);
   };
 
-  const getStatusBadge = (status: PeriodStatus, isLocked: boolean) => {
-    if (isLocked) {
-      return <Badge variant="destructive">Locked</Badge>;
-    }
-    
-    switch (status) {
-      case PeriodStatus.ACTIVE:
-        return <Badge variant="default">Active</Badge>;
-      case PeriodStatus.ENDED:
-        return <Badge variant="secondary">Ended</Badge>;
-      case PeriodStatus.ARCHIVED:
-        return <Badge variant="outline">Archived</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+
 
   return (
     <>

@@ -18,6 +18,7 @@ export async function middleware(request: NextRequest) {
   const protectedRoutes = [
     '/dashboard',
     '/groups',
+    '/periods',
     '/settings',
     '/market',
     '/expenses',

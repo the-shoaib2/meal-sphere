@@ -238,6 +238,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     )
   }
 
+  
+
   // Get meal counts for calendar display
   const getMealCountsForMonth = () => {
     const start = startOfMonth(selectedDate)
