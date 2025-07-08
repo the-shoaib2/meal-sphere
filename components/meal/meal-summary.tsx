@@ -2,10 +2,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Utensils } from "lucide-react";
 import React from "react";
+import type { MealType } from "@/hooks/use-meal";
 
 interface MealSummaryProps {
   selectedDate: Date;
-  useMealCount: (date: Date, type: string) => number;
+  useMealCount: (date: Date, type: MealType) => number;
 }
 
 const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount }) => {

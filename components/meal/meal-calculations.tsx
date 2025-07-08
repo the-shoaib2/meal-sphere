@@ -13,6 +13,7 @@ import { format, subMonths, addMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { CalendarIcon, Download, ChevronLeft, ChevronRight } from "lucide-react"
 import { formatCurrency } from "@/lib/meal-calculations"
 import { useMeal } from "@/hooks/use-meal"
+import { LoadingSpinner } from "@/components/meal/meal-skeletons";
 
 interface MealCalculationsProps {
   roomId: string
@@ -185,7 +186,7 @@ export default function MealCalculations({ roomId }: MealCalculationsProps) {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              <LoadingSpinner size={24} />
             </div>
           ) : summary ? (
             <div className="space-y-4">
