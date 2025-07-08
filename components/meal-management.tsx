@@ -26,6 +26,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
 import AutoMealSettingsDialog from "@/components/meal/auto-meal-settings-dialog";
 import MealList from "@/components/meal/meal-list";
+import PeriodNotFoundCard from "@/components/periods/period-not-found-card";
 
 interface MealWithUser {
   id: string
@@ -202,15 +203,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     return (
       <div className="space-y-6">
         {header}
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-          <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <Users className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold mb-2">No Period</h2>
-          <p className="text-muted-foreground mb-4">
-            There is no period for this group.
-          </p>
-        </div>
+        <PeriodNotFoundCard userRole={userRole} isLoading={isPeriodLoading} />
       </div>
     );
   }
