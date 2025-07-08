@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { EndPeriodDialog } from './end-period-dialog';
 import { Calendar, Users, Unlock, Lock } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+
 
 export function CurrentPeriodStatusCard({
   currentPeriod,
@@ -92,30 +92,4 @@ export function CurrentPeriodStatusCard({
   );
 }
 
-export function CurrentPeriodStatusCardSkeleton() {
-  return (
-    <Card className="bg-muted">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
-          <Skeleton className="h-5 w-5 rounded-full" />
-          <Skeleton className="h-6 w-40" />
-        </CardTitle>
-        <CardDescription>
-          <Skeleton className="h-4 w-48 mt-2" />
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-} 
+ 

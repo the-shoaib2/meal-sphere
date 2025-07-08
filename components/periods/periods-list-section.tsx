@@ -3,10 +3,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Calendar, Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, Plus } from 'lucide-react';
+import { Calendar, Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, Plus, Loader2 } from 'lucide-react';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
-import { Skeleton } from '@/components/ui/skeleton';
-import { PeriodsListSectionSkeleton } from './periods-skeleton';
+
 
 export function PeriodsListSection({
   periods,
@@ -38,7 +37,14 @@ export function PeriodsListSection({
   isPrivileged: boolean;
 }) {
   if (!activeGroup || !periods) {
-    return <PeriodsListSectionSkeleton />;
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+          <p className="text-muted-foreground text-sm">Loading periods...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -138,16 +144,9 @@ export function PeriodsListSection({
                 </TableBody>
               </Table>
             ) : (
-              <>
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4 py-4">
-                    <Skeleton className="h-6 w-1/4" />
-                    <Skeleton className="h-6 w-1/4" />
-                    <Skeleton className="h-6 w-1/4" />
-                    <Skeleton className="h-6 w-1/4" />
-                  </div>
-                ))}
-              </>
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No periods found</p>
+              </div>
             )}
           </div>
         </CardContent>

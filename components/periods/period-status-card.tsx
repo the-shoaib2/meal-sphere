@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Calendar, Plus, AlertCircle, CheckCircle, Clock, Users, DollarSign } from 'lucide-react';
+import { Calendar, Plus, AlertCircle, CheckCircle, Clock, Users, DollarSign, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,8 +46,9 @@ export function PeriodStatusCard() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="h-4 bg-muted animate-pulse rounded" />
-          <div className="h-3 bg-muted animate-pulse rounded w-2/3" />
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
         </CardContent>
       </Card>
     );
