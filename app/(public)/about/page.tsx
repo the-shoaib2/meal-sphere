@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Heart, Users, Target, Award, Globe, Zap, Shield, Star } from "lucide-react"
 import Image from "next/image"
+import { motion } from "framer-motion"
 
 export default function AboutPage() {
   const teamMembers = [
@@ -78,13 +79,48 @@ export default function AboutPage() {
     { number: "95%", label: "Satisfaction Rate" }
   ]
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  }
+
+  const cardVariants = {
+    hidden: { opacity: 0, scale: 0.9 },
+    visible: { opacity: 1, scale: 1 },
+    hover: { scale: 1.02 }
+  }
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Backdrop blur background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 backdrop-blur-3xl -z-10" />
+      
       {/* Hero Section */}
-      <section className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      <motion.section 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-7xl mx-auto text-center">
-          <div className="mb-8">
-            <Badge variant="secondary" className="mb-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mb-8"
+          >
+            <Badge variant="secondary" className="mb-4 animate-pulse">
               <Heart className="w-4 h-4 mr-2" />
               Our Story
             </Badge>
@@ -97,39 +133,60 @@ export default function AboutPage() {
               but it doesn't have to be. We're on a mission to make roommates' lives easier, 
               one meal at a time.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              <Button size="lg" className="w-full sm:w-auto">
-                <Users className="w-5 h-5 mr-2" />
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
+            >
+              <Button size="lg" className="w-full sm:w-auto group">
+                <Users className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                 Join Our Mission
               </Button>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <Globe className="w-5 h-5 mr-2" />
+              <Button variant="outline" size="lg" className="w-full sm:w-auto group">
+                <Globe className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
                 Learn More
               </Button>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Stats */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 backdrop-blur-sm"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
+            {stats.map((stat, index) => (
+              <motion.div 
+                key={stat.label} 
+                variants={itemVariants}
+                className="text-center"
+              >
                 <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary mb-2">{stat.number}</div>
                 <div className="text-sm sm:text-base text-muted-foreground">{stat.label}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Our Story */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="order-2 lg:order-1">
+            <motion.div variants={itemVariants} className="order-2 lg:order-1">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6">Our Story</h2>
               <div className="space-y-4 text-muted-foreground">
                 <p>
@@ -147,126 +204,205 @@ export default function AboutPage() {
                   build stronger relationships through better meal management.
                 </p>
               </div>
-            </div>
-            <div className="relative order-1 lg:order-2">
-              <div className="bg-primary/10 rounded-2xl p-6 sm:p-8 h-64 sm:h-80 flex items-center justify-center">
+            </motion.div>
+            <motion.div 
+              variants={itemVariants}
+              className="relative order-1 lg:order-2"
+            >
+              <div className="bg-primary/10 rounded-2xl p-6 sm:p-8 h-64 sm:h-80 flex items-center justify-center backdrop-blur-sm">
                 <Users className="w-16 h-16 sm:w-32 sm:h-32 text-primary" />
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Mission & Vision */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 backdrop-blur-sm"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                </div>
-                <CardTitle className="text-xl sm:text-2xl">Our Mission</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  To simplify shared living by providing intuitive tools that help roommates coordinate 
-                  meals, manage expenses, and build stronger communities. We believe that when people 
-                  can easily share resources and responsibilities, everyone benefits.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <div className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Star className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                </div>
-                <CardTitle className="text-xl sm:text-2xl">Our Vision</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  A world where shared living is not just a necessity but a choice people make because 
-                  it's better than living alone. We envision communities where roommates become friends, 
-                  neighbors become family, and shared resources create abundance for everyone.
-                </p>
-              </CardContent>
-            </Card>
+            <motion.div variants={cardVariants} whileHover="hover">
+              <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                <CardHeader>
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors">Our Mission</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    To simplify shared living by providing intuitive tools that help roommates coordinate 
+                    meals, manage expenses, and build stronger communities. We believe that when people 
+                    can easily share resources and responsibilities, everyone benefits.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            <motion.div variants={cardVariants} whileHover="hover">
+              <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                <CardHeader>
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Star className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors">Our Vision</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    A world where shared living is not just a necessity but a choice people make because 
+                    it's better than living alone. We envision communities where roommates become friends, 
+                    neighbors become family, and shared resources create abundance for everyone.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Values */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
+          <motion.div 
+            variants={itemVariants}
+            className="text-center mb-8 sm:mb-12"
+          >
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">Our Values</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               The principles that guide everything we do
             </p>
-          </div>
+          </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {values.map((value) => (
-              <Card key={value.title} className="text-center hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-                    <value.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-foreground mb-2">{value.title}</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">{value.description}</p>
-                </CardContent>
-              </Card>
+            {values.map((value, index) => (
+              <motion.div
+                key={value.title}
+                variants={cardVariants}
+                whileHover="hover"
+                className="group"
+              >
+                <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                  <CardContent className="pt-6">
+                    <motion.div 
+                      className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <value.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                    </motion.div>
+                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{value.title}</h3>
+                    <p className="text-sm sm:text-base text-muted-foreground">{value.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Team */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <motion.section 
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        variants={containerVariants}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 backdrop-blur-sm"
+      >
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
+          <motion.div 
+            variants={itemVariants}
+            className="text-center mb-8 sm:mb-12"
+          >
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">Meet Our Team</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               The passionate people behind MealSphere
             </p>
-          </div>
+          </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {teamMembers.map((member) => (
-              <Card key={member.name} className="text-center hover:shadow-lg transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Users className="w-8 h-8 sm:w-12 sm:h-12 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-foreground mb-1">{member.name}</h3>
-                  <p className="text-primary text-sm mb-3">{member.role}</p>
-                  <p className="text-muted-foreground text-sm mb-4">{member.bio}</p>
-                  <Button variant="outline" size="sm" className="w-full">
-                    Connect
-                  </Button>
-                </CardContent>
-              </Card>
+            {teamMembers.map((member, index) => (
+              <motion.div
+                key={member.name}
+                variants={cardVariants}
+                whileHover="hover"
+                className="group"
+              >
+                <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                  <CardContent className="pt-6">
+                    <motion.div 
+                      className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Users className="w-8 h-8 sm:w-12 sm:h-12 text-primary group-hover:scale-110 transition-transform" />
+                    </motion.div>
+                    <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{member.name}</h3>
+                    <p className="text-primary text-sm mb-3">{member.role}</p>
+                    <p className="text-muted-foreground text-sm mb-4">{member.bio}</p>
+                    <Button variant="outline" size="sm" className="w-full group">
+                      <span className="group-hover:scale-105 transition-transform">Connect</span>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* CTA Section */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-primary">
+      <motion.section 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-primary backdrop-blur-sm"
+      >
         <div className="max-w-4xl mx-auto text-center text-primary-foreground">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4">Join Us in Building Better Communities</h2>
-          <p className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90">
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-2xl sm:text-3xl font-bold mb-4"
+          >
+            Join Us in Building Better Communities
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90"
+          >
             Whether you're a roommate, landlord, or just someone who believes in the power of community, 
             we'd love to hear from you.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-              Get Started
+          </motion.p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
+          >
+            <Button size="lg" variant="secondary" className="w-full sm:w-auto group">
+              <span className="group-hover:scale-105 transition-transform">Get Started</span>
             </Button>
-            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary w-full sm:w-auto">
-              Contact Us
+            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary w-full sm:w-auto group">
+              <span className="group-hover:scale-105 transition-transform">Contact Us</span>
             </Button>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
     </div>
   )
 } 

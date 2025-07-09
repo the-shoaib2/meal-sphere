@@ -206,7 +206,7 @@ export default function MealPlansPage() {
                 className="group"
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
-                  <CardContent className="pt-6">
+                <CardContent className="pt-6">
                     <motion.div 
                       className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
@@ -215,9 +215,9 @@ export default function MealPlansPage() {
                       <feature.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
                     </motion.div>
                     <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{feature.title}</h3>
-                    <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
+                  <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
               </motion.div>
             ))}
           </div>
@@ -251,7 +251,7 @@ export default function MealPlansPage() {
                 className="group"
               >
                 <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
-                  <CardHeader>
+                <CardHeader>
                     <motion.div 
                       className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
@@ -260,19 +260,19 @@ export default function MealPlansPage() {
                       <plan.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
                     </motion.div>
                     <CardTitle className="text-lg sm:text-xl group-hover:text-primary transition-colors">{plan.name}</CardTitle>
-                    <CardDescription className="text-sm sm:text-base">{plan.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center text-sm">
-                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
+                  <CardDescription className="text-sm sm:text-base">{plan.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-center text-sm">
+                        <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
               </motion.div>
             ))}
           </div>
@@ -306,37 +306,37 @@ export default function MealPlansPage() {
                 className="group"
               >
                 <Card className={`relative hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 ${tier.popular ? 'ring-2 ring-primary' : ''}`}>
-                  {tier.popular && (
-                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary">
-                      Most Popular
-                    </Badge>
-                  )}
-                  <CardHeader className="text-center">
+                {tier.popular && (
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary">
+                    Most Popular
+                  </Badge>
+                )}
+                <CardHeader className="text-center">
                     <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors">{tier.name}</CardTitle>
-                    <div className="mb-4">
-                      <span className="text-3xl sm:text-4xl font-bold">{tier.price}</span>
-                      <span className="text-muted-foreground">/{tier.period}</span>
-                    </div>
-                    <CardDescription className="text-sm sm:text-base">{tier.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      {tier.features.map((feature) => (
-                        <li key={feature} className="flex items-center text-sm">
-                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button 
+                  <div className="mb-4">
+                    <span className="text-3xl sm:text-4xl font-bold">{tier.price}</span>
+                    <span className="text-muted-foreground">/{tier.period}</span>
+                  </div>
+                  <CardDescription className="text-sm sm:text-base">{tier.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 mb-6">
+                    {tier.features.map((feature) => (
+                      <li key={feature} className="flex items-center text-sm">
+                        <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
                       className={`w-full group ${tier.popular ? '' : 'bg-muted-foreground hover:bg-muted-foreground/90'}`}
-                    >
+                  >
                       <span className="group-hover:scale-105 transition-transform">
-                        {tier.name === 'Free' ? 'Get Started' : 'Choose Plan'}
+                    {tier.name === 'Free' ? 'Get Started' : 'Choose Plan'}
                       </span>
-                    </Button>
-                  </CardContent>
-                </Card>
+                  </Button>
+                </CardContent>
+              </Card>
               </motion.div>
             ))}
           </div>
