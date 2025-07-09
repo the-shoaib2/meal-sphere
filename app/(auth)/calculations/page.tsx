@@ -1,14 +1,14 @@
 "use client"
 import { useMemo } from "react"
-import MealCalculations from "@/components/calculations"
+import MealCalculations from "@/components/calculations/calculations"
 import { useActiveGroup } from "@/contexts/group-context"
 
-const CalculationsPage = ({ roomId: propRoomId }: { roomId?: string }) => {
+const CalculationsPage = () => {
   const { activeGroup, isLoading } = useActiveGroup()
   
   const roomId = useMemo(() => {
-    return propRoomId || activeGroup?.id
-  }, [propRoomId, activeGroup?.id])
+    return activeGroup?.id
+  }, [activeGroup?.id])
 
   return <MealCalculations roomId={roomId} />
 }
