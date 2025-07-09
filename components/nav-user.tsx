@@ -210,7 +210,7 @@ export function NavUser({ user, className = '' }: NavUserProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => setShowLogoutDialog(true)}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
@@ -221,7 +221,7 @@ export function NavUser({ user, className = '' }: NavUserProps) {
       </SidebarMenu>
 
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-lg w-[90vw] p-4 sm:max-w-sm sm:p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm log out?</AlertDialogTitle>
             <AlertDialogDescription>
