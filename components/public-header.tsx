@@ -60,7 +60,7 @@ export function PublicHeader() {
             <Utensils className="h-8 w-8" />
             <span className="font-bold text-xl">MealSphere</span>
           </button>
-          <nav className="hidden md:flex items-center ml-8 space-x-6 text-sm font-medium">
+          <nav className="hidden md:flex items-center ml-8 space-x-2 text-sm font-medium">
             {navLinks.map((link) => (
               <Button
                 key={link.name}
