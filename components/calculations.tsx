@@ -1,17 +1,19 @@
 "use client"
 
-import { useMemo, useCallback, memo } from "react"
+import { useMemo, useCallback, memo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { formatCurrency } from "@/lib/meal-calculations"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useCurrentPeriod } from "@/hooks/use-periods"
+import { useCurrentPeriod, usePeriods, usePeriod } from "@/hooks/use-periods"
 import { useRoomCalculations } from "@/hooks/use-calculations"
 import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
+import { useSession } from "next-auth/react"
+import { useActiveGroup } from "@/contexts/group-context"
 
 interface CalculationsProps {
   roomId?: string
@@ -43,7 +45,6 @@ const CalculationsSkeleton = memo(() => {
               <Skeleton className="h-4 w-40" />
             </CardDescription>
           </div>
-          <Skeleton className="h-8 w-24" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -131,18 +132,66 @@ const UserTableRow = memo(({ user }: { user: any }) => {
 
 UserTableRow.displayName = "UserTableRow"
 
-// Memoized header component
-const CalculationsHeader = memo(() => {
+// Memoized header component with period navigation
+const CalculationsHeader = memo(({ 
+  isAdmin, 
+  currentPeriod, 
+  selectedPeriodId, 
+  onPrevious, 
+  onNext, 
+  hasPrevious, 
+  hasNext 
+}: { 
+  isAdmin: boolean
+  currentPeriod: any
+  selectedPeriodId: string | null
+  onPrevious: () => void
+  onNext: () => void
+  hasPrevious: boolean
+  hasNext: boolean
+}) => {
+  const isViewingCurrentPeriod = !selectedPeriodId || selectedPeriodId === currentPeriod?.id
+  const displayPeriod = selectedPeriodId ? null : currentPeriod
+
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
       <div>
         <h2 className="text-xl font-bold tracking-tight">Meal Calculations</h2>
         <p className="text-muted-foreground text-sm">View and manage meal costs and balances</p>
       </div>
-      <Button variant="outline" size="sm">
-        <Download className="mr-2 h-4 w-4" />
-        Export
-      </Button>
+      
+      {isAdmin && (
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onPrevious}
+            disabled={!hasPrevious}
+          >
+            <ChevronLeft className="h-3 w-3" />
+          </Button>
+          
+          <div className="text-center px-2 py-1 bg-muted rounded text-xs min-w-[80px]">
+            <div className="text-muted-foreground font-medium text-[10px]">
+              {isViewingCurrentPeriod ? "Current" : "Historical"}
+            </div>
+            {displayPeriod && (
+              <div className=" text-[10px]">
+                {displayPeriod.name}
+              </div>
+            )}
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onNext}
+            disabled={!hasNext}
+          >
+            <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 })
@@ -172,28 +221,74 @@ const SummaryCards = memo(({ summary }: { summary: any }) => {
 SummaryCards.displayName = "SummaryCards"
 
 const MealCalculations = memo(({ roomId }: CalculationsProps) => {
-  const { data: period, isLoading: periodLoading } = useCurrentPeriod()
+  const { data: session } = useSession()
+  const { activeGroup } = useActiveGroup()
+  const { data: currentPeriod, isLoading: periodLoading } = useCurrentPeriod()
+  const { data: allPeriods = [] } = usePeriods(true) // Include archived periods for admin navigation
+  
+  // State for period navigation
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
+  
+  // Get current user's role
+  const member = activeGroup?.members?.find(m => m.userId === session?.user?.id)
+  const userRole = member?.role
+  const isAdmin = userRole === 'ADMIN'
+  
+  // Get selected period data
+  const { data: selectedPeriod } = usePeriod(selectedPeriodId || '')
+  
+  // Determine which period to use for calculations
+  const periodToUse = selectedPeriodId ? selectedPeriod : currentPeriod
+  
+  // Find current period index in all periods
+  const currentPeriodIndex = useMemo(() => {
+    if (!currentPeriod || !allPeriods.length) return -1
+    return allPeriods.findIndex((p: any) => p.id === currentPeriod.id)
+  }, [currentPeriod, allPeriods])
+  
+  // Find selected period index
+  const selectedPeriodIndex = useMemo(() => {
+    if (!selectedPeriodId || !allPeriods.length) return currentPeriodIndex
+    return allPeriods.findIndex((p: any) => p.id === selectedPeriodId)
+  }, [selectedPeriodId, allPeriods, currentPeriodIndex])
+  
+  // Navigation handlers
+  const handlePrevious = useCallback(() => {
+    if (selectedPeriodIndex > 0) {
+      setSelectedPeriodId(allPeriods[selectedPeriodIndex - 1].id)
+    }
+  }, [selectedPeriodIndex, allPeriods])
+  
+  const handleNext = useCallback(() => {
+    if (selectedPeriodIndex < allPeriods.length - 1) {
+      setSelectedPeriodId(allPeriods[selectedPeriodIndex + 1].id)
+    }
+  }, [selectedPeriodIndex, allPeriods])
+  
+  // Check if navigation is available
+  const hasPrevious = selectedPeriodIndex > 0
+  const hasNext = selectedPeriodIndex < allPeriods.length - 1
 
   // Memoized calculation parameters
   const calcParams = useMemo(() => {
-    if (!period) return null
+    if (!periodToUse) return null
     return {
       roomId,
-      startDate: new Date(period.startDate),
-      endDate: period.endDate ? new Date(period.endDate) : new Date(),
-      dependencies: [roomId, period?.id],
+      startDate: new Date(periodToUse.startDate),
+      endDate: periodToUse.endDate ? new Date(periodToUse.endDate) : new Date(),
+      dependencies: [roomId, periodToUse?.id],
     }
-  }, [period, roomId])
+  }, [periodToUse, roomId])
 
   const { data: summary, isLoading } = useRoomCalculations(calcParams || { enabled: false })
 
   // Memoized period date strings
   const periodDateRange = useMemo(() => {
-    if (!period) return ""
-    const startDate = new Date(period.startDate).toLocaleDateString()
-    const endDate = period.endDate ? new Date(period.endDate).toLocaleDateString() : 'Present'
-    return `${period.name} (${startDate} - ${endDate})`
-  }, [period])
+    if (!periodToUse) return ""
+    const startDate = new Date(periodToUse.startDate).toLocaleDateString()
+    const endDate = periodToUse.endDate ? new Date(periodToUse.endDate).toLocaleDateString() : 'Present'
+    return `${periodToUse.name} (${startDate} - ${endDate})`
+  }, [periodToUse])
 
   // Memoized user summaries
   const userSummaries = useMemo(() => {
@@ -206,10 +301,18 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
   }
 
   // Show period not found only after loading is complete and no period exists
-  if (!period) {
+  if (!periodToUse) {
     return (
       <div className="space-y-3">
-        <CalculationsHeader />
+        <CalculationsHeader 
+          isAdmin={isAdmin}
+          currentPeriod={currentPeriod}
+          selectedPeriodId={selectedPeriodId}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
+        />
         <PeriodNotFoundCard />
       </div>
     )
@@ -217,7 +320,15 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
 
   return (
     <div className="space-y-3">
-      <CalculationsHeader />
+      <CalculationsHeader 
+        isAdmin={isAdmin}
+        currentPeriod={currentPeriod}
+        selectedPeriodId={selectedPeriodId}
+        onPrevious={handlePrevious}
+        onNext={handleNext}
+        hasPrevious={hasPrevious}
+        hasNext={hasNext}
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
