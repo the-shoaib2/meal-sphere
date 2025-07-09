@@ -1,18 +1,10 @@
-// Prefetch related queries example (call in a useEffect in component):
-// useEffect(() => {
-//   if (roomId) {
-//     queryClient.prefetchQuery(['meals', roomId]);
-//     queryClient.prefetchQuery(['guest-meals', roomId]);
-//   }
-// }, [roomId]);
-
 import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { format, isSameDay, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
-import { useCurrentPeriod } from './use-periods';
+import { useCurrentPeriod } from '@/hooks/use-periods';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 

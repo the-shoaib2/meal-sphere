@@ -36,11 +36,24 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Parse date range or use current month
+    // Get current period for the room
+    const currentPeriod = await prisma.mealPeriod.findFirst({
+      where: {
+        roomId,
+        status: "ACTIVE",
+      },
+      orderBy: { startDate: "desc" },
+    })
+
     let startDate: Date
     let endDate: Date
+    let periodId: string | undefined = undefined
 
-    if (startDateParam && endDateParam) {
+    if (currentPeriod) {
+      startDate = currentPeriod.startDate
+      endDate = currentPeriod.endDate || new Date()
+      periodId = currentPeriod.id
+    } else if (startDateParam && endDateParam) {
       startDate = new Date(startDateParam)
       endDate = new Date(endDateParam)
     } else {
@@ -51,12 +64,12 @@ export async function GET(request: Request) {
 
     // If userId is provided, calculate for specific user
     if (userId) {
-      const summary = await calculateUserMealSummary(userId, roomId, startDate, endDate)
+      const summary = await calculateUserMealSummary(userId, roomId, startDate, endDate, periodId)
       return NextResponse.json(summary)
     }
     // Otherwise calculate for the entire room
     else {
-      const summary = await calculateRoomMealSummary(roomId, startDate, endDate)
+      const summary = await calculateRoomMealSummary(roomId, startDate, endDate, periodId)
       return NextResponse.json(summary)
     }
   } catch (error) {
