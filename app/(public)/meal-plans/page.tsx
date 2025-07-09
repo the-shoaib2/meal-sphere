@@ -5,110 +5,54 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, Calendar, Users, ShoppingCart, ChefHat, Clock, Star, Zap } from "lucide-react"
 import { motion } from "framer-motion"
+import { usePublicData } from "@/hooks/use-public-data"
+
+interface MealPlansData {
+  hero: {
+    title: string
+    subtitle: string
+    ctaPrimary: { text: string; href: string }
+    ctaSecondary: { text: string; href: string }
+  }
+  features: Array<{
+    title: string
+    description: string
+    icon: string
+  }>
+  mealPlanTypes: Array<{
+    name: string
+    description: string
+    icon: string
+    features: string[]
+  }>
+  pricingTiers: Array<{
+    name: string
+    price: string
+    period: string
+    description: string
+    features: string[]
+    popular: boolean
+  }>
+  cta: {
+    title: string
+    subtitle: string
+    ctaPrimary: { text: string; href: string }
+    ctaSecondary: { text: string; href: string }
+  }
+}
+
+const iconMap = {
+  Users,
+  ShoppingCart,
+  ChefHat,
+  Clock,
+  Zap,
+  Star,
+  Calendar
+}
 
 export default function MealPlansPage() {
-  const mealPlanTypes = [
-    {
-      name: "Weekly Planner",
-      description: "Plan meals for the entire week with your roommates",
-      icon: Calendar,
-      features: ["7-day meal planning", "Shopping list generation", "Recipe suggestions", "Collaborative editing"]
-    },
-    {
-      name: "Monthly Planner",
-      description: "Long-term meal planning with budget tracking",
-      icon: Calendar,
-      features: ["30-day meal planning", "Budget optimization", "Bulk shopping lists", "Nutrition tracking"]
-    },
-    {
-      name: "Special Occasions",
-      description: "Plan meals for parties, holidays, and special events",
-      icon: Star,
-      features: ["Event planning", "Guest management", "Portion calculations", "Timeline management"]
-    }
-  ]
-
-  const pricingTiers = [
-    {
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Perfect for small groups getting started",
-      features: [
-        "Up to 3 roommates",
-        "Basic meal planning",
-        "Recipe library access",
-        "Shopping list generation",
-        "Email support"
-      ],
-      popular: false
-    },
-    {
-      name: "Pro",
-      price: "$9.99",
-      period: "per month",
-      description: "Ideal for active households",
-      features: [
-        "Up to 8 roommates",
-        "Advanced meal planning",
-        "Nutrition tracking",
-        "Budget optimization",
-        "Recipe sharing",
-        "Priority support",
-        "Custom meal categories"
-      ],
-      popular: true
-    },
-    {
-      name: "Team",
-      price: "$19.99",
-      period: "per month",
-      description: "For large households and communities",
-      features: [
-        "Unlimited roommates",
-        "Advanced analytics",
-        "Custom integrations",
-        "White-label options",
-        "Dedicated support",
-        "API access",
-        "Advanced reporting"
-      ],
-      popular: false
-    }
-  ]
-
-  const features = [
-    {
-      icon: Users,
-      title: "Collaborative Planning",
-      description: "Plan meals together with your roommates in real-time"
-    },
-    {
-      icon: ShoppingCart,
-      title: "Smart Shopping Lists",
-      description: "Automatically generate shopping lists from your meal plans"
-    },
-    {
-      icon: ChefHat,
-      title: "Recipe Integration",
-      description: "Access thousands of recipes and add them to your plans"
-    },
-    {
-      icon: Clock,
-      title: "Time Management",
-      description: "Plan cooking times and coordinate kitchen schedules"
-    },
-    {
-      icon: Zap,
-      title: "Quick Setup",
-      description: "Get started in minutes with our guided setup process"
-    },
-    {
-      icon: Star,
-      title: "Personalization",
-      description: "Customize plans based on dietary preferences and budgets"
-    }
-  ]
+  const { data, loading, error } = usePublicData<MealPlansData>({ endpoint: "meal-plans" })
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -153,12 +97,10 @@ export default function MealPlansPage() {
               Meal Planning
             </Badge>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground mb-4 sm:mb-6">
-              Plan Meals Together
-              <span className="text-primary"> Smarter</span>
+              {data?.hero?.title || "Plan Meals Together Smarter"}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
-              Coordinate meals with your roommates, save money on groceries, and never wonder what's for dinner again. 
-              Our collaborative meal planning makes shared living delicious and efficient.
+              {data?.hero?.subtitle || "Coordinate meals with your roommates, save money on groceries, and never wonder what's for dinner again."}
             </p>
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -168,11 +110,11 @@ export default function MealPlansPage() {
             >
               <Button size="lg" className="w-full sm:w-auto group">
                 <Calendar className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                Start Planning
+                {data?.hero?.ctaPrimary?.text || "Start Planning"}
               </Button>
               <Button variant="outline" size="lg" className="w-full sm:w-auto group">
                 <Users className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                Invite Roommates
+                {data?.hero?.ctaSecondary?.text || "Invite Roommates"}
               </Button>
             </motion.div>
           </motion.div>
@@ -198,26 +140,51 @@ export default function MealPlansPage() {
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {features.map((feature, index) => (
+            {data?.features?.map((feature, index) => {
+              const IconComponent = iconMap[feature.icon as keyof typeof iconMap] || Users
+              
+              return (
+                <motion.div
+                  key={feature.title}
+                  variants={cardVariants}
+                  whileHover="hover"
+                  className="group"
+                >
+                  <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
+                    <CardContent className="pt-6">
+                      <motion.div 
+                        className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                      </motion.div>
+                      <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{feature.title}</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            }) || Array.from({ length: 6 }).map((_, i) => (
               <motion.div
-                key={feature.title}
+                key={i}
                 variants={cardVariants}
                 whileHover="hover"
                 className="group"
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
-                <CardContent className="pt-6">
+                  <CardContent className="pt-6">
                     <motion.div 
                       className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <feature.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                      <Users className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
                     </motion.div>
-                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{feature.title}</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
+                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Loading...</h3>
+                    <p className="text-sm sm:text-base text-muted-foreground">Loading feature description...</p>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -243,36 +210,71 @@ export default function MealPlansPage() {
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {mealPlanTypes.map((plan, index) => (
+            {data?.mealPlanTypes?.map((plan, index) => {
+              const IconComponent = iconMap[plan.icon as keyof typeof iconMap] || Calendar
+              
+              return (
+                <motion.div
+                  key={plan.name}
+                  variants={cardVariants}
+                  whileHover="hover"
+                  className="group"
+                >
+                  <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
+                    <CardHeader>
+                      <motion.div 
+                        className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                      </motion.div>
+                      <CardTitle className="text-lg sm:text-xl group-hover:text-primary transition-colors">{plan.name}</CardTitle>
+                      <CardDescription className="text-sm sm:text-base">{plan.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-center text-sm">
+                            <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            }) || Array.from({ length: 3 }).map((_, i) => (
               <motion.div
-                key={plan.name}
+                key={i}
                 variants={cardVariants}
                 whileHover="hover"
                 className="group"
               >
                 <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
-                <CardHeader>
+                  <CardHeader>
                     <motion.div 
                       className="w-12 h-12 sm:w-16 sm:h-16 mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <plan.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                      <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
                     </motion.div>
-                    <CardTitle className="text-lg sm:text-xl group-hover:text-primary transition-colors">{plan.name}</CardTitle>
-                  <CardDescription className="text-sm sm:text-base">{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center text-sm">
-                        <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-lg sm:text-xl group-hover:text-primary transition-colors">Loading Plan...</CardTitle>
+                    <CardDescription className="text-sm sm:text-base">Loading plan description...</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {Array.from({ length: 4 }).map((_, j) => (
+                        <li key={j} className="flex items-center text-sm">
+                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                          Loading feature...
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -298,7 +300,7 @@ export default function MealPlansPage() {
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {pricingTiers.map((tier, index) => (
+            {data?.pricingTiers?.map((tier, index) => (
               <motion.div
                 key={tier.name}
                 variants={cardVariants}
@@ -306,37 +308,68 @@ export default function MealPlansPage() {
                 className="group"
               >
                 <Card className={`relative hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 ${tier.popular ? 'ring-2 ring-primary' : ''}`}>
-                {tier.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary">
-                    Most Popular
-                  </Badge>
-                )}
-                <CardHeader className="text-center">
+                  {tier.popular && (
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary">
+                      Most Popular
+                    </Badge>
+                  )}
+                  <CardHeader className="text-center">
                     <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors">{tier.name}</CardTitle>
-                  <div className="mb-4">
-                    <span className="text-3xl sm:text-4xl font-bold">{tier.price}</span>
-                    <span className="text-muted-foreground">/{tier.period}</span>
-                  </div>
-                  <CardDescription className="text-sm sm:text-base">{tier.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 mb-6">
-                    {tier.features.map((feature) => (
-                      <li key={feature} className="flex items-center text-sm">
-                        <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
+                    <div className="mb-4">
+                      <span className="text-3xl sm:text-4xl font-bold">{tier.price}</span>
+                      <span className="text-muted-foreground">/{tier.period}</span>
+                    </div>
+                    <CardDescription className="text-sm sm:text-base">{tier.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 mb-6">
+                      {tier.features.map((feature) => (
+                        <li key={feature} className="flex items-center text-sm">
+                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
                       className={`w-full group ${tier.popular ? '' : 'bg-muted-foreground hover:bg-muted-foreground/90'}`}
-                  >
+                    >
                       <span className="group-hover:scale-105 transition-transform">
-                    {tier.name === 'Free' ? 'Get Started' : 'Choose Plan'}
+                        {tier.name === 'Free' ? 'Get Started' : 'Choose Plan'}
                       </span>
-                  </Button>
-                </CardContent>
-              </Card>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )) || Array.from({ length: 3 }).map((_, i) => (
+              <motion.div
+                key={i}
+                variants={cardVariants}
+                whileHover="hover"
+                className="group"
+              >
+                <Card className="relative hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
+                  <CardHeader className="text-center">
+                    <CardTitle className="text-xl sm:text-2xl group-hover:text-primary transition-colors">Loading...</CardTitle>
+                    <div className="mb-4">
+                      <span className="text-3xl sm:text-4xl font-bold">$0</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <CardDescription className="text-sm sm:text-base">Loading pricing description...</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3 mb-6">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <li key={j} className="flex items-center text-sm">
+                          <Check className="w-4 h-4 text-primary mr-2 flex-shrink-0" />
+                          Loading feature...
+                        </li>
+                      ))}
+                    </ul>
+                    <Button className="w-full group bg-muted-foreground hover:bg-muted-foreground/90">
+                      <span className="group-hover:scale-105 transition-transform">Loading...</span>
+                    </Button>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -359,7 +392,7 @@ export default function MealPlansPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-2xl sm:text-3xl font-bold mb-4"
           >
-            Ready to Transform Your Meal Planning?
+            {data?.cta?.title || "Ready to Transform Your Meal Planning?"}
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -368,7 +401,7 @@ export default function MealPlansPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90"
           >
-            Join thousands of roommates who are already saving time and money with collaborative meal planning
+            {data?.cta?.subtitle || "Join thousands of roommates who are already saving time and money with collaborative meal planning"}
           </motion.p>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -378,10 +411,10 @@ export default function MealPlansPage() {
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
           >
             <Button size="lg" variant="secondary" className="w-full sm:w-auto group">
-              <span className="group-hover:scale-105 transition-transform">Start Free Trial</span>
+              <span className="group-hover:scale-105 transition-transform">{data?.cta?.ctaPrimary?.text || "Start Free Trial"}</span>
             </Button>
             <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary w-full sm:w-auto group">
-              <span className="group-hover:scale-105 transition-transform">Schedule Demo</span>
+              <span className="group-hover:scale-105 transition-transform">{data?.cta?.ctaSecondary?.text || "Schedule Demo"}</span>
             </Button>
           </motion.div>
         </div>

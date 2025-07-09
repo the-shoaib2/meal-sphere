@@ -9,9 +9,54 @@ import { Mail, Phone, MapPin, Clock, MessageCircle, HelpCircle, Send, Users, Ref
 import { motion } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { usePublicData } from "@/hooks/use-public-data"
+
+interface ContactData {
+  hero: {
+    title: string
+    subtitle: string
+  }
+  contactMethods: Array<{
+    title: string
+    description: string
+    contact: string
+    icon: string
+  }>
+  officeLocations: Array<{
+    city: string
+    address: string
+    phone: string
+    hours: string
+  }>
+  faqs: Array<{
+    question: string
+    answer: string
+  }>
+  supportChannels: Array<{
+    title: string
+    description: string
+    icon: string
+    cta: string
+  }>
+  cta: {
+    title: string
+    subtitle: string
+    ctaPrimary: { text: string; href: string }
+    ctaSecondary: { text: string; href: string }
+  }
+}
+
+const iconMap = {
+  Mail,
+  Phone,
+  MessageCircle,
+  Users,
+  HelpCircle
+}
 
 export default function ContactPage() {
   const { toast } = useToast()
+  const { data, loading, error } = usePublicData<ContactData>({ endpoint: "contact" })
   const [isLoading, setIsLoading] = useState(false)
   const [showCaptcha, setShowCaptcha] = useState(false)
   const [captchaImage, setCaptchaImage] = useState<string>("")
@@ -26,69 +71,6 @@ export default function ContactPage() {
     subject: "",
     message: ""
   })
-
-  const contactMethods = [
-    {
-      icon: Mail,
-      title: "Email Support",
-      description: "Get help via email within 24 hours",
-      contact: "support@mealsphere.com"
-    },
-    {
-      icon: Phone,
-      title: "Phone Support",
-      description: "Speak with our team directly",
-      contact: "+1 (555) 123-4567"
-    },
-    {
-      icon: MessageCircle,
-      title: "Live Chat",
-      description: "Chat with us in real-time",
-      contact: "Available 9AM-6PM EST"
-    }
-  ]
-
-  const faqs = [
-    {
-      question: "How do I invite my roommates to join?",
-      answer: "Simply create a group and share the invite link with your roommates. They can join using the link or by searching for your group name."
-    },
-    {
-      question: "Can I use MealSphere for free?",
-      answer: "Yes! We offer a free plan that supports up to 3 roommates with basic meal planning features. Upgrade to Pro for more features."
-    },
-    {
-      question: "How do you handle payments and expenses?",
-      answer: "Our expense tracking feature helps you split bills, track payments, and manage shared expenses transparently with your roommates."
-    },
-    {
-      question: "Is my data secure?",
-      answer: "Absolutely. We use industry-standard encryption and security practices to protect your personal information and data."
-    },
-    {
-      question: "Can I export my meal plans and data?",
-      answer: "Yes, you can export your meal plans, shopping lists, and expense reports in various formats for your convenience."
-    },
-    {
-      question: "Do you support dietary restrictions?",
-      answer: "Yes! You can set dietary preferences and restrictions for each roommate, and our recipe suggestions will respect these preferences."
-    }
-  ]
-
-  const officeLocations = [
-    {
-      city: "San Francisco",
-      address: "123 Innovation Drive, San Francisco, CA 94105",
-      phone: "+1 (555) 123-4567",
-      hours: "Mon-Fri 9AM-6PM PST"
-    },
-    {
-      city: "New York",
-      address: "456 Tech Avenue, New York, NY 10001",
-      phone: "+1 (555) 987-6543",
-      hours: "Mon-Fri 9AM-6PM EST"
-    }
-  ]
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -299,12 +281,10 @@ export default function ContactPage() {
               Get in Touch
             </Badge>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground mb-4 sm:mb-6">
-              We'd Love to
-              <span className="text-primary"> Hear from You</span>
+              {data?.hero?.title || "We'd Love to Hear from You"}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
-              Have questions, feedback, or need help? Our team is here to support you. 
-              Reach out and we'll get back to you as soon as possible.
+              {data?.hero?.subtitle || "Have questions, feedback, or need help? Our team is here to support you."}
             </p>
           </motion.div>
         </div>
@@ -320,7 +300,10 @@ export default function ContactPage() {
       >
         <div className="max-w-7xl mx-auto">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {contactMethods.map((method, index) => (
+            {data?.contactMethods?.map((method, index) => {
+              const IconComponent = iconMap[method.icon as keyof typeof iconMap] || MessageCircle
+              
+              return (
               <motion.div
                 key={method.title}
                 variants={cardVariants}
@@ -334,11 +317,34 @@ export default function ContactPage() {
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <method.icon className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
                     </motion.div>
                     <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{method.title}</h3>
                     <p className="text-sm sm:text-base text-muted-foreground mb-3">{method.description}</p>
                     <p className="text-primary font-medium">{method.contact}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              )
+            }) || Array.from({ length: 3 }).map((_, i) => (
+              <motion.div
+                key={i}
+                variants={cardVariants}
+                whileHover="hover"
+                className="group"
+              >
+                <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                  <CardContent className="pt-6">
+                    <motion.div 
+                      className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                    </motion.div>
+                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Loading...</h3>
+                    <p className="text-sm sm:text-base text-muted-foreground mb-3">Loading contact method...</p>
+                    <p className="text-primary font-medium">Loading...</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -527,7 +533,7 @@ export default function ContactPage() {
             <motion.div variants={itemVariants} className="order-1 lg:order-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6">Office Locations</h2>
               <div className="space-y-4 sm:space-y-6">
-                {officeLocations.map((office, index) => (
+                {data?.officeLocations?.map((office, index) => (
                   <motion.div
                     key={office.city}
                     variants={cardVariants}
@@ -550,6 +556,33 @@ export default function ContactPage() {
                         <p className="text-muted-foreground flex items-center">
                           <Clock className="w-4 h-4 mr-2" />
                           {office.hours}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )) || Array.from({ length: 2 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    variants={cardVariants}
+                    whileHover="hover"
+                    className="group"
+                  >
+                    <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center text-lg sm:text-xl group-hover:text-primary transition-colors">
+                          <MapPin className="w-5 h-5 mr-2 text-primary group-hover:scale-110 transition-transform" />
+                          Loading Office...
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-muted-foreground">Loading address...</p>
+                        <p className="text-muted-foreground flex items-center">
+                          <Phone className="w-4 h-4 mr-2" />
+                          Loading phone...
+                        </p>
+                        <p className="text-muted-foreground flex items-center">
+                          <Clock className="w-4 h-4 mr-2" />
+                          Loading hours...
                         </p>
                       </CardContent>
                     </Card>
@@ -580,7 +613,7 @@ export default function ContactPage() {
             </p>
           </motion.div>
           <div className="space-y-4 sm:space-y-6">
-            {faqs.map((faq, index) => (
+            {data?.faqs?.map((faq, index) => (
               <motion.div
                 key={index}
                 variants={cardVariants}
@@ -596,6 +629,25 @@ export default function ContactPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">{faq.answer}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )) || Array.from({ length: 6 }).map((_, i) => (
+              <motion.div
+                key={i}
+                variants={cardVariants}
+                whileHover="hover"
+                className="group"
+              >
+                <Card className="hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-base sm:text-lg group-hover:text-primary transition-colors">
+                      <HelpCircle className="w-5 h-5 mr-2 text-primary group-hover:scale-110 transition-transform" />
+                      Loading question...
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">Loading answer...</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -626,7 +678,11 @@ export default function ContactPage() {
             We're here to help you get the most out of MealSphere. Choose the support option that works best for you.
           </motion.p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <motion.div variants={cardVariants} whileHover="hover" className="group">
+            {data?.supportChannels?.map((channel, index) => {
+              const IconComponent = iconMap[channel.icon as keyof typeof iconMap] || MessageCircle
+              
+              return (
+                <motion.div key={channel.title} variants={cardVariants} whileHover="hover" className="group">
               <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                 <CardContent className="pt-6">
                   <motion.div 
@@ -634,52 +690,37 @@ export default function ContactPage() {
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
                   </motion.div>
-                  <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Live Chat</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground mb-4">Get instant help from our support team</p>
+                      <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{channel.title}</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground mb-4">{channel.description}</p>
                   <Button variant="outline" className="w-full group">
-                    <span className="group-hover:scale-105 transition-transform">Start Chat</span>
+                        <span className="group-hover:scale-105 transition-transform">{channel.cta}</span>
                   </Button>
                 </CardContent>
               </Card>
             </motion.div>
-            <motion.div variants={cardVariants} whileHover="hover" className="group">
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
-                <CardContent className="pt-6">
-                  <motion.div 
-                    className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Users className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
-                  </motion.div>
-                  <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Community Forum</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground mb-4">Connect with other MealSphere users</p>
-                  <Button variant="outline" className="w-full group">
-                    <span className="group-hover:scale-105 transition-transform">Join Forum</span>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-            <motion.div variants={cardVariants} whileHover="hover" className="group sm:col-span-2 lg:col-span-1">
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
-                <CardContent className="pt-6">
-                  <motion.div 
-                    className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <HelpCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
-                  </motion.div>
-                  <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Help Center</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground mb-4">Browse our comprehensive documentation</p>
-                  <Button variant="outline" className="w-full group">
-                    <span className="group-hover:scale-105 transition-transform">Visit Help Center</span>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+              )
+            }) || Array.from({ length: 3 }).map((_, i) => (
+              <motion.div key={i} variants={cardVariants} whileHover="hover" className="group">
+                <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                  <CardContent className="pt-6">
+                    <motion.div 
+                      className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
+                    </motion.div>
+                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">Loading...</h3>
+                    <p className="text-sm sm:text-base text-muted-foreground mb-4">Loading support channel...</p>
+                    <Button variant="outline" className="w-full group">
+                      <span className="group-hover:scale-105 transition-transform">Loading...</span>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
           </div>
         </div>
       </motion.section>
@@ -700,7 +741,7 @@ export default function ContactPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-2xl sm:text-3xl font-bold mb-4"
           >
-            Ready to Get Started?
+            {data?.cta?.title || "Ready to Get Started?"}
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -709,7 +750,7 @@ export default function ContactPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90"
           >
-            Join thousands of roommates who are already using MealSphere to simplify their shared living experience.
+            {data?.cta?.subtitle || "Join thousands of roommates who are already using MealSphere to simplify their shared living experience."}
           </motion.p>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -719,10 +760,10 @@ export default function ContactPage() {
             className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
           >
             <Button size="lg" variant="secondary" className="w-full sm:w-auto group">
-              <span className="group-hover:scale-105 transition-transform">Start Free Trial</span>
+              <span className="group-hover:scale-105 transition-transform">{data?.cta?.ctaPrimary?.text || "Start Free Trial"}</span>
             </Button>
             <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary w-full sm:w-auto group">
-              <span className="group-hover:scale-105 transition-transform">Schedule Demo</span>
+              <span className="group-hover:scale-105 transition-transform">{data?.cta?.ctaSecondary?.text || "Schedule Demo"}</span>
             </Button>
           </motion.div>
         </div>
