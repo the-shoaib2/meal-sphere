@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, LogOut, LayoutDashboard, Sun, Moon, Laptop } from "lucide-react";
+import { Settings, LogOut, LayoutDashboard, Sun, Moon, Laptop, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +45,7 @@ interface UserAvatarProps {
 
 export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   
@@ -57,10 +58,15 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
     }
   };
 
-  const handleLogout = () => {
-    setShowLogoutDialog(false);
-    window.dispatchEvent(new CustomEvent('routeChangeStart'));
-    signOut({ callbackUrl: "/" });
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      window.dispatchEvent(new CustomEvent('routeChangeStart'));
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutDialog(false);
+    }
   };
 
   const getThemeIcon = () => {
@@ -174,7 +180,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+      <AlertDialog open={showLogoutDialog} onOpenChange={loggingOut ? undefined : setShowLogoutDialog}>
         <AlertDialogContent className="rounded-lg w-[90vw] p-4 sm:max-w-sm sm:p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
@@ -183,11 +189,13 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleLogout}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center"
+              disabled={loggingOut}
             >
+              {loggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Log out
             </AlertDialogAction>
           </AlertDialogFooter>

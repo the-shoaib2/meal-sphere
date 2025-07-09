@@ -11,6 +11,7 @@ import {
   Settings,
   Sun,
   Laptop,
+  Loader2,
 } from "lucide-react"
 
 import {
@@ -62,6 +63,7 @@ interface NavUserProps {
 
 export function NavUser({ user, className = '' }: NavUserProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { isMobile } = useSidebar();
@@ -73,9 +75,14 @@ export function NavUser({ user, className = '' }: NavUserProps) {
     setMounted(true);
   }, []);
 
-  const handleLogout = () => {
-    setShowLogoutDialog(false);
-    signOut({ callbackUrl: "/" });
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut({ callbackUrl: "/" });
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutDialog(false);
+    }
   };
 
   const getThemeIcon = () => {
@@ -220,7 +227,7 @@ export function NavUser({ user, className = '' }: NavUserProps) {
         </SidebarMenuItem>
       </SidebarMenu>
 
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+      <AlertDialog open={showLogoutDialog} onOpenChange={loggingOut ? undefined : setShowLogoutDialog}>
         <AlertDialogContent className="rounded-lg w-[90vw] p-4 sm:max-w-sm sm:p-6">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm log out?</AlertDialogTitle>
@@ -229,11 +236,13 @@ export function NavUser({ user, className = '' }: NavUserProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleLogout}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center"
+              disabled={loggingOut}
             >
+              {loggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Log out
             </AlertDialogAction>
           </AlertDialogFooter>
