@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Menu, Search as SearchIcon, Utensils, X } from "lucide-react"
@@ -22,29 +23,59 @@ const navLinks = [
 
 export function PublicHeader() {
   const router = useRouter()
+  const pathname = usePathname()
   const { data: session } = useSession()
   const isMobile = useIsMobile()
   const [searchQuery, setSearchQuery] = useState('')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
+  // Handle navigation with route change event
+  const handleNavigation = (href: string) => {
+    if (href.startsWith('/')) {
+      window.dispatchEvent(new CustomEvent('routeChangeStart'))
+      router.push(href)
+    } else {
+      window.open(href, '_blank')
+    }
+  }
+
+  // Check if a link is active
+  const isActive = (href: string) => {
+    if (!pathname) return false
+    if (href === '/') {
+      return pathname === '/'
+    }
+    return pathname.startsWith(href)
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 backdrop-blur-md px-4 md:px-6">
       <div className="w-full flex h-16 items-center justify-between">
         <div className="flex items-center">
-          <Link href="/" className="flex items-center space-x-2">
+          <button 
+            onClick={() => handleNavigation('/')}
+
+            className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+          >
             <Utensils className="h-8 w-8" />
             <span className="font-bold text-xl">MealSphere</span>
-          </Link>
+          </button>
           <nav className="hidden md:flex items-center ml-8 space-x-6 text-sm font-medium">
             {navLinks.map((link) => (
-              <Link
+              <Button
                 key={link.name}
-                href={link.href}
-                className="transition-colors hover:text-blue-600 dark:hover:text-blue-400"
+                onClick={() => handleNavigation(link.href)}
+                variant={isActive(link.href) ? "secondary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "rounded-full transition-all px-3",
+                  isActive(link.href) 
+                    ? "bg-muted text-foreground font-semibold" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
                 {link.name}
-              </Link>
+              </Button>
             ))}
           </nav>
         </div>
@@ -81,14 +112,23 @@ export function PublicHeader() {
               <nav className="flex-1 space-y-6">
                 <div className="space-y-2">
                   {navLinks.map((link) => (
-                    <Link
+                    <Button
                       key={link.name}
-                      href={link.href}
-                      className="block py-2 text-base font-medium"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => {
+                        handleNavigation(link.href)
+                        setIsMenuOpen(false)
+                      }}
+                      variant={isActive(link.href) ? "secondary" : "ghost"}
+                      size="sm"
+                      className={cn(
+                        "w-full justify-start rounded-full transition-all",
+                        isActive(link.href) 
+                          ? "bg-muted text-foreground font-semibold" 
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
                     >
                       {link.name}
-                    </Link>
+                    </Button>
                   ))}
                 </div>
                 <div className="pt-4 border-t space-y-3">
