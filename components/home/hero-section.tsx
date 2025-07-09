@@ -42,11 +42,11 @@ export default function HeroSection() {
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Button size="lg" className="gap-1.5 rounded-full" onClick={() => handleNavigation(router, '/register')}>
+                <Button size="lg" className="gap-1.5 rounded-full" onClick={() => handleNavigation('/register')}>
                   Get Started
                   <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" className="rounded-full" onClick={() => handleNavigation(router, '/about')}>
+                <Button size="lg" variant="outline" className="rounded-full" onClick={() => handleNavigation('/about')}>
                   Learn More
                 </Button>
               </div>
@@ -73,11 +73,11 @@ export default function HeroSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button size="lg" className="gap-1.5 rounded-full" onClick={() => handleNavigation(router, data.ctaPrimary.href)}>
+              <Button size="lg" className="gap-1.5 rounded-full" onClick={() => handleNavigation(data.ctaPrimary.href)}>
                 {data.ctaPrimary.text}
                 <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" className="rounded-full" onClick={() => handleNavigation(router, data.ctaSecondary.href)}>
+              <Button size="lg" variant="outline" className="rounded-full" onClick={() => handleNavigation(data.ctaSecondary.href)}>
                 {data.ctaSecondary.text}
               </Button>
             </div>

@@ -20,6 +20,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { handleNavigation } from "@/lib/utils"
 
 export function NavMain({
   items,
@@ -52,19 +53,7 @@ export function NavMain({
     return currentPath.startsWith(item.url)
   }
 
-  // Handle navigation with loading bar
-  const handleNavigation = (url: string) => {
-    // Dispatch custom event to trigger loading bar
-    window.dispatchEvent(new CustomEvent('routeChangeStart'))
-    
-    // Close mobile sidebar if on mobile
-    if (isMobile) {
-      setOpenMobile(false)
-    }
-    
-    // Navigate to the new page
-    router.push(url)
-  }
+
 
   return (
     <SidebarGroup>

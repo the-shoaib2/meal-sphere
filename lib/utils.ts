@@ -48,13 +48,12 @@ export async function getCurrentGroupId(userId: string): Promise<string | null> 
 
 /**
  * Handles navigation with route change event
- * @param router The Next.js router instance
  * @param href The target URL
  */
-export function handleNavigation(router: ReturnType<typeof useRouter>, href: string) {
+export function handleNavigation(href: string) {
   if (href.startsWith('/')) {
     window.dispatchEvent(new CustomEvent('routeChangeStart'));
-    router.push(href);
+    window.location.assign(href);
   } else {
     window.open(href, '_blank');
   }

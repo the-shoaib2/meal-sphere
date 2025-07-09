@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { NotificationBell } from "./notification-bell"
 import { UserAvatar } from "./user-avatar"
-
+import { handleNavigation } from "@/lib/utils"
 const navLinks = [
   { name: 'Recipes', href: '/recipes' },
   { name: 'Meal Plans', href: '/meal-plans' },
@@ -29,15 +29,7 @@ export function PublicHeader() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-  // Handle navigation with route change event
-  const handleNavigation = (href: string) => {
-    if (href.startsWith('/')) {
-      window.dispatchEvent(new CustomEvent('routeChangeStart'))
-      router.push(href)
-    } else {
-      window.open(href, '_blank')
-    }
-  }
+
 
   // Check if a link is active
   const isActive = (href: string) => {

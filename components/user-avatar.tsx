@@ -31,7 +31,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-
+import { handleNavigation } from "@/lib/utils"
 interface UserAvatarProps {
   user: {
     id: string;
@@ -49,14 +49,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   
-  const handleNavigation = (href: string) => {
-    if (href.startsWith('/')) {
-      window.dispatchEvent(new CustomEvent('routeChangeStart'));
-      router.push(href);
-    } else {
-      window.open(href, '_blank');
-    }
-  };
+
 
   const handleLogout = async () => {
     setLoggingOut(true);

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Facebook, Instagram, Twitter, Linkedin, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { handleNavigation } from "@/lib/utils"
 
 export function PublicFooter() {
   const router = useRouter()
@@ -47,15 +48,7 @@ export function PublicFooter() {
     },
   ]
 
-  // Handle navigation with route change event
-  const handleNavigation = (href: string) => {
-    if (href.startsWith('/')) {
-      window.dispatchEvent(new CustomEvent('routeChangeStart'))
-      router.push(href)
-    } else {
-      window.open(href, '_blank')
-    }
-  }
+
 
   return (
     <footer className="w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-auto">
