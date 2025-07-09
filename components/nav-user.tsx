@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useProfileImage } from "@/hooks/use-profile-image"
+import { handleNavigation } from "@/lib/utils"
 
 interface NavUserProps {
   user: {
@@ -159,10 +160,13 @@ export function NavUser({ user, className = '' }: NavUserProps) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild className="transition-colors duration-200 hover:bg-accent/80">
-                  <Link href="/settings" className="w-full cursor-pointer focus:bg-accent/80">
+                  <button
+                    className="w-full flex items-center cursor-pointer"
+                    onClick={() => handleNavigation('/settings')}
+                  >
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                  </Link>
+                  </button>
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="cursor-pointer w-full transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80">
