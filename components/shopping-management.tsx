@@ -25,6 +25,10 @@ import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
 import { toast } from "react-hot-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import PeriodNotFoundCard from "@/components/periods/period-not-found-card";
+import { useCurrentPeriod } from "@/hooks/use-periods";
+import { useGroupAccess } from "@/hooks/use-group-access";
+
 
 export default function ShoppingManagement() {
   const { data: session, status } = useSession()
@@ -36,7 +40,14 @@ export default function ShoppingManagement() {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null)
-  
+  // Check user permissions
+  const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: activeGroup?.id || "" })
+
+  // Get current period
+  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
+
+  // Check if user can manage meal settings (only when not loading)
+  const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
   const {
     items: shoppingItems = [],
     isLoading,
@@ -46,7 +57,9 @@ export default function ShoppingManagement() {
     deleteItem,
     clearPurchased,
   } = useShopping()
-  
+
+
+
   // Type guard to ensure shoppingItems is an array
   const safeShoppingItems = Array.isArray(shoppingItems) ? shoppingItems : []
 
@@ -108,7 +121,7 @@ export default function ShoppingManagement() {
 
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return
-    
+
     try {
       await deleteItem.mutateAsync(itemToDelete)
       toast.success('Item deleted')
@@ -136,126 +149,124 @@ export default function ShoppingManagement() {
   const purchasedItems = safeShoppingItems.filter((item: ShoppingItem) => item.purchased)
   const pendingItems = safeShoppingItems.filter((item: ShoppingItem) => !item.purchased)
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Shopping List</h2>
-          <p className="text-muted-foreground">
-            {activeGroup?.name ? `For ${activeGroup.name}` : 'Select a group to get started'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {safeShoppingItems.some((item: ShoppingItem) => item.purchased) && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleClearPurchased}
-              disabled={clearPurchased.isPending}
+  // Show PeriodNotFoundCard if no period and not loading, but always show header
+  if (!currentPeriod && !isPeriodLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Shopping List</h2>
+            <p className="text-muted-foreground">
+              {activeGroup?.name ? `For ${activeGroup.name}` : 'Select a group to get started'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Dialog
+              open={showAddDialog}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingItem(null)
+                  setItemName('')
+                  setQuantity('1')
+                  setUnit('')
+                }
+                setShowAddDialog(open)
+              }}
             >
-              {clearPurchased.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Clearing...
-                </>
-              ) : (
-                'Clear Purchased'
-              )}
-            </Button>
-          )}
-          <Dialog 
-            open={showAddDialog} 
-            onOpenChange={(open) => {
-              if (!open) {
-                setEditingItem(null)
-                setItemName('')
-                setQuantity('1')
-                setUnit('')
-              }
-              setShowAddDialog(open)
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" /> Add Item
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[calc(100%-2rem)] max-w-[425px] mx-auto rounded-lg sm:rounded-lg">
-              <DialogHeader className="pb-4">
-                <DialogTitle className="text-xl sm:text-2xl">{editingItem ? 'Edit Item' : 'Add Shopping Item'}</DialogTitle>
-                <DialogDescription className="text-sm sm:text-base">
-                  {editingItem ? 'Update the item details below' : 'Enter the details of the item you want to add to your shopping list'}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAddOrUpdateItem}>
-                <div className="grid gap-4 sm:gap-6 py-2">
-                  <div className="space-y-1 sm:space-y-2">
-                    <Label htmlFor="name" className="text-sm sm:text-base">
-                      Item Name
-                    </Label>
-                    <Input
-                      id="name"
-                      value={itemName}
-                      onChange={(e) => setItemName(e.target.value)}
-                      className="w-full text-sm sm:text-base px-3 sm:px-4 py-2 h-10 sm:h-auto"
-                      placeholder="e.g. Rice, Eggs, Milk, etc."
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <DialogTrigger asChild>
+                <Button className="w-full sm:w-auto">
+                  <Plus className="mr-2 h-4 w-4" /> Add Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[calc(100%-2rem)] max-w-[425px] mx-auto rounded-lg sm:rounded-lg">
+                <DialogHeader className="pb-4">
+                  <DialogTitle className="text-xl sm:text-2xl">{editingItem ? 'Edit Item' : 'Add Shopping Item'}</DialogTitle>
+                  <DialogDescription className="text-sm sm:text-base">
+                    {editingItem ? 'Update the item details below' : 'Enter the details of the item you want to add to your shopping list'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddOrUpdateItem}>
+                  <div className="grid gap-4 sm:gap-6 py-2">
                     <div className="space-y-1 sm:space-y-2">
-                      <Label htmlFor="quantity" className="text-sm sm:text-base">
-                        Quantity
+                      <Label htmlFor="name" className="text-sm sm:text-base">
+                        Item Name
                       </Label>
                       <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
+                        id="name"
+                        value={itemName}
+                        onChange={(e) => setItemName(e.target.value)}
                         className="w-full text-sm sm:text-base px-3 sm:px-4 py-2 h-10 sm:h-auto"
+                        placeholder="e.g. Rice, Eggs, Milk, etc."
                         required
                       />
                     </div>
-                    <div className="space-y-1 sm:space-y-2">
-                      <Label htmlFor="unit" className="text-sm sm:text-base">
-                        Unit (optional)
-                      </Label>
-                      <Input
-                        id="unit"
-                        value={unit}
-                        onChange={(e) => setUnit(e.target.value)}
-                        className="w-full text-sm sm:text-base px-3 sm:px-4 py-2 h-10 sm:h-auto"
-                        placeholder="e.g. kg, L, pcs, g"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      <div className="space-y-1 sm:space-y-2">
+                        <Label htmlFor="quantity" className="text-sm sm:text-base">
+                          Quantity
+                        </Label>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min="1"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          className="w-full text-sm sm:text-base px-3 sm:px-4 py-2 h-10 sm:h-auto"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1 sm:space-y-2">
+                        <Label htmlFor="unit" className="text-sm sm:text-base">
+                          Unit (optional)
+                        </Label>
+                        <Input
+                          id="unit"
+                          value={unit}
+                          onChange={(e) => setUnit(e.target.value)}
+                          className="w-full text-sm sm:text-base px-3 sm:px-4 py-2 h-10 sm:h-auto"
+                          placeholder="e.g. kg, L, pcs, g"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <DialogFooter className="pt-4">
-                  <Button 
-                    type="submit" 
-                    size="lg"
-                    className="w-full sm:w-auto px-6 sm:px-8 text-sm sm:text-base h-10 sm:h-auto"
-                    disabled={addItem.isPending || updateItem.isPending}
-                  >
-                    {(addItem.isPending || updateItem.isPending) ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                        {editingItem ? 'Updating...' : 'Adding...'}
-                      </>
-                    ) : editingItem ? (
-                      'Update Item'
-                    ) : (
-                      'Add to List'
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter className="pt-4">
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full sm:w-auto px-6 sm:px-8 text-sm sm:text-base h-10 sm:h-auto"
+                      disabled={addItem.isPending || updateItem.isPending}
+                    >
+                      {(addItem.isPending || updateItem.isPending) ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                          {editingItem ? 'Updating...' : 'Adding...'}
+                        </>
+                      ) : editingItem ? (
+                        'Update Item'
+                      ) : (
+                        'Add to List'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
+        <PeriodNotFoundCard
+          userRole={userRole}
+          isLoading={isPeriodLoading}
+          groupId={activeGroup?.id}
+          userId={session?.user?.id}
+        />
       </div>
+    );
+  }
 
+  
+
+  return (
+    <div className="space-y-6">
       {isLoading ? (
         <div className="space-y-6">
           {/* Pending Items Skeleton */}
@@ -365,7 +376,7 @@ export default function ShoppingManagement() {
                               <Pencil className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => handleDeleteClick(item.id)}
                               disabled={deleteItem.isPending}
@@ -439,7 +450,7 @@ export default function ShoppingManagement() {
                                   <Pencil className="mr-2 h-4 w-4" />
                                   <span>Edit</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"
                                   onClick={() => handleDeleteClick(item.id)}
                                   disabled={deleteItem.isPending}
@@ -458,19 +469,6 @@ export default function ShoppingManagement() {
               </CardContent>
             </Card>
           )}
-
-          {safeShoppingItems.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-64 rounded-lg border border-dashed">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">No items in your shopping list</h3>
-              <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
-                Add items to your shopping list to get started.
-              </p>
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add your first item
-              </Button>
-            </div>
-          )}
         </>
       )}
 
@@ -484,7 +482,7 @@ export default function ShoppingManagement() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={deleteItem.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

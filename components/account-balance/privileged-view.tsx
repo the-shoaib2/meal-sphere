@@ -42,21 +42,6 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <h1 className="text-2xl font-bold">Account Balances</h1>
-            {currentPeriod && (
-              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit">
-                {currentPeriod.name} {currentPeriod.isLocked ? "(Locked)" : ""}
-              </Badge>
-            )}
-          </div>
-          <p className="text-muted-foreground text-sm mt-1">Manage all user balances and transactions.</p>
-        </div>
-        <Badge variant="outline">{userRole}</Badge>
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Users} title="Total Members" value={members.length} />
         <StatCard icon={TrendingUp} title="Active Balances" value={activeBalancesCount} />

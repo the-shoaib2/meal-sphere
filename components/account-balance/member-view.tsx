@@ -45,22 +45,6 @@ export default function MemberView({ balance, transactions, userRole, session }:
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <h1 className="text-2xl font-bold">My Account</h1>
-            {balance?.currentPeriod && (
-              <Badge variant={balance.currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit">
-                {balance.currentPeriod.name} {balance.currentPeriod.isLocked ? "(Locked)" : ""}
-              </Badge>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">Balance overview and transaction history</p>
-        </div>
-        <Badge variant="outline">{userRole}</Badge>
-      </div>
-
       {/* Main Balance Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>

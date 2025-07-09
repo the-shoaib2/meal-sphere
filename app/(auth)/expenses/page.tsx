@@ -7,10 +7,16 @@ import { ExtraExpenseDialog } from "@/components/extra-expense-dialog"
 import { useActiveGroup } from "@/contexts/group-context"
 import { Plus } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCurrentPeriod } from "@/hooks/use-periods"
+import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
+import { useSession } from "next-auth/react"
 
 export default function ExpensesPage() {
+  const { data: session } = useSession();
   const { activeGroup } = useActiveGroup()
   const [open, setOpen] = useState(false)
+  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
+  const userRole = activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role
 
   const handleSuccess = () => {
     setOpen(false);
@@ -35,14 +41,18 @@ export default function ExpensesPage() {
           </Button>
         </div>
       </div>
-      
-      <ExtraExpenseDialog 
-        open={open} 
-        onOpenChange={setOpen} 
-        onSuccess={handleSuccess}
-      />
-
-      <ExpenseList />
+      <ExtraExpenseDialog open={open} onOpenChange={setOpen} onSuccess={handleSuccess} />
+      {/* Show PeriodNotFoundCard if no period */}
+      {!currentPeriod && !isPeriodLoading ? (
+        <PeriodNotFoundCard
+          userRole={userRole}
+          isLoading={isPeriodLoading}
+          groupId={activeGroup?.id}
+          userId={session?.user?.id}
+        />
+      ) : (
+        <ExpenseList />
+      )}
     </div>
   )
 }
