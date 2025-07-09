@@ -3,6 +3,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { usePublicData } from "@/hooks/use-public-data"
+import { useRouter } from "next/navigation"
+import { handleNavigation } from "@/lib/utils"
 
 interface HeroData {
   title: string
@@ -20,6 +22,7 @@ interface HeroData {
 
 export default function HeroSection() {
   const { data, error } = usePublicData<HeroData>({ endpoint: "hero" })
+  const router = useRouter()
 
   if (error || !data) {
     return (
@@ -39,17 +42,13 @@ export default function HeroSection() {
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Link href="/register">
-                  <Button size="lg" className="gap-1.5 rounded-full">
-                    Get Started
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/about">
-                  <Button size="lg" variant="outline" className="rounded-full">
-                    Learn More
-                  </Button>
-                </Link>
+                <Button size="lg" className="gap-1.5 rounded-full" onClick={() => handleNavigation(router, '/register')}>
+                  Get Started
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button size="lg" variant="outline" className="rounded-full" onClick={() => handleNavigation(router, '/about')}>
+                  Learn More
+                </Button>
               </div>
             </div>
           </div>
@@ -74,17 +73,13 @@ export default function HeroSection() {
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Link href={data.ctaPrimary.href}>
-                <Button size="lg" className="gap-1.5 rounded-full">
-                  {data.ctaPrimary.text}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href={data.ctaSecondary.href}>
-                <Button size="lg" variant="outline" className="rounded-full">
-                  {data.ctaSecondary.text}
-                </Button>
-              </Link>
+              <Button size="lg" className="gap-1.5 rounded-full" onClick={() => handleNavigation(router, data.ctaPrimary.href)}>
+                {data.ctaPrimary.text}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="outline" className="rounded-full" onClick={() => handleNavigation(router, data.ctaSecondary.href)}>
+                {data.ctaSecondary.text}
+              </Button>
             </div>
           </div>
         </div>

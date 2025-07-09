@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { prisma } from "@/lib/prisma"
+import { useRouter } from "next/navigation"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -42,5 +43,19 @@ export async function getCurrentGroupId(userId: string): Promise<string | null> 
   } catch (error) {
     console.error('Error getting current group ID:', error);
     return null;
+  }
+}
+
+/**
+ * Handles navigation with route change event
+ * @param router The Next.js router instance
+ * @param href The target URL
+ */
+export function handleNavigation(router: ReturnType<typeof useRouter>, href: string) {
+  if (href.startsWith('/')) {
+    window.dispatchEvent(new CustomEvent('routeChangeStart'));
+    router.push(href);
+  } else {
+    window.open(href, '_blank');
   }
 }
