@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "react-hot-toast"
 import { Loader2 } from "lucide-react"
 import { ExtraExpenseDialog } from "./extra-expense-dialog"
-import { type ExtraExpense } from "@/hooks/use-extra-expense"
+import { type ExtraExpense } from "@/hooks/use-expense"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface ExpenseActionsProps {

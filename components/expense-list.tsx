@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import Image from "next/image"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
-import { useExtraExpense, type ExtraExpense } from "@/hooks/use-extra-expense"
+import { useExtraExpense, type ExtraExpense } from "@/hooks/use-expense"
 import { ExpenseActions } from "@/components/expense-actions"
 import { Skeleton } from "@/components/ui/skeleton"
 
