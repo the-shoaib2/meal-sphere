@@ -1,8 +1,8 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
-import { useActiveGroup } from '@/contexts/group-context';
-import { useMemo } from 'react';
+import { useCurrentPeriod } from '@/hooks/use-periods';
 
 export interface UserMealSummary {
   userId: string;
@@ -49,12 +49,12 @@ export function useRoomCalculations({
   dependencies = [] 
 }: CalculationParams = {}) {
   const { data: session } = useSession();
-  const { activeGroup } = useActiveGroup();
-  
+  const { data: currentPeriod } = useCurrentPeriod();
+
   // Memoize resolved room ID to prevent unnecessary re-renders
   const resolvedRoomId = useMemo(() => {
-    return roomId || activeGroup?.id;
-  }, [roomId, activeGroup?.id]);
+    return roomId || currentPeriod?.groupId || currentPeriod?.roomId;
+  }, [roomId, currentPeriod?.groupId, currentPeriod?.roomId]);
 
   // Memoize query key to prevent unnecessary refetches
   const queryKey = useMemo(() => [
@@ -112,12 +112,12 @@ export function useUserCalculations({
   dependencies = [] 
 }: UserCalculationParams) {
   const { data: session } = useSession();
-  const { activeGroup } = useActiveGroup();
-  
+  const { data: currentPeriod } = useCurrentPeriod();
+
   // Memoize resolved room ID
   const resolvedRoomId = useMemo(() => {
-    return roomId || activeGroup?.id;
-  }, [roomId, activeGroup?.id]);
+    return roomId || currentPeriod?.groupId || currentPeriod?.roomId;
+  }, [roomId, currentPeriod?.groupId, currentPeriod?.roomId]);
 
   // Memoize query key
   const queryKey = useMemo(() => [

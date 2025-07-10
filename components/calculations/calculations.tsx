@@ -24,51 +24,40 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
   const { activeGroup } = useActiveGroup()
   const { data: currentPeriod, isLoading: periodLoading } = useCurrentPeriod()
   const { data: allPeriods = [] } = usePeriods(true) // Include archived periods for admin navigation
-  
-  // State for period navigation
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
-  
-  // Get current user's role
+
+  // Always call all hooks
   const member = activeGroup?.members?.find(m => m.userId === session?.user?.id)
   const userRole = member?.role
   const isAdmin = userRole === 'ADMIN'
-  
-  // Get selected period data
   const { data: selectedPeriod } = usePeriod(selectedPeriodId || '')
-  
-  // Determine which period to use for calculations
   const periodToUse = selectedPeriodId ? selectedPeriod : currentPeriod
-  
-  // Find current period index in all periods
+
   const currentPeriodIndex = useMemo(() => {
     if (!currentPeriod || !allPeriods.length) return -1
     return allPeriods.findIndex((p: any) => p.id === currentPeriod.id)
   }, [currentPeriod, allPeriods])
-  
-  // Find selected period index
+
   const selectedPeriodIndex = useMemo(() => {
     if (!selectedPeriodId || !allPeriods.length) return currentPeriodIndex
     return allPeriods.findIndex((p: any) => p.id === selectedPeriodId)
   }, [selectedPeriodId, allPeriods, currentPeriodIndex])
-  
-  // Navigation handlers
+
   const handlePrevious = useCallback(() => {
     if (selectedPeriodIndex > 0) {
       setSelectedPeriodId(allPeriods[selectedPeriodIndex - 1].id)
     }
   }, [selectedPeriodIndex, allPeriods])
-  
+
   const handleNext = useCallback(() => {
     if (selectedPeriodIndex < allPeriods.length - 1) {
       setSelectedPeriodId(allPeriods[selectedPeriodIndex + 1].id)
     }
   }, [selectedPeriodIndex, allPeriods])
-  
-  // Check if navigation is available
+
   const hasPrevious = selectedPeriodIndex > 0
   const hasNext = selectedPeriodIndex < allPeriods.length - 1
 
-  // Memoized calculation parameters
   const calcParams = useMemo(() => {
     if (!periodToUse) return null
     return {
@@ -94,16 +83,18 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
     return summary?.userSummaries || []
   }, [summary?.userSummaries])
 
-  // Show loading state if period is loading or calculations are loading
+
+
+  // Show loading skeleton if period or calculations are loading, or summary is not ready
   if (periodLoading || isLoading || !summary) {
     return <CalculationsSkeleton />
   }
 
-  // Show period not found only after loading is complete and no period exists
-  if (!periodToUse) {
+  // Show not-found card if there is no period after loading is done
+  if (!periodToUse && !periodLoading) {
     return (
       <div className="space-y-3">
-        <CalculationsHeader 
+        <CalculationsHeader
           isAdmin={isAdmin}
           currentPeriod={currentPeriod}
           selectedPeriodId={selectedPeriodId}
@@ -112,14 +103,20 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
           hasPrevious={hasPrevious}
           hasNext={hasNext}
         />
-        <PeriodNotFoundCard />
+        <PeriodNotFoundCard
+          userRole={userRole}
+          groupId={roomId}
+          userId={session?.user?.id}
+        />
       </div>
     )
   }
 
+  // Main content render
+
   return (
     <div className="space-y-3">
-      <CalculationsHeader 
+      <CalculationsHeader
         isAdmin={isAdmin}
         currentPeriod={currentPeriod}
         selectedPeriodId={selectedPeriodId}

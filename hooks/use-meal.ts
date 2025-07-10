@@ -1,9 +1,9 @@
-import { useCallback, useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { format, isSameDay, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
+import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import { useCurrentPeriod } from '@/hooks/use-periods';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
