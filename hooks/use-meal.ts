@@ -493,7 +493,38 @@ export function useMeal(roomId?: string): UseMealReturn {
       meal.userId === session?.user?.id
     ).length;
     
-    return todayMeals < (mealSettings?.maxMealsPerDay || 3);
+    // Check if user has reached daily meal limit
+    if (todayMeals >= (mealSettings?.maxMealsPerDay || 3)) {
+      return false;
+    }
+    
+    // Check if meal time has passed for the specific date
+    const now = new Date();
+    const targetDate = new Date(date);
+    
+    // Get meal time for the specific type
+    let mealTimeStr = '';
+    if (type === 'BREAKFAST') mealTimeStr = mealSettings.breakfastTime || '08:00';
+    if (type === 'LUNCH') mealTimeStr = mealSettings.lunchTime || '13:00';
+    if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00';
+    
+    // Parse meal time
+    const [hours, minutes] = mealTimeStr.split(':').map(Number);
+    const mealTime = new Date(targetDate);
+    mealTime.setHours(hours, minutes, 0, 0);
+    
+    // If the target date is today, check if meal time has passed
+    if (isSameDay(targetDate, now)) {
+      return now < mealTime;
+    }
+    
+    // For future dates, always allow
+    if (targetDate > now) {
+      return true;
+    }
+    
+    // For past dates, don't allow
+    return false;
   }, [mealSettings, meals, session?.user?.id]);
 
   const isAutoMealTime = useCallback((date: Date, type: MealType): boolean => {

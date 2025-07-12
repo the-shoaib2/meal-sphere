@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
 import { Plus, Settings, Clock, Users, Utensils, Minus, Zap } from "lucide-react"
-import { format, startOfMonth, endOfMonth, isToday, eachDayOfInterval } from "date-fns"
+import { format, startOfMonth, endOfMonth, isToday, isSameDay, eachDayOfInterval } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
@@ -262,17 +262,37 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       return false
     }
 
-    // Only allow edit if current time is before meal time, or user is admin/manager/meal manager
+    // Admin/Manager/Meal Manager can always edit
+    const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
+    if (privileged) return true
+
+    // For regular users, check if meal time has passed
     const now = new Date()
+    const targetDate = new Date(selectedDate)
+    
+    // Get meal time for the specific type
     let mealTimeStr = ''
     if (type === 'BREAKFAST') mealTimeStr = mealSettings?.breakfastTime || '08:00'
     if (type === 'LUNCH') mealTimeStr = mealSettings?.lunchTime || '13:00'
     if (type === 'DINNER') mealTimeStr = mealSettings?.dinnerTime || '20:00'
-    const [h, m] = mealTimeStr.split(':').map(Number)
-    const mealTime = new Date(selectedDate)
-    mealTime.setHours(h, m, 0, 0)
-    const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
-    return privileged || now < mealTime
+    
+    // Parse meal time
+    const [hours, minutes] = mealTimeStr.split(':').map(Number)
+    const mealTime = new Date(targetDate)
+    mealTime.setHours(hours, minutes, 0, 0)
+    
+    // If the target date is today, check if meal time has passed
+    if (isSameDay(targetDate, now)) {
+      return now < mealTime
+    }
+    
+    // For future dates, always allow
+    if (targetDate > now) {
+      return true
+    }
+    
+    // For past dates, don't allow
+    return false
   }
 
 
@@ -336,6 +356,18 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                             'bg-blue-100 text-blue-700'
                         const shouldAutoAdd = shouldAutoAddForUser(mealType)
                         const isAutoTime = isAutoTimeForMeal(mealType)
+                        
+                        // Check if meal time has passed for today
+                        const now = new Date()
+                        const isTodaySelected = isSameDay(selectedDate, now)
+                        let mealTimeStr = ''
+                        if (mealType === 'BREAKFAST') mealTimeStr = mealSettings?.breakfastTime || '08:00'
+                        if (mealType === 'LUNCH') mealTimeStr = mealSettings?.lunchTime || '13:00'
+                        if (mealType === 'DINNER') mealTimeStr = mealSettings?.dinnerTime || '20:00'
+                        const [hours, minutes] = mealTimeStr.split(':').map(Number)
+                        const mealTime = new Date(selectedDate)
+                        mealTime.setHours(hours, minutes, 0, 0)
+                        const mealTimePassed = isTodaySelected && now >= mealTime
 
                         return (
                           <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
@@ -345,23 +377,29 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                               </div>
                               <div className="flex-1 min-w-0">
                                 <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
-                                <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
-                                  <Badge variant="secondary" className="text-xs sm:text-sm">{mealCount} total</Badge>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">{mealCount} total</Badge>
                                   {hasMealSelected && (
-                                    <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm">
+                                    <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0.5 h-5">
                                       ✓ You're in
                                     </Badge>
                                   )}
                                   {shouldAutoAdd && (
-                                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs sm:text-sm flex items-center gap-1">
-                                      <Zap className="h-3 w-3" />
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
+                                      <Zap className="h-2.5 w-2.5" />
                                       Auto
                                     </Badge>
                                   )}
                                   {isAutoTime && (
-                                    <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs sm:text-sm flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
+                                    <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
+                                      <Clock className="h-2.5 w-2.5" />
                                       Time
+                                    </Badge>
+                                  )}
+                                  {mealTimePassed && (
+                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
+                                      <Clock className="h-2.5 w-2.5" />
+                                      Time Passed
                                     </Badge>
                                   )}
                                 </div>
