@@ -392,7 +392,7 @@ export default function ContactPage() {
             <motion.div variants={itemVariants} className="order-2 lg:order-1">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6">Send us a Message</h2>
               
-              {isSuccess ? (
+0              {isSuccess ? (
                 // Success State
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}
