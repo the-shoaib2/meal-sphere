@@ -222,10 +222,26 @@ export function getEmailConfig(): EmailConfig {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`)
   }
 
+  const port = Number(process.env.SMTP_PORT!)
+  
+  // Determine secure setting based on port and environment
+  // Port 465 = SSL, Port 587 = STARTTLS, Port 25 = plain text (not recommended)
+  let secure = false
+  if (port === 465) {
+    secure = true
+  } else if (port === 587) {
+    secure = false // STARTTLS will be used
+  } else if (port === 25) {
+    secure = false
+  } else {
+    // For other ports, use environment-based decision
+    secure = process.env.NODE_ENV === 'production'
+  }
+
   return {
     host: process.env.SMTP_HOST!,
-    port: Number(process.env.SMTP_PORT!),
-    secure: process.env.NODE_ENV === 'production',
+    port,
+    secure,
     auth: {
       user: process.env.SMTP_USER!,
       pass: process.env.SMTP_PASS!,
@@ -243,6 +259,14 @@ export async function sendEmail(to: string, template: EmailTemplate): Promise<vo
       port: config.port,
       secure: config.secure,
       auth: config.auth,
+      // Additional SSL/TLS options to handle common issues
+      tls: {
+        rejectUnauthorized: false, // Ignore certificate issues in development
+        ciphers: 'SSLv3'
+      },
+      // For STARTTLS
+      requireTLS: config.port === 587,
+      ignoreTLS: false,
     })
 
     // Verify transporter configuration

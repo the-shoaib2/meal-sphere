@@ -64,6 +64,7 @@ export default function ContactPage() {
   const [captchaText, setCaptchaText] = useState<string>("")
   const [captchaInput, setCaptchaInput] = useState<string>("")
   const [isCaptchaValid, setIsCaptchaValid] = useState<boolean | null>(null)
+  const [isSuccess, setIsSuccess] = useState(false)
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -206,11 +207,15 @@ export default function ContactPage() {
       const result = await response.json()
 
       if (response.ok) {
+        // Show success toast
         toast({
-          title: "Success!",
+          title: "Message Sent Successfully! 🎉",
           description: result.message,
           variant: "default"
         })
+        
+        // Show success state
+        setIsSuccess(true)
         
         // Reset form and hide CAPTCHA
         setFormData({
@@ -223,6 +228,11 @@ export default function ContactPage() {
         setCaptchaInput("")
         setShowCaptcha(false)
         setCaptchaImage("")
+        
+        // Hide success state after 5 seconds
+        setTimeout(() => {
+          setIsSuccess(false)
+        }, 5000)
       } else {
         toast({
           title: "Error",
@@ -255,6 +265,21 @@ export default function ContactPage() {
     setShowCaptcha(false)
     setCaptchaInput("")
     setIsCaptchaValid(null)
+  }
+
+  // Reset form and start over
+  const handleResetForm = () => {
+    setIsSuccess(false)
+    setShowCaptcha(false)
+    setCaptchaInput("")
+    setIsCaptchaValid(null)
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      subject: "",
+      message: ""
+    })
   }
 
   return (
@@ -367,7 +392,30 @@ export default function ContactPage() {
             <motion.div variants={itemVariants} className="order-2 lg:order-1">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6">Send us a Message</h2>
               
-              {!showCaptcha ? (
+              {isSuccess ? (
+                // Success State
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-8"
+                >
+                  <div className="w-16 h-16 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">Message Sent Successfully!</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Thank you for contacting us. We'll get back to you within 24 hours.
+                  </p>
+                  <div className="space-y-3">
+                    <Button onClick={handleResetForm} className="w-full">
+                      Send Another Message
+                    </Button>
+                    <Button variant="outline" onClick={handleResetForm} className="w-full">
+                      Back to Form
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : !showCaptcha ? (
                 // Initial Form
                 <form onSubmit={handleShowCaptcha} className="space-y-4 sm:space-y-6">
                   <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
