@@ -528,7 +528,11 @@ export function useMeal(roomId?: string): UseMealReturn {
   }, [mealSettings, meals, session?.user?.id]);
 
   const isAutoMealTime = useCallback((date: Date, type: MealType): boolean => {
-    if (!autoMealSettings?.isEnabled || !mealSettings?.autoMealEnabled) return false;
+    // Check if auto meal system is enabled by admin
+    if (!mealSettings?.autoMealEnabled) return false;
+    
+    // Check if user has auto meals enabled
+    if (!autoMealSettings?.isEnabled) return false;
     
     const now = new Date();
     const currentTime = format(now, 'HH:mm');
@@ -540,7 +544,11 @@ export function useMeal(roomId?: string): UseMealReturn {
   }, [autoMealSettings, mealSettings]);
 
   const shouldAutoAddMeal = useCallback((date: Date, type: MealType): boolean => {
-    if (!autoMealSettings?.isEnabled || !mealSettings?.autoMealEnabled) return false;
+    // Check if auto meal system is enabled by admin
+    if (!mealSettings?.autoMealEnabled) return false;
+    
+    // Check if user has auto meals enabled
+    if (!autoMealSettings?.isEnabled) return false;
     
     // Check if this meal type is enabled for the user
     const isEnabled = type === 'BREAKFAST' ? autoMealSettings.breakfastEnabled :

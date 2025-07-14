@@ -20,7 +20,7 @@ generator client {
 }
 
 enum Role {
-  OWNER
+  SUPER_ADMIN
   ADMIN
   MODERATOR
   MANAGER
@@ -30,6 +30,7 @@ enum Role {
   MARKET_MANAGER
   MEMBER
   BANNED
+  USER
 }
 
 enum MealType {

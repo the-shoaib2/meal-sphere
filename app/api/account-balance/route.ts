@@ -5,9 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { getPeriodAwareWhereClause, validateActivePeriod, getCurrentPeriod } from '@/lib/period-utils';
 
 const PRIVILEGED_ROLES = [
-  'OWNER',
+  'SUPER_ADMIN',
   'ADMIN',
-  'ACCOUNTANT',
+  'MANAGER',
 ];
 
 function isPrivileged(role?: string) {

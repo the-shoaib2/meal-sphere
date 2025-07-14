@@ -98,7 +98,7 @@ export class PeriodService {
       },
     });
 
-    if (!member || !['OWNER', 'ADMIN', 'MODERATOR'].includes(member.role)) {
+    if (!member || !['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(member.role)) {
       throw new Error('Insufficient permissions to start a period');
     }
 
@@ -176,7 +176,7 @@ export class PeriodService {
       },
     });
 
-    if (!member || !['OWNER', 'ADMIN', 'MODERATOR'].includes(member.role)) {
+    if (!member || !['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(member.role)) {
       throw new Error('Insufficient permissions to end a period');
     }
 
@@ -235,7 +235,7 @@ export class PeriodService {
       },
     });
 
-    if (!member || !['OWNER', 'ADMIN', 'MODERATOR'].includes(member.role)) {
+    if (!member || !['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(member.role)) {
       throw new Error('Insufficient permissions to lock a period');
     }
 
@@ -300,7 +300,7 @@ export class PeriodService {
       },
     });
 
-    if (!member || !['OWNER', 'ADMIN', 'MODERATOR'].includes(member.role)) {
+    if (!member || !['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(member.role)) {
       throw new Error('Insufficient permissions to unlock a period');
     }
 
@@ -516,7 +516,7 @@ export class PeriodService {
       },
     });
 
-    if (!member || !['OWNER', 'ADMIN', 'MODERATOR'].includes(member.role)) {
+    if (!member || !['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(member.role)) {
       throw new Error('Insufficient permissions to archive a period');
     }
 
@@ -563,7 +563,7 @@ export class PeriodService {
         },
       });
 
-      if (!member || !['OWNER', 'ADMIN', 'MODERATOR'].includes(member.role)) {
+      if (!member || !['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(member.role)) {
         throw new Error('Insufficient permissions to restart a period');
       }
 

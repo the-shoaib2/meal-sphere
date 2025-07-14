@@ -3,12 +3,12 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 
 // Import configurations and utilities
-import { validateEnvironmentVariables, cookieConfig, sessionConfig, pagesConfig } from './config';
-import { providers } from './providers';
-import { sessionCallback, signInCallback, eventsCallbacks } from './callbacks';
+import { validateEnvironmentVariables, cookieConfig, sessionConfig, pagesConfig } from '@/lib/auth/config';
+import { providers } from '@/lib/auth/providers';
+import { sessionCallback, signInCallback, eventsCallbacks } from '@/lib/auth/callbacks';
 
 // Import types
-import './types';
+import '@/lib/auth/types';
 
 const prisma = new PrismaClient();
 

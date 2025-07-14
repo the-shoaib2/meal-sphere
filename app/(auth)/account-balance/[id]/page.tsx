@@ -69,9 +69,8 @@ import {
 } from "@/components/ui/tooltip"
 
 const PRIVILEGED_ROLES = [
-  'OWNER',
+  'SUPER_ADMIN',
   'ADMIN',
-  'ACCOUNTANT',
   'MANAGER',
   'MODERATOR',
   'MEAL_MANAGER',

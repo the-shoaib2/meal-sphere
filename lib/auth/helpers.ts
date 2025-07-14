@@ -2,8 +2,8 @@ import { getServerSession } from "next-auth/next";
 import { NextApiRequest, NextApiResponse } from "next";
 import { UAParser } from 'ua-parser-js';
 import { PrismaClient } from "@prisma/client";
-import { authOptions } from './auth';
-import { extractClientInfo, capitalizeDeviceType } from './utils';
+import { authOptions } from '@/lib/auth/auth';
+import { extractClientInfo, capitalizeDeviceType } from '@/lib/auth/utils';
 
 const prisma = new PrismaClient();
 

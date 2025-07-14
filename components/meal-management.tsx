@@ -185,14 +185,16 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             </Button>
           </>
         )}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setAutoSettingsOpen(true)}
-          title="Auto Meal Settings"
-        >
-          <Clock className="h-4 w-4" />
-        </Button>
+        {mealSettings?.autoMealEnabled && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setAutoSettingsOpen(true)}
+            title="Auto Meal Settings"
+          >
+            <Clock className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -487,6 +489,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         onOpenChange={setAutoSettingsOpen}
         autoMealSettings={autoMealSettings}
         updateAutoMealSettings={updateAutoMealSettings}
+        mealSettings={mealSettings}
       />
     </div>
   )

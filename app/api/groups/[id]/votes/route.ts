@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
   // Fetch group members to filter candidates
   const group = await getGroupData(groupId, adminUserId!);
   if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
-  const nonAdminMembers = group.members.filter((m: any) => ![Role.ADMIN, Role.MANAGER, Role.OWNER].includes(m.role));
+  const nonAdminMembers = group.members.filter((m: any) => ![Role.ADMIN, Role.MANAGER, Role.SUPER_ADMIN].includes(m.role));
   // Only allow non-admins as candidates
   const validCandidates = (data.candidates || []).filter((c: any) => nonAdminMembers.some((m: any) => m.userId === c.id));
   // Map frontend type to enum

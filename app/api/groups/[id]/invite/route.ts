@@ -55,7 +55,7 @@ export async function POST(
           where: {
             userId: session.user.id,
             role: {
-              in: [Role.ADMIN, Role.MANAGER, Role.MODERATOR, Role.OWNER]
+              in: [Role.ADMIN, Role.MANAGER, Role.MODERATOR, Role.SUPER_ADMIN]
             }
           }
         }
@@ -176,7 +176,7 @@ export async function GET(
       where: {
         roomId: groupId,
         userId,
-        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'OWNER'] },
+        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'SUPER_ADMIN'] },
       },
     });
 
@@ -248,7 +248,7 @@ export async function DELETE(
       where: {
         roomId: groupId,
         userId,
-        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'OWNER'] },
+        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'SUPER_ADMIN'] },
       },
     });
 

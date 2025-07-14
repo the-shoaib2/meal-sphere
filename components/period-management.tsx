@@ -49,7 +49,7 @@ export function PeriodManagement() {
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
   const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
-  const isPrivileged = ["OWNER", "ADMIN", "MODERATOR"].includes(currentMember?.role ?? "");
+  const isPrivileged = ["SUPER_ADMIN", "ADMIN", "MODERATOR"].includes(currentMember?.role ?? "");
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showRestartDialog, setShowRestartDialog] = useState(false);

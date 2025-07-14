@@ -99,6 +99,18 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
+    // Check if auto meal system is enabled by admin
+    const mealSettings = await prisma.mealSettings.findUnique({
+      where: { roomId: roomId },
+    })
+
+    // If user is trying to enable auto meals but admin has disabled it
+    if (body.isEnabled && !mealSettings?.autoMealEnabled) {
+      return NextResponse.json({ 
+        error: "Auto meal system is disabled by the group administrator" 
+      }, { status: 400 })
+    }
+
     // Get or create auto meal settings
     let autoMealSettings = await prisma.autoMealSettings.findUnique({
       where: {

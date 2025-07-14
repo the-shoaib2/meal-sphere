@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { updateSessionWithDeviceInfo } from './session-manager';
+import { updateSessionWithDeviceInfo } from '@/lib/auth/session-manager';
 import { getLocationFromIP } from '@/lib/location-utils';
 
 const prisma = new PrismaClient();
