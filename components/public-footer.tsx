@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Facebook, Instagram, Twitter, Linkedin, Github } from "lucide-react"
+import { Facebook, Instagram, Twitter, Linkedin, Github, Code2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { handleNavigation } from "@/lib/utils"
 
@@ -22,8 +22,8 @@ export function PublicFooter() {
     {
       title: "Product",
       links: [
-        { name: "Features", href: "#" },
-        { name: "Pricing", href: "#" },
+        { name: "Features", href: "/features" },
+        { name: "Plugins", href: "/plugins" },
         { name: "Documentation", href: "#" },
         { name: "Releases", href: "#" },
       ],
@@ -56,18 +56,11 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="space-y-3">
             <div className="flex items-center space-x-2">
-              <svg
-                className="h-6 w-6 text-primary"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-              <span className="text-lg font-bold">MealSphere</span>
+              <Code2 className="h-6 w-6 text-primary" />
+              <span className="text-lg font-bold">B.A.B.Y.</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Simplify your meal management with our comprehensive solution for roommates and shared living spaces.
+              AI-powered code assistant for flow diagrams, summaries, and more. Basic Assistant Bring Your Help.
             </p>
             <div className="flex space-x-2">
               {socialLinks.map((social, index) => (
@@ -101,7 +94,7 @@ export function PublicFooter() {
 
         <div className="border-t border-border/40 mt-6 pt-4 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-xs text-muted-foreground">
-            © {currentYear} MealSphere. All rights reserved.
+            © {currentYear} B.A.B.Y. All rights reserved.
           </p>
           <div className="flex items-center space-x-4">
             <button

@@ -306,10 +306,10 @@ export default function ContactPage() {
               Get in Touch
             </Badge>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground mb-4 sm:mb-6">
-              {data?.hero?.title || "We'd Love to Hear from You"}
+              {data?.hero?.title || "Get in Touch with B.A.B.Y."}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
-              {data?.hero?.subtitle || "Have questions, feedback, or need help? Our team is here to support you."}
+              {data?.hero?.subtitle || "Have questions about our AI code assistant? We're here to help you understand code better."}
             </p>
           </motion.div>
         </div>
@@ -392,7 +392,7 @@ export default function ContactPage() {
             <motion.div variants={itemVariants} className="order-2 lg:order-1">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6">Send us a Message</h2>
               
-0              {isSuccess ? (
+              {isSuccess ? (
                 // Success State
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.9 }}

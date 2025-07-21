@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, LogOut, LayoutDashboard, Sun, Moon, Laptop, Loader2 } from "lucide-react";
+import { Settings, LogOut, Home, Sun, Moon, Laptop, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -124,19 +124,19 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
           <DropdownMenuItem asChild>
               <button
                 className="w-full flex items-center cursor-pointer"
-                onClick={() => handleNavigation('/dashboard')}
+                onClick={() => handleNavigation('/')}
               >
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                <span>Dashboard</span>
+                <Home className="mr-2 h-4 w-4" />
+                <span>Home</span>
               </button>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <button
                 className="w-full flex items-center cursor-pointer"
-                onClick={() => handleNavigation('/settings')}
+                onClick={() => handleNavigation('/profile')}
               >
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+                <span>Profile</span>
               </button>
             </DropdownMenuItem>
 

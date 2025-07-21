@@ -14,23 +14,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Define protected routes (these are inside the (auth) route group)
+  // Define protected routes (only profile and dashboard)
   const protectedRoutes = [
     '/dashboard',
-    '/groups',
-    '/periods',
-    '/settings',
-    '/market',
-    '/expenses',
-    '/account-balance',
-    '/analytics',
-    '/excel',
-    '/calculations',
-    '/notifications',
-    '/shopping',
-    '/voting',
-    '/meals',
-    '/payments',
     '/profile'
   ]
 
@@ -66,12 +52,12 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from auth pages
   if (isAuthPage && sessionToken) {
-    const callbackUrl = request.nextUrl.searchParams.get('callbackUrl') || '/dashboard'
+    const callbackUrl = request.nextUrl.searchParams.get('callbackUrl') || '/profile'
     const redirectUrl = new URL(callbackUrl, request.url)
     
     // Prevent open redirects
     if (!redirectUrl.pathname.startsWith('/')) {
-      redirectUrl.pathname = '/dashboard'
+      redirectUrl.pathname = '/profile'
     }
     
     return NextResponse.redirect(redirectUrl)

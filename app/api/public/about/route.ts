@@ -7,8 +7,8 @@ export async function GET() {
 
     const aboutData = {
       hero: {
-        title: "Building Better Communities",
-        subtitle: "MealSphere was born from a simple observation: shared living can be challenging, but it doesn't have to be. We're on a mission to make roommates' lives easier, one meal at a time.",
+        title: "Building Better Code",
+        subtitle: "B.A.B.Y. was born from a simple observation: code analysis can be challenging, but it doesn't have to be. We're on a mission to make developers' lives easier, one line of code at a time.",
         ctaPrimary: {
           text: "Join Our Mission",
           href: "/register"
@@ -20,55 +20,55 @@ export async function GET() {
       },
       stats: [
         { number: "50K+", label: "Active Users" },
-        { number: "10K+", label: "Households" },
-        { number: "1M+", label: "Meals Planned" },
+        { number: "10K+", label: "Development Teams" },
+        { number: "1M+", label: "Code Files Analyzed" },
         { number: "95%", label: "Satisfaction Rate" }
       ],
       story: {
         title: "Our Story",
         content: [
-          "In 2023, our founders were struggling with the same problem millions of roommates face: coordinating meals, splitting grocery bills, and managing shared expenses. What started as a simple spreadsheet quickly evolved into something bigger.",
-          "We realized that shared living doesn't have to be complicated. With the right tools, roommates can not only survive together but thrive together. That's why we built MealSphere - to transform the way people live together.",
-          "Today, we're proud to serve thousands of households across the globe, helping them build stronger relationships through better meal management."
+          "In 2023, our founders were struggling with the same problem millions of developers face: understanding complex code, debugging issues, and optimizing performance. What started as a simple code analyzer quickly evolved into something bigger.",
+          "We realized that code analysis doesn't have to be complicated. With the right tools, developers can not only write better code but understand it better too. That's why we built B.A.B.Y. - to transform the way people develop software.",
+          "Today, we're proud to serve thousands of developers across the globe, helping them build better software through AI-powered code analysis."
         ]
       },
       mission: {
         title: "Our Mission",
-        description: "To simplify shared living by providing intuitive tools that help roommates coordinate meals, manage expenses, and build stronger communities. We believe that when people can easily share resources and responsibilities, everyone benefits."
+        description: "To simplify code development by providing intuitive tools that help developers analyze code, optimize performance, and build better software. We believe that when developers can easily understand and improve their code, everyone benefits."
       },
       vision: {
         title: "Our Vision",
-        description: "A world where shared living is not just a necessity but a choice people make because it's better than living alone. We envision communities where roommates become friends, neighbors become family, and shared resources create abundance for everyone."
+        description: "A world where code development is not just a necessity but a choice people make because it's better than manual analysis. We envision communities where developers become more productive, teams become more efficient, and AI-powered tools create better software for everyone."
       },
       values: [
         {
-          title: "Community First",
-          description: "We believe in the power of community and building connections through shared experiences.",
+          title: "Developer First",
+          description: "We believe in the power of developers and building tools that enhance their productivity.",
           icon: "Heart"
         },
         {
           title: "Collaboration",
-          description: "Every feature is designed to bring people together and make collaboration seamless.",
+          description: "Every feature is designed to bring teams together and make code collaboration seamless.",
           icon: "Users"
         },
         {
           title: "Simplicity",
-          description: "Complex problems deserve simple solutions that anyone can use and understand.",
+          description: "Complex code deserves simple analysis that anyone can use and understand.",
           icon: "Target"
         },
         {
           title: "Trust & Security",
-          description: "Your data and privacy are our top priorities, always protected and never compromised.",
+          description: "Your code and privacy are our top priorities, always protected and never compromised.",
           icon: "Shield"
         },
         {
           title: "Innovation",
-          description: "Constantly pushing boundaries to create better experiences for shared living.",
+          description: "Constantly pushing boundaries to create better experiences for code development.",
           icon: "Zap"
         },
         {
           title: "Inclusivity",
-          description: "Building for everyone, regardless of background, dietary preferences, or living situation.",
+          description: "Building for everyone, regardless of programming language, framework, or development environment.",
           icon: "Globe"
         }
       ],
@@ -103,8 +103,8 @@ export async function GET() {
         }
       ],
       cta: {
-        title: "Join Us in Building Better Communities",
-        subtitle: "Whether you're a roommate, landlord, or just someone who believes in the power of community, we'd love to hear from you.",
+        title: "Join Us in Building Better Code",
+        subtitle: "Whether you're a developer, team lead, or just someone who believes in the power of better software, we'd love to hear from you.",
         ctaPrimary: {
           text: "Get Started",
           href: "/register"

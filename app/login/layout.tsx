@@ -2,8 +2,7 @@
 
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { SessionProvider } from "@/components/providers/session-provider"
-import { LanguageProvider } from "@/contexts/language-context"
-import { NotificationProvider } from "@/contexts/notification-context"
+
 import { ToastProvider } from "@/components/providers/toast-provider"
 
 export default function LoginLayout({
@@ -14,12 +13,8 @@ export default function LoginLayout({
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <SessionProvider>
-        <LanguageProvider>
-          <NotificationProvider>
-            {children}
-            <ToastProvider />
-          </NotificationProvider>
-        </LanguageProvider>
+        {children}
+        <ToastProvider />
       </SessionProvider>
     </ThemeProvider>
   )

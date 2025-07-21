@@ -10,7 +10,7 @@ export async function GET() {
         title: "Introduction",
         icon: "Shield",
         content: [
-          "Welcome to MealSphere (\"we,\" \"our,\" or \"us\"). These Terms of Service (\"Terms\") govern your use of our meal planning and shared living management platform, including our website, mobile applications, and related services (collectively, the \"Service\").",
+          "Welcome to B.A.B.Y. (\"we,\" \"our,\" or \"us\"). These Terms of Service (\"Terms\") govern your use of our AI-powered code analysis and development platform, including our website, mobile applications, and related services (collectively, the \"Service\").",
           "By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of these terms, then you may not access the Service."
         ]
       },
@@ -18,13 +18,13 @@ export async function GET() {
         id: 2,
         title: "Service Description",
         content: [
-          "MealSphere provides a platform for roommates and shared living communities to:",
+          "B.A.B.Y. provides a platform for developers and development teams to:",
           [
-            "Plan and coordinate meals together",
-            "Manage shared expenses and payments",
-            "Track grocery shopping and meal preparation",
-            "Access recipes and meal suggestions",
-            "Communicate and collaborate on household management"
+            "Analyze and understand code structure",
+            "Generate flow diagrams and visualizations",
+            "Optimize code performance and quality",
+            "Collaborate on code reviews and analysis",
+            "Integrate AI-powered development tools"
           ],
           "We reserve the right to modify, suspend, or discontinue any part of the Service at any time with reasonable notice."
         ]
@@ -71,7 +71,7 @@ export async function GET() {
         id: 6,
         title: "Intellectual Property",
         content: [
-          "The Service and its original content, features, and functionality are owned by MealSphere and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.",
+          "The Service and its original content, features, and functionality are owned by B.A.B.Y. and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws.",
           "You retain ownership of any content you submit to the Service, but you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute your content in connection with the Service."
         ]
       },
@@ -88,7 +88,7 @@ export async function GET() {
         id: 8,
         title: "Limitation of Liability",
         content: [
-          "To the maximum extent permitted by law, MealSphere shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.",
+          "To the maximum extent permitted by law, B.A.B.Y. shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.",
           "Our total liability to you for any claims arising from these Terms or your use of the Service shall not exceed the amount you paid us in the 12 months preceding the claim."
         ]
       },
@@ -107,7 +107,7 @@ export async function GET() {
         content: [
           "If you have any questions about these Terms of Service, please contact us:",
           {
-            email: "legal@mealsphere.com",
+            email: "legal@baby.dev",
             address: "123 Innovation Drive, San Francisco, CA 94105",
             phone: "+1 (555) 123-4567"
           },

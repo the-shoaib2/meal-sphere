@@ -10,7 +10,7 @@ export async function GET() {
         title: "Introduction",
         icon: "Shield",
         content: [
-          "MealSphere (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our meal planning and shared living management platform.",
+          "B.A.B.Y. (\"we,\" \"our,\" or \"us\") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered code analysis and development platform.",
           "By using our service, you consent to the data practices described in this policy."
         ]
       },
@@ -27,9 +27,9 @@ export async function GET() {
               "Communication preferences"
             ],
             usageInfo: [
-              "Meal plans and recipes you create or save",
-              "Shopping lists and expense tracking data",
-              "Group membership and collaboration activities",
+              "Code files and analysis data you upload",
+              "Flow diagrams and optimization suggestions",
+              "Development environment and tool preferences",
               "App usage patterns and preferences"
             ],
             technicalInfo: [
@@ -47,9 +47,9 @@ export async function GET() {
         content: [
           "We use the information we collect to:",
           [
-            "Provide and maintain our meal planning services",
+            "Provide and maintain our code analysis services",
             "Process payments and manage subscriptions",
-            "Enable collaboration between roommates and group members",
+            "Enable collaboration between developers and team members",
             "Personalize your experience and provide relevant content",
             "Send important updates and notifications",
             "Improve our platform and develop new features",
@@ -65,7 +65,7 @@ export async function GET() {
           "We do not sell, trade, or rent your personal information to third parties. We may share your information in the following circumstances:",
           {
             withConsent: "We may share information when you explicitly consent to such sharing.",
-            groupCollaboration: "Information you share within groups (meal plans, expenses, etc.) is visible to other group members.",
+            groupCollaboration: "Information you share within teams (code analysis, flow diagrams, etc.) is visible to other team members.",
             serviceProviders: "We may share information with trusted third-party service providers who assist us in operating our platform.",
             legalRequirements: "We may disclose information if required by law or to protect our rights and safety."
           }
@@ -117,7 +117,7 @@ export async function GET() {
         content: [
           "If you have any questions about this Privacy Policy or our data practices, please contact us:",
           {
-            email: "privacy@mealsphere.com",
+            email: "privacy@baby.dev",
             address: "123 Innovation Drive, San Francisco, CA 94105",
             phone: "+1 (555) 123-4567"
           },

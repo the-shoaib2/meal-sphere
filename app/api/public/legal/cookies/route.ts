@@ -46,8 +46,8 @@ export async function GET() {
               description: "These cookies remember your choices and preferences to provide a personalized experience:",
               items: [
                 "Theme and appearance settings",
-                "Dietary preferences and restrictions",
-                "Meal planning preferences",
+                "Code analysis preferences",
+                "Development environment settings",
                 "Notification settings"
               ]
             },
@@ -142,7 +142,7 @@ export async function GET() {
         content: [
           "If you have any questions about our use of cookies or this Cookie Policy, please contact us:",
           {
-            email: "privacy@mealsphere.com",
+            email: "privacy@baby.dev",
             address: "123 Innovation Drive, San Francisco, CA 94105",
             phone: "+1 (555) 123-4567"
           },

@@ -45,7 +45,7 @@ export async function signInCallback(params: any) {
             image: user.image,
             role: 'MEMBER',
             emailVerified: new Date(),
-            language: 'en',
+
             isActive: true,
             password: null, // Since it's a Google sign-in
             resetToken: null,

@@ -5,19 +5,21 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Menu, Search as SearchIcon, Utensils, X } from "lucide-react"
+import { Menu, Search as SearchIcon, Code2, X } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { NotificationBell } from "./notification-bell"
 import { UserAvatar } from "./user-avatar"
 import { handleNavigation } from "@/lib/utils"
+
 const navLinks = [
-  { name: 'Recipes', href: '/recipes' },
-  { name: 'Meal Plans', href: '/meal-plans' },
-  { name: 'About', href: '/about' },
+  { name: 'Install', href: '/install' },
+  { name: 'Docs', href: '/docs' },
+  { name: 'Blog', href: '/blog' },
+  { name: 'Pricing', href: '/pricing' },
+  { name: 'Support', href: '/support' },
   { name: 'Contact', href: '/contact' },
 ]
 
@@ -28,8 +30,6 @@ export function PublicHeader() {
   const isMobile = useIsMobile()
   const [searchQuery, setSearchQuery] = useState('')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-
 
   // Check if a link is active
   const isActive = (href: string) => {
@@ -46,11 +46,10 @@ export function PublicHeader() {
         <div className="flex items-center">
           <button
             onClick={() => handleNavigation('/')}
-
             className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
           >
-            <Utensils className="h-8 w-8" />
-            <span className="font-bold text-xl">MealSphere</span>
+            <Code2 className="h-8 w-8" />
+            <span className="font-bold text-xl">B.A.B.Y.</span>
           </button>
           <nav className="hidden md:flex items-center ml-8 space-x-2 text-sm font-medium">
             {navLinks.map((link) => (
@@ -74,7 +73,6 @@ export function PublicHeader() {
 
         {session ? (
           <div className="hidden md:flex items-center gap-4">
-            <NotificationBell />
             <UserAvatar user={session.user} />
           </div>
         ) : (

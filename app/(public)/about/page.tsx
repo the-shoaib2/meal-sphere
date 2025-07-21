@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Heart, Users, Target, Award, Globe, Zap, Shield, Star } from "lucide-react"
+import { Heart, Users, Target, Award, Globe, Zap, Shield, Star, Code2 } from "lucide-react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { usePublicData } from "@/hooks/use-public-data"
@@ -102,14 +102,14 @@ export default function AboutPage() {
             className="mb-8"
           >
             <Badge variant="secondary" className="mb-4 animate-pulse">
-              <Heart className="w-4 h-4 mr-2" />
-              Our Story
+              <Code2 className="w-4 h-4 mr-2" />
+              AI Code Assistant
             </Badge>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground mb-4 sm:mb-6">
-              {data?.hero?.title || "Building Better Communities"}
+              {data?.hero?.title || "Building Better Code Understanding"}
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
-              {data?.hero?.subtitle || "MealSphere was born from a simple observation: shared living can be challenging, but it doesn't have to be."}
+              {data?.hero?.subtitle || "B.A.B.Y. was born from a simple observation: understanding code can be challenging, but it doesn't have to be."}
             </p>
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -118,8 +118,8 @@ export default function AboutPage() {
               className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
             >
               <Button size="lg" className="w-full sm:w-auto group">
-                <Users className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                {data?.hero?.ctaPrimary?.text || "Join Our Mission"}
+                <Code2 className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                {data?.hero?.ctaPrimary?.text || "Try B.A.B.Y."}
               </Button>
               <Button variant="outline" size="lg" className="w-full sm:w-auto group">
                 <Globe className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
@@ -188,7 +188,7 @@ export default function AboutPage() {
               className="relative order-1 lg:order-2"
             >
               <div className="bg-primary/10 rounded-2xl p-6 sm:p-8 h-64 sm:h-80 flex items-center justify-center backdrop-blur-sm">
-                <Users className="w-16 h-16 sm:w-32 sm:h-32 text-primary" />
+                <Code2 className="w-16 h-16 sm:w-32 sm:h-32 text-primary" />
               </div>
             </motion.div>
           </div>
@@ -324,7 +324,7 @@ export default function AboutPage() {
           >
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">Meet Our Team</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              The passionate people behind MealSphere
+              The passionate people behind B.A.B.Y.
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
@@ -399,7 +399,7 @@ export default function AboutPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-2xl sm:text-3xl font-bold mb-4"
           >
-            {data?.cta?.title || "Join Us in Building Better Communities"}
+            {data?.cta?.title || "Join Us in Building Better Code Understanding"}
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
@@ -408,7 +408,7 @@ export default function AboutPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg sm:text-xl mb-6 sm:mb-8 opacity-90"
           >
-            {data?.cta?.subtitle || "Whether you're a roommate, landlord, or just someone who believes in the power of community, we'd love to hear from you."}
+            {data?.cta?.subtitle || "Whether you're a developer, student, or just someone who wants to understand code better, we'd love to help."}
           </motion.p>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}

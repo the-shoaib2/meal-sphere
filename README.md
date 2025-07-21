@@ -170,3 +170,15 @@ The system uses the following key models:
 - Payment integration with external services
 - Automated meal rate adjustments
 - Budget tracking and alerts
+
+## VS Code Extension: B.A.B.Y.
+
+A VS Code extension version of B.A.B.Y. is being developed in the `vscode-extension/` folder. This extension will bring the AI code assistant, flow diagrams, and code summarization features directly to your editor.
+
+### Getting Started
+1. Go to the `vscode-extension/` folder.
+2. Run `npm install` to install dependencies.
+3. Run `npm run watch` or `npm run build` to build the extension.
+4. Open the folder in VS Code and press `F5` to launch a new Extension Development Host.
+
+The extension will open a webview panel with the B.A.B.Y. assistant UI. More features coming soon!

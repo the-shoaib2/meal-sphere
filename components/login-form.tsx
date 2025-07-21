@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff, Utensils, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Utensils, Loader2, Code2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { signIn } from "next-auth/react"
 import { toast } from "react-hot-toast"
@@ -95,8 +95,8 @@ export default function LoginForm() {
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-8 dark:bg-gray-900">
       <div className="mb-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Utensils className="h-6 w-6" />
-          <span className="text-xl">MealSphere</span>
+          <Code2 className="h-6 w-6" />
+          <span className="text-xl">B.A.B.Y.</span>
         </Link>
       </div>
 

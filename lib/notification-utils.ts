@@ -56,7 +56,7 @@ export async function createPaymentDueNotification(userId: string, amount: numbe
     return await createNotification({
       userId,
       type: NotificationType.PAYMENT_CREATED,
-      message: `You have a payment of ৳${amount} due on ${dueDate.toLocaleDateString()}.`,
+      message: `You have a payment of ৳${amount} due on ${dueDate.toLocaleDateString('en-US')}.`,
     });
   } catch (error) {
     console.error('Error creating payment due notification:', error);

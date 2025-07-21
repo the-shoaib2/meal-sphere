@@ -6,16 +6,15 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 import { SessionProvider } from "@/components/providers/session-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { getServerAuthSession } from "@/lib/auth/auth"
-import { LanguageProvider } from "@/contexts/language-context"
-import { NotificationProvider } from "@/contexts/notification-context"
+
 import { ToastProvider } from "@/components/providers/toast-provider"
 import InternetStatusBanner from "@/components/internet-status-card"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MealSphere - Meal Management System",
-  description: "A comprehensive meal management system for roommates and hostels",
+  title: "B.A.B.Y. - Basic Assistant Bring Your Help",
+  description: "AI-powered code assistant for flow diagrams, summaries, and more",
 }
 
 export default async function RootLayout({
@@ -30,17 +29,13 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           <QueryProvider>
             <ThemeProvider>
-              <LanguageProvider>
-                <NotificationProvider>
-                  <>
-                    <InternetStatusBanner />
-                    <div className="flex-1 flex flex-col">
-                      {children}
-                    </div>
-                    <ToastProvider />
-                  </>
-                </NotificationProvider>
-              </LanguageProvider>
+              <>
+                <InternetStatusBanner />
+                <div className="flex-1 flex flex-col">
+                  {children}
+                </div>
+                <ToastProvider />
+              </>
             </ThemeProvider>
           </QueryProvider>
         </SessionProvider>

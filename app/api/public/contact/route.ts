@@ -14,7 +14,7 @@ export async function GET() {
         {
           title: "Email Support",
           description: "Get help via email within 24 hours",
-          contact: "support@mealsphere.com",
+          contact: "support@baby.dev",
           icon: "Mail"
         },
         {
@@ -46,28 +46,28 @@ export async function GET() {
       ],
       faqs: [
         {
-          question: "How do I invite my roommates to join?",
-          answer: "Simply create a group and share the invite link with your roommates. They can join using the link or by searching for your group name."
+          question: "How do I invite my team members to join?",
+          answer: "Simply create a team and share the invite link with your developers. They can join using the link or by searching for your team name."
         },
         {
-          question: "Can I use MealSphere for free?",
-          answer: "Yes! We offer a free plan that supports up to 3 roommates with basic meal planning features. Upgrade to Pro for more features."
+          question: "Can I use B.A.B.Y. for free?",
+          answer: "Yes! We offer a free plan that supports basic code analysis features. Upgrade to Pro for advanced features and team collaboration."
         },
         {
-          question: "How do you handle payments and expenses?",
-          answer: "Our expense tracking feature helps you split bills, track payments, and manage shared expenses transparently with your roommates."
+          question: "How do you handle code security and privacy?",
+          answer: "Our code analysis feature helps you identify security vulnerabilities, optimize performance, and maintain code quality transparently with your team."
         },
         {
-          question: "Is my data secure?",
-          answer: "Absolutely. We use industry-standard encryption and security practices to protect your personal information and data."
+          question: "Is my code secure?",
+          answer: "Absolutely. We use industry-standard encryption and security practices to protect your code and personal information."
         },
         {
-          question: "Can I export my meal plans and data?",
-          answer: "Yes, you can export your meal plans, shopping lists, and expense reports in various formats for your convenience."
+          question: "Can I export my analysis reports and data?",
+          answer: "Yes, you can export your flow diagrams, analysis reports, and optimization suggestions in various formats for your convenience."
         },
         {
-          question: "Do you support dietary restrictions?",
-          answer: "Yes! You can set dietary preferences and restrictions for each roommate, and our recipe suggestions will respect these preferences."
+          question: "Do you support multiple programming languages?",
+          answer: "Yes! We support 50+ programming languages and frameworks, and our analysis tools will work with your preferred tech stack."
         }
       ],
       supportChannels: [
@@ -79,7 +79,7 @@ export async function GET() {
         },
         {
           title: "Community Forum",
-          description: "Connect with other MealSphere users",
+          description: "Connect with other B.A.B.Y. users",
           icon: "Users",
           cta: "Join Forum"
         },
@@ -92,7 +92,7 @@ export async function GET() {
       ],
       cta: {
         title: "Ready to Get Started?",
-        subtitle: "Join thousands of roommates who are already using MealSphere to simplify their shared living experience.",
+        subtitle: "Join thousands of developers who are already using B.A.B.Y. to simplify their code development experience.",
         ctaPrimary: {
           text: "Start Free Trial",
           href: "/register"

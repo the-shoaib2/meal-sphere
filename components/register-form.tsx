@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff, Loader2, RefreshCw, Utensils } from "lucide-react"
+import { Eye, EyeOff, Loader2, RefreshCw, Utensils, Code2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { signIn } from "next-auth/react"
 import { toast } from "react-hot-toast"
@@ -412,8 +412,8 @@ export default function RegisterForm() {
     <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-8 dark:bg-gray-900">
       <div className="mb-2">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Utensils className="h-6 w-6" />
-          <span className="text-xl">MealSphere</span>
+          <Code2 className="h-6 w-6" />
+          <span className="text-xl">B.A.B.Y.</span>
         </Link>
       </div>
      
