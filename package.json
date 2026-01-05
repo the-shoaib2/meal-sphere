@@ -64,7 +64,7 @@
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.19.1",
     "input-otp": "1.4.1",
-    "jspdf": "^3.0.1",
+    "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.454.0",
     "mongodb": "^5.9.2",
