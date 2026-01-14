@@ -4,32 +4,35 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 
 async function calculateBalance(userId: string, roomId: string): Promise<number> {
-  const transactions = await prisma.accountTransaction.findMany({
+  // Calculate money received (targetUserId = user)
+  const received = await prisma.accountTransaction.aggregate({
     where: {
       roomId,
-      OR: [
-        { targetUserId: userId },                    // User is the receiver
-        { 
-          AND: [
-            { userId: userId },                      // User is the sender
-            { targetUserId: userId }                 // AND user is also the target (self-transaction)
-          ]
-        }
-      ],
+      targetUserId: userId,
+      // Exclude self-transactions if needed, though they net to zero in balance usually
+      // but logic above was: if target==user -> +amount.
     },
-    select: {
-      userId: true,
-      targetUserId: true,
+    _sum: {
       amount: true,
     },
   });
 
-  return transactions.reduce((balance, t) => {
-    if (t.targetUserId === userId) {
-      return balance + t.amount; // Money received (positive)
-    }
-    return balance;
-  }, 0);
+  // Calculate money sent (userId = user) if needed for logic, 
+  // but previous logic ONLY summed where t.targetUserId === userId.
+  // Wait, previous logic:
+  // return transactions.reduce((balance, t) => {
+  //   if (t.targetUserId === userId) {
+  //     return balance + t.amount; // Money received (positive)
+  //   }
+  //   return balance;
+  // }, 0);
+
+  // The previous logic ONLY added amounts where user is target. 
+  // It completely IGNORED money sent by the user (userId === userId).
+  // Assuming the previous logic was correct in INTENT (calculating "inflow" or "credit"?), 
+  // I will match the behavior: Sum amount where targetUserId == userId.
+
+  return received._sum.amount || 0;
 }
 
 async function calculateUserMealCount(userId: string, roomId: string): Promise<number> {
@@ -50,11 +53,12 @@ async function calculateMealRate(roomId: string): Promise<{ mealRate: number; to
       where: { roomId },
     });
 
-    // Get total expenses
-    const totalExpenses = await prisma.extraExpense.findMany({
+    // Get total expenses using aggregation
+    const expenseAgg = await prisma.extraExpense.aggregate({
       where: { roomId },
-      select: { amount: true },
-    }).then(expenses => expenses.reduce((sum, expense) => sum + expense.amount, 0));
+      _sum: { amount: true },
+    });
+    const totalExpenses = expenseAgg._sum.amount || 0;
 
     // Calculate meal rate
     const mealRate = totalMeals > 0 ? totalExpenses / totalMeals : 0;
@@ -113,9 +117,9 @@ export async function GET(
   try {
     // Check if user is a member of this group
     const membership = await prisma.roomMember.findFirst({
-      where: { 
+      where: {
         userId: session.user.id,
-        roomId: groupId 
+        roomId: groupId
       },
       include: { room: { include: { members: true } } },
     });

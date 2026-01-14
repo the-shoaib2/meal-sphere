@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     // Get user's current group
     const currentGroup = await prisma.roomMember.findFirst({
-      where: { 
+      where: {
         userId: session.user.id,
-        isCurrent: true 
+        isCurrent: true
       },
       include: { room: true }
     });
@@ -33,70 +33,73 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Fetch meals
-    const meals = await prisma.meal.findMany({
-      where: {
-        roomId,
-        date: { gte: thirtyDaysAgo }
-      },
-      include: {
-        user: { select: { name: true, image: true } }
-      },
-      orderBy: { date: 'desc' },
-      take: 10
-    });
+    // Fetch all data in parallel
+    const [meals, payments, shoppingItems, expenses, activities] = await Promise.all([
+      // Fetch meals
+      prisma.meal.findMany({
+        where: {
+          roomId,
+          date: { gte: thirtyDaysAgo }
+        },
+        include: {
+          user: { select: { name: true, image: true } }
+        },
+        orderBy: { date: 'desc' },
+        take: 10
+      }),
 
-    // Fetch payments
-    const payments = await prisma.payment.findMany({
-      where: {
-        roomId,
-        date: { gte: thirtyDaysAgo }
-      },
-      include: {
-        user: { select: { name: true, image: true } }
-      },
-      orderBy: { date: 'desc' },
-      take: 10
-    });
+      // Fetch payments
+      prisma.payment.findMany({
+        where: {
+          roomId,
+          date: { gte: thirtyDaysAgo }
+        },
+        include: {
+          user: { select: { name: true, image: true } }
+        },
+        orderBy: { date: 'desc' },
+        take: 10
+      }),
 
-    // Fetch shopping items
-    const shoppingItems = await prisma.shoppingItem.findMany({
-      where: {
-        roomId,
-        date: { gte: thirtyDaysAgo }
-      },
-      include: {
-        user: { select: { name: true, image: true } }
-      },
-      orderBy: { date: 'desc' },
-      take: 10
-    });
+      // Fetch shopping items
+      prisma.shoppingItem.findMany({
+        where: {
+          roomId,
+          date: { gte: thirtyDaysAgo }
+        },
+        include: {
+          user: { select: { name: true, image: true } }
+        },
+        orderBy: { date: 'desc' },
+        take: 10
+      }),
 
-    // Fetch extra expenses
-    const expenses = await prisma.extraExpense.findMany({
-      where: {
-        roomId,
-        date: { gte: thirtyDaysAgo }
-      },
-      include: {
-        user: { select: { name: true, image: true } }
-      },
-      orderBy: { date: 'desc' },
-      take: 10
-    });
+      // Fetch extra expenses
+      prisma.extraExpense.findMany({
+        where: {
+          roomId,
+          date: { gte: thirtyDaysAgo }
+        },
+        include: {
+          user: { select: { name: true, image: true } }
+        },
+        orderBy: { date: 'desc' },
+        take: 10
+      }),
 
-    // Fetch group activities
-    const activities = await prisma.groupActivityLog.findMany({
-      where: {
-        roomId,
-        createdAt: { gte: thirtyDaysAgo }
-      },
-      include: {
-        user: { select: { name: true, image: true } }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10
-    });
+      // Fetch group activities
+      prisma.groupActivityLog.findMany({
+        where: {
+          roomId,
+          createdAt: { gte: thirtyDaysAgo }
+        },
+        include: {
+          user: { select: { name: true, image: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      })
+    ]);
 
     // Combine and format all activities
     const allActivities = [
@@ -151,7 +154,7 @@ export async function GET(request: NextRequest) {
         icon: 'Users'
       }))
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 10);
+      .slice(0, 10);
 
     return NextResponse.json(allActivities);
   } catch (error) {

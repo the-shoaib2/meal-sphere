@@ -74,10 +74,10 @@ export function Header() {
           )}
           <span className="sr-only">{isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</span>
         </Button>
-       
+
         <NotificationBell />
-        
-        {/* <UserAvatar user={session?.user} /> */}
+
+        <UserAvatar user={session?.user as any} />
       </div>
     </header>
   )

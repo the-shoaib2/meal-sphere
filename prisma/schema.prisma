@@ -345,6 +345,7 @@ model ShoppingItem {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
+  @@index([roomId, date])
   @@index([roomId])
   @@index([purchased])
   @@index([createdAt])
@@ -370,6 +371,7 @@ model Payment {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
+  @@index([roomId, date])
   @@index([roomId, status, date])
   @@index([userId, status, date])
   @@index([method, status])
@@ -547,6 +549,7 @@ model GroupActivityLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId, type])
+  @@index([roomId, createdAt])
   @@index([createdAt])
 }
 
@@ -667,6 +670,7 @@ model AccountTransaction {
   @@index([createdAt])
   @@index([type])
   @@index([periodId])
+  @@index([roomId, targetUserId])
 }
 
 /// MEAL PERIOD MODEL

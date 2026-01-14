@@ -21,7 +21,7 @@ function isPrivileged(role?: string) {
 async function calculateBalance(userId: string, roomId: string): Promise<number> {
   // Get current period for filtering
   const currentPeriod = await getCurrentPeriod(roomId);
-  
+
   // If no active period exists, return 0 (no balance for ended periods)
   if (!currentPeriod || currentPeriod.status !== 'ACTIVE') {
     return 0;
@@ -33,7 +33,7 @@ async function calculateBalance(userId: string, roomId: string): Promise<number>
       periodId: currentPeriod.id,
       OR: [
         { targetUserId: userId },                    // User is the receiver
-        { 
+        {
           AND: [
             { userId: userId },                      // User is the sender
             { targetUserId: userId }                 // AND user is also the target (self-transaction)
@@ -60,14 +60,14 @@ async function calculateGroupTotalBalance(roomId: string): Promise<number> {
   try {
     // Get current period for filtering
     const currentPeriod = await getCurrentPeriod(roomId);
-    
+
     // If no active period exists, return 0 (no balance for ended periods)
     if (!currentPeriod || currentPeriod.status !== 'ACTIVE') {
       return 0;
     }
 
     const transactions = await prisma.accountTransaction.findMany({
-      where: { 
+      where: {
         roomId,
         periodId: currentPeriod.id,
       },
@@ -94,21 +94,21 @@ async function calculateTotalExpenses(roomId: string): Promise<number> {
   try {
     // Get period-aware where clause
     const periodFilter = await getPeriodAwareWhereClause(roomId, {});
-    
+
     // If no active period, return 0
     if (periodFilter.id === null) {
       return 0;
     }
 
-    const expenses = await prisma.extraExpense.findMany({
-      where: { 
+    const aggregated = await prisma.extraExpense.aggregate({
+      where: {
         roomId,
         periodId: periodFilter.periodId,
       },
-      select: { amount: true },
+      _sum: { amount: true },
     });
 
-    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    return aggregated._sum.amount || 0;
   } catch (error) {
     console.error('Error calculating total expenses:', error);
     return 0;
@@ -119,7 +119,7 @@ async function calculateMealRate(roomId: string): Promise<{ mealRate: number; to
   try {
     // Get period-aware where clause for meals
     const periodFilter = await getPeriodAwareWhereClause(roomId, {});
-    
+
     // If no active period, return 0
     if (periodFilter.id === null) {
       return { mealRate: 0, totalMeals: 0, totalExpenses: 0 };
@@ -127,7 +127,7 @@ async function calculateMealRate(roomId: string): Promise<{ mealRate: number; to
 
     // Get total meals in the room for current period
     const totalMeals = await prisma.meal.count({
-      where: { 
+      where: {
         roomId,
         periodId: periodFilter.periodId,
       },
@@ -150,15 +150,15 @@ async function calculateUserMealCount(userId: string, roomId: string): Promise<n
   try {
     // Get period-aware where clause
     const periodFilter = await getPeriodAwareWhereClause(roomId, {});
-    
+
     // If no active period, return 0
     if (periodFilter.id === null) {
       return 0;
     }
 
     return await prisma.meal.count({
-      where: { 
-        userId, 
+      where: {
+        userId,
         roomId,
         periodId: periodFilter.periodId,
       },
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const roomId = searchParams.get('roomId');
-    const userId = searchParams.get('userId'); 
+    const userId = searchParams.get('userId');
     const getAll = searchParams.get('all') === 'true';
     const includeDetails = searchParams.get('includeDetails') === 'true';
 
@@ -234,10 +234,44 @@ export async function GET(request: NextRequest) {
       if (!hasPrivilege) {
         return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
       }
-      
+
       const members = await prisma.roomMember.findMany({
         where: { roomId },
         include: { user: { select: { id: true, name: true, image: true, email: true } } },
+      });
+
+      // 1. Fetch ALL transactions for the room/period at once, grouped by targetUserId
+      const transactionsGrouped = await prisma.accountTransaction.groupBy({
+        by: ['targetUserId'],
+        where: {
+          roomId,
+          periodId: currentPeriod?.id,
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+      // Convert to map for O(1) lookup
+      const balanceMap = new Map<string, number>();
+      transactionsGrouped.forEach(t => {
+        if (t.targetUserId) balanceMap.set(t.targetUserId, t._sum.amount || 0);
+      });
+
+      // 2. Fetch ALL meal counts for the room/period at once, grouped by userId
+      const mealsGrouped = await prisma.meal.groupBy({
+        by: ['userId'],
+        where: {
+          roomId,
+          periodId: currentPeriod?.id,
+        },
+        _count: {
+          id: true,
+        },
+      });
+      // Convert to map
+      const mealCountMap = new Map<string, number>();
+      mealsGrouped.forEach(m => {
+        if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
       });
 
       // Calculate group totals
@@ -247,46 +281,52 @@ export async function GET(request: NextRequest) {
         calculateMealRate(roomId),
       ]);
 
-      const membersWithBalances = await Promise.all(
-        members.map(async (m) => {
-          const basicBalance = await calculateBalance(m.userId, roomId);
-          
-          if (includeDetails) {
-            const availableBalanceData = await calculateAvailableBalance(m.userId, roomId);
-            return {
-              ...m,
-              balance: basicBalance,
-              ...availableBalanceData,
-            };
-          }
-          
+      // Construct the response in memory
+      const membersWithBalances = members.map((m) => {
+        // Use pre-fetched data
+        const basicBalance = balanceMap.get(m.userId) || 0;
+
+        if (includeDetails) {
+          const userMealCount = mealCountMap.get(m.userId) || 0;
+          const totalSpent = userMealCount * mealRate;
+          const availableBalance = basicBalance - totalSpent;
+
           return {
             ...m,
             balance: basicBalance,
+            availableBalance,
+            totalSpent,
+            mealCount: userMealCount,
+            mealRate,
           };
-        })
-      );
+        }
 
-          // Get current period info
-    const currentPeriod = await getCurrentPeriod(roomId);
-    
-    const response: any = {
-      members: membersWithBalances,
-      groupTotalBalance,
-      totalExpenses,
-      mealRate,
-      totalMeals,
-      netGroupBalance: groupTotalBalance - totalExpenses,
-      currentPeriod: currentPeriod ? {
-        id: currentPeriod.id,
-        name: currentPeriod.name,
-        startDate: currentPeriod.startDate,
-        endDate: currentPeriod.endDate,
-        status: currentPeriod.status,
-        isLocked: currentPeriod.isLocked,
-      } : null,
-    };
-      
+        return {
+          ...m,
+          balance: basicBalance,
+        };
+      });
+
+      // Get current period info
+      const currentPeriod = await getCurrentPeriod(roomId);
+
+      const response: any = {
+        members: membersWithBalances,
+        groupTotalBalance,
+        totalExpenses,
+        mealRate,
+        totalMeals,
+        netGroupBalance: groupTotalBalance - totalExpenses,
+        currentPeriod: currentPeriod ? {
+          id: currentPeriod.id,
+          name: currentPeriod.name,
+          startDate: currentPeriod.startDate,
+          endDate: currentPeriod.endDate,
+          status: currentPeriod.status,
+          isLocked: currentPeriod.isLocked,
+        } : null,
+      };
+
       return NextResponse.json(response);
     }
 
@@ -301,7 +341,7 @@ export async function GET(request: NextRequest) {
       includeDetails ? calculateAvailableBalance(targetUserId, roomId) : null,
       getCurrentPeriod(roomId),
     ]);
-    
+
     if (!targetUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -338,7 +378,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     const body = await request.json();
     const { roomId, targetUserId, amount, type, description } = body;
 
@@ -361,11 +401,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Members can only create payment transactions.' }, { status: 403 });
       }
       if (session.user.id !== body.userId) {
-         return NextResponse.json({ error: 'You can only make payments for yourself.' }, { status: 403 });
+        return NextResponse.json({ error: 'You can only make payments for yourself.' }, { status: 403 });
       }
-      const targetMember = await prisma.roomMember.findFirst({ where: { userId: targetUserId, roomId }});
+      const targetMember = await prisma.roomMember.findFirst({ where: { userId: targetUserId, roomId } });
       if (!targetMember || !isPrivileged(targetMember.role)) {
-        return NextResponse.json({ error: 'Payments can only be made to privileged members.'}, { status: 403});
+        return NextResponse.json({ error: 'Payments can only be made to privileged members.' }, { status: 403 });
       }
     }
 
