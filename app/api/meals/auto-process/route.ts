@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/prisma"
 import { format, parse, isBefore, isAfter, startOfDay, endOfDay } from 'date-fns'
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
 

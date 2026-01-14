@@ -15,7 +15,7 @@ const updateGroupSchema = z.object({
   maxMembers: z.number().min(1).optional(),
   bannerUrl: z.string().url().optional(),
   tags: z.array(z.string()).optional(),
-  features: z.record(z.boolean()).optional()
+  features: z.record(z.string(), z.boolean()).optional()
 });
 
 // Schema for joining a group
@@ -30,7 +30,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    
+
     // Validate group access
     const validation = await validateGroupAccess(id);
     if (!validation.success || !validation.authResult) {
@@ -179,8 +179,8 @@ export async function POST(
 
     // For private groups, require join request instead of direct joining
     if (group.isPrivate) {
-      return NextResponse.json({ 
-        error: 'This is a private group. Please send a join request instead of trying to join directly.' 
+      return NextResponse.json({
+        error: 'This is a private group. Please send a join request instead of trying to join directly.'
       }, { status: 403 });
     }
 

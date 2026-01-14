@@ -3,6 +3,10 @@ import { Resend } from 'resend';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '@/lib/prisma';
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 // Initialize Resend only if API key is available
 const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;

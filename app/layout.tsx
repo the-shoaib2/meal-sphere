@@ -11,6 +11,10 @@ import { NotificationProvider } from "@/contexts/notification-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
 import InternetStatusBanner from "@/components/internet-status-card"
 
+// Force all routes to be dynamic - prevents build-time pre-rendering
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
+
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/email-utils'
 
+export const dynamic = 'force-dynamic';
+
+
 // Contact form data type
 type ContactFormData = {
   firstName: string

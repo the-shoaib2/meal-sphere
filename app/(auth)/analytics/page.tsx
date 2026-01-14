@@ -14,15 +14,15 @@ import { useState, useEffect } from "react"
 import { BarChart3, Filter, CheckSquare, PieChart as PieChartIcon, AreaChart, TrendingUp, Users } from "lucide-react"
 import { AnalyticsCard } from "@/components/analytics/analytics-card"
 import { RoomStatsTable } from "@/components/analytics/room-stats-table"
-import { 
-  ChartContainer, 
-  ChartTooltip, 
+import {
+  ChartContainer,
+  ChartTooltip,
   ChartTooltipContent,
   ChartConfig
 } from "@/components/ui/chart"
-import { 
-  PieChart, 
-  Pie, 
+import {
+  PieChart,
+  Pie,
   Cell,
   Bar,
   BarChart,
@@ -64,8 +64,8 @@ export default function AnalyticsPage() {
   }, [userRooms, selectedRoomIds.length])
 
   const handleRoomToggle = (roomId: string) => {
-    setSelectedRoomIds(prev => 
-      prev.includes(roomId) 
+    setSelectedRoomIds(prev =>
+      prev.includes(roomId)
         ? prev.filter(id => id !== roomId)
         : [...prev, roomId]
     )
@@ -103,67 +103,67 @@ export default function AnalyticsPage() {
 
   const renderContent = (data: AnalyticsData) => (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-        <div className="xl:col-span-3">
-            <AnalyticsCard title="Room Statistics" icon={Users} isLoading={isLoading} description="Key metrics for each room.">
-                <RoomStatsTable data={data.roomStats} />
-            </AnalyticsCard>
-        </div>
-
-        <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={isLoading} description="Breakdown of meals by type.">
-            <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                    <Pie data={data.mealDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-                        {data.mealDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                </PieChart>
-            </ResponsiveContainer>
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={isLoading} description="Key metrics for each room.">
+          <RoomStatsTable data={data.roomStats} />
         </AnalyticsCard>
+      </div>
 
-        <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={isLoading} description="Breakdown of expenses by type.">
-            <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                    <Pie data={data.expenseDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-                        {data.expenseDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                </PieChart>
-            </ResponsiveContainer>
-        </AnalyticsCard>
+      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={isLoading} description="Breakdown of meals by type.">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie data={data.mealDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {data.mealDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
 
-        <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={isLoading} description="Meal rate fluctuations over time.">
-            <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={data.mealRateTrend}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="value" stroke="#8884d8" name="Meal Rate" />
-                </LineChart>
-            </ResponsiveContainer>
+      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={isLoading} description="Breakdown of expenses by type.">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie data={data.expenseDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {data.expenseDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={isLoading} description="Meal rate fluctuations over time.">
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={data.mealRateTrend}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="value" stroke="#8884d8" name="Meal Rate" />
+          </LineChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={isLoading} description="Total expenses per month.">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={data.monthlyExpenses}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#82ca9d" name="Expenses" />
+            </BarChart>
+          </ResponsiveContainer>
         </AnalyticsCard>
-        
-        <div className="xl:col-span-3">
-            <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={isLoading} description="Total expenses per month.">
-                <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={data.monthlyExpenses}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="value" fill="#82ca9d" name="Expenses" />
-                    </BarChart>
-                </ResponsiveContainer>
-            </AnalyticsCard>
-        </div>
+      </div>
     </div>
   );
 
@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold">Analytics</h1>
           <p className="text-muted-foreground">
-            {activeGroup?.name } Analytics
+            {activeGroup?.name} Analytics
           </p>
         </div>
       </div>

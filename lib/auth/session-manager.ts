@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { parseDeviceInfo, capitalizeDeviceType } from './utils';
 import { LocationData } from './types';
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma"
 
 // Helper function to get current session info
 export async function getCurrentSessionInfo(userId: string) {
@@ -15,7 +15,7 @@ export async function getCurrentSessionInfo(userId: string) {
       },
       orderBy: { updatedAt: 'desc' }
     });
-    
+
     return currentSession;
   } catch (error) {
     // Comment out all console.log and debugging statements
@@ -33,7 +33,7 @@ export async function getAllActiveSessions(userId: string) {
       },
       orderBy: { updatedAt: 'desc' }
     });
-    
+
     return sessions;
   } catch (error) {
     // Comment out all console.log and debugging statements
@@ -43,9 +43,9 @@ export async function getAllActiveSessions(userId: string) {
 
 // Utility function to update session info
 export async function updateSessionInfo(
-  sessionToken: string, 
-  userAgent: string, 
-  ipAddress: string, 
+  sessionToken: string,
+  userAgent: string,
+  ipAddress: string,
   userId?: string,
   locationData?: LocationData
 ) {
@@ -64,7 +64,7 @@ export async function updateSessionInfo(
         },
         orderBy: { updatedAt: 'desc' }
       });
-      
+
       if (existingSession) {
         // Update the session token to match the current one
         await prisma.session.update({
@@ -81,8 +81,8 @@ export async function updateSessionInfo(
     const deviceInfo = parseDeviceInfo(userAgent);
 
     // Clean up IP address (remove IPv6 prefix if present)
-    const cleanIpAddress = ipAddress && ipAddress.startsWith('::ffff:') 
-      ? ipAddress.substring(7) 
+    const cleanIpAddress = ipAddress && ipAddress.startsWith('::ffff:')
+      ? ipAddress.substring(7)
       : ipAddress;
 
     await prisma.session.update({
@@ -116,7 +116,7 @@ export async function revokeSession(sessionId: string, userId: string) {
         userId: userId
       }
     });
-    
+
     return result.count > 0;
   } catch (error) {
     // Comment out all console.log and debugging statements
@@ -135,7 +135,7 @@ export async function revokeMultipleSessions(sessionIds: string[], userId: strin
         userId: userId
       }
     });
-    
+
     return result.count;
   } catch (error) {
     // Comment out all console.log and debugging statements
@@ -152,7 +152,7 @@ export async function revokeAllSessions(userId: string) {
         expires: { gt: new Date() }
       }
     });
-    
+
     return result.count;
   } catch (error) {
     // Comment out all console.log and debugging statements
@@ -176,13 +176,13 @@ export async function updateSessionWithDeviceInfo(userId: string) {
   try {
     // Get the most recent session for this user and update it with device info
     const session = await prisma.session.findFirst({
-      where: { 
+      where: {
         userId,
         expires: { gt: new Date() }
       },
       orderBy: { createdAt: 'desc' }
     });
-    
+
     if (session) {
       // Parse user agent for device info
       const userAgent = session.userAgent || '';

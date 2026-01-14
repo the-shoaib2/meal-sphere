@@ -8,6 +8,10 @@ import { z } from "zod"
 import { UAParser } from 'ua-parser-js'
 
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
+
 
 const registerSchema = z.object({
   name: z.string().min(2).max(50),
@@ -38,13 +42,13 @@ function extractClientInfo(request: NextRequest) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Validate request body
     const validatedData = registerSchema.parse(body);
 
     // Validate CAPTCHA directly
     const isValidCaptcha = validatedData.captchaText.toUpperCase() === validatedData.storedCaptchaText.toUpperCase();
-    
+
     if (!isValidCaptcha) {
       return NextResponse.json(
         { message: "Invalid CAPTCHA" },
@@ -73,12 +77,12 @@ export async function POST(request: Request) {
     const device = parser.getDevice();
     const os = parser.getOS();
     const browser = parser.getBrowser();
-    
+
     // Device type detection
-    const deviceType = device.type || 
-                      (userAgent.toLowerCase().includes('mobile') ? 'mobile' : 
-                       userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
-    
+    const deviceType = device.type ||
+      (userAgent.toLowerCase().includes('mobile') ? 'mobile' :
+        userAgent.toLowerCase().includes('tablet') ? 'tablet' : 'desktop');
+
     // Device model detection
     let deviceModel = '';
     if (device.vendor && device.model) {
@@ -115,7 +119,7 @@ export async function POST(request: Request) {
     console.error("Registration error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: "Invalid input data", errors: error.errors },
+        { message: "Invalid input data", errors: error.issues },
         { status: 400 }
       );
     }

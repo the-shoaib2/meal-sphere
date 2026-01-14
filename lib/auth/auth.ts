@@ -10,7 +10,7 @@ import { sessionCallback, signInCallback, eventsCallbacks } from '@/lib/auth/cal
 // Import types
 import '@/lib/auth/types';
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma"
 
 // Validate environment variables
 validateEnvironmentVariables();

@@ -6,6 +6,10 @@ import { z } from "zod"
 import { createNotification } from "@/lib/notification-utils"
 import { NotificationType } from "@prisma/client"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 const guestMealSchema = z.object({
   roomId: z.string(),
   date: z

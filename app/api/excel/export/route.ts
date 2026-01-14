@@ -7,6 +7,10 @@ import { ExcelExportType, ExcelExportScope, ExcelDateRange } from "@/types/excel
 import prisma from "@/lib/prisma"
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
@@ -25,8 +29,8 @@ export async function GET(request: NextRequest) {
   const preview = searchParams.get("preview") === "true"
 
   if (!roomId || !type || !scope || !dateRange) {
-    return NextResponse.json({ 
-      error: "Room ID, type, scope, and dateRange are required" 
+    return NextResponse.json({
+      error: "Room ID, type, scope, and dateRange are required"
     }, { status: 400 })
   }
 
@@ -307,7 +311,7 @@ export async function GET(request: NextRequest) {
     if (format === 'pdf') {
       // Debug: print first bytes of buffer
       console.log('PDF buffer preview:', buffer.slice(0, 32));
-      return new NextResponse(buffer, {
+      return new NextResponse(buffer as any, {
         status: 200,
         headers: {
           'Content-Type': 'application/pdf',
@@ -316,7 +320,7 @@ export async function GET(request: NextRequest) {
       })
     } else {
       // Excel
-      return new NextResponse(buffer, {
+      return new NextResponse(buffer as any, {
         status: 200,
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

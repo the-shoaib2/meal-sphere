@@ -4,6 +4,10 @@ import { authOptions, updateSessionInfo, getCurrentSessionInfo } from '@/lib/aut
 import { prisma } from '@/lib/prisma'
 import { getLocationFromIP } from '@/lib/location-utils'
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

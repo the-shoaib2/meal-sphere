@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { updateSessionWithDeviceInfo } from '@/lib/auth/session-manager';
 import { getLocationFromIP } from '@/lib/location-utils';
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma"
 
 // Session callback
 export async function sessionCallback({ session, token, user }: any) {
@@ -14,20 +14,20 @@ export async function sessionCallback({ session, token, user }: any) {
     session.user.image = user.image || undefined;
     session.user.role = user.role;
   }
-  
+
   return session;
 }
 
 // Sign in callback
 export async function signInCallback(params: any) {
   const { user, account, profile } = params;
-  
+
   try {
     if (account?.provider === 'google') {
       if (!user.email) {
         console.error('❌ No email found in user object from Google OAuth');
-        
-        return false; 
+
+        return false;
       }
 
       // Check if user exists with this email
@@ -41,7 +41,7 @@ export async function signInCallback(params: any) {
         const newUser = await prisma.user.create({
           data: {
             email: user.email,
-            name: user.name || user.email.split('@')[0], 
+            name: user.name || user.email.split('@')[0],
             image: user.image,
             role: 'MEMBER',
             emailVerified: new Date(),
@@ -65,7 +65,7 @@ export async function signInCallback(params: any) {
           },
           include: { accounts: true }
         });
-        
+
         user.id = newUser.id;
         user.role = newUser.role;
       } else {
@@ -90,22 +90,22 @@ export async function signInCallback(params: any) {
             }
           });
         }
-        
+
         // Update the user object with existing user's data
         user.id = existingUser.id;
         user.role = existingUser.role;
       }
     }
-    
+
     return true;
   } catch (error) {
     console.error('❌ Error in signIn callback:', error);
-    
+
     // Log the full error for debugging
     if (error instanceof Error) {
       console.error('Full error stack:', error.stack);
     }
-    
+
     // Return true to allow the sign-in to continue even if there's an error
     return true;
   }
@@ -115,29 +115,29 @@ export async function signInCallback(params: any) {
 export const eventsCallbacks = {
   async signIn(message: any) {
 
-    
+
     try {
       // Update the most recent session with device info and location if available
       if (message.user?.id) {
         // Get the most recent session for this user
         const session = await prisma.session.findFirst({
-          where: { 
+          where: {
             userId: message.user.id,
             expires: { gt: new Date() }
           },
           orderBy: { createdAt: 'desc' }
         });
-        
+
         if (session) {
-  
-          
+
+
           // Parse user agent for device info
           const userAgent = session.userAgent || '';
           const deviceInfo = parseDeviceInfo(userAgent);
-          
+
           // Get IP address from session
           const ipAddress = session.ipAddress;
-          
+
           // Get location data if we have an IP address
           let locationData: { city?: string; country?: string; latitude?: number; longitude?: number } = {};
           if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
@@ -164,7 +164,7 @@ export const eventsCallbacks = {
               updatedAt: new Date()
             }
           });
-          
+
 
         } else {
 
@@ -174,7 +174,7 @@ export const eventsCallbacks = {
       // Error updating session in signIn event
     }
   },
-  
+
   async signOut(message: any) {
     // Handle sign out events if needed
   }
@@ -187,7 +187,7 @@ function parseDeviceInfo(userAgent: string) {
   }
 
   const ua = userAgent.toLowerCase();
-  
+
   // Mobile detection
   if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone') || ua.includes('ipad')) {
     if (ua.includes('iphone')) {
@@ -200,7 +200,7 @@ function parseDeviceInfo(userAgent: string) {
       return { deviceType: 'Mobile', deviceModel: 'Mobile Device' };
     }
   }
-  
+
   // Desktop detection
   if (ua.includes('windows')) {
     return { deviceType: 'Desktop', deviceModel: 'Windows PC' };
@@ -209,7 +209,7 @@ function parseDeviceInfo(userAgent: string) {
   } else if (ua.includes('linux')) {
     return { deviceType: 'Desktop', deviceModel: 'Linux PC' };
   }
-  
+
   return { deviceType: 'Desktop', deviceModel: 'Desktop' };
 }
 

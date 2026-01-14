@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { PrismaClient, User as PrismaUser } from "@prisma/client";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma"
 
 // Create Google provider with explicit environment variable access
 export const googleProvider = GoogleProvider({
@@ -57,7 +57,7 @@ export const credentialsProvider = CredentialsProvider({
     if (!isPasswordValid) {
       throw new Error("Invalid credentials");
     }
-    
+
     return {
       id: user.id,
       email: user.email,

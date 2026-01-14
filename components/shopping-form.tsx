@@ -25,18 +25,14 @@ import Image from "next/image"
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 const shoppingFormSchema = z.object({
-  roomId: z.string({
-    required_error: "Please select a room",
-  }),
+  roomId: z.string(),
   description: z.string().min(3, {
     message: "Description must be at least 3 characters.",
   }),
   amount: z.coerce.number().positive({
     message: "Amount must be a positive number.",
   }),
-  date: z.date({
-    required_error: "Please select a date",
-  }),
+  date: z.date(),
   receipt: z
     .instanceof(FileList)
     .optional()
@@ -60,7 +56,7 @@ export function ShoppingForm({ user, rooms }: ShoppingFormProps) {
   const { t } = useLanguage()
 
   const form = useForm<ShoppingFormValues>({
-    resolver: zodResolver(shoppingFormSchema),
+    resolver: zodResolver(shoppingFormSchema) as any,
     defaultValues: {
       description: "",
       amount: 0,

@@ -16,9 +16,7 @@ import { toast } from "react-hot-toast"
 import { useLanguage } from "@/contexts/language-context"
 
 const fineSettingsFormSchema = z.object({
-  roomId: z.string({
-    required_error: "Please select a room",
-  }),
+  roomId: z.string(),
   fineAmount: z.coerce.number().min(0),
   fineEnabled: z.boolean(),
 })
@@ -37,7 +35,7 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
   const { t } = useLanguage()
 
   const form = useForm<FineSettingsFormValues>({
-    resolver: zodResolver(fineSettingsFormSchema),
+    resolver: zodResolver(fineSettingsFormSchema) as any,
     defaultValues: {
       fineAmount: 0,
       fineEnabled: false,

@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 const PRIVILEGED_ROLES = [
   'SUPER_ADMIN',
   'ADMIN',
@@ -65,10 +68,10 @@ export async function GET(request: NextRequest) {
     const whereClause: any = {
       roomId,
       periodId: currentPeriod.id, // Always filter by current period
-        OR: [
-          { userId: targetUserId },
-          { targetUserId: targetUserId },
-        ],
+      OR: [
+        { userId: targetUserId },
+        { targetUserId: targetUserId },
+      ],
     };
 
     const transactions = await prisma.accountTransaction.findMany({

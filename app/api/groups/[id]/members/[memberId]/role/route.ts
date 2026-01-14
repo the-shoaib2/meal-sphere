@@ -43,15 +43,15 @@ export async function PATCH(
   try {
     const resolvedParams = await params;
     const { id: groupId, memberId } = resolvedParams;
-    
+
     // Log the parsed values
     logDebugInfo('Parsed params', { groupId, memberId });
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ 
-        success: false, 
-        message: 'Unauthorized' 
+      return new NextResponse(JSON.stringify({
+        success: false,
+        message: 'Unauthorized'
       }), { status: 401 });
     }
 
@@ -144,7 +144,7 @@ export async function PATCH(
       success: true,
       message: 'Member role updated successfully',
       member: updatedMember,
-    }), { 
+    }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ export async function PATCH(
     });
   } catch (error) {
     console.error('Error updating member role:', error);
-    
+
     // Log detailed error information
     const errorDetails = {
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -160,15 +160,15 @@ export async function PATCH(
       name: error instanceof Error ? error.name : 'UnknownError',
       ...(error instanceof z.ZodError ? { issues: error.issues } : {})
     };
-    
+
     logDebugInfo('Error details', errorDetails);
-    
+
     if (error instanceof z.ZodError) {
       return new NextResponse(
         JSON.stringify({
           success: false,
           message: 'Invalid request data',
-          errors: error.errors,
+          errors: error.issues,
         }),
         { status: 400 }
       );

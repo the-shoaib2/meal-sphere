@@ -10,6 +10,10 @@ import {
 } from '@/lib/auth/session-manager'
 import { getLocationFromIP } from '@/lib/location-utils'
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

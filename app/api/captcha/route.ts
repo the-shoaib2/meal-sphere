@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { cleanupExpiredCaptchas, storeCaptcha, validateCaptcha } from '@/lib/captcha-store';
 
+export const dynamic = 'force-dynamic';
+
+
 // Generate a random string for CAPTCHA
 function generateCaptchaText(length = 6): string {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';

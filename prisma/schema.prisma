@@ -4,11 +4,10 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-/*
-  npx prisma generate 
-  npx prisma db push
-  
-*/
+/**
+ * npx prisma generate
+ * npx prisma db push
+ */
 
 datasource db {
   provider = "mongodb"
@@ -109,51 +108,49 @@ enum PeriodStatus {
   ARCHIVED
 }
 
-
-
 /// USER MODEL
 model User {
-  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
   name             String
-  email            String           @unique
+  email            String    @unique
   emailVerified    DateTime?
   password         String?
   image            String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  role             Role             @default(MEMBER)
-  language         String           @default("en")
-  isActive         Boolean          @default(true)
-  resetToken       String?          
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  role             Role      @default(MEMBER)
+  language         String    @default("en")
+  isActive         Boolean   @default(true)
+  resetToken       String?
   resetTokenExpiry DateTime?
 
   // RELATIONS
-  accounts         Account[]
-  bkashPayments    BkashPayment[]
-  createdRooms     Room[]         @relation("RoomCreator")
-  extraExpenses    ExtraExpense[]
-  guestMeals       GuestMeal[]
-  marketDates      MarketDate[]
-  meals            Meal[]
-  notifications    Notification[]
-  payments         Payment[]
-  rooms            RoomMember[]
-  sessions         Session[]
-  shoppingItems    ShoppingItem[]
-  votes            Vote[]
-  createdInvitations Invitation[] @relation("CreatedInvitations")
-  usedInvitations   Invitation[]  @relation("UsedInvitations")
-  joinRequests      JoinRequest[]
-  messages          GroupMessage[]
-  activityLogs      GroupActivityLog[]
-  inviteTokens      InviteToken[]
-  announcements     Announcement[] @relation("CreatedAnnouncements")
-  groupNotificationSettings GroupNotificationSettings[]
-  autoMealSettings  AutoMealSettings[]
-  accountTransactionsSent AccountTransaction[] @relation("TransactionUser")
-  accountTransactionsReceived AccountTransaction[] @relation("TransactionTarget")
-  accountTransactionsCreated AccountTransaction[] @relation("TransactionCreator")
-  createdPeriods MealPeriod[] @relation("CreatedPeriods")
+  accounts                    Account[]
+  bkashPayments               BkashPayment[]
+  createdRooms                Room[]                      @relation("RoomCreator")
+  extraExpenses               ExtraExpense[]
+  guestMeals                  GuestMeal[]
+  marketDates                 MarketDate[]
+  meals                       Meal[]
+  notifications               Notification[]
+  payments                    Payment[]
+  rooms                       RoomMember[]
+  sessions                    Session[]
+  shoppingItems               ShoppingItem[]
+  votes                       Vote[]
+  createdInvitations          Invitation[]                @relation("CreatedInvitations")
+  usedInvitations             Invitation[]                @relation("UsedInvitations")
+  joinRequests                JoinRequest[]
+  messages                    GroupMessage[]
+  activityLogs                GroupActivityLog[]
+  inviteTokens                InviteToken[]
+  announcements               Announcement[]              @relation("CreatedAnnouncements")
+  groupNotificationSettings   GroupNotificationSettings[]
+  autoMealSettings            AutoMealSettings[]
+  accountTransactionsSent     AccountTransaction[]        @relation("TransactionUser")
+  accountTransactionsReceived AccountTransaction[]        @relation("TransactionTarget")
+  accountTransactionsCreated  AccountTransaction[]        @relation("TransactionCreator")
+  createdPeriods              MealPeriod[]                @relation("CreatedPeriods")
 
   @@index([role, isActive])
   @@index([resetToken])
@@ -163,43 +160,43 @@ model User {
 
 /// ROOM MODEL
 model Room {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  description   String?
-  isPrivate     Boolean  @default(false)
-  memberCount   Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  createdBy     String   @db.ObjectId
-  isActive      Boolean  @default(true)
-  fineAmount    Float?
-  fineEnabled   Boolean  @default(false)
-  maxMembers    Int?
-  bannerUrl     String?
-  category      String?
-  tags          String[]
-  features      Json?    // Store features as JSON
-  createdByUser User     @relation("RoomCreator", fields: [createdBy], references: [id])
-  members       RoomMember[]
-  joinRequests  JoinRequest[]
-  messages      GroupMessage[]
-  announcements Announcement[]
-  activityLogs  GroupActivityLog[]
-  shoppingItems ShoppingItem[]
-  meals         Meal[]
-  payments      Payment[]
-  votes         Vote[]
-  invitations   Invitation[]
-  bkashPayments BkashPayment[]
-  extraExpenses ExtraExpense[]
-  guestMeals    GuestMeal[]
-  marketDates   MarketDate[]
-  inviteTokens  InviteToken[]
+  id                        String                      @id @default(auto()) @map("_id") @db.ObjectId
+  name                      String
+  description               String?
+  isPrivate                 Boolean                     @default(false)
+  memberCount               Int                         @default(0)
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  createdBy                 String                      @db.ObjectId
+  isActive                  Boolean                     @default(true)
+  fineAmount                Float?
+  fineEnabled               Boolean                     @default(false)
+  maxMembers                Int?
+  bannerUrl                 String?
+  category                  String?
+  tags                      String[]
+  features                  Json? // Store features as JSON
+  createdByUser             User                        @relation("RoomCreator", fields: [createdBy], references: [id])
+  members                   RoomMember[]
+  joinRequests              JoinRequest[]
+  messages                  GroupMessage[]
+  announcements             Announcement[]
+  activityLogs              GroupActivityLog[]
+  shoppingItems             ShoppingItem[]
+  meals                     Meal[]
+  payments                  Payment[]
+  votes                     Vote[]
+  invitations               Invitation[]
+  bkashPayments             BkashPayment[]
+  extraExpenses             ExtraExpense[]
+  guestMeals                GuestMeal[]
+  marketDates               MarketDate[]
+  inviteTokens              InviteToken[]
   groupNotificationSettings GroupNotificationSettings[]
-  mealSettings  MealSettings?
-  autoMealSettings AutoMealSettings[]
-  accountTransactions AccountTransaction[]
-  mealPeriods MealPeriod[]
+  mealSettings              MealSettings?
+  autoMealSettings          AutoMealSettings[]
+  accountTransactions       AccountTransaction[]
+  mealPeriods               MealPeriod[]
 
   @@index([isActive])
   @@index([createdAt])
@@ -208,19 +205,19 @@ model Room {
 
 /// ROOM MEMBER MODEL
 model RoomMember {
-  id         String   @id @default(auto())  @map("_id") @db.ObjectId
-  role       Role     @default(MEMBER)
-  joinedAt   DateTime @default(now())
-  userId     String   @db.ObjectId
-  roomId     String   @db.ObjectId
-  isCurrent  Boolean  @default(false)
-  isBanned   Boolean  @default(false)
-  lastActive DateTime? @updatedAt
-  mutedUntil DateTime?
-  permissions Json?    // Store custom permissions as JSON
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  role        Role      @default(MEMBER)
+  joinedAt    DateTime  @default(now())
+  userId      String    @db.ObjectId
+  roomId      String    @db.ObjectId
+  isCurrent   Boolean   @default(false)
+  isBanned    Boolean   @default(false)
+  lastActive  DateTime? @updatedAt
+  mutedUntil  DateTime?
+  permissions Json? // Store custom permissions as JSON
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  room       Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
   @@index([roomId, role])
@@ -244,11 +241,10 @@ model Account {
   id_token          String? @db.String
   session_state     String?
 
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -258,20 +254,20 @@ model Account {
 model Session {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionToken String   @unique
-  userId      String   @db.ObjectId
-  expires     DateTime
-  ipAddress   String?
-  userAgent   String?
-  deviceType  String?
-  deviceModel String?
-  city        String?
-  country     String?
-  latitude    Float?
-  longitude   Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  userId       String   @db.ObjectId
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+  deviceType   String?
+  deviceModel  String?
+  city         String?
+  country      String?
+  latitude     Float?
+  longitude    Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expires])
@@ -284,7 +280,6 @@ model VerificationToken {
   token      String   @unique
   expires    DateTime
   createdAt  DateTime @default(now())
-
 
   @@unique([identifier, token])
 }
@@ -300,9 +295,9 @@ model Meal {
   roomId    String   @db.ObjectId
   periodId  String?  @db.ObjectId
 
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period    MealPeriod? @relation(fields: [periodId], references: [id])
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@unique([userId, roomId, date, type])
   @@index([roomId, date])
@@ -322,9 +317,9 @@ model GuestMeal {
   roomId    String   @db.ObjectId
   periodId  String?  @db.ObjectId
 
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period    MealPeriod? @relation(fields: [periodId], references: [id])
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId, date])
   @@index([userId, date])
@@ -346,15 +341,16 @@ model ShoppingItem {
   roomId      String   @db.ObjectId
   periodId    String?  @db.ObjectId
 
-  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period      MealPeriod? @relation(fields: [periodId], references: [id])
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId])
   @@index([purchased])
   @@index([createdAt])
   @@index([userId])
 }
+
 /// PAYMENT MODEL
 model Payment {
   id           String        @id @default(auto()) @map("_id") @db.ObjectId
@@ -370,9 +366,9 @@ model Payment {
   periodId     String?       @db.ObjectId
   bkashPayment BkashPayment?
 
-  room         Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period       MealPeriod?   @relation(fields: [periodId], references: [id])
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId, status, date])
   @@index([userId, status, date])
@@ -392,11 +388,11 @@ model BkashPayment {
   updatedAt       DateTime @updatedAt
   userId          String   @db.ObjectId
   roomId          String   @db.ObjectId
-  paymentRecordId String   @db.ObjectId @unique
+  paymentRecordId String   @unique @db.ObjectId
 
-  paymentRecord   Payment  @relation(fields: [paymentRecordId], references: [id], onDelete: Cascade)
-  room            Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentRecord Payment @relation(fields: [paymentRecordId], references: [id], onDelete: Cascade)
+  room          Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId])
 }
@@ -412,9 +408,9 @@ model MarketDate {
   roomId    String       @db.ObjectId
   periodId  String?      @db.ObjectId
 
-  room      Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period    MealPeriod?  @relation(fields: [periodId], references: [id])
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period MealPeriod? @relation(fields: [periodId], references: [id])
 }
 
 /// EXTRA EXPENSE MODEL
@@ -431,28 +427,28 @@ model ExtraExpense {
   roomId      String      @db.ObjectId
   periodId    String?     @db.ObjectId
 
-  room        Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  period      MealPeriod? @relation(fields: [periodId], references: [id])
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  period MealPeriod? @relation(fields: [periodId], references: [id])
 }
 
 model Invitation {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  code      String   @unique
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  code      String    @unique
   email     String
   role      Role
   expiresAt DateTime
   usedAt    DateTime?
-  usedBy    String?  @db.ObjectId
-  groupId   String   @db.ObjectId
-  createdBy String   @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  usedBy    String?   @db.ObjectId
+  groupId   String    @db.ObjectId
+  createdBy String    @db.ObjectId
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
-  group     Room     @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  creator   User     @relation("CreatedInvitations", fields: [createdBy], references: [id], onDelete: Cascade)
-  user      User?    @relation("UsedInvitations", fields: [usedBy], references: [id])
+  group   Room  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator User  @relation("CreatedInvitations", fields: [createdBy], references: [id], onDelete: Cascade)
+  user    User? @relation("UsedInvitations", fields: [usedBy], references: [id])
 
   @@unique([code, groupId])
   @@index([email])
@@ -463,25 +459,25 @@ model Invitation {
 
 /// VOTE MODEL
 model Vote {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  type         VoteType
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        VoteType
   // Vote configuration
-  title        String?
-  description  String?
-  startDate    DateTime  @default(now())
-  endDate      DateTime
-  isActive     Boolean   @default(true)
-  userId       String    @db.ObjectId
-  roomId       String    @db.ObjectId
-  candidateId  String?   @db.ObjectId
-  options      String?   // Store as JSON string
-  results      String?   // Store as JSON string
-  isAnonymous  Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  title       String?
+  description String?
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  userId      String   @db.ObjectId
+  roomId      String   @db.ObjectId
+  candidateId String?  @db.ObjectId
+  options     String? // Store as JSON string
+  results     String? // Store as JSON string
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId, type])
   @@index([roomId, type, candidateId])
@@ -497,7 +493,7 @@ model Notification {
   createdAt DateTime         @default(now())
   userId    String           @db.ObjectId
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
   @@index([createdAt])
@@ -513,8 +509,8 @@ model JoinRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
   @@index([status])
@@ -531,8 +527,8 @@ model GroupMessage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId, pinned])
   @@index([createdAt])
@@ -541,30 +537,30 @@ model GroupMessage {
 /// GROUP ACTIVITY LOG MODEL
 model GroupActivityLog {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  type      String   // e.g., MEMBER_JOINED, SETTINGS_CHANGED, etc.
+  type      String // e.g., MEMBER_JOINED, SETTINGS_CHANGED, etc.
   details   Json?
   roomId    String   @db.ObjectId
   userId    String   @db.ObjectId
   createdAt DateTime @default(now())
 
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([roomId, type])
   @@index([createdAt])
 }
 
 model InviteToken {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  token     String   @unique
-  roomId    String   @db.ObjectId
-  createdBy String   @db.ObjectId
-  role      Role     @default(MEMBER)
-  expiresAt DateTime?
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  createdByUser User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  token         String    @unique
+  roomId        String    @db.ObjectId
+  createdBy     String    @db.ObjectId
+  role          Role      @default(MEMBER)
+  expiresAt     DateTime?
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+  room          Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdByUser User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@unique([token, roomId])
   @@index([roomId])
@@ -584,19 +580,19 @@ model Announcement {
 }
 
 model GroupNotificationSettings {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   @db.ObjectId
-  groupId       String   @db.ObjectId
-  groupMessages Boolean  @default(true)
-  announcements Boolean  @default(true)
-  mealUpdates   Boolean  @default(true)
-  memberActivity Boolean @default(true)
-  joinRequests  Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  groupId        String   @db.ObjectId
+  groupMessages  Boolean  @default(true)
+  announcements  Boolean  @default(true)
+  mealUpdates    Boolean  @default(true)
+  memberActivity Boolean  @default(true)
+  joinRequests   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group         Room    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Room @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@unique([userId, groupId])
   @@index([userId])
@@ -605,41 +601,41 @@ model GroupNotificationSettings {
 
 /// MEAL SETTINGS MODEL (Admin controls)
 model MealSettings {
-  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  roomId                String   @db.ObjectId @unique
-  breakfastTime         String   @default("08:00")
-  lunchTime             String   @default("13:00")
-  dinnerTime            String   @default("20:00")
-  autoMealEnabled       Boolean  @default(false)
-  mealCutoffTime        String   @default("22:00")
-  maxMealsPerDay        Int      @default(3)
-  allowGuestMeals       Boolean  @default(true)
-  guestMealLimit        Int      @default(5)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  roomId          String   @unique @db.ObjectId
+  breakfastTime   String   @default("08:00")
+  lunchTime       String   @default("13:00")
+  dinnerTime      String   @default("20:00")
+  autoMealEnabled Boolean  @default(false)
+  mealCutoffTime  String   @default("22:00")
+  maxMealsPerDay  Int      @default(3)
+  allowGuestMeals Boolean  @default(true)
+  guestMealLimit  Int      @default(5)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 }
 
 /// AUTO MEAL SETTINGS MODEL (User preferences)
 model AutoMealSettings {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String   @db.ObjectId
-  roomId            String   @db.ObjectId
-  isEnabled         Boolean  @default(false)
-  breakfastEnabled  Boolean  @default(true)
-  lunchEnabled      Boolean  @default(true)
-  dinnerEnabled     Boolean  @default(true)
-  guestMealEnabled  Boolean  @default(false)
-  startDate         DateTime @default(now())
+  id                String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String     @db.ObjectId
+  roomId            String     @db.ObjectId
+  isEnabled         Boolean    @default(false)
+  breakfastEnabled  Boolean    @default(true)
+  lunchEnabled      Boolean    @default(true)
+  dinnerEnabled     Boolean    @default(true)
+  guestMealEnabled  Boolean    @default(false)
+  startDate         DateTime   @default(now())
   endDate           DateTime?
   excludedDates     String[] // Store dates as strings
   excludedMealTypes MealType[] // Store meal types to exclude
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  room              Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
 }
@@ -647,8 +643,8 @@ model AutoMealSettings {
 /// ACCOUNT TRANSACTION MODEL
 model AccountTransaction {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId       String   @db.ObjectId 
-  targetUserId String   @db.ObjectId  
+  userId       String   @db.ObjectId
+  targetUserId String   @db.ObjectId
   roomId       String   @db.ObjectId
   amount       Float
   type         String   @default("PAYMENT") // PAYMENT, ADJUSTMENT, REFUND
@@ -659,11 +655,11 @@ model AccountTransaction {
   periodId     String?  @db.ObjectId
 
   // Relations
-  user         User     @relation("TransactionUser", fields: [userId], references: [id], onDelete: Cascade)
-  targetUser   User     @relation("TransactionTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
-  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  creator      User     @relation("TransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  period       MealPeriod? @relation(fields: [periodId], references: [id])
+  user       User        @relation("TransactionUser", fields: [userId], references: [id], onDelete: Cascade)
+  targetUser User        @relation("TransactionTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  room       Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  creator    User        @relation("TransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  period     MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId])
   @@index([userId])
@@ -675,38 +671,35 @@ model AccountTransaction {
 
 /// MEAL PERIOD MODEL
 model MealPeriod {
-  id              String       @id @default(auto()) @map("_id") @db.ObjectId
-  name            String       // e.g., "January 2024", "Q1 2024"
-  startDate       DateTime
-  endDate         DateTime?
-  status          PeriodStatus @default(ACTIVE)
-  isLocked        Boolean      @default(false)
-  openingBalance  Float        @default(0)
-  closingBalance  Float?
-  carryForward    Boolean      @default(false)
-  notes           String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  roomId          String       @db.ObjectId
-  createdBy       String       @db.ObjectId
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  name           String // e.g., "January 2024", "Q1 2024"
+  startDate      DateTime
+  endDate        DateTime?
+  status         PeriodStatus @default(ACTIVE)
+  isLocked       Boolean      @default(false)
+  openingBalance Float        @default(0)
+  closingBalance Float?
+  carryForward   Boolean      @default(false)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  roomId         String       @db.ObjectId
+  createdBy      String       @db.ObjectId
 
   // Relations
-  room            Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  createdByUser   User         @relation("CreatedPeriods", fields: [createdBy], references: [id], onDelete: Cascade)
-  meals           Meal[]
-  guestMeals      GuestMeal[]
-  shoppingItems   ShoppingItem[]
-  payments        Payment[]
-  extraExpenses   ExtraExpense[]
-  marketDates     MarketDate[]
+  room                Room                 @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdByUser       User                 @relation("CreatedPeriods", fields: [createdBy], references: [id], onDelete: Cascade)
+  meals               Meal[]
+  guestMeals          GuestMeal[]
+  shoppingItems       ShoppingItem[]
+  payments            Payment[]
+  extraExpenses       ExtraExpense[]
+  marketDates         MarketDate[]
   accountTransactions AccountTransaction[]
 
-  @@unique([roomId, name]) 
+  @@unique([roomId, name])
   @@index([startDate, endDate])
   @@index([createdAt])
   @@index([isLocked])
   @@index([roomId, status])
 }
-
-
-

@@ -5,6 +5,10 @@ import prisma from "@/lib/prisma"
 import { createBkashPayment } from "@/lib/bkash-service"
 import { v4 as uuidv4 } from "uuid"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
 

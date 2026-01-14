@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/prisma"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 async function markAllAsRead(session: any) {
   // Update all unread notifications for the user
   const result = await prisma.notification.updateMany({

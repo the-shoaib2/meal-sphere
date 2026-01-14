@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 const checkExistsSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),

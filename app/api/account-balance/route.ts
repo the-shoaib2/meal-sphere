@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { getPeriodAwareWhereClause, validateActivePeriod, getCurrentPeriod } from '@/lib/period-utils';
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 const PRIVILEGED_ROLES = [
   'SUPER_ADMIN',
   'ADMIN',

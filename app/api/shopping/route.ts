@@ -7,6 +7,10 @@ import { uploadReceipt } from "@/lib/upload-utils"
 import { NotificationType } from "@prisma/client"
 import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/period-utils"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)

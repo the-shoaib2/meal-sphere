@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { detectLocation } from '@/lib/location-utils'
 
+export const dynamic = 'force-dynamic';
+
+
 export async function GET(request: NextRequest) {
   try {
     const location = await detectLocation()

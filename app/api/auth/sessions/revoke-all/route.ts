@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth/auth'
 import { revokeAllSessions } from '@/lib/auth/session-manager'
 
+export const dynamic = 'force-dynamic';
+
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Skip middleware for static files and API routes
@@ -44,18 +44,18 @@ export async function middleware(request: NextRequest) {
   ]
 
   // Check if current path is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
+  const isProtectedRoute = protectedRoutes.some(route =>
     pathname === route || pathname.startsWith(route + '/')
   )
 
   // Check if current path is an auth page
-  const isAuthPage = authPages.some(page => 
+  const isAuthPage = authPages.some(page =>
     pathname === page || pathname.startsWith(page + '/')
   )
 
   // Check for session token in cookies
   const sessionToken = request.cookies.get('next-auth.session-token')?.value ||
-                      request.cookies.get('__Secure-next-auth.session-token')?.value
+    request.cookies.get('__Secure-next-auth.session-token')?.value
 
   // Handle protected routes - redirect to login with callbackUrl
   if (isProtectedRoute && !sessionToken) {
@@ -68,12 +68,12 @@ export async function middleware(request: NextRequest) {
   if (isAuthPage && sessionToken) {
     const callbackUrl = request.nextUrl.searchParams.get('callbackUrl') || '/dashboard'
     const redirectUrl = new URL(callbackUrl, request.url)
-    
+
     // Prevent open redirects
     if (!redirectUrl.pathname.startsWith('/')) {
       redirectUrl.pathname = '/dashboard'
     }
-    
+
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -88,7 +88,7 @@ export async function middleware(request: NextRequest) {
 
   // Ensure proper cookie handling for OAuth
   const response = NextResponse.next()
-  
+
   // Set SameSite attribute for cookies in development
   if (process.env.NODE_ENV === 'development') {
     response.headers.set('Set-Cookie', 'SameSite=Lax')

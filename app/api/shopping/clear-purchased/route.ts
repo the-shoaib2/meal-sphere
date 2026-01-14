@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions);

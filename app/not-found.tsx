@@ -2,18 +2,16 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Search, Home, ArrowLeft, ChefHat, Calendar, LayoutDashboard } from "lucide-react"
+import { Home, ArrowLeft, ChefHat, Calendar } from "lucide-react"
 import Link from "next/link"
-import { useSession } from "next-auth/react"
+
+export const dynamic = 'force-dynamic'
 
 export default function NotFound() {
-  const { data: session } = useSession()
-  
   const quickLinks = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Meal Plans", href: "/meal-plans", icon: Calendar },
-    { name: "Recipes", href: "/recipes", icon: ChefHat },
+    { name: "Dashboard", href: "/dashboard", icon: Calendar },
+    { name: "Groups", href: "/groups", icon: ChefHat },
   ]
 
   return (
@@ -30,7 +28,7 @@ export default function NotFound() {
             </p>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           {/* Quick Links */}
           <div className="space-y-2">
@@ -49,33 +47,16 @@ export default function NotFound() {
 
           {/* Action Buttons */}
           <div className="flex gap-2">
-            {session ? (
-              <>
-                <Button asChild className="flex-1">
-                  <Link href="/dashboard">
-                    <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Dashboard
-                  </Link>
-                </Button>
-                <Button variant="outline" onClick={() => window.history.back()} className="flex-1">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Go Back
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button asChild className="flex-1">
-                  <Link href="/">
-                    <Home className="w-4 h-4 mr-2" />
-                    Go Home
-                  </Link>
-                </Button>
-                <Button variant="outline" onClick={() => window.history.back()} className="flex-1">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Go Back
-                </Button>
-              </>
-            )}
+            <Button asChild className="flex-1">
+              <Link href="/">
+                <Home className="w-4 h-4 mr-2" />
+                Go Home
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={() => window.history.back()} className="flex-1">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back
+            </Button>
           </div>
 
           {/* Help Link */}

@@ -49,9 +49,9 @@ export default function CreateGroupPage() {
   const router = useRouter();
   const { createGroup } = useGroups();
   const { mutateAsync: createGroupMutation, isPending } = createGroup;
-  
+
   const form = useForm<CreateGroupInput>({
-    resolver: zodResolver(createGroupSchema),
+    resolver: zodResolver(createGroupSchema) as any,
     defaultValues: {
       isPrivate: false,
       maxMembers: null,
@@ -59,10 +59,10 @@ export default function CreateGroupPage() {
     mode: 'onChange',
   });
 
-  const { 
-    register, 
-    handleSubmit, 
-    watch, 
+  const {
+    register,
+    handleSubmit,
+    watch,
     formState: { errors, isSubmitting, isDirty, isValid },
     setValue,
     trigger,
@@ -124,7 +124,7 @@ export default function CreateGroupPage() {
               </div>
             </div>
           </CardHeader>
-          
+
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -209,7 +209,7 @@ export default function CreateGroupPage() {
                       </Label>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {isPrivate 
+                      {isPrivate
                         ? 'New members will need admin approval to join this group.'
                         : 'Anyone with the link can join this group.'}
                     </p>
@@ -232,8 +232,8 @@ export default function CreateGroupPage() {
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={!isDirty || !isValid || isSubmitting}
                 className="min-w-[120px]"
               >

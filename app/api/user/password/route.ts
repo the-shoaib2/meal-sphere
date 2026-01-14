@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(8),

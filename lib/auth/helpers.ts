@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { authOptions } from '@/lib/auth/auth';
 import { extractClientInfo, capitalizeDeviceType } from '@/lib/auth/utils';
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma"
 
 // Helper function to get session with device info (for API routes)
 export const getServerAuthSessionForApi = async (req: NextApiRequest, res: NextApiResponse) => {

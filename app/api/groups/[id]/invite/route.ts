@@ -85,7 +85,7 @@ export async function POST(
     for (let i = 0; i < 10; i++) {
       token += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    
+
     // Calculate expiration date - handle both hours and days
     let expiresAt: Date | null = null;
     if (expiresInDays !== null && expiresInDays !== 0) {
@@ -162,7 +162,7 @@ export async function GET(
 
     const resolvedParams = await params;
     const { id: groupId } = resolvedParams;
-    
+
     const group = await prisma.room.findUnique({
       where: { id: groupId },
       select: { id: true }
@@ -216,7 +216,7 @@ export async function GET(
 }
 
 type DeleteRouteParams = {
-  params: Promise<{ id: string; token: string }>;
+  params: Promise<{ id: string }>;
 };
 
 // DELETE /api/groups/[id]/invite - Delete an invite token
@@ -233,8 +233,14 @@ export async function DELETE(
     }
 
     const resolvedParams = await params;
-    const { id: groupId, token } = resolvedParams;
-    
+    const { id: groupId } = resolvedParams;
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+
+    if (!token) {
+      return new NextResponse('Token is required', { status: 400 });
+    }
+
     const group = await prisma.room.findUnique({
       where: { id: groupId },
       select: { id: true }

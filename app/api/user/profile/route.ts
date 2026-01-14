@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 const profileSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),

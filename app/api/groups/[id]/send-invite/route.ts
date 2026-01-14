@@ -29,16 +29,16 @@ export async function POST(
     }
 
     const { id: groupId } = await params;
-    
+
     // Validate request body
     const body = await request.json();
     const validationResult = inviteSchema.safeParse(body);
-    
+
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
+        {
           error: "Invalid request data",
-          details: validationResult.error.errors 
+          details: validationResult.error.issues
         },
         { status: 400 }
       );
@@ -201,11 +201,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Successfully sent ${invitations.length} invitation(s). ${
-        skippedEmails.existingMembers.length > 0 || skippedEmails.pendingInvitations.length > 0
+      message: `Successfully sent ${invitations.length} invitation(s). ${skippedEmails.existingMembers.length > 0 || skippedEmails.pendingInvitations.length > 0
           ? `(${skippedEmails.existingMembers.length} already members, ${skippedEmails.pendingInvitations.length} pending invitations)`
           : ''
-      }`,
+        }`,
       invitations: invitations.map(inv => ({
         code: inv.code,
         email: inv.email,

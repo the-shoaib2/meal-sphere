@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth/auth"
 import { importMealsFromExcel } from "@/lib/excel-utils"
 import prisma from "@/lib/prisma"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
 

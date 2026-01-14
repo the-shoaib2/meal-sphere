@@ -6,6 +6,10 @@ import { getExcelPermissions, validateImportOptions } from "@/lib/excel-permissi
 import { ExcelImportType } from "@/types/excel"
 import prisma from "@/lib/prisma"
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 

@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth";
 import { exportGroupCalendarToExcel } from "@/lib/excel-utils";
 
+export const dynamic = 'force-dynamic';
+
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const roomId = searchParams.get("roomId");

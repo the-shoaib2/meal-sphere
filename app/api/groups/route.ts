@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
+
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 // Schema for creating a new group
 const createGroupSchema = z.object({
   name: z.string().min(3).max(100),
