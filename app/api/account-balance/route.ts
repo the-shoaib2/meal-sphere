@@ -235,6 +235,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
       }
 
+      // Get current period info
+      const currentPeriod = await getCurrentPeriod(roomId);
+
       const members = await prisma.roomMember.findMany({
         where: { roomId },
         include: { user: { select: { id: true, name: true, image: true, email: true } } },
@@ -307,8 +310,7 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      // Get current period info
-      const currentPeriod = await getCurrentPeriod(roomId);
+      // currentPeriod already fetched above
 
       const response: any = {
         members: membersWithBalances,
