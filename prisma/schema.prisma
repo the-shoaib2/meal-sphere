@@ -300,6 +300,7 @@ model Meal {
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@unique([userId, roomId, date, type])
+  @@index([roomId, periodId])
   @@index([roomId, date])
   @@index([userId, date])
   @@index([type, date])
@@ -321,6 +322,7 @@ model GuestMeal {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
+  @@index([roomId, periodId])
   @@index([roomId, date])
   @@index([userId, date])
 }
@@ -345,6 +347,7 @@ model ShoppingItem {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
+  @@index([roomId, periodId])
   @@index([roomId, date])
   @@index([roomId])
   @@index([purchased])
@@ -413,6 +416,8 @@ model MarketDate {
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
+
+  @@index([roomId, periodId])
 }
 
 /// EXTRA EXPENSE MODEL
@@ -432,6 +437,8 @@ model ExtraExpense {
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
+
+  @@index([roomId, periodId])
 }
 
 model Invitation {
@@ -664,6 +671,7 @@ model AccountTransaction {
   creator    User        @relation("TransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   period     MealPeriod? @relation(fields: [periodId], references: [id])
 
+  @@index([roomId, periodId])
   @@index([roomId])
   @@index([userId])
   @@index([targetUserId])

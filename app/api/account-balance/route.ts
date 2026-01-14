@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
-import { getPeriodAwareWhereClause, validateActivePeriod, getCurrentPeriod } from '@/lib/period-utils';
-
+import { getCurrentPeriod } from '@/lib/period-utils';
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
@@ -18,19 +17,17 @@ function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
 }
 
-async function calculateBalance(userId: string, roomId: string): Promise<number> {
-  // Get current period for filtering
-  const currentPeriod = await getCurrentPeriod(roomId);
-
+// Optimized: Accepts periodId to avoid DB lookup
+async function calculateBalance(userId: string, roomId: string, periodId: string | null | undefined): Promise<number> {
   // If no active period exists, return 0 (no balance for ended periods)
-  if (!currentPeriod || currentPeriod.status !== 'ACTIVE') {
+  if (!periodId) {
     return 0;
   }
 
   const transactions = await prisma.accountTransaction.findMany({
     where: {
       roomId,
-      periodId: currentPeriod.id,
+      periodId: periodId,
       OR: [
         { targetUserId: userId },                    // User is the receiver
         {
@@ -56,20 +53,17 @@ async function calculateBalance(userId: string, roomId: string): Promise<number>
   }, 0);
 }
 
-async function calculateGroupTotalBalance(roomId: string): Promise<number> {
+// Optimized: Accepts periodId
+async function calculateGroupTotalBalance(roomId: string, periodId: string | null | undefined): Promise<number> {
   try {
-    // Get current period for filtering
-    const currentPeriod = await getCurrentPeriod(roomId);
-
-    // If no active period exists, return 0 (no balance for ended periods)
-    if (!currentPeriod || currentPeriod.status !== 'ACTIVE') {
+    if (!periodId) {
       return 0;
     }
 
     const transactions = await prisma.accountTransaction.findMany({
       where: {
         roomId,
-        periodId: currentPeriod.id,
+        periodId: periodId,
       },
       select: {
         userId: true,
@@ -90,20 +84,17 @@ async function calculateGroupTotalBalance(roomId: string): Promise<number> {
   }
 }
 
-async function calculateTotalExpenses(roomId: string): Promise<number> {
+// Optimized: Accepts periodId
+async function calculateTotalExpenses(roomId: string, periodId: string | null | undefined): Promise<number> {
   try {
-    // Get period-aware where clause
-    const periodFilter = await getPeriodAwareWhereClause(roomId, {});
-
-    // If no active period, return 0
-    if (periodFilter.id === null) {
+    if (!periodId) {
       return 0;
     }
 
     const aggregated = await prisma.extraExpense.aggregate({
       where: {
         roomId,
-        periodId: periodFilter.periodId,
+        periodId: periodId,
       },
       _sum: { amount: true },
     });
@@ -115,13 +106,14 @@ async function calculateTotalExpenses(roomId: string): Promise<number> {
   }
 }
 
-async function calculateMealRate(roomId: string): Promise<{ mealRate: number; totalMeals: number; totalExpenses: number }> {
+// Optimized: Accepts periodId and optional pre-calculated values
+async function calculateMealRate(
+  roomId: string,
+  periodId: string | null | undefined,
+  precalculatedTotalExpenses?: number
+): Promise<{ mealRate: number; totalMeals: number; totalExpenses: number }> {
   try {
-    // Get period-aware where clause for meals
-    const periodFilter = await getPeriodAwareWhereClause(roomId, {});
-
-    // If no active period, return 0
-    if (periodFilter.id === null) {
+    if (!periodId) {
       return { mealRate: 0, totalMeals: 0, totalExpenses: 0 };
     }
 
@@ -129,12 +121,14 @@ async function calculateMealRate(roomId: string): Promise<{ mealRate: number; to
     const totalMeals = await prisma.meal.count({
       where: {
         roomId,
-        periodId: periodFilter.periodId,
+        periodId: periodId, // Use direct ID filter
       },
     });
 
-    // Get total expenses
-    const totalExpenses = await calculateTotalExpenses(roomId);
+    // Get total expenses (use pre-calculated if available)
+    const totalExpenses = precalculatedTotalExpenses !== undefined
+      ? precalculatedTotalExpenses
+      : await calculateTotalExpenses(roomId, periodId);
 
     // Calculate meal rate
     const mealRate = totalMeals > 0 ? totalExpenses / totalMeals : 0;
@@ -146,13 +140,10 @@ async function calculateMealRate(roomId: string): Promise<{ mealRate: number; to
   }
 }
 
-async function calculateUserMealCount(userId: string, roomId: string): Promise<number> {
+// Optimized: Accepts periodId
+async function calculateUserMealCount(userId: string, roomId: string, periodId: string | null | undefined): Promise<number> {
   try {
-    // Get period-aware where clause
-    const periodFilter = await getPeriodAwareWhereClause(roomId, {});
-
-    // If no active period, return 0
-    if (periodFilter.id === null) {
+    if (!periodId) {
       return 0;
     }
 
@@ -160,7 +151,7 @@ async function calculateUserMealCount(userId: string, roomId: string): Promise<n
       where: {
         userId,
         roomId,
-        periodId: periodFilter.periodId,
+        periodId: periodId,
       },
     });
   } catch (error) {
@@ -169,19 +160,31 @@ async function calculateUserMealCount(userId: string, roomId: string): Promise<n
   }
 }
 
-async function calculateAvailableBalance(userId: string, roomId: string): Promise<{
+// Optimized: Accepts periodId and mealRate info
+async function calculateAvailableBalance(
+  userId: string,
+  roomId: string,
+  periodId: string | null | undefined,
+  mealRateInfo?: { mealRate: number }
+): Promise<{
   availableBalance: number;
   totalSpent: number;
   mealCount: number;
   mealRate: number;
 }> {
   try {
-    const [balance, mealCount, { mealRate }] = await Promise.all([
-      calculateBalance(userId, roomId),
-      calculateUserMealCount(userId, roomId),
-      calculateMealRate(roomId),
+    // If we don't have mealRate info, fetch it
+    const mealRatePromise = mealRateInfo
+      ? Promise.resolve({ mealRate: mealRateInfo.mealRate })
+      : calculateMealRate(roomId, periodId);
+
+    const [balance, mealCount, mealRateData] = await Promise.all([
+      calculateBalance(userId, roomId, periodId),
+      calculateUserMealCount(userId, roomId, periodId),
+      mealRatePromise,
     ]);
 
+    const mealRate = 'mealRate' in mealRateData ? mealRateData.mealRate : 0;
     const totalSpent = mealCount * mealRate;
     const availableBalance = balance - totalSpent;
 
@@ -230,13 +233,14 @@ export async function GET(request: NextRequest) {
 
     const hasPrivilege = isPrivileged(member.role);
 
+    // Fetch current period ONCE for the entire request
+    const currentPeriod = await getCurrentPeriod(roomId);
+    const periodId = currentPeriod?.id;
+
     if (getAll) {
       if (!hasPrivilege) {
         return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
       }
-
-      // Get current period info
-      const currentPeriod = await getCurrentPeriod(roomId);
 
       const members = await prisma.roomMember.findMany({
         where: { roomId },
@@ -248,7 +252,7 @@ export async function GET(request: NextRequest) {
         by: ['targetUserId'],
         where: {
           roomId,
-          periodId: currentPeriod?.id,
+          periodId: periodId,
         },
         _sum: {
           amount: true,
@@ -265,7 +269,7 @@ export async function GET(request: NextRequest) {
         by: ['userId'],
         where: {
           roomId,
-          periodId: currentPeriod?.id,
+          periodId: periodId,
         },
         _count: {
           id: true,
@@ -277,12 +281,12 @@ export async function GET(request: NextRequest) {
         if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
       });
 
-      // Calculate group totals
-      const [groupTotalBalance, totalExpenses, { mealRate, totalMeals }] = await Promise.all([
-        calculateGroupTotalBalance(roomId),
-        calculateTotalExpenses(roomId),
-        calculateMealRate(roomId),
-      ]);
+      // Calculate group totals efficiently
+      // We calculate total expenses first, then pass it to meal rate calculation
+      const totalExpenses = await calculateTotalExpenses(roomId, periodId);
+      const { mealRate, totalMeals } = await calculateMealRate(roomId, periodId, totalExpenses);
+
+      const groupTotalBalance = await calculateGroupTotalBalance(roomId, periodId);
 
       // Construct the response in memory
       const membersWithBalances = members.map((m) => {
@@ -310,8 +314,6 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      // currentPeriod already fetched above
-
       const response: any = {
         members: membersWithBalances,
         groupTotalBalance,
@@ -337,11 +339,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
-    const [targetUser, balance, availableBalanceData, currentPeriod] = await Promise.all([
+    // Optimization: Calculate everything in parallel, passing the pre-fetched periodId
+    // For single user, we may need meal rate if includeDetails is true
+    let availableBalanceData: any = null;
+
+    if (includeDetails) {
+      availableBalanceData = await calculateAvailableBalance(targetUserId, roomId, periodId);
+    }
+
+    const [targetUser, balance] = await Promise.all([
       prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, name: true, image: true, email: true } }),
-      calculateBalance(targetUserId, roomId),
-      includeDetails ? calculateAvailableBalance(targetUserId, roomId) : null,
-      getCurrentPeriod(roomId),
+      calculateBalance(targetUserId, roomId, periodId),
     ]);
 
     if (!targetUser) {
@@ -361,7 +369,7 @@ export async function GET(request: NextRequest) {
       } : null,
     };
 
-    if (includeDetails && availableBalanceData) {
+    if (availableBalanceData) {
       Object.assign(response, availableBalanceData);
     }
 
@@ -434,5 +442,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
-
-// No PUT and DELETE for this route, handled in [transactionId] route 
