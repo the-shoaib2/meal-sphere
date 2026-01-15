@@ -38,13 +38,21 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+      // Lazy check: Ensure monthly period logic is enforced when listing periods
+      try {
+        await PeriodService.ensureMonthPeriod(groupId, session.user.id);
+      } catch (e) {
+        console.warn('Failed to ensure monthly period:', e);
+        // Continue anyway to show existing periods
+      }
+
       const periods = await PeriodService.getPeriods(groupId, includeArchived);
       return NextResponse.json({ periods });
     } catch (dbError: any) {
       // Handle case where database schema hasn't been updated yet
-      if (dbError.message?.includes('Unknown table') || 
-          dbError.message?.includes('doesn\'t exist') ||
-          dbError.message?.includes('MealPeriod')) {
+      if (dbError.message?.includes('Unknown table') ||
+        dbError.message?.includes('doesn\'t exist') ||
+        dbError.message?.includes('MealPeriod')) {
         return NextResponse.json({ periods: [] });
       }
       throw dbError;
@@ -107,9 +115,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     } catch (dbError: any) {
       // Handle case where database schema hasn't been updated yet
-      if (dbError.message?.includes('Unknown table') || 
-          dbError.message?.includes('doesn\'t exist') ||
-          dbError.message?.includes('MealPeriod')) {
+      if (dbError.message?.includes('Unknown table') ||
+        dbError.message?.includes('doesn\'t exist') ||
+        dbError.message?.includes('MealPeriod')) {
         return NextResponse.json(
           { error: 'Period management is not available yet. Please update the database schema first.' },
           { status: 503 }

@@ -64,7 +64,7 @@ const data: {
 
         { category: "Tools" },
         { title: "Voting", url: "/voting", icon: Vote },
-        { title: "Analytics", url: "/analytics", icon: TrendingUp },
+        // Analytics moved to dashboard
         { title: "Excel", url: "/excel", icon: FileSpreadsheet },
         { title: "Notifications", url: "/notifications", icon: Bell },
 

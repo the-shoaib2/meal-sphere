@@ -3,16 +3,16 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  DollarSign, 
+import {
+  DollarSign,
   ArrowUpRight, 
   ArrowDownLeft, 
   Receipt, 
@@ -22,6 +22,8 @@ import {
   TrendingDown
 } from 'lucide-react';
 import type { UserBalance, AccountTransaction } from '@/hooks/use-account-balance';
+import { NumberTicker } from "@/components/ui/number-ticker";
+
 import { Session } from 'next-auth';
 
 interface MemberViewProps {
@@ -42,6 +44,7 @@ export default function MemberView({ balance, transactions, userRole, session }:
 
   const currentBalance = balance?.balance ?? 0;
   const availableBalance = balance?.availableBalance ?? 0;
+  const netFlow = totalReceived - totalSent;
 
   return (
     <div className="space-y-4">
@@ -57,12 +60,14 @@ export default function MemberView({ balance, transactions, userRole, session }:
           <CardContent>
             <div className="space-y-2">
               <p className={`text-4xl font-bold ${currentBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ৳{currentBalance.toFixed(2)}
+                {currentBalance < 0 && "-"}৳
+                <NumberTicker value={Math.abs(currentBalance)} decimalPlaces={2} />
               </p>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">Available:</span>
                 <span className={`font-semibold text-lg ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ৳{availableBalance.toFixed(2)}
+                  {availableBalance < 0 && "-"}৳
+                  <NumberTicker value={Math.abs(availableBalance)} decimalPlaces={2} />
                 </span>
               </div>
             </div>
@@ -84,11 +89,15 @@ export default function MemberView({ balance, transactions, userRole, session }:
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Meal Rate</span>
-                <span className="font-medium text-blue-600">৳{(balance?.mealRate ?? 0).toFixed(2)}</span>
+                <span className="font-medium text-blue-600">
+                  ৳<NumberTicker value={balance?.mealRate ?? 0} decimalPlaces={2} />
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Spent</span>
-                <span className="font-medium text-red-600">৳{(balance?.totalSpent ?? 0).toFixed(2)}</span>
+                <span className="font-medium text-red-600">
+                  ৳<NumberTicker value={balance?.totalSpent ?? 0} decimalPlaces={2} />
+                </span>
               </div>
             </div>
           </CardContent>
@@ -97,29 +106,32 @@ export default function MemberView({ balance, transactions, userRole, session }:
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <QuickStat 
-          icon={Receipt} 
-          title="Transactions" 
+        <QuickStat
+          icon={Receipt}
+          title="Transactions"
           value={transactions.length}
           color="text-blue-600"
         />
-        <QuickStat 
-          icon={TrendingUp} 
-          title="Received" 
-          value={`৳${totalReceived.toFixed(2)}`}
+        <QuickStat
+          icon={TrendingUp}
+          title="Received"
+          value={totalReceived}
+          isCurrency
           color="text-green-600"
         />
-        <QuickStat 
-          icon={TrendingDown} 
-          title="Sent" 
-          value={`৳${totalSent.toFixed(2)}`}
+        <QuickStat
+          icon={TrendingDown}
+          title="Sent"
+          value={totalSent}
+          isCurrency
           color="text-red-600"
         />
-        <QuickStat 
-          icon={Calculator} 
-          title="Net Flow" 
-          value={`৳${(totalReceived - totalSent).toFixed(2)}`}
-          color={(totalReceived - totalSent) >= 0 ? "text-green-600" : "text-red-600"}
+        <QuickStat
+          icon={Calculator}
+          title="Net Flow"
+          value={netFlow}
+          isCurrency
+          color={netFlow >= 0 ? "text-green-600" : "text-red-600"}
         />
       </div>
 
@@ -142,10 +154,10 @@ export default function MemberView({ balance, transactions, userRole, session }:
                 </TableHeader>
                 <TableBody>
                   {transactions.map((transaction) => (
-                    <TransactionRow 
-                      key={transaction.id} 
-                      transaction={transaction} 
-                      currentUserId={session?.user?.id} 
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      currentUserId={session?.user?.id}
                     />
                   ))}
                 </TableBody>
@@ -163,11 +175,12 @@ export default function MemberView({ balance, transactions, userRole, session }:
   );
 }
 
-const QuickStat = ({ icon: Icon, title, value, color }: {
+const QuickStat = ({ icon: Icon, title, value, color, isCurrency = false }: {
   icon: React.ElementType,
   title: string,
   value: string | number,
-  color: string
+  color: string,
+  isCurrency?: boolean
 }) => (
   <Card>
     <CardContent className="p-4">
@@ -177,16 +190,24 @@ const QuickStat = ({ icon: Icon, title, value, color }: {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground truncate">{title}</p>
-          <p className={`text-sm font-semibold truncate ${color}`}>{value}</p>
+          <p className={`text-sm font-semibold truncate ${color}`}>
+            {typeof value === 'number' ? (
+              <>
+                {isCurrency && (value < 0 ? "-" : "")}
+                {isCurrency && "৳"}
+                <NumberTicker value={Math.abs(value)} decimalPlaces={isCurrency ? 2 : 0} />
+              </>
+            ) : value}
+          </p>
         </div>
       </div>
     </CardContent>
   </Card>
 );
 
-const TransactionRow = ({ transaction, currentUserId }: { 
-  transaction: AccountTransaction, 
-  currentUserId?: string 
+const TransactionRow = ({ transaction, currentUserId }: {
+  transaction: AccountTransaction,
+  currentUserId?: string
 }) => {
   const isSender = transaction.userId === currentUserId;
   const isReceiver = transaction.targetUserId === currentUserId;
@@ -217,9 +238,9 @@ const TransactionRow = ({ transaction, currentUserId }: {
         {new Date(transaction.createdAt).toLocaleDateString()}
         <br />
         <span className="text-xs">
-          {new Date(transaction.createdAt).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
+          {new Date(transaction.createdAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
           })}
         </span>
       </TableCell>

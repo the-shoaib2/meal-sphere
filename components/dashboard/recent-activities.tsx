@@ -17,6 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -172,7 +173,7 @@ export default function RecentActivities() {
             </CardTitle>
           </div>
           <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
-            {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
+            <NumberTicker value={activities.length} /> {activities.length === 1 ? 'activity' : 'activities'}
           </Badge>
         </div>
         <CardDescription className="text-xs sm:text-sm">

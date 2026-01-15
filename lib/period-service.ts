@@ -23,6 +23,8 @@ export interface PeriodSummary {
 
 
 
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+
 export interface CreatePeriodData {
   name: string;
   startDate: Date;
@@ -33,6 +35,82 @@ export interface CreatePeriodData {
 }
 
 export class PeriodService {
+  /**
+   * Ensure a period exists for the current month if in MONTHLY mode.
+   * Ends previous periods if necessary.
+   */
+  static async ensureMonthPeriod(groupId: string, userId: string): Promise<void> {
+    // Check group mode
+    const room = await prisma.room.findUnique({
+      where: { id: groupId },
+      select: { periodMode: true },
+    });
+
+    if (room?.periodMode !== 'MONTHLY') {
+      return;
+    }
+
+    const now = new Date();
+    const currentMonthStart = startOfMonth(now);
+    const monthName = format(now, 'MMMM yyyy');
+
+    // Check for active period
+    const activePeriod = await prisma.mealPeriod.findFirst({
+      where: {
+        roomId: groupId,
+        status: PeriodStatus.ACTIVE,
+      },
+    });
+
+    // If active period exists
+    if (activePeriod) {
+      // Check if it's for a previous month
+      const isPreviousMonth = activePeriod.startDate < currentMonthStart;
+
+      if (isPreviousMonth) {
+        // End the previous period
+        // We use system/admin override style here since this is an automated system action
+        // We might need to handle closing balance -> opening balance if we want full auto
+        await this.endPeriod(groupId, userId, endOfMonth(activePeriod.startDate));
+      } else {
+        // Current period is valid, nothing to do
+        return;
+      }
+    }
+
+    // Double check if period for this month already exists (maybe ended or archived)
+    const existingMonthPeriod = await prisma.mealPeriod.findFirst({
+      where: {
+        roomId: groupId,
+        name: monthName,
+      },
+    });
+
+    if (!existingMonthPeriod) {
+      // Create new period for current month
+      // We need to decide on opening balance. 
+      // Ideally fetch last ended period and get its closing balance if carryForward is enabled.
+      // For now, simpler implementation:
+
+      const lastEndedPeriod = await prisma.mealPeriod.findFirst({
+        where: { roomId: groupId, status: PeriodStatus.ENDED },
+        orderBy: { endDate: 'desc' },
+      });
+
+      let openingBalance = 0;
+      if (lastEndedPeriod && lastEndedPeriod.carryForward && lastEndedPeriod.closingBalance !== null) {
+        openingBalance = lastEndedPeriod.closingBalance;
+      }
+
+      await this.startPeriod(groupId, userId, {
+        name: monthName,
+        startDate: currentMonthStart,
+        endDate: null,
+        openingBalance,
+        carryForward: false, // Default to false for fresh monthly start? Or inherit? User didn't specify.
+      });
+    }
+  }
   /**
    * Validate period uniqueness for a group
    */

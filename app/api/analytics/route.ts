@@ -7,6 +7,7 @@ import { getPeriodAwareWhereClause, validateActivePeriod } from '@/lib/period-ut
 
 
 // Force dynamic rendering - don't pre-render during build
+// Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -21,10 +22,9 @@ export async function GET(request: NextRequest) {
     const groupId = searchParams.get('groupId');
 
     // Get user's room memberships.
-    // We do NOT use include: { room: true } here because if a room is deleted but the member exists (orphan),
-    // Prisma throws "Inconsistent query result: Field room is required to return data, got `null` instead."
     const memberships = await prisma.roomMember.findMany({
       where: { userId: session.user.id },
+      select: { roomId: true }
     });
 
     if (!memberships) {
@@ -32,161 +32,142 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all room IDs the user is part of
-    const allRoomIds = memberships.map((m) => m.roomId);
+    let roomIds = memberships.map((m) => m.roomId);
 
-    // Fetch only the rooms that actually exist
+    // Fetch valid rooms to ensure they exist and get names
     const validRooms = await prisma.room.findMany({
-      where: {
-        id: { in: allRoomIds },
-      },
+      where: { id: { in: roomIds } },
+      select: { id: true, name: true }
     });
 
-    // Filter memberships to only those that correspond to a valid room
-    const validMemberships = memberships.filter(m =>
-      validRooms.some(r => r.id === m.roomId)
-    );
-
-    // Get room IDs from valid memberships
-    let roomIds = validRooms.map(r => r.id);
+    // Update roomIds to only include valid ones
+    roomIds = validRooms.map(r => r.id);
 
     // Filter to requested group if needed
     if (groupId && groupId !== 'all') {
-      const isMember = validMemberships.some(m => m.roomId === groupId);
-      if (!isMember) {
+      if (!roomIds.includes(groupId)) {
         return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
       }
       roomIds = [groupId];
     }
 
-    // Fetch meals with period filtering
-    const mealsPromises = roomIds.map(async (roomId) => {
-      const whereClause = await getPeriodAwareWhereClause(roomId, {
-        roomId: roomId,
+    if (roomIds.length === 0) {
+      return NextResponse.json({
+        meals: [],
+        expenses: [],
+        shoppingItems: [],
+        calculations: [],
+        mealDistribution: [],
+        expenseDistribution: [],
+        monthlyExpenses: [],
+        mealRateTrend: [],
+        roomStats: []
       });
+    }
 
-      if (whereClause.id === null) {
-        return [];
-      }
+    // --- OPTIMIZATION START ---
 
-      return prisma.meal.findMany({
-        where: whereClause,
-        include: {
-          room: {
-            select: { id: true, name: true },
-          },
-          user: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { date: 'desc' },
-      });
-    });
-
-    const mealsArrays = await Promise.all(mealsPromises);
-    const meals = mealsArrays.flat();
-
-    // Fetch expenses with period filtering
-    const expensesPromises = roomIds.map(async (roomId) => {
-      const whereClause = await getPeriodAwareWhereClause(roomId, {
-        roomId: roomId,
-      });
-
-      if (whereClause.id === null) {
-        return [];
-      }
-
-      return prisma.extraExpense.findMany({
-        where: whereClause,
-        include: {
-          room: {
-            select: { id: true, name: true },
-          },
-          user: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { date: 'desc' },
-      });
-    });
-
-    const expensesArrays = await Promise.all(expensesPromises);
-    const expenses = expensesArrays.flat();
-
-    // Fetch shopping items with period filtering
-    const shoppingPromises = roomIds.map(async (roomId) => {
-      const whereClause = await getPeriodAwareWhereClause(roomId, {
-        roomId: roomId,
-      });
-
-      if (whereClause.id === null) {
-        return [];
-      }
-
-      return prisma.shoppingItem.findMany({
-        where: whereClause,
-        include: {
-          room: {
-            select: { id: true, name: true },
-          },
-          user: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { date: 'desc' },
-      });
-    });
-
-    const shoppingArrays = await Promise.all(shoppingPromises);
-    const shoppingItems = shoppingArrays.flat();
-
-    // Get room member counts
-    const roomMembers = await prisma.roomMember.findMany({
+    // 1. Batch fetch active periods for all selected rooms
+    const activePeriods = await prisma.mealPeriod.findMany({
       where: {
         roomId: { in: roomIds },
+        status: 'ACTIVE'
       },
-      select: {
-        roomId: true,
-        // Remove room include here as it might crash if other members have broken links too
-        // We only need roomId for counting
-      },
+      select: { id: true, roomId: true, startDate: true, endDate: true }
     });
 
-    const memberCounts = roomMembers.reduce((acc, member) => {
-      acc[member.roomId] = (acc[member.roomId] || 0) + 1;
+    const activePeriodIds = activePeriods.map(p => p.id);
+    // Create a map for quick period lookup by roomId
+    const periodMap = new Map<string, typeof activePeriods[0]>();
+    activePeriods.forEach(p => periodMap.set(p.roomId, p));
+
+    // 2. Batch fetch data only for active periods (using periodId index)
+    // If a room has no active period, we effectively skip fetching massive history for it
+    const [meals, expenses, shoppingItems, roomMembers] = await Promise.all([
+      // Fetch meals
+      activePeriodIds.length > 0 ? prisma.meal.findMany({
+        where: { periodId: { in: activePeriodIds } },
+        include: {
+          room: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true } }
+        },
+        orderBy: { date: 'desc' }
+      }) : Promise.resolve([]),
+
+      // Fetch expenses
+      activePeriodIds.length > 0 ? prisma.extraExpense.findMany({
+        where: { periodId: { in: activePeriodIds } },
+        include: {
+          room: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true } }
+        },
+        orderBy: { date: 'desc' }
+      }) : Promise.resolve([]),
+
+      // Fetch shopping items
+      activePeriodIds.length > 0 ? prisma.shoppingItem.findMany({
+        where: { periodId: { in: activePeriodIds } },
+        include: {
+          room: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true } }
+        },
+        orderBy: { date: 'desc' }
+      }) : Promise.resolve([]),
+
+      // Fetch member counts (grouped)
+      prisma.roomMember.groupBy({
+        by: ['roomId'],
+        where: { roomId: { in: roomIds } },
+        _count: { userId: true }
+      })
+    ]);
+
+    // Create member count map
+    const memberCounts = roomMembers.reduce((acc, curr) => {
+      acc[curr.roomId] = curr._count.userId;
       return acc;
     }, {} as Record<string, number>);
 
-    // Calculate meal rates for each room
-    const calculations = await Promise.all(
-      roomIds.map(async (roomId) => {
-        const roomMeals = meals.filter(meal => meal.roomId === roomId);
-        const roomExpenses = expenses.filter(expense => expense.roomId === roomId);
-        const roomShopping = shoppingItems.filter(item => item.roomId === roomId);
+    // 3. Perform calculations in memory
+    const calculations = roomIds.map((roomId) => {
+      const roomMeals = meals.filter(m => m.roomId === roomId);
+      const roomExpenses = expenses.filter(e => e.roomId === roomId);
+      const roomShopping = shoppingItems.filter(s => s.roomId === roomId);
 
-        const totalMeals = roomMeals.length;
-        const totalExpense = roomExpenses.reduce((sum, expense) => sum + expense.amount, 0) +
-          roomShopping.reduce((sum, item) => sum + (item.quantity || 0), 0);
-        const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
+      const totalMeals = roomMeals.length;
+      const totalExpense = roomExpenses.reduce((sum, e) => sum + e.amount, 0) +
+        roomShopping.reduce((sum, s) => sum + (s.quantity || 0), 0);
 
+      const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
+
+      // Use period dates if available, otherwise calculate from data
+      const period = periodMap.get(roomId);
+      let startDate: Date, endDate: Date;
+
+      if (period) {
+        startDate = new Date(period.startDate);
+        endDate = period.endDate ? new Date(period.endDate) : new Date();
+      } else {
+        // Fallback for rooms without active period (should be empty data usually)
         const dates = [...roomMeals, ...roomExpenses, ...roomShopping].map(item => item.date);
-        const startDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => d.getTime()))) : new Date();
-        const endDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
+        startDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => d.getTime()))) : new Date();
+        endDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
+      }
 
-        const roomName = validRooms.find(r => r.id === roomId)?.name || 'Unknown Room';
+      const roomName = validRooms.find(r => r.id === roomId)?.name || 'Unknown Room';
 
-        return {
-          id: roomId,
-          roomId,
-          roomName: roomName,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          totalMeals,
-          totalExpense,
-          mealRate,
-          memberCount: memberCounts[roomId] || 0,
-        };
-      })
-    );
+      return {
+        id: roomId,
+        roomId,
+        roomName,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        totalMeals,
+        totalExpense,
+        mealRate,
+        memberCount: memberCounts[roomId] || 0,
+      };
+    });
 
     // Generate chart data
     const mealDistribution = generateMealCountData(meals);
@@ -194,7 +175,6 @@ export async function GET(request: NextRequest) {
     const mealRateTrend = generateMealRateTrendData(calculations);
     const monthlyExpenses = generateMonthlyExpenseData(expenses, shoppingItems);
 
-    // Generate room stats
     // Generate room stats
     const roomStats = calculations.map(calc => {
       const start = new Date(calc.startDate);
@@ -232,4 +212,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
+

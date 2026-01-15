@@ -45,14 +45,21 @@ export async function GET(
       return NextResponse.json({ period });
     } catch (dbError: any) {
       // Handle case where database schema hasn't been updated yet
-      if (dbError.message?.includes('Unknown table') || 
-          dbError.message?.includes('doesn\'t exist') ||
-          dbError.message?.includes('MealPeriod')) {
+      if (dbError.message?.includes('Unknown table') ||
+        dbError.message?.includes('doesn\'t exist') ||
+        dbError.message?.includes('MealPeriod')) {
         return NextResponse.json({ error: 'Period not found' }, { status: 404 });
       }
       throw dbError;
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'Period not found') {
+      return NextResponse.json({ error: 'Period not found' }, { status: 404 });
+    }
+    if (error.message === 'Period does not belong to the specified group') {
+      return NextResponse.json({ error: 'Period does not belong to this group' }, { status: 403 });
+    }
+
     console.error('Error fetching period:', error);
     return NextResponse.json(
       { error: 'Failed to fetch period' },
@@ -120,18 +127,18 @@ export async function PATCH(
       return NextResponse.json(result);
     } catch (dbError: any) {
       console.error('Database error in period API:', dbError);
-      
+
       // Handle case where database schema hasn't been updated yet
-      if (dbError.message?.includes('Unknown table') || 
-          dbError.message?.includes('doesn\'t exist') ||
-          dbError.message?.includes('MealPeriod') ||
-          dbError.code === 'P2023') {
+      if (dbError.message?.includes('Unknown table') ||
+        dbError.message?.includes('doesn\'t exist') ||
+        dbError.message?.includes('MealPeriod') ||
+        dbError.code === 'P2023') {
         return NextResponse.json(
           { error: 'Period management is not available yet. Please update the database schema first.' },
           { status: 503 }
         );
       }
-      
+
       // Handle unique constraint violations
       if (dbError.code === 'P2002') {
         return NextResponse.json(
@@ -139,7 +146,7 @@ export async function PATCH(
           { status: 400 }
         );
       }
-      
+
       // Re-throw other database errors
       throw dbError;
     }

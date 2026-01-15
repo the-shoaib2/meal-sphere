@@ -3,36 +3,95 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
-  Bell,
   Utensils,
   CreditCard,
   ShoppingBag,
   Users,
   RefreshCw,
   Settings,
-  BarChart3
+  BarChart3,
+  CheckSquare,
+  PieChart as PieChartIcon,
+  AreaChart,
+  TrendingUp,
 } from "lucide-react"
 import DashboardSummaryCards from "@/components/dashboard/summary-cards"
 import MealChart from "@/components/dashboard/meal-chart"
 import RecentActivities from "@/components/dashboard/recent-activities"
 import { useDashboardSummary, useDashboardRefresh } from "@/hooks/use-dashboard"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth/auth"
 import { redirect } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
 import { Badge } from "@/components/ui/badge"
 import { DashboardProvider } from "@/contexts/dashboard-context"
 import { useActiveGroup } from "@/contexts/group-context"
+import { useSelectedRoomsAnalytics, useAnalytics, useUserRooms, AnalyticsData } from "@/hooks/use-analytics"
+import { useState, useEffect } from "react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { AnalyticsCard } from "@/components/analytics/analytics-card"
+import { RoomStatsTable } from "@/components/analytics/room-stats-table"
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Bar,
+  BarChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line
+} from "recharts"
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560"];
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { isLoading: isGroupLoading } = useActiveGroup();
+  const { activeGroup, isLoading: isGroupLoading } = useActiveGroup();
   const { data: dashboardData, isLoading: isDashboardLoading } = useDashboardSummary();
   const { mutate: refreshDashboard, isPending: isRefreshing } = useDashboardRefresh();
 
+  // Analytics State
+  const [viewMode, setViewMode] = useState<'current' | 'selected'>('current')
+  const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([])
+  const [showRoomSelector, setShowRoomSelector] = useState(false)
+
+  // Analytics Hooks
+  const { data: userRooms = [], isLoading: isLoadingRooms } = useUserRooms()
+  const { data: currentGroupData, isLoading: isLoadingCurrent } = useAnalytics()
+  const { data: selectedRoomsData, isLoading: isLoadingSelected } = useSelectedRoomsAnalytics(selectedRoomIds)
+
+  const isAnalyticsLoading = viewMode === 'current' ? isLoadingCurrent : isLoadingSelected
+  const analyticsData = viewMode === 'current' ? currentGroupData : selectedRoomsData
+
   if (!session?.user?.email) {
     redirect("/login")
+  }
+
+  // Effect for room selection
+  useEffect(() => {
+    if (userRooms.length > 0 && selectedRoomIds.length === 0) {
+      setSelectedRoomIds(userRooms.slice(0, 3).map(room => room.id))
+    }
+  }, [userRooms, selectedRoomIds.length])
+
+  const handleRoomToggle = (roomId: string) => {
+    setSelectedRoomIds(prev =>
+      prev.includes(roomId)
+        ? prev.filter(id => id !== roomId)
+        : [...prev, roomId]
+    )
+  }
+
+  const handleSelectAll = () => {
+    setSelectedRoomIds(userRooms.map(room => room.id))
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedRoomIds([])
   }
 
   // Only provide fallback values, all real data comes from the hook
@@ -43,20 +102,103 @@ export default function DashboardPage() {
   const activeRooms = 0
   const totalMembers = 0
 
+  const AnalyticsSkeleton = () => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={true} description="Key metrics for each room.">
+          <Skeleton className="h-[200px] w-full" />
+        </AnalyticsCard>
+      </div>
+
+      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of meals by type.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of expenses by type.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={true} description="Meal rate fluctuations over time.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={true} description="Total expenses per month.">
+          <Skeleton className="h-[250px] w-full" />
+        </AnalyticsCard>
+      </div>
+    </div>
+  )
+
+  const renderAnalyticsContent = (data: AnalyticsData) => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={isAnalyticsLoading} description="Key metrics for each room.">
+          <RoomStatsTable data={data.roomStats} />
+        </AnalyticsCard>
+      </div>
+
+      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of meals by type.">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie data={data.mealDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {data.mealDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of expenses by type.">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie data={data.expenseDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {data.expenseDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={isAnalyticsLoading} description="Meal rate fluctuations over time.">
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={data.mealRateTrend}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="value" stroke="#8884d8" name="Meal Rate" />
+          </LineChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={isAnalyticsLoading} description="Total expenses per month.">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={data.monthlyExpenses}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#82ca9d" name="Expenses" />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsCard>
+      </div>
+    </div>
+  );
+
   if (isGroupLoading || isDashboardLoading || isRefreshing) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        {/* Enhanced Header with title and buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="space-y-1">
-            <Skeleton className="h-7 sm:h-9 w-40 sm:w-48 rounded-md" />
-            <Skeleton className="h-3 sm:h-4 w-56 sm:w-64 rounded-md" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-8 sm:h-10 w-8 sm:w-10 rounded-md" />
-            <Skeleton className="h-8 sm:h-10 w-28 sm:w-36 rounded-md" />
-          </div>
-        </div>
 
         {/* Summary Cards Section */}
         <div className="space-y-3 sm:space-y-4">
@@ -198,7 +340,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <h2 className="text-base sm:text-lg lg:text-xl font-semibold">Analytics & Activities</h2>
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold">Activity Overview</h2>
             </div>
             <Button
               variant="outline"
@@ -285,6 +427,67 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+
+        {/* Detailed Analytics Section */}
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex items-center gap-2">
+            <PieChartIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <h2 className="text-lg sm:text-xl font-semibold">Detailed Analytics</h2>
+          </div>
+
+          {viewMode === 'selected' && showRoomSelector && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="h-5 w-5 text-primary" />
+                    <CardTitle>Select Rooms for Analytics</CardTitle>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDeselectAll}>
+                      Deselect All
+                    </Button>
+                  </div>
+                </div>
+                <CardDescription>
+                  Choose which rooms to include in your analytics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {userRooms.map((room) => (
+                    <div key={room.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={room.id}
+                        checked={selectedRoomIds.includes(room.id)}
+                        onCheckedChange={() => handleRoomToggle(room.id)}
+                      />
+                      <label
+                        htmlFor={room.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{room.name}</span>
+                          <Badge variant="outline" className="ml-2">
+                            {room.memberCount} members
+                          </Badge>
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isAnalyticsLoading && <AnalyticsSkeleton />}
+          {!isAnalyticsLoading && analyticsData && renderAnalyticsContent(analyticsData)}
+          {!isAnalyticsLoading && !analyticsData && <p className="text-muted-foreground">No analytics data available.</p>}
+        </div>
+
       </div>
     </DashboardProvider>
   )

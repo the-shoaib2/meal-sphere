@@ -63,6 +63,13 @@ export async function GET(
       throw dbError;
     }
   } catch (error: any) {
+    if (error.message === 'Period not found') {
+      return NextResponse.json({ error: 'Period not found' }, { status: 404 });
+    }
+    if (error.message === 'Period does not belong to the specified group') {
+      return NextResponse.json({ error: 'Period does not belong to this group' }, { status: 403 });
+    }
+
     console.error('Error fetching period summary:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch period summary' },

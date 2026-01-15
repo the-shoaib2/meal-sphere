@@ -5,6 +5,7 @@ import { Calendar, Utensils, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PeriodSummaryCard } from './period-summary-card';
 import { PeriodStatus, MealPeriod } from '@prisma/client';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 interface PeriodOverviewSectionProps {
   periods: MealPeriod[];
@@ -31,9 +32,9 @@ export function PeriodOverviewSection({
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{periods?.length || 0}</div>
+            <div className="text-xl sm:text-2xl font-bold"><NumberTicker value={periods?.length || 0} /></div>
             <p className="text-xs text-muted-foreground">
-              {periods?.filter((p: MealPeriod) => p.status === PeriodStatus.ACTIVE).length || 0} active
+              <NumberTicker value={periods?.filter((p: MealPeriod) => p.status === PeriodStatus.ACTIVE).length || 0} /> active
             </p>
           </CardContent>
         </Card>
@@ -44,10 +45,10 @@ export function PeriodOverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold">
-              {currentPeriod ? (periodSummary?.totalMeals || 0) : 0}
+              <NumberTicker value={currentPeriod ? (periodSummary?.totalMeals || 0) : 0} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {currentPeriod ? (periodSummary?.totalGuestMeals || 0) : 0} guest meals
+              <NumberTicker value={currentPeriod ? (periodSummary?.totalGuestMeals || 0) : 0} /> guest meals
             </p>
           </CardContent>
         </Card>
@@ -58,10 +59,10 @@ export function PeriodOverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold">
-              ${currentPeriod ? (periodSummary?.totalShoppingAmount || 0).toFixed(2) : '0.00'}
+              $<NumberTicker value={currentPeriod ? (periodSummary?.totalShoppingAmount || 0) : 0} decimalPlaces={2} />
             </div>
             <p className="text-xs text-muted-foreground">
-              + ${currentPeriod ? (periodSummary?.totalExtraExpenses || 0).toFixed(2) : '0.00'} extra
+              + $<NumberTicker value={currentPeriod ? (periodSummary?.totalExtraExpenses || 0) : 0} decimalPlaces={2} /> extra
             </p>
           </CardContent>
         </Card>
@@ -72,10 +73,10 @@ export function PeriodOverviewSection({
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold">
-              ${currentPeriod ? (periodSummary?.totalPayments || 0).toFixed(2) : '0.00'}
+              $<NumberTicker value={currentPeriod ? (periodSummary?.totalPayments || 0) : 0} decimalPlaces={2} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {activeGroup?.members?.length || 0} active members
+              <NumberTicker value={activeGroup?.members?.length || 0} /> active members
             </p>
           </CardContent>
         </Card>

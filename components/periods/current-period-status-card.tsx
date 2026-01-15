@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { EndPeriodDialog } from './end-period-dialog';
 import { Calendar, Users, Unlock, Lock } from 'lucide-react';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 
 export function CurrentPeriodStatusCard({
@@ -46,7 +47,7 @@ export function CurrentPeriodStatusCard({
             <div className="flex items-center space-x-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs sm:text-sm text-muted-foreground">
-                {activeGroup?.members?.length || 0} members
+                <NumberTicker value={activeGroup?.members?.length || 0} /> members
               </span>
             </div>
             {/* Status badge can be added here if needed */}
@@ -92,4 +93,3 @@ export function CurrentPeriodStatusCard({
   );
 }
 
- 

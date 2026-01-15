@@ -1,4 +1,5 @@
 "use client"
+import "./globals.css"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,9 +8,11 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 
+import { SessionProvider } from "@/components/providers/session-provider"
+
 export const dynamic = 'force-dynamic'
 
-export default function NotFound() {
+function NotFoundContent() {
   const router = useRouter()
   const { data: session } = useSession()
 
@@ -82,5 +85,13 @@ export default function NotFound() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function NotFound() {
+  return (
+    <SessionProvider>
+      <NotFoundContent />
+    </SessionProvider>
   )
 } 

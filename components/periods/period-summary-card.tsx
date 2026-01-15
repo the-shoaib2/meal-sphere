@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { PeriodSummary } from '@/hooks/use-periods';
 import { PeriodStatus } from '@prisma/client';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 
 interface PeriodSummaryCardProps {
@@ -18,7 +19,7 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
   if (!period) return null;
 
   const getStatusBadge = () => {
-        return <Badge variant="default">Active</Badge>;
+    return <Badge variant="default">Active</Badge>;
   };
 
   const totalExpenses = (summary?.totalShoppingAmount || 0) + (summary?.totalExtraExpenses || 0);
@@ -49,9 +50,9 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
               <Utensils className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Meals</span>
             </div>
-            <div className="text-2xl font-bold">{summary?.totalMeals || 0}</div>
+            <div className="text-2xl font-bold"><NumberTicker value={summary?.totalMeals || 0} /></div>
             <p className="text-xs text-muted-foreground">
-              {summary?.totalGuestMeals || 0} guest meals
+              <NumberTicker value={summary?.totalGuestMeals || 0} /> guest meals
             </p>
           </div>
 
@@ -60,9 +61,9 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
               <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Members</span>
             </div>
-            <div className="text-2xl font-bold">{summary?.memberCount || 0}</div>
+            <div className="text-2xl font-bold"><NumberTicker value={summary?.memberCount || 0} /></div>
             <p className="text-xs text-muted-foreground">
-              {summary?.activeMemberCount || 0} active
+              <NumberTicker value={summary?.activeMemberCount || 0} /> active
             </p>
           </div>
         </div>
@@ -70,34 +71,34 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
         {/* Financial Summary */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium">Financial Summary</h4>
-          
+
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Opening Balance:</span>
-              <span className="font-medium">${(summary?.openingBalance || 0).toFixed(2)}</span>
+              <span className="font-medium">$<NumberTicker value={summary?.openingBalance || 0} decimalPlaces={2} /></span>
             </div>
-            
+
             <div className="flex justify-between text-sm">
               <span>Total Payments:</span>
-              <span className="font-medium text-green-600">+${(summary?.totalPayments || 0).toFixed(2)}</span>
+              <span className="font-medium text-green-600">+$<NumberTicker value={summary?.totalPayments || 0} decimalPlaces={2} /></span>
             </div>
-            
+
             <div className="flex justify-between text-sm">
               <span>Shopping Expenses:</span>
-              <span className="font-medium text-red-600">-${(summary?.totalShoppingAmount || 0).toFixed(2)}</span>
+              <span className="font-medium text-red-600">-$<NumberTicker value={summary?.totalShoppingAmount || 0} decimalPlaces={2} /></span>
             </div>
-            
+
             <div className="flex justify-between text-sm">
               <span>Extra Expenses:</span>
-              <span className="font-medium text-red-600">-${(summary?.totalExtraExpenses || 0).toFixed(2)}</span>
+              <span className="font-medium text-red-600">-$<NumberTicker value={summary?.totalExtraExpenses || 0} decimalPlaces={2} /></span>
             </div>
-            
+
             <div className="border-t pt-2">
               <div className="flex justify-between text-sm font-medium">
                 <span>Net Balance:</span>
                 <span className={`flex items-center space-x-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                   {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  <span>${Math.abs(netBalance).toFixed(2)}</span>
+                  <span>$<NumberTicker value={Math.abs(netBalance)} decimalPlaces={2} /></span>
                 </span>
               </div>
             </div>
@@ -131,4 +132,3 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
   );
 }
 
- 
