@@ -19,6 +19,8 @@ import { PeriodManagementSkeleton } from '@/components/periods/period-management
 import { usePeriodMode } from '@/hooks/use-periods';
 import { Calendar, Settings2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { NoGroupState } from '@/components/empty-states/no-group-state';
+import { useGroups } from '@/hooks/use-groups';
 
 export function PeriodManagement() {
   const {
@@ -50,6 +52,7 @@ export function PeriodManagement() {
   } = usePeriodManagement();
 
   const { data: session } = useSession();
+  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const currentUserId = session?.user?.id;
   const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
   const isPrivileged = ["OWNER", "ADMIN", "MODERATOR"].includes(currentMember?.role ?? "");
@@ -67,6 +70,23 @@ export function PeriodManagement() {
 
   // Combined loading state - show loader if any data is loading
   const isLoading = periodsLoading || currentPeriodLoading || selectedPeriodLoading || summaryLoading || !activeGroup;
+
+  // Check if user has no groups - show empty state
+  if (!isLoadingGroups && userGroups.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Period Management</h1>
+            <p className="text-muted-foreground text-sm">
+              Manage your periods and their statuses
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
 
   // Handle period mode toggle
   const handlePeriodModeToggle = (checked: boolean) => {

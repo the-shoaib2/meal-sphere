@@ -1,23 +1,28 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import prisma from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { Role, GroupRole } from "@prisma/client";
+import { Permission, hasPermission } from "./permissions";
+
+export { Permission };
 
 export interface GroupAuthResult {
   isAuthenticated: boolean;
   isMember: boolean;
-  userRole: Role | null;
+  userRole: GroupRole | null;
   canAccess: boolean;
   isAdmin: boolean;
   isCreator: boolean;
   groupId: string;
   userId: string | null;
+  globalRole?: string | null; // Use string as next-auth role might be string
+  permissions?: any; // Custom permissions JSON
   error?: string;
 }
 
 export interface GroupPermissionResult extends GroupAuthResult {
   hasPermission: boolean;
-  requiredRole?: Role;
+  requiredRole?: GroupRole;
 }
 
 /**
@@ -43,6 +48,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
     }
 
     const userId = session.user.id;
+    const globalRole = session.user.role;
 
     // Check if group exists
     const group = await prisma.room.findUnique({
@@ -52,7 +58,8 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
           where: { userId },
           select: {
             role: true,
-            isBanned: true
+            isBanned: true,
+            permissions: true // FETCH PERMISSIONS
           }
         },
         createdByUser: {
@@ -71,6 +78,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
         isCreator: false,
         groupId,
         userId,
+        globalRole,
         error: "Group not found"
       };
     }
@@ -88,6 +96,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
         isCreator: false,
         groupId,
         userId,
+        globalRole,
         error: "You are banned from this group"
       };
     }
@@ -98,7 +107,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
     const isCreator = group.createdByUser.id === userId;
 
     // Determine admin status (only ADMIN role)
-    const isAdmin = isMember && userRole === Role.ADMIN;
+    const isAdmin = isMember && userRole === GroupRole.ADMIN;
 
     // Determine access based on group privacy
     let canAccess = false;
@@ -107,6 +116,11 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
       canAccess = isMember;
     } else {
       // Public groups: everyone can view, but only members can interact
+      canAccess = true;
+    }
+
+    // SUPER_ADMIN override (part 1 of check)
+    if (globalRole === 'SUPER_ADMIN') {
       canAccess = true;
     }
 
@@ -119,6 +133,8 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
       isCreator,
       groupId,
       userId,
+      globalRole,
+      permissions: member?.permissions,
       error: canAccess ? undefined : "Not a member of this group"
     };
 
@@ -143,7 +159,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
  */
 export async function checkGroupPermission(
   groupId: string,
-  requiredRoles: Role[] = [Role.ADMIN]
+  requiredRoles: GroupRole[] = [GroupRole.ADMIN]
 ): Promise<GroupPermissionResult> {
   const authResult = await checkGroupAccess(groupId);
 
@@ -151,17 +167,69 @@ export async function checkGroupPermission(
     return {
       ...authResult,
       hasPermission: false,
-      requiredRole: requiredRoles[0]
     };
   }
 
-  const hasPermission = authResult.isAdmin ||
-    (authResult.userRole && requiredRoles.includes(authResult.userRole));
+  // Use the new centralized permission checker
+  // We determine what "Permission" corresponds to the requested "Roles".
+  // This is a bridge for legacy calls. If 'requiredRoles' contains ADMIN, we check generic management.
+  // Ideally, callers should use checkActionPermission directly, but for backward compat:
+
+  let allowed = false;
+
+  // If no specific roles requested, check if just access is enough (which is true if here)
+  if (!requiredRoles || requiredRoles.length === 0) {
+    allowed = true;
+  } else {
+    // Check if user has ANY of the required roles OR super admin
+    if (authResult.globalRole === 'SUPER_ADMIN') {
+      allowed = true;
+    } else {
+      // Default check: does user role match one of the required roles?
+      // This keeps backward compatibility with existing code
+      if (authResult.userRole && requiredRoles.includes(authResult.userRole)) {
+        allowed = true;
+      }
+    }
+  }
 
   return {
     ...authResult,
-    hasPermission: !!hasPermission,
+    hasPermission: allowed,
     requiredRole: requiredRoles[0]
+  };
+}
+
+/**
+ * Check if user has a specific granular permission
+ */
+export async function checkActionPermission(
+  groupId: string,
+  action: Permission
+): Promise<GroupPermissionResult> {
+  const authResult = await checkGroupAccess(groupId);
+
+  // Member permissions also come from the DB fetch in checkGroupAccess
+  // But currently checkGroupAccess doesn't fetch the `permissions` JSON column.
+  // Optimally, we should fetch it there. For now, we rely on the role default + global override.
+
+  // However, to support CUSTOM roles fully, we need that JSON.
+  // Let's rely on hasPermission helper which does the logic.
+  // Since we don't have the custom permissions loaded in authResult yet, we might miss them.
+  // For this refactor, let's assume standard role behavior + SUPER_ADMIN override is the priority.
+
+  // We can fetch custom permissions here if needed or update checkGroupAccess to select them.
+  // Let's update checkGroupAccess to select them in a follow-up if needed, 
+  // but looking at checkGroupAccess code:
+  // select: { role: true, isBanned: true } -> It bypasses 'permissions'.
+
+  // Ideally, we should update checkGroupAccess to fetch permissions too.
+
+  const hasPerm = hasPermission(authResult.globalRole, authResult.userRole, action, authResult.permissions);
+
+  return {
+    ...authResult,
+    hasPermission: hasPerm
   };
 }
 
@@ -197,7 +265,7 @@ export async function validateGroupAccess(groupId: string) {
  * Middleware function to validate admin permissions
  */
 export async function validateAdminAccess(groupId: string) {
-  const authResult = await checkGroupPermission(groupId, [Role.ADMIN]);
+  const authResult = await checkGroupPermission(groupId, [GroupRole.ADMIN]);
 
   if (!authResult.isAuthenticated) {
     return {
@@ -231,7 +299,7 @@ export async function getGroupData(groupId: string, userId: string) {
 
     // Execute all queries in parallel for maximum performance independent of access
     // We filter sensitive data in memory if access is denied later
-    const [accessCheck, groupDetails, memberList] = await Promise.all([
+    const [accessCheck, groupDetails, memberList, globalUser] = await Promise.all([
       // 1. Access Check: Get specific membership info for current user
       prisma.roomMember.findUnique({
         where: {
@@ -243,9 +311,8 @@ export async function getGroupData(groupId: string, userId: string) {
         select: { role: true, isBanned: true }
       }),
 
-      // 2. Room Metadata & Messages
-      // We optimistically fetch messages (limit 50) to avoid a second round trip
-      // We will discard them if the user turns out not to be a member
+      // 2. Room Metadata (without messages for performance)
+      // Messages should be fetched separately via /api/groups/[id]/messages
       prisma.room.findUnique({
         where: { id: groupId },
         include: {
@@ -254,30 +321,28 @@ export async function getGroupData(groupId: string, userId: string) {
           },
           _count: {
             select: { members: true }
-          },
-          // Always fetch messages, we'll strip them later if needed
-          messages: {
-            include: {
-              user: {
-                select: { id: true, name: true, email: true, image: true }
-              }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 50
           }
         }
       }),
 
-      // 3. Member Display List (Top 100)
+      // 3. Member Display List (Top 20 for performance)
+      // Full member list should be fetched via separate endpoint if needed
       prisma.roomMember.findMany({
         where: { roomId: groupId },
         orderBy: { joinedAt: 'asc' },
-        take: 100,
+        take: 20,
         include: {
           user: {
             select: { id: true, name: true, email: true, image: true }
           }
         }
+      }
+      ),
+
+      // 4. Fetch User Global Role (for SUPER_ADMIN check)
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true }
       })
     ]);
 
@@ -287,12 +352,10 @@ export async function getGroupData(groupId: string, userId: string) {
     const isMember = !!accessCheck;
     const isCreator = groupDetails.createdByUser.id === userId;
     const isBanned = accessCheck?.isBanned || false;
+    const isSuperAdmin = globalUser?.role === Role.SUPER_ADMIN;
 
     if (isBanned) return null;
-    if (groupDetails.isPrivate && !isMember) return null;
-
-    // Filter sensitive data for non-members (public groups)
-    const secureMessages = isMember ? groupDetails.messages : [];
+    if (groupDetails.isPrivate && !isMember && !isSuperAdmin) return null;
 
     // Return combined data
     return {
@@ -303,12 +366,12 @@ export async function getGroupData(groupId: string, userId: string) {
       // Auth metadata
       userRole: accessCheck?.role || null,
       isMember,
-      isAdmin: accessCheck?.role === Role.ADMIN,
+      isAdmin: accessCheck?.role === GroupRole.ADMIN || isSuperAdmin,
       isCreator,
       canAccess: true,
 
-      // Sanitized data
-      messages: secureMessages,
+      // Messages should be fetched separately for performance
+      messages: [],
       joinRequests: [], // Always empty here, fetched via separate API
     };
 
@@ -331,22 +394,24 @@ export async function canPerformAction(
     return false;
   }
 
+  // Map legacy string actions to strict Permissions
+  // This allows SUPER_ADMIN override via hasPermission
+  let permission: Permission;
+
   switch (action) {
-    case 'view':
-      return authResult.canAccess;
-
-    case 'edit':
-    case 'delete':
-      return authResult.isAdmin;
-
-    case 'manage_members':
-    case 'manage_settings':
-      return authResult.isAdmin;
-
-    case 'send_messages':
-      return authResult.isMember;
-
-    default:
-      return false;
+    case 'view': permission = Permission.VIEW_GROUP; break;
+    case 'edit': permission = Permission.EDIT_GROUP; break;
+    case 'delete': permission = Permission.DELETE_GROUP; break;
+    case 'manage_members': permission = Permission.MANAGE_MEMBERS; break;
+    case 'manage_settings': permission = Permission.MANAGE_SETTINGS; break;
+    case 'send_messages': permission = Permission.SEND_MESSAGES; break;
+    default: return false;
   }
+
+  return hasPermission(
+    authResult.globalRole,
+    authResult.userRole,
+    permission,
+    authResult.permissions
+  );
 } 

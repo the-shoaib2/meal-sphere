@@ -42,6 +42,7 @@ import NoActiveVotesCard from "./voting/no-active-votes-card"
 import PastVotesList from "./voting/past-votes-list"
 import LoadingSkeletons from "./voting/loading-skeletons"
 import { Candidate, Vote as VoteType, ActiveVote, PastVote, Voter } from "./voting/types"
+import { NoGroupState } from "@/components/empty-states/no-group-state"
 
 const VOTE_TYPE_OPTIONS = [
   { value: "manager", label: "Manager Election", backend: "MEAL_MANAGER" },
@@ -72,6 +73,23 @@ export default function VotingSystem() {
   const [endDate, setEndDate] = useState<Date>(() => addDays(startOfDay(new Date()), 1))
   const [endTimeStr, setEndTimeStr] = useState("")
   const [createVoteError, setCreateVoteError] = useState<string | null>(null)
+
+  // Check if user has no groups - show empty state
+  if (groups.length === 0 && !initialLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Voting System</h1>
+            <p className="text-muted-foreground text-sm">
+              Participate in group votes and elections
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
 
   // Determine if current user is admin in the group
   const currentUserId = session?.user?.id

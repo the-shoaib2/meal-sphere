@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
-import { Role, NotificationType } from "@prisma/client";
+import { GroupRole, NotificationType } from "@prisma/client";
 
 // Helper to log detailed debug info
 function logDebugInfo(label: string, data: any) {
@@ -21,7 +21,7 @@ export async function DELETE(
   try {
     const resolvedParams = await params;
     const { id: groupId, memberId } = resolvedParams;
-    
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({
@@ -41,7 +41,7 @@ export async function DELETE(
         userId: currentUserId,
       },
     });
-    
+
     logDebugInfo('Current user membership', currentUserMembership);
 
     // If user is not a member of the group
@@ -82,7 +82,7 @@ export async function DELETE(
     const isRemovingSelf = targetMember.userId === currentUserId;
 
     // If not removing self, check admin privileges
-    if (!isRemovingSelf && currentUserMembership.role !== Role.ADMIN) {
+    if (!isRemovingSelf && currentUserMembership.role !== GroupRole.ADMIN) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Only group admins can remove other members',
@@ -90,7 +90,7 @@ export async function DELETE(
     }
 
     // Prevent removing other admins (only the admin themselves can leave)
-    if (!isRemovingSelf && targetMember.role === Role.ADMIN) {
+    if (!isRemovingSelf && targetMember.role === GroupRole.ADMIN) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Cannot remove another admin. Please demote them first.',
@@ -139,13 +139,13 @@ export async function DELETE(
     return new NextResponse(JSON.stringify({
       success: true,
       message: isRemovingSelf ? 'You have left the group' : 'Member removed successfully',
-    }), { 
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error('Error removing member:', error);
-    
+
     // Log detailed error information
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -187,7 +187,7 @@ export async function PATCH(
       select: { role: true }
     });
 
-    if (!adminMembership || adminMembership.role !== Role.ADMIN) {
+    if (!adminMembership || adminMembership.role !== GroupRole.ADMIN) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -207,7 +207,7 @@ export async function PATCH(
     }
 
     // Prevent modifying owner
-    if (targetMember.role === Role.ADMIN) {
+    if (targetMember.role === GroupRole.ADMIN) {
       return new NextResponse("Cannot modify group admin", { status: 400 });
     }
 
@@ -220,7 +220,7 @@ export async function PATCH(
         }
       },
       data: {
-        role: role as Role
+        role: role as GroupRole
       }
     });
 

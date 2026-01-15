@@ -20,6 +20,10 @@ generator client {
 
 enum Role {
   SUPER_ADMIN
+  USER
+}
+
+enum GroupRole {
   ADMIN
   MODERATOR
   MANAGER
@@ -29,7 +33,6 @@ enum Role {
   MARKET_MANAGER
   MEMBER
   BANNED
-  USER
 }
 
 enum MealType {
@@ -118,7 +121,7 @@ model User {
   image            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  role             Role      @default(MEMBER)
+  role             Role      @default(USER)
   language         String    @default("en")
   isActive         Boolean   @default(true)
   resetToken       String?
@@ -156,8 +159,7 @@ model User {
   @@index([resetToken])
   @@index([emailVerified, isActive])
   @@index([createdAt])
-  @@index([name]) // Search optimization
-  @@index([email]) // Search optimization
+  @@index([name])
 }
 
 /// ROOM MODEL
@@ -211,7 +213,7 @@ model Room {
 /// ROOM MEMBER MODEL
 model RoomMember {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  role        Role      @default(MEMBER)
+  role        GroupRole @default(MEMBER)
   joinedAt    DateTime  @default(now())
   userId      String    @db.ObjectId
   roomId      String    @db.ObjectId
@@ -219,7 +221,7 @@ model RoomMember {
   isBanned    Boolean   @default(false)
   lastActive  DateTime? @updatedAt
   mutedUntil  DateTime?
-  permissions Json? // Store custom permissions as JSON
+  permissions Json?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -365,7 +367,7 @@ model ShoppingItem {
   @@index([userId])
   @@index([roomId, periodId, purchased])
   @@index([periodId])
-  @@index([name]) // Search optimization
+  @@index([name])
 }
 
 /// PAYMENT MODEL
@@ -589,7 +591,7 @@ model InviteToken {
   token         String    @unique
   roomId        String    @db.ObjectId
   createdBy     String    @db.ObjectId
-  role          Role      @default(MEMBER)
+  role          GroupRole @default(MEMBER)
   expiresAt     DateTime?
   usedAt        DateTime?
   createdAt     DateTime  @default(now())

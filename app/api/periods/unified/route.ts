@@ -22,64 +22,69 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
         }
 
-        // OPTIMIZATION: Start data fetching immediately in parallel with auth check
-        // We trust that 99% of requests are authorized, so the small wasted resources on 403s 
-        // is worth the speed up for 200s.
-        const dataPromise = Promise.all([
-            PeriodService.getPeriods(groupId, includeArchived),
-            PeriodService.getCurrentPeriod(groupId),
-        ]);
-
-        // Verify user has access to this group
-        const member = await prisma.roomMember.findUnique({
-            where: {
-                userId_roomId: {
-                    userId: session.user.id,
-                    roomId: groupId,
+        // OPTIMIZATION: Fetch member and periods in parallel
+        const [member, periods] = await Promise.all([
+            // Verify user has access to this group
+            prisma.roomMember.findUnique({
+                where: {
+                    userId_roomId: {
+                        userId: session.user.id,
+                        roomId: groupId,
+                    },
                 },
-            },
-            include: {
-                room: {
-                    select: {
-                        periodMode: true,
-                        features: true, // If we need to check features
+                select: {
+                    room: {
+                        select: {
+                            periodMode: true,
+                        }
                     }
                 }
-            }
-        });
+            }),
+
+            // Fetch all periods in one query
+            prisma.mealPeriod.findMany({
+                where: {
+                    roomId: groupId,
+                    ...(includeArchived ? {} : {
+                        status: {
+                            in: ['ACTIVE', 'ENDED', 'LOCKED'],
+                        }
+                    })
+                },
+                orderBy: {
+                    startDate: 'desc',
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    startDate: true,
+                    endDate: true,
+                    status: true,
+                    isLocked: true,
+                    openingBalance: true,
+                    closingBalance: true,
+                    roomId: true,
+                }
+            })
+        ]);
 
         if (!member) {
-            // If unauthorized, valid promise will effectively be discarded/ignored when we return early
             return NextResponse.json({ error: 'Access denied to this group' }, { status: 403 });
         }
 
-        try {
-            // Await the data that we already started fetching
-            const [periods, currentPeriod] = await dataPromise;
+        // Extract current period from the results (already fetched)
+        const currentPeriod = periods.find(p => p.status === 'ACTIVE') || null;
 
-            return NextResponse.json({
-                periods,
-                currentPeriod,
-                periodMode: member.room.periodMode || 'CUSTOM',
-            }, {
-                headers: {
-                    'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=30'
-                }
-            });
-
-        } catch (dbError: any) {
-            // Handle case where database schema hasn't been updated yet
-            if (dbError.message?.includes('Unknown table') ||
-                dbError.message?.includes('doesn\'t exist') ||
-                dbError.message?.includes('MealPeriod')) {
-                return NextResponse.json({
-                    periods: [],
-                    currentPeriod: null,
-                    periodMode: member.room.periodMode || 'CUSTOM'
-                });
+        return NextResponse.json({
+            periods,
+            currentPeriod,
+            periodMode: member.room.periodMode || 'CUSTOM',
+        }, {
+            headers: {
+                'Cache-Control': 'private, max-age=10, stale-while-revalidate=30'
             }
-            throw dbError;
-        }
+        });
+
     } catch (error) {
         console.error('Error fetching unified periods data:', error);
         return NextResponse.json(

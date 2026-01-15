@@ -4,8 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
-// Enable caching for better performance
-export const revalidate = 30; // Cache for 30 seconds
+// Enable aggressive caching for better performance
+export const revalidate = 60; // Cache for 60 seconds
 
 export async function GET(
     req: NextRequest,
@@ -19,22 +19,27 @@ export async function GET(
 
         const { id: groupId } = await params;
 
-        // Quick validation - just check if room exists and get periodMode
+        // OPTIMIZED: Only select the periodMode field - minimal data transfer
         const room = await prisma.room.findUnique({
             where: { id: groupId },
-            select: { periodMode: true },
+            select: {
+                periodMode: true
+            },
         });
 
         if (!room) {
             return NextResponse.json({ error: 'Group not found' }, { status: 404 });
         }
 
-        // Return with cache headers for better performance
+        // Return with aggressive cache headers for maximum performance
         return NextResponse.json(
             { periodMode: room.periodMode || 'CUSTOM' },
             {
                 headers: {
-                    'Cache-Control': 'public, max-age=30, stale-while-revalidate=60',
+                    // Cache for 60 seconds, allow stale content for 2 minutes while revalidating
+                    'Cache-Control': 'public, max-age=60, stale-while-revalidate=120',
+                    // Add ETag for conditional requests
+                    'ETag': `"${groupId}-${room.periodMode || 'CUSTOM'}"`,
                 },
             }
         );

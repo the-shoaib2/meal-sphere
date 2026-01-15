@@ -29,11 +29,14 @@ import PeriodNotFoundCard from "@/components/periods/period-not-found-card";
 import { useCurrentPeriod } from "@/hooks/use-periods";
 import { useGroupAccess } from "@/hooks/use-group-access";
 import { useQuery } from "@tanstack/react-query";
+import { NoGroupState } from "@/components/empty-states/no-group-state";
+import { useGroups } from "@/hooks/use-groups";
 
 
 export default function ShoppingManagement() {
   const { data: session, status } = useSession()
   const { activeGroup } = useActiveGroup()
+  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [itemName, setItemName] = useState("")
   const [quantity, setQuantity] = useState("1")
@@ -43,6 +46,23 @@ export default function ShoppingManagement() {
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null)
   // Check user permissions
   const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: activeGroup?.id || "" })
+
+  // Check if user has no groups - show empty state
+  if (!isLoadingGroups && userGroups.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Shopping List</h1>
+            <p className="text-muted-foreground text-sm">
+              Manage your shopping items
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
 
   // Get current period and also fetch recent periods if no current one exists
   const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()

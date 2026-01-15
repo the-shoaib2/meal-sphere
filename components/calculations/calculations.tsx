@@ -8,6 +8,8 @@ import { useRoomCalculations } from "@/hooks/use-calculations"
 import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
 import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
+import { NoGroupState } from "@/components/empty-states/no-group-state"
+import { useGroups } from "@/hooks/use-groups"
 
 // Import separated components
 import CalculationsSkeleton from "@/components/calculations/calculations-skeleton"
@@ -22,9 +24,27 @@ interface CalculationsProps {
 const MealCalculations = memo(({ roomId }: CalculationsProps) => {
   const { data: session } = useSession()
   const { activeGroup } = useActiveGroup()
+  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const { data: currentPeriod, isLoading: periodLoading } = useCurrentPeriod()
   const { data: allPeriods = [] } = usePeriods(true) // Include archived periods for admin navigation
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
+
+  // Check if user has no groups - show empty state
+  if (!isLoadingGroups && userGroups.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Calculations</h1>
+            <p className="text-muted-foreground text-sm">
+              View meal calculations and balances
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
 
   // Always call all hooks
   const member = activeGroup?.members?.find(m => m.userId === session?.user?.id)

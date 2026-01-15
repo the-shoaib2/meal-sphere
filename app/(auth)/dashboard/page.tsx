@@ -30,6 +30,8 @@ import { useState, useEffect } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AnalyticsCard } from "@/components/analytics/analytics-card"
 import { RoomStatsTable } from "@/components/analytics/room-stats-table"
+import { NoGroupState } from "@/components/empty-states/no-group-state"
+import { useGroups } from "@/hooks/use-groups"
 import {
   PieChart,
   Pie,
@@ -54,6 +56,9 @@ export default function DashboardPage() {
   const { data: dashboardData, isLoading: isDashboardLoading } = useDashboardSummary();
   const { mutate: refreshDashboard, isPending: isRefreshing } = useDashboardRefresh();
 
+  // Get user's groups to check if they have any
+  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+
   // Analytics State
   const [viewMode, setViewMode] = useState<'current' | 'selected'>('current')
   const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([])
@@ -69,6 +74,23 @@ export default function DashboardPage() {
 
   if (!session?.user?.email) {
     redirect("/login")
+  }
+
+  // Check if user has no groups - show empty state
+  if (!isLoadingGroups && userGroups.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground text-sm">
+              Welcome to MealSphere! Get started by creating or joining a group.
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
   }
 
   // Effect for room selection

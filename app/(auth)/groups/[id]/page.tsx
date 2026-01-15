@@ -383,7 +383,7 @@ export default function GroupPage() {
                 isCreator={isCreator}
                 onUpdate={() => {
                   refetch();
-                  toast.success('Group updated successfully');
+                  // toast.success('Group updated successfully');
                 }}
               />
             </TabsContent>

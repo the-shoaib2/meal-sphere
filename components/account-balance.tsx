@@ -11,8 +11,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
 import { Badge } from '@/components/ui/badge';
+import { NoGroupState } from '@/components/empty-states/no-group-state';
+import { useGroups } from '@/hooks/use-groups';
 
-const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER','MEAL_MANAGER'];
+const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
@@ -21,7 +23,8 @@ function isPrivileged(role?: string) {
 export default function AccountBalancePanel() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  
+  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+
   const member = activeGroup?.members?.find(m => m.userId === session?.user?.id);
   const userRole = member?.role;
   const hasPrivilege = isPrivileged(userRole);
@@ -30,6 +33,23 @@ export default function AccountBalancePanel() {
   const { data: groupData, isLoading: isLoadingBalances } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);
   const { data: ownBalance, isLoading: isLoadingOwnBalance } = useGetBalance(activeGroup?.id!, session?.user?.id!, true);
   const { data: ownTransactions, isLoading: isLoadingTransactions } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id);
+
+  // Check if user has no groups - show empty state
+  if (!isLoadingGroups && userGroups.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Account Balance</h1>
+            <p className="text-muted-foreground text-sm">
+              Track your meal expenses and payments
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
 
   if (!activeGroup) {
     return <BalanceSkeleton hasPrivilege={false} />;
@@ -71,7 +91,7 @@ export default function AccountBalancePanel() {
   if (isLoadingBalances || (hasPrivilege && !groupData) || (!hasPrivilege && (isLoadingOwnBalance || isLoadingTransactions))) {
     return <BalanceSkeleton hasPrivilege={hasPrivilege} />;
   }
-  
+
   if (hasPrivilege) {
     return (
       <>

@@ -32,10 +32,6 @@ const nextConfig = {
       'recharts',
     ],
   },
-  // Keep Prisma client external for server components (stable in Next.js 16)
-  serverComponentsExternalPackages: ['@prisma/client'],
-  // Enable SWC minification for faster builds
-  swcMinify: true,
   // Add output configuration
   output: 'standalone',
   // Skip static page generation during build

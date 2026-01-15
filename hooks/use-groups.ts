@@ -339,7 +339,7 @@ export function useGroups(): UseGroupsReturn {
     onSuccess: (data: Group) => {
       queryClient.invalidateQueries({ queryKey: ['group', data.id] });
       queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      toast.success('Group updated successfully');
+      // toast.success('Group updated successfully');
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error updating group:', error);
