@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user permissions
-    const permissions = getExcelPermissions(roomMember.role)
+    // Cast to any because GroupRole and Role are compatible for this check
+    const permissions = getExcelPermissions(roomMember.role as any)
 
     // Validate export options
     const validation = validateExportOptions({ type, scope }, permissions)
