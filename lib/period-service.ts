@@ -357,10 +357,11 @@ export class PeriodService {
     }
 
     const whereClause: any = { roomId };
-    
+
     if (!includeArchived) {
+      // Optimize query to use 'in' which can use indexes better than 'not'
       whereClause.status = {
-        not: PeriodStatus.ARCHIVED,
+        in: [PeriodStatus.ACTIVE, PeriodStatus.ENDED, PeriodStatus.LOCKED],
       };
     }
 
@@ -369,6 +370,18 @@ export class PeriodService {
       orderBy: {
         startDate: 'desc',
       },
+      // Select only necessary fields for list view to reduce payload
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        isLocked: true,
+        openingBalance: true,
+        closingBalance: true,
+        roomId: true,
+      }
     });
   }
 
@@ -381,7 +394,7 @@ export class PeriodService {
     }
 
     const whereClause: any = { id: periodId };
-    
+
     // If roomId is provided, ensure the period belongs to that group
     if (roomId) {
       whereClause.roomId = roomId;
@@ -419,6 +432,7 @@ export class PeriodService {
 
   /**
    * Calculate period summary with all financial and meal data
+   * Optimized for performance using database aggregation and parallel execution
    */
   static async calculatePeriodSummary(periodId: string, roomId?: string): Promise<PeriodSummary> {
     const period = await this.getPeriod(periodId, roomId);
@@ -426,77 +440,105 @@ export class PeriodService {
       throw new Error('Period not found');
     }
 
-    // Get all meals in the period
-    const meals = await prisma.meal.findMany({
-      where: {
-        periodId,
-      },
-    });
+    const { id, name, startDate, endDate, status, isLocked, openingBalance, closingBalance, carryForward, roomId: periodRoomId } = period;
 
-    // Get all guest meals in the period
-    const guestMeals = await prisma.guestMeal.findMany({
-      where: {
-        periodId,
-      },
-    });
+    // Execute all aggregation queries in parallel
+    const [
+      mealsCount,
+      guestMealsAgg,
+      shoppingAgg,
+      paymentsAgg,
+      extraExpensesAgg,
+      memberCount
+    ] = await Promise.all([
+      // Count meals
+      prisma.meal.count({
+        where: {
+          periodId,
+          roomId: periodRoomId, // Include roomId for index usage
+        },
+      }),
 
-    // Get all shopping items in the period
-    const shoppingItems = await prisma.shoppingItem.findMany({
-      where: {
-        periodId,
-        purchased: true,
-      },
-    });
+      // Sum guest meals count
+      prisma.guestMeal.aggregate({
+        where: {
+          periodId,
+          roomId: periodRoomId,
+        },
+        _sum: {
+          count: true,
+        },
+      }),
 
-    // Get all payments in the period
-    const payments = await prisma.payment.findMany({
-      where: {
-        periodId,
-        status: 'COMPLETED',
-      },
-    });
+      // Sum shopping items quantity (and ideally cost if available)
+      prisma.shoppingItem.aggregate({
+        where: {
+          periodId,
+          roomId: periodRoomId,
+          purchased: true,
+        },
+        _sum: {
+          quantity: true,
+        },
+      }),
 
-    // Get all extra expenses in the period
-    const extraExpenses = await prisma.extraExpense.findMany({
-      where: {
-        periodId,
-      },
-    });
+      // Sum completed payments
+      prisma.payment.aggregate({
+        where: {
+          periodId,
+          roomId: periodRoomId,
+          status: 'COMPLETED',
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
 
-    // Calculate totals
-    const totalMeals = meals.length;
-    const totalGuestMeals = guestMeals.reduce((sum, gm) => sum + gm.count, 0);
-    // If you add a price or amount field to ShoppingItem, sum that here instead of quantity
-    const totalShoppingAmount = shoppingItems.reduce((sum, item) => sum + (item.quantity || 1), 0); // TODO: Use item.amount or item.price if available
-    const totalPayments = payments.reduce((sum, payment) => sum + payment.amount, 0);
-    const totalExtraExpenses = extraExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+      // Sum extra expenses
+      prisma.extraExpense.aggregate({
+        where: {
+          periodId,
+          roomId: periodRoomId,
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
 
-    // Get current group members count
-    const memberCount = await prisma.roomMember.count({
-      where: {
-        roomId: period.roomId,
-        isCurrent: true,
-        isBanned: false,
-      },
-    });
+      // Count active members
+      prisma.roomMember.count({
+        where: {
+          roomId: periodRoomId,
+          isCurrent: true,
+          isBanned: false,
+        },
+      }),
+    ]);
+
+    // Extract values with defaults
+    const totalMeals = mealsCount;
+    const totalGuestMeals = guestMealsAgg._sum.count || 0;
+    const totalShoppingAmount = shoppingAgg._sum.quantity || 0;
+    const totalPayments = paymentsAgg._sum.amount || 0;
+    const totalExtraExpenses = extraExpensesAgg._sum.amount || 0;
 
     return {
-      id: period.id,
-      name: period.name,
-      startDate: period.startDate,
-      endDate: period.endDate || null,
-      status: period.status,
-      isLocked: period.isLocked,
+      id,
+      name,
+      startDate,
+      endDate: endDate || null,
+      status,
+      isLocked,
       totalMeals,
       totalGuestMeals,
       totalShoppingAmount,
       totalPayments,
       totalExtraExpenses,
       memberCount,
-      activeMemberCount: memberCount, // All current members are considered active
-      openingBalance: period.openingBalance,
-      closingBalance: period.closingBalance,
-      carryForward: period.carryForward,
+      activeMemberCount: memberCount,
+      openingBalance,
+      closingBalance,
+      carryForward,
     };
   }
 
@@ -552,7 +594,7 @@ export class PeriodService {
    */
   static async restartPeriod(roomId: string, userId: string, periodId: string, newName?: string, withData: boolean = false) {
     try {
-      
+
       // Check if user has admin permissions
       const member = await prisma.roomMember.findUnique({
         where: {
@@ -596,7 +638,7 @@ export class PeriodService {
       if (!periodName) {
         let baseName = `${originalPeriod.name} (Restarted)`;
         let counter = 1;
-        
+
         // Check if the name already exists and generate a unique one
         while (true) {
           const existingPeriod = await prisma.mealPeriod.findFirst({
@@ -605,12 +647,12 @@ export class PeriodService {
               name: baseName,
             },
           });
-          
+
           if (!existingPeriod) {
             periodName = baseName;
             break;
           }
-          
+
           baseName = `${originalPeriod.name} (Restarted ${counter})`;
           counter++;
         }
@@ -696,7 +738,7 @@ export class PeriodService {
         where: { periodId: fromPeriodId },
         data: { periodId: toPeriodId },
       });
-      
+
     } catch (error) {
       console.error('Error copying period data:', error);
       throw new Error('Failed to copy period data. Please try again without data copying.');

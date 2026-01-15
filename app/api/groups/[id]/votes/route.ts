@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminAccess, checkGroupAccess, getGroupData } from "@/lib/auth/group-auth";
 import { Role, VoteType } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/auth";
 
 // Simulate notification
 function sendNotification(groupId: string, message: string) {
