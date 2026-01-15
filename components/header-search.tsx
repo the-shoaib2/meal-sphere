@@ -1,0 +1,156 @@
+"use client"
+
+import * as React from "react"
+import { Search, Loader2, X, User, Home, ShoppingBag, Receipt, ChevronRight } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useDebounce } from "@/hooks/use-debounce" // Assuming you have this or wil create it. usage: useDebounce(value, delay)
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+    CommandDialog,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+    CommandSeparator,
+} from "@/components/ui/command"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
+// Using a custom Popper/Dropdown approach for the input search to control it fully
+
+interface SearchResult {
+    id: string
+    type: 'user' | 'room' | 'shopping' | 'expense'
+    title: string
+    subtitle: string
+    image?: string
+    url: string
+}
+
+export function HeaderSearch() {
+    const router = useRouter()
+    const [query, setQuery] = React.useState("")
+    const [results, setResults] = React.useState<SearchResult[]>([])
+    const [open, setOpen] = React.useState(false)
+    const [loading, setLoading] = React.useState(false)
+    const inputRef = React.useRef<HTMLInputElement>(null)
+
+    const debouncedQuery = useDebounce(query, 300)
+
+    React.useEffect(() => {
+        if (debouncedQuery.length >= 2) {
+            setLoading(true)
+            fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`)
+                .then(res => res.json())
+                .then(data => {
+                    setResults(data.results || [])
+                    setLoading(false)
+                    setOpen(true)
+                })
+                .catch(() => setLoading(false))
+        } else {
+            setResults([])
+            setOpen(false)
+        }
+    }, [debouncedQuery])
+
+    const handleSelect = (url: string) => {
+        router.push(url)
+        setOpen(false)
+        setQuery("")
+    }
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (query) {
+            router.push(`/search?q=${encodeURIComponent(query)}`)
+            setOpen(false)
+            setQuery("")
+        }
+    }
+
+    // Click outside to close
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (inputRef.current && !inputRef.current.contains(event.target as Node) && !(event.target as Element).closest('.search-results')) {
+                setOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
+
+    return (
+        <div className="relative w-full max-w-[450px] hidden md:block" ref={inputRef as any}>
+            <form onSubmit={handleSubmit} className="relative w-full">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                    ref={inputRef}
+                    type="search"
+                    placeholder="Search meals, members, or rooms..."
+                    className="w-full appearance-none bg-background pl-9 pr-10 shadow-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
+                    value={query}
+                    onChange={(e) => {
+                        setQuery(e.target.value)
+                        if (e.target.value.length === 0) setOpen(false)
+                    }}
+                    onFocus={() => {
+                        if (query.length >= 2 && results.length > 0) setOpen(true)
+                    }}
+                />
+                {loading ? (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                ) : query && (
+                    <button
+                        type="button"
+                        onClick={() => { setQuery(""); setOpen(false); inputRef.current?.focus(); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+            </form>
+
+            {open && results.length > 0 && (
+                <div className="search-results absolute top-full mt-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95 overflow-hidden z-50">
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                        {results.slice(0, 5).map((result) => (
+                            <div
+                                key={result.id}
+                                className="relative flex cursor-default select-none items-center rounded-sm px-2 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer overflow-hidden"
+                                onClick={() => handleSelect(result.url)}
+                            >
+                                <Avatar className="h-8 w-8 mr-2">
+                                    {result.type === 'user' && result.image && (
+                                        <AvatarImage src={result.image} alt={result.title} />
+                                    )}
+                                    <AvatarFallback>
+                                        {result.type === 'user' && <User className="h-4 w-4" />}
+                                        {result.type === 'room' && <Home className="h-4 w-4" />}
+                                        {result.type === 'shopping' && <ShoppingBag className="h-4 w-4" />}
+                                        {result.type === 'expense' && <Receipt className="h-4 w-4" />}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="truncate font-medium">{result.title}</p>
+                                    <p className="truncate text-xs text-muted-foreground">{result.subtitle}</p>
+                                </div>
+                            </div>
+                        ))}
+                        <div
+                            className="border-t p-2 text-center text-sm text-primary hover:bg-muted cursor-pointer font-medium flex items-center justify-center gap-1"
+                            onClick={() => {
+                                router.push(`/search?q=${encodeURIComponent(query)}`)
+                                setOpen(false)
+                                setQuery("")
+                            }}
+                        >
+                            View all {results.length} results <ChevronRight className="h-3 w-3" />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}

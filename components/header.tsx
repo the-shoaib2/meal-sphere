@@ -13,6 +13,8 @@ import { SidebarContent } from "@/components/sidebar-content"
 import { useEffect, useState } from "react"
 import screenfull from "screenfull"
 
+import { HeaderSearch } from "@/components/header-search"
+
 export function Header() {
   const { data: session } = useSession()
   const isMobile = useIsMobile()
@@ -70,16 +72,7 @@ export function Header() {
           </Link>
         </div>
         <div className="flex-1 flex justify-center">
-          <form className="hidden rounded-full md:flex w-full max-w-[450px] ">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search meals, members, or rooms..."
-                className="w-full appearance-none bg-background pl-9 pr-4 shadow-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
-              />
-            </div>
-          </form>
+          <HeaderSearch />
         </div>
         <div className="flex items-center gap-4">
           <Button

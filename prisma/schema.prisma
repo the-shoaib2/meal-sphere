@@ -156,6 +156,8 @@ model User {
   @@index([resetToken])
   @@index([emailVerified, isActive])
   @@index([createdAt])
+  @@index([name]) // Search optimization
+  @@index([email]) // Search optimization
 }
 
 /// ROOM MODEL
@@ -199,6 +201,8 @@ model Room {
   accountTransactions       AccountTransaction[]
   mealPeriods               MealPeriod[]
 
+  @@index([name])
+  @@index([description])
   @@index([isActive])
   @@index([createdAt])
   @@index([category])
@@ -361,6 +365,7 @@ model ShoppingItem {
   @@index([userId])
   @@index([roomId, periodId, purchased])
   @@index([periodId])
+  @@index([name]) // Search optimization
 }
 
 /// PAYMENT MODEL
@@ -453,6 +458,7 @@ model ExtraExpense {
   @@index([roomId, periodId, date])
   @@index([roomId, date])
   @@index([periodId])
+  @@index([description]) // Search optimization
 }
 
 model Invitation {
