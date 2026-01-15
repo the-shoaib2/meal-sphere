@@ -85,7 +85,8 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
       }
       return failureCount < 3;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
 }
@@ -99,7 +100,8 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
       return res.json();
     },
     enabled: !!roomId && !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
 }
@@ -118,7 +120,8 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
       return res.json();
     },
     enabled: !!roomId && !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
 }

@@ -217,6 +217,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     },
     enabled: !!roomId && !!session?.user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false
   });
 
@@ -230,6 +231,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     },
     enabled: !!roomId && !!session?.user?.id,
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false
   });
 
@@ -242,7 +244,8 @@ export function useMeal(roomId?: string): UseMealReturn {
       return data;
     },
     enabled: !!roomId && !!session?.user?.id,
-    staleTime: 30 * 60 * 1000, // 30 minutes (was 10)
+    staleTime: 60 * 60 * 1000, // 60 minutes - settings rarely change
+    gcTime: 90 * 60 * 1000, // 90 minutes cache retention
     refetchOnWindowFocus: false,
     select: (data) => data, // placeholder for shape reduction if needed
   });
@@ -256,7 +259,8 @@ export function useMeal(roomId?: string): UseMealReturn {
       return data;
     },
     enabled: !!roomId && !!session?.user?.id,
-    staleTime: 30 * 60 * 1000, // 30 minutes (was 10)
+    staleTime: 60 * 60 * 1000, // 60 minutes - auto settings rarely change
+    gcTime: 90 * 60 * 1000, // 90 minutes cache retention
     refetchOnWindowFocus: false,
     select: (data) => data, // placeholder for shape reduction if needed
   });

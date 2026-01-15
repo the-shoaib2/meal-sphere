@@ -136,7 +136,8 @@ export function useUserRooms() {
       }
     },
     enabled: !!session?.user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false
   });
 }
@@ -165,7 +166,8 @@ export function useAnalytics() {
       }
     },
     enabled: !!session?.user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - analytics data changes slowly
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false
   });
 }

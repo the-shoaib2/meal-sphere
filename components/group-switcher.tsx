@@ -17,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useGroups, Group } from "@/hooks/use-groups"
 import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
+import { useLoading } from "@/hooks/use-loading"
 
 export function GroupSwitcher() {
   const isMobile = useIsMobile()
@@ -24,6 +25,7 @@ export function GroupSwitcher() {
   const { data: session } = useSession()
   const { data: groups = [], isLoading } = useGroups()
   const { activeGroup, setActiveGroup, isLoading: isActiveGroupLoading } = useActiveGroup()
+  const { startLoading } = useLoading()
   const hasGroups = groups.length > 0
 
   React.useEffect(() => {
@@ -40,6 +42,7 @@ export function GroupSwitcher() {
   }
 
   const handleAddGroup = () => {
+    startLoading()
     router.push('/groups/create')
   }
 
@@ -78,7 +81,7 @@ export function GroupSwitcher() {
                   {activeGroup?.name || 'Select a group'}
                 </span>
                 <span className="truncate text-xs flex items-center gap-1 text-muted-foreground">
-                  {activeGroup?.members?.length || 0} members
+                  {activeGroup?.memberCount || activeGroup?._count?.members || 0} members
                 </span>
               </>
             ) : (
@@ -143,7 +146,10 @@ export function GroupSwitcher() {
         </DropdownMenuItem>
         {hasGroups && (
           <DropdownMenuItem
-            onClick={() => router.push('/groups')}
+            onClick={() => {
+              startLoading();
+              router.push('/groups');
+            }}
             className="gap-2 p-2 text-muted-foreground cursor-pointer"
           >
             <div className="flex size-6 items-center justify-center rounded-md border bg-background">

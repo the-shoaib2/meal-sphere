@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Zap, AlertTriangle, CheckCircle2, Server, Database, Activity } from 'lucide-react';
-import { axios } from '@/lib/axios';
 
 export default function BenchmarkPage() {
     const [loading, setLoading] = useState(false);

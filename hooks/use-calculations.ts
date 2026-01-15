@@ -41,12 +41,12 @@ interface CalculationParams {
   dependencies?: any[];
 }
 
-export function useRoomCalculations({ 
-  roomId, 
-  startDate, 
-  endDate, 
-  enabled = true, 
-  dependencies = [] 
+export function useRoomCalculations({
+  roomId,
+  startDate,
+  endDate,
+  enabled = true,
+  dependencies = []
 }: CalculationParams = {}) {
   const { data: session } = useSession();
   const { data: currentPeriod } = useCurrentPeriod();
@@ -76,7 +76,7 @@ export function useRoomCalculations({
       if (!session?.user?.id || !resolvedRoomId) {
         throw new Error('User or group not available');
       }
-      
+
       const params = {
         roomId: resolvedRoomId,
         startDate: startDate?.toISOString(),
@@ -87,7 +87,8 @@ export function useRoomCalculations({
       return data;
     },
     enabled: isEnabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 2,
@@ -103,13 +104,13 @@ interface UserCalculationParams {
   dependencies?: any[];
 }
 
-export function useUserCalculations({ 
-  userId, 
-  roomId, 
-  startDate, 
-  endDate, 
-  enabled = true, 
-  dependencies = [] 
+export function useUserCalculations({
+  userId,
+  roomId,
+  startDate,
+  endDate,
+  enabled = true,
+  dependencies = []
 }: UserCalculationParams) {
   const { data: session } = useSession();
   const { data: currentPeriod } = useCurrentPeriod();
@@ -140,7 +141,7 @@ export function useUserCalculations({
       if (!session?.user?.id || !resolvedRoomId || !userId) {
         throw new Error('User, group, or userId not available');
       }
-      
+
       const params = {
         roomId: resolvedRoomId,
         userId,
@@ -152,7 +153,8 @@ export function useUserCalculations({
       return data;
     },
     enabled: isEnabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 2,

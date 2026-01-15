@@ -42,6 +42,9 @@ export interface Group extends Omit<Room, 'createdBy'> {
   }>;
   userRole?: string;
   joinedAt?: string;
+  _count?: {
+    members: number;
+  };
 }
 
 interface CreateGroupInput {
@@ -181,9 +184,9 @@ export function useGroups(): UseGroupsReturn {
       if (password) {
         params.append('password', password);
       }
-      
+
       const url = `/api/groups/${groupId}${params.toString() ? `?${params.toString()}` : ''}`;
-      
+
       // Make the API request
       const response = await axios.get<Group>(url, {
         withCredentials: true,
@@ -195,9 +198,9 @@ export function useGroups(): UseGroupsReturn {
           return (status >= 200 && status < 300) || status === 401 || status === 403;
         },
       });
-      
+
       const responseData = response.data as any;
-      
+
       // Handle the case where the API returns requiresPassword in the success response
       if (response.status === 403 || responseData.requiresPassword) {
         const error = new Error('This is a private group. A password is required.');
@@ -207,25 +210,25 @@ export function useGroups(): UseGroupsReturn {
         (error as any).code = 'PRIVATE_GROUP';
         throw error;
       }
-      
+
       // Handle invalid password case
       if (response.status === 401) {
         const error = new Error('Invalid password');
         (error as any).code = 'INVALID_PASSWORD';
         throw error;
       }
-      
+
       return responseData;
     } catch (error: any) {
       // If it's already our custom error, just rethrow it
       if (error?.code === 'PRIVATE_GROUP' || error?.code === 'INVALID_PASSWORD') {
         throw error;
       }
-      
+
       // Handle axios errors
       if (error?.response) {
         const responseData = error.response.data || {};
-        
+
         // Handle password required case (403)
         if (error.response.status === 403) {
           const newError = new Error('This is a private group. A password is required.');
@@ -234,7 +237,7 @@ export function useGroups(): UseGroupsReturn {
           (newError as any).code = 'PRIVATE_GROUP';
           throw newError;
         }
-        
+
         // Handle invalid password case (401)
         if (error.response.status === 401) {
           const newError = new Error('Invalid password');
@@ -242,7 +245,7 @@ export function useGroups(): UseGroupsReturn {
           throw newError;
         }
       }
-      
+
       // For any other errors, rethrow with a generic message
       throw new Error(error?.message || 'Failed to fetch group details');
     }
@@ -280,7 +283,7 @@ export function useGroups(): UseGroupsReturn {
         const prev = localStorage.getItem(`groups-${session.user.id}`);
         let groups: Group[] = [];
         if (prev) {
-          try { groups = JSON.parse(prev); } catch {}
+          try { groups = JSON.parse(prev); } catch { }
         }
         localStorage.setItem(`groups-${session.user.id}`, JSON.stringify([data, ...groups]));
       }
@@ -301,13 +304,13 @@ export function useGroups(): UseGroupsReturn {
         throw new Error('Either groupId or inviteToken must be provided');
       }
 
-      const endpoint = inviteToken 
+      const endpoint = inviteToken
         ? `/api/groups/join/${inviteToken}`
         : `/api/groups/${groupId}/join`;
-      
-      await axios.post(endpoint, { 
+
+      await axios.post(endpoint, {
         join: true,
-        password 
+        password
       });
     },
     onSuccess: () => {
@@ -364,11 +367,11 @@ export function useGroups(): UseGroupsReturn {
       await queryClient.cancelQueries({ queryKey: ['groups', 'public'] });
       await queryClient.cancelQueries({ queryKey: ['join-requests', groupId] });
       await queryClient.cancelQueries({ queryKey: ['join-request-status', groupId] });
-      
+
       // Snapshot the previous value
       const previousGroup = queryClient.getQueryData<Group>(['group', groupId]);
       const previousGroups = queryClient.getQueryData<Group[]>(['user-groups', session?.user?.id]);
-      
+
       // Optimistically update the UI
       if (previousGroup) {
         queryClient.setQueryData(['group', groupId], {
@@ -376,13 +379,13 @@ export function useGroups(): UseGroupsReturn {
           members: (previousGroup as Group).members?.filter(m => m.userId !== session?.user?.id) || []
         });
       }
-      
+
       if (Array.isArray(previousGroups)) {
-        queryClient.setQueryData(['user-groups', session?.user?.id], 
+        queryClient.setQueryData(['user-groups', session?.user?.id],
           (previousGroups as Group[]).filter(g => g.id !== groupId)
         );
       }
-      
+
       return { previousGroup, previousGroups };
     },
     onSuccess: (_, groupId) => {
@@ -390,37 +393,37 @@ export function useGroups(): UseGroupsReturn {
       queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'public'] });
-      
+
       // Remove specific group data from cache
       queryClient.removeQueries({ queryKey: ['group', groupId] });
       queryClient.removeQueries({ queryKey: ['join-requests', groupId] });
       queryClient.removeQueries({ queryKey: ['join-request-status', groupId] });
       queryClient.removeQueries({ queryKey: ['group-members', groupId] });
       queryClient.removeQueries({ queryKey: ['group-activities', groupId] });
-      
+
       // Clear any join request status for this group
       queryClient.setQueryData(['join-request-status', groupId], null);
-      
+
       // Clear localStorage cache to force fresh data
       if (typeof window !== 'undefined' && session?.user?.id) {
         localStorage.removeItem(`groups-${session.user.id}`);
       }
-      
+
       toast.success('You have left the group successfully');
       router.push('/groups');
     },
     onError: (error: AxiosError<{ message: string }>, groupId: string, context: LeaveGroupContext | undefined) => {
       console.error('Error leaving group:', error);
-      
+
       // Handle specific error cases
       const errorMessage = error.response?.data?.message || 'Failed to leave group';
-      
+
       if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
         toast.error('Group creator cannot leave. Please transfer ownership or delete the group.');
       } else {
         toast.error(errorMessage);
       }
-      
+
       // Rollback on error
       if (context?.previousGroup) {
         queryClient.setQueryData(['group', groupId], context.previousGroup);
@@ -454,7 +457,7 @@ export function useGroups(): UseGroupsReturn {
 
       // Optimistically update the groups list
       if (Array.isArray(previousGroups)) {
-        queryClient.setQueryData(['user-groups', session?.user?.id], 
+        queryClient.setQueryData(['user-groups', session?.user?.id],
           previousGroups.filter(g => g.id !== groupId)
         );
       }
@@ -535,7 +538,7 @@ export function useGroups(): UseGroupsReturn {
     queryClient.setQueryData(['join-request-status', groupId], null);
     queryClient.removeQueries({ queryKey: ['join-request-status', groupId] });
     queryClient.invalidateQueries({ queryKey: ['join-request-status', groupId] });
-    
+
     // Also clear join requests list for this group
     queryClient.removeQueries({ queryKey: ['join-requests', groupId] });
     queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });

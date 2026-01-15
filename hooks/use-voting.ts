@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useActiveGroup } from "@/contexts/group-context";
-import axios from "axios";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { assertOnline } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from "axios";
 
 export interface Candidate {
   id: string;
@@ -38,156 +39,134 @@ export function useVoting() {
   const { activeGroup } = useActiveGroup();
   const { data: session } = useSession();
   const userId = session?.user?.id;
-  const [activeVotes, setActiveVotes] = useState<Vote[]>([]);
-  const [pastVotes, setPastVotes] = useState<Vote[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Function to fetch votes
-  const fetchVotes = useCallback(async (isInitial = false) => {
-    assertOnline();
-    if (!activeGroup) {
-      setActiveVotes([]);
-      setPastVotes([]);
-      if (isInitial) setInitialLoading(false);
-      return;
-    }
-    if (isInitial) {
-      setInitialLoading(true);
-    } else {
-      setLoading(true);
-    }
-    try {
+  // Fetch all votes using React Query
+  const { data: votesData, isLoading: initialLoading } = useQuery<Vote[]>({
+    queryKey: ['votes', activeGroup?.id],
+    queryFn: async () => {
       assertOnline();
+      if (!activeGroup?.id) return [];
+
       const res = await axios.get<VotesResponse>(`/api/groups/${activeGroup.id}/votes`);
-      const votes = res.data.votes || [];
-      setActiveVotes(votes.filter((v) => v.isActive));
-      setPastVotes(votes.filter((v) => !v.isActive));
-    } catch {
-      setActiveVotes([]);
-      setPastVotes([]);
-    } finally {
-      if (isInitial) {
-        setInitialLoading(false);
-      } else {
-        setLoading(false);
-      }
-    }
-  }, [activeGroup]);
+      return res.data.votes || [];
+    },
+    enabled: !!activeGroup?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchInterval: 60000, // Refetch every minute to check for expired votes
+    select: (votes) => votes, // Can add transformation here if needed
+  });
 
-  useEffect(() => {
-    fetchVotes(true);
-  }, [fetchVotes]);
+  // Separate active and past votes using useMemo equivalent
+  const activeVotes = votesData?.filter((v) => v.isActive) || [];
+  const pastVotes = votesData?.filter((v) => !v.isActive) || [];
 
-  // Set up periodic refresh to check for expired votes
-  useEffect(() => {
-    if (!activeGroup || activeVotes.length === 0) return;
+  // Create vote mutation
+  const createVoteMutation = useMutation({
+    mutationFn: async (voteData: Partial<Vote> & { candidates: Candidate[]; startDate?: string; endDate?: string }) => {
+      assertOnline();
+      if (!activeGroup?.id) throw new Error('No active group');
 
-    // Check for expired votes every minute
-    const interval = setInterval(() => {
-      const now = new Date();
-      const hasExpiredVotes = activeVotes.some(vote => 
-        vote.endDate && new Date(vote.endDate) <= now
+      const res = await axios.post<CreateVoteResponse>(`/api/groups/${activeGroup.id}/votes`, voteData);
+      return res.data.vote;
+    },
+    onSuccess: (newVote) => {
+      // Optimistically update the cache
+      queryClient.setQueryData<Vote[]>(['votes', activeGroup?.id], (old = []) => [newVote, ...old]);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create vote",
+        description: error?.response?.data?.error || 'Failed to create vote.',
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cast vote mutation
+  const castVoteMutation = useMutation({
+    mutationFn: async ({ voteId, candidateId }: { voteId: string; candidateId: string }) => {
+      assertOnline();
+      if (!activeGroup?.id || !userId) throw new Error('Missing required data');
+
+      const res = await axios.patch<CastVoteResponse>(
+        `/api/groups/${activeGroup.id}/votes`,
+        { voteId, candidateId, userId }
       );
-      
-      if (hasExpiredVotes) {
-        // Refresh votes to get updated status from server
-        fetchVotes();
-        toast({
-          title: "Votes Expired",
-          description: "Some votes have expired and have been moved to history.",
-          duration: 5000,
-        });
-      }
-    }, 60000); // Check every minute
+      return res.data.vote;
+    },
+    onSuccess: (updatedVote) => {
+      // Update the cache with the new vote data
+      queryClient.setQueryData<Vote[]>(['votes', activeGroup?.id], (old = []) =>
+        old.map((v) => (v.id === updatedVote.id ? updatedVote : v))
+      );
 
-    return () => clearInterval(interval);
-  }, [activeGroup, activeVotes, fetchVotes, toast]);
+      // Show appropriate toast based on vote status
+      if (!updatedVote.isActive) {
+        if (updatedVote.winner) {
+          toast({
+            title: "Vote Completed!",
+            description: `"${updatedVote.title}" has been completed. Winner: ${updatedVote.winner.name}`,
+            duration: 5000,
+          });
+        } else {
+          toast({
+            title: "Vote Expired",
+            description: "This vote has expired and has been moved to history.",
+            duration: 5000,
+          });
+        }
+      }
+    },
+  });
 
   const createVote = useCallback(
     async (voteData: Partial<Vote> & { candidates: Candidate[]; startDate?: string; endDate?: string }) => {
-      assertOnline();
-      if (!activeGroup) return;
-      setLoading(true);
       try {
-        assertOnline();
-        const res = await axios.post<CreateVoteResponse>(`/api/groups/${activeGroup.id}/votes`, voteData);
-        const newVote = res.data.vote;
-        setActiveVotes((prev) => [newVote, ...prev]);
+        await createVoteMutation.mutateAsync(voteData);
         return { success: true };
       } catch (error: any) {
         return { success: false, error: error?.response?.data?.error || 'Failed to create vote.' };
-      } finally {
-        setLoading(false);
       }
     },
-    [activeGroup]
+    [createVoteMutation]
   );
 
   const castVote = useCallback(
     async (voteId: string, candidateId: string) => {
-      assertOnline();
-      if (!activeGroup || !userId) return;
-      setIsSubmitting(true);
-      try {
-        assertOnline();
-        const res = await axios.patch<CastVoteResponse>(`/api/groups/${activeGroup.id}/votes`, { voteId, candidateId, userId });
-        const updatedVote = res.data.vote;
-        
-        // If vote is no longer active, move it from activeVotes to pastVotes
-        if (!updatedVote.isActive) {
-          setActiveVotes((prev) => prev.filter((v) => v.id !== updatedVote.id));
-          setPastVotes((prev) => [updatedVote, ...prev]);
-          
-          // Show different toast based on whether vote was completed or expired
-          if (updatedVote.winner) {
-            toast({
-              title: "Vote Completed!",
-              description: `"${updatedVote.title}" has been completed. Winner: ${updatedVote.winner.name}`,
-              duration: 5000,
-            });
-          } else {
-            toast({
-              title: "Vote Expired",
-              description: "This vote has expired and has been moved to history.",
-              duration: 5000,
-            });
-          }
-        } else {
-          // If vote is still active, update it in activeVotes
-          setActiveVotes((prev) =>
-            prev.map((v) => (v.id === updatedVote.id ? updatedVote : v))
-          );
-        }
-      } finally {
-        setIsSubmitting(false);
-      }
+      await castVoteMutation.mutateAsync({ voteId, candidateId });
     },
-    [activeGroup, userId, toast]
+    [castVoteMutation]
   );
 
   const hasVoted = useCallback(
     (vote: Vote) => {
       if (!userId) return false;
-      return Object.values(vote.results || {}).some((arr) => Array.isArray(arr) && arr.some(voter => voter.id === userId));
+      return Object.values(vote.results || {}).some((arr) =>
+        Array.isArray(arr) && arr.some(voter => voter.id === userId)
+      );
     },
     [userId]
   );
 
+  const refreshVotes = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['votes', activeGroup?.id] });
+  }, [queryClient, activeGroup?.id]);
+
   return {
     activeVotes,
     pastVotes,
-    loading,
+    loading: createVoteMutation.isPending || castVoteMutation.isPending,
     initialLoading,
-    isSubmitting,
+    isSubmitting: castVoteMutation.isPending,
     createVote,
     castVote,
     hasVoted,
     group: activeGroup,
-    refreshVotes: fetchVotes,
+    refreshVotes,
   };
 }
 
-export default useVoting; 
+export default useVoting;

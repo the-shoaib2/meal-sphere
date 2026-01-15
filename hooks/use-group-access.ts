@@ -1,9 +1,10 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Role } from '@prisma/client';
 import { toast } from 'react-hot-toast';
 import { isValidObjectId } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 interface UseGroupAccessProps {
   groupId: string;
@@ -22,6 +23,14 @@ interface UseGroupAccessReturn {
   actualGroupId: string | null;
 }
 
+interface GroupAccessData {
+  isMember: boolean;
+  userRole: string | null;
+  canAccess: boolean;
+  actualGroupId: string | null;
+  groupData?: any;
+}
+
 // Helper function to check if a string looks like an invite token
 function checkIsInviteToken(token: string): boolean {
   // Invite tokens are 10 characters long and contain a mix of letters, numbers, and special characters
@@ -29,38 +38,33 @@ function checkIsInviteToken(token: string): boolean {
   return token.length === 10 && !isValidObjectId(token);
 }
 
-export function useGroupAccess({ 
-  groupId, 
-  onLoading, 
+export function useGroupAccess({
+  groupId,
+  onLoading,
   onError,
   onGroupData
 }: UseGroupAccessProps): UseGroupAccessReturn {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isMember, setIsMember] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [canAccess, setCanAccess] = useState(false);
-  const [isInviteToken, setIsInviteToken] = useState(false);
-  const [actualGroupId, setActualGroupId] = useState<string | null>(null);
-  const isCheckingRef = useRef(false);
 
-  const checkAccess = useCallback(async () => {
-    if (!groupId || status === 'loading' || isCheckingRef.current) return;
+  // Determine if this is an invite token
+  const isInviteToken = useMemo(() => checkIsInviteToken(groupId), [groupId]);
 
-    try {
-      isCheckingRef.current = true;
-      setIsLoading(true);
-      onLoading?.(true);
-      setError(null);
-      onError?.(null);
+  // Fetch group access data using React Query
+  const {
+    data: accessData,
+    isLoading,
+    error: queryError
+  } = useQuery<GroupAccessData, Error>({
+    queryKey: ['group-access', groupId],
+    queryFn: async () => {
+      if (!groupId) {
+        throw new Error('No group ID provided');
+      }
 
       // Check if this is an invite token
       if (checkIsInviteToken(groupId)) {
-        setIsInviteToken(true);
-        
-        // For invite tokens, we need to fetch the token details first
+        // For invite tokens, fetch token details
         const tokenResponse = await fetch(`/api/groups/join/${groupId}`);
         const tokenData = await tokenResponse.json();
 
@@ -68,33 +72,18 @@ export function useGroupAccess({
           throw new Error(tokenData.error || 'Invalid or expired invite token');
         }
 
-        // Set the actual group ID from the token data
-        setActualGroupId(tokenData.data?.groupId || null);
-        
-        // Handle the group data
-        if (tokenData.data?.group) {
-          setIsMember(tokenData.data.isMember || false);
-          setUserRole(tokenData.data.role || null);
-          setCanAccess(true); // If we can fetch token data, we have access
-          onGroupData?.(tokenData.data);
-          // console.log('[useGroupAccess] Invite token group:', {
-          //   groupName: tokenData.data.group?.name,
-          //   userRole: tokenData.data.role,
-          //   userName: session?.user?.name,
-          //   userEmail: session?.user?.email
-          // });
-        }
-        
-        return;
+        return {
+          isMember: tokenData.data?.isMember || false,
+          userRole: tokenData.data?.role || null,
+          canAccess: true,
+          actualGroupId: tokenData.data?.groupId || null,
+          groupData: tokenData.data,
+        };
       }
 
       // For regular group IDs, validate as ObjectId
       if (!isValidObjectId(groupId)) {
-        const errorMessage = 'Invalid group ID format. Please check the URL and try again.';
-        setError(errorMessage);
-        onError?.(errorMessage);
-        setCanAccess(false);
-        return;
+        throw new Error('Invalid group ID format. Please check the URL and try again.');
       }
 
       // Regular group access check
@@ -105,36 +94,50 @@ export function useGroupAccess({
         throw new Error(groupData.error || 'Failed to check group access');
       }
 
-      setIsMember(groupData.isMember);
-      setUserRole(groupData.userRole);
-      setCanAccess(groupData.canAccess);
-      onGroupData?.(groupData);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to check group access';
-      setError(errorMessage);
-      onError?.(errorMessage);
-      setCanAccess(false);
-    } finally {
-      setIsLoading(false);
-      onLoading?.(false);
-      isCheckingRef.current = false;
-    }
-  }, [groupId, status, onLoading, onError, onGroupData]);
+      return {
+        isMember: groupData.isMember,
+        userRole: groupData.userRole,
+        canAccess: groupData.canAccess,
+        actualGroupId: groupId,
+        groupData,
+      };
+    },
+    enabled: !!groupId && status !== 'loading',
+    staleTime: 10 * 60 * 1000, // 10 minutes - access permissions don't change frequently
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      // Don't retry on validation errors
+      if (error.message.includes('Invalid') || error.message.includes('expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
 
-  useEffect(() => {
-    // Only check access if we have a groupId and session is loaded
-    if (groupId && status !== 'loading') {
-      checkAccess();
-    }
-  }, [groupId, status, checkAccess]);
+  // Call callbacks when loading state changes
+  const loadingState = isLoading || status === 'loading';
+  if (onLoading) {
+    onLoading(loadingState);
+  }
+
+  // Call callbacks when error changes
+  const errorMessage = queryError?.message || null;
+  if (onError) {
+    onError(errorMessage);
+  }
+
+  // Call callback when group data is available
+  if (onGroupData && accessData?.groupData) {
+    onGroupData(accessData.groupData);
+  }
 
   return {
-    isLoading,
-    error,
-    isMember,
-    userRole,
-    canAccess,
+    isLoading: loadingState,
+    error: errorMessage,
+    isMember: accessData?.isMember || false,
+    userRole: accessData?.userRole || null,
+    canAccess: accessData?.canAccess || false,
     isInviteToken,
-    actualGroupId,
+    actualGroupId: accessData?.actualGroupId || null,
   };
-} 
+}
