@@ -37,8 +37,12 @@ const expenseFormSchema = z.object({
   amount: z.coerce.number().positive({
     message: "Amount must be a positive number.",
   }),
-  date: z.date(),
-  type: z.nativeEnum(ExpenseType),
+  date: z.date({
+    required_error: "Please select a date",
+  }),
+  type: z.nativeEnum(ExpenseType, {
+    required_error: "Please select an expense type",
+  }),
   receipt: z
     .any()
     .optional()
@@ -76,7 +80,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
   const { addExpense, updateExpense } = useExtraExpense()
 
   const form = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseFormSchema) as any,
+    resolver: zodResolver(expenseFormSchema),
     defaultValues: {
       description: "",
       amount: 0,
@@ -129,7 +133,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
       const { receipt, ...expenseData } = data;
-
+      
       if (isEditMode && expense) {
         // For update, convert date to ISO string
         await updateExpense.mutateAsync({
@@ -147,7 +151,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
         });
         toast.success("Expense added successfully!");
       }
-
+      
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -179,9 +183,9 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="What was this expense for?"
-                        {...field}
+                      <Input 
+                        placeholder="What was this expense for?" 
+                        {...field} 
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -200,20 +204,20 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">৳</span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            className="pl-8"
-                            {...field}
-                            value={field.value || ''}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value);
-                              field.onChange(isNaN(value) ? 0 : value);
-                            }}
-                            disabled={isLoading}
-                          />
+                          <Input 
+                          type="number" 
+                        step="0.01" 
+                          min="0"
+                        placeholder="0.00" 
+                          className="pl-8"
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          field.onChange(isNaN(value) ? 0 : value);
+                          }}
+                          disabled={isLoading}
+                        />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -316,20 +320,20 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                     <FormMessage />
                     {previewUrl && (
                       <div className="mt-2">
-                        <img
-                          src={previewUrl}
-                          alt="Receipt preview"
-                          className="max-h-32 w-auto max-w-full rounded-md object-contain"
-                        />
+                          <img
+                            src={previewUrl}
+                            alt="Receipt preview"
+                            className="max-h-32 w-auto max-w-full rounded-md object-contain"
+                          />
                       </div>
                     )}
                   </FormItem>
                 )}
               />
             </div>
-
+            
             <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
-              <Button
+              <Button 
                 type="submit"
                 className="w-full sm:w-auto"
                 disabled={isLoading}

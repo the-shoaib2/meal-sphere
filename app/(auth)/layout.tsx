@@ -17,7 +17,7 @@ export default async function AuthLayout({
   children: React.ReactNode
 }>) {
   const session = await getServerSession(authOptions)
-
+  
   // If no session, redirect to login instead of throwing error
   // This handles the transition from JWT to database sessions
   if (!session) {

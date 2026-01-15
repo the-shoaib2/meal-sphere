@@ -10,10 +10,9 @@ interface AutoMealSettingsDialogProps {
   onOpenChange: (open: boolean) => void;
   autoMealSettings: any;
   updateAutoMealSettings: (settings: Partial<any>) => void;
-  mealSettings?: any;
 }
 
-const AutoMealSettingsDialog: React.FC<AutoMealSettingsDialogProps> = ({ open, onOpenChange, autoMealSettings, updateAutoMealSettings, mealSettings }) => (
+const AutoMealSettingsDialog: React.FC<AutoMealSettingsDialogProps> = ({ open, onOpenChange, autoMealSettings, updateAutoMealSettings }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-[500px] rounded-lg">
       <DialogHeader>
@@ -24,29 +23,20 @@ const AutoMealSettingsDialog: React.FC<AutoMealSettingsDialogProps> = ({ open, o
       </DialogHeader>
 
       <div className="space-y-4">
-        {!mealSettings?.autoMealEnabled ? (
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              Auto meal system is currently disabled by the group administrator. 
-              Contact your admin to enable this feature.
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Enable Auto Meals</Label>
+            <p className="text-sm text-muted-foreground">
+              Automatically add meals based on your schedule
             </p>
           </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Auto Meals</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically add meals based on your schedule
-              </p>
-            </div>
-            <Switch
-              checked={autoMealSettings?.isEnabled || false}
-              onCheckedChange={(checked) => updateAutoMealSettings({ isEnabled: checked })}
-            />
-          </div>
-        )}
+          <Switch
+            checked={autoMealSettings?.isEnabled || false}
+            onCheckedChange={(checked) => updateAutoMealSettings({ isEnabled: checked })}
+          />
+        </div>
         <Separator />
-        {mealSettings?.autoMealEnabled && autoMealSettings?.isEnabled && (
+        {autoMealSettings?.isEnabled && (
           <div className="space-y-3">
             <Label>Meal Types</Label>
             <div className="space-y-2">

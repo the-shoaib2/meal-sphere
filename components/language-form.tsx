@@ -15,7 +15,9 @@ import { toast } from "react-hot-toast"
 import { useLanguage } from "@/contexts/language-context"
 
 const languageFormSchema = z.object({
-  language: z.union([z.literal("en"), z.literal("bn")]),
+  language: z.enum(["en", "bn"], {
+    required_error: "Please select a language.",
+  }),
 })
 
 type LanguageFormValues = z.infer<typeof languageFormSchema>
@@ -45,33 +47,33 @@ export function LanguageForm({ user }: LanguageFormProps) {
     if (revertTimeout) {
       clearTimeout(revertTimeout)
     }
-
+    
     // Set the preview language
     setPreviewLanguage(lang)
     setLanguage(lang as "en" | "bn")
-
+    
     // Start countdown from 5
     let count = 5
     setCountdown(count)
-
+    
     // Update countdown every second
     const countdownInterval = setInterval(() => {
       count--
       setCountdown(count)
-
+      
       if (count <= 0) {
         clearInterval(countdownInterval)
       }
     }, 1000)
-
+    
     // Set a timeout to save after 5 seconds
     const timeout = setTimeout(async () => {
       clearInterval(countdownInterval)
-
+      
       try {
         // Update form value to match the preview
         form.setValue('language', lang as any)
-
+        
         // Save the language
         const response = await fetch("/api/user/language", {
           method: "PATCH",
@@ -88,7 +90,7 @@ export function LanguageForm({ user }: LanguageFormProps) {
         // Clear preview state
         setPreviewLanguage(null)
         setCountdown(0)
-
+        
         // Show success message
         toast.success(t("notification.success"))
         router.refresh()
@@ -99,13 +101,13 @@ export function LanguageForm({ user }: LanguageFormProps) {
         toast.error(t("notification.error"))
       }
     }, 5000)
-
+    
     setRevertTimeout(timeout as unknown as NodeJS.Timeout)
-
+    
     // Cleanup interval on unmount or when timeout is cleared
     return () => clearInterval(countdownInterval)
   }
-
+  
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {

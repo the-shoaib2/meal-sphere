@@ -21,9 +21,15 @@ import { ResponsiveFormLayout, ResponsiveFormItem } from "@/components/ui/respon
 import { useIsMobile } from "@/hooks/use-mobile"
 
 const marketDateFormSchema = z.object({
-  roomId: z.string(),
-  userId: z.string(),
-  date: z.date(),
+  roomId: z.string({
+    required_error: "Please select a room",
+  }),
+  userId: z.string({
+    required_error: "Please select a member",
+  }),
+  date: z.date({
+    required_error: "Please select a date",
+  }),
 })
 
 type MarketDateFormValues = z.infer<typeof marketDateFormSchema>

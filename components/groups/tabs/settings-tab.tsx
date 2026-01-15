@@ -123,7 +123,7 @@ const groupSettingsSchema = z.object({
       .nullable()
   ]).optional().transform(val => val === undefined ? null : val),
   tags: z.array(z.string()).default([]),
-  features: z.record(z.string(), z.boolean()).default({}),
+  features: z.record(z.boolean()).default({}),
 });
 
 type GroupSettingsFormValues = {
@@ -184,7 +184,7 @@ export function SettingsTab({
   const prevGroupRef = useState<PreviousGroupSettings | null>(null);
 
   const form = useForm<GroupSettingsFormValues>({
-    resolver: zodResolver(groupSettingsSchema) as any,
+    resolver: zodResolver(groupSettingsSchema),
     defaultValues: {
       name: group?.name || '',
       description: group?.description || '',
@@ -392,7 +392,7 @@ export function SettingsTab({
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-10 w-full" />
             </div>
-          </div>
+      </div>
         </CardContent>
       </Card>
     );
@@ -767,12 +767,13 @@ export function SettingsTab({
                     placeholder="Enter group name"
                     value={deleteGroupName}
                     onChange={(e) => setDeleteGroupName(e.target.value)}
-                    className={`${isDeleteNameValid
-                      ? "border-green-500 focus-visible:ring-green-500"
-                      : deleteGroupName
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                      }`}
+                    className={`${
+                      isDeleteNameValid 
+                        ? "border-green-500 focus-visible:ring-green-500" 
+                        : deleteGroupName 
+                          ? "border-destructive focus-visible:ring-destructive" 
+                          : ""
+                    }`}
                     disabled={deleteGroup.isPending}
                   />
                   {deleteGroupName && !isDeleteNameValid && (
@@ -833,7 +834,7 @@ export function SettingsTab({
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel
+                  <AlertDialogCancel 
                     disabled={isLeaving || leaveGroup.isPending}
                   >
                     Cancel

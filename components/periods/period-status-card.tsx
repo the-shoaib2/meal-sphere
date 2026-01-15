@@ -14,7 +14,7 @@ import { CreatePeriodDialog } from './create-period-dialog';
 import { PeriodStatus } from '@prisma/client';
 
 const PRIVILEGED_ROLES = [
-  'SUPER_ADMIN',
+  'OWNER',
   'ADMIN',
   'MODERATOR',
   'MANAGER',
