@@ -35,26 +35,59 @@ export type DashboardChartData = {
   balance: number;
 };
 
+// Unified hook that fetches all dashboard data in a single parallel request
+export function useDashboardUnified() {
+  const { data: session } = useSession();
+  const { activeGroup } = useActiveGroup();
+
+  return useQuery<{
+    summary: DashboardSummary;
+    activities: DashboardActivity[];
+    chartData: DashboardChartData[];
+  }>({
+    queryKey: ['dashboard-unified', activeGroup?.id],
+    queryFn: async () => {
+      if (!activeGroup?.id) {
+        throw new Error('No active group selected');
+      }
+
+      const url = `/api/dashboard/unified?groupId=${activeGroup.id}`;
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Failed to fetch dashboard data: ${res.status} ${errorText}`);
+      }
+
+      return res.json();
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: !!session?.user?.id && !!activeGroup?.id,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// Legacy hook - kept for backward compatibility
 export function useDashboardSummary() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  
-  
+
+
   return useQuery<DashboardSummary>({
     queryKey: ['dashboard-summary', activeGroup?.id],
     queryFn: async () => {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      
+
       const url = `/api/dashboard/summary/${activeGroup.id}`;
       const res = await fetch(url);
-      
+
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`Failed to fetch dashboard summary: ${res.status} ${errorText}`);
       }
-      
+
       const data = await res.json();
       return data;
     },
@@ -67,14 +100,14 @@ export function useDashboardSummary() {
 export function useDashboardActivities() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery<DashboardActivity[]>({
     queryKey: ['dashboard-activities', activeGroup?.id],
     queryFn: async () => {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      
+
       const res = await fetch('/api/dashboard/activities');
       if (!res.ok) throw new Error('Failed to fetch dashboard activities');
       return res.json();
@@ -88,14 +121,14 @@ export function useDashboardActivities() {
 export function useDashboardChartData() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery<DashboardChartData[]>({
     queryKey: ['dashboard-chart-data', activeGroup?.id],
     queryFn: async () => {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      
+
       const res = await fetch('/api/dashboard/chart-data');
       if (!res.ok) throw new Error('Failed to fetch dashboard chart data');
       return res.json();
@@ -108,12 +141,15 @@ export function useDashboardChartData() {
 
 export function useDashboardRefresh() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async () => {
       return Promise.resolve();
     },
     onSuccess: () => {
+      // Invalidate unified query
+      queryClient.invalidateQueries({ queryKey: ['dashboard-unified'] });
+      // Keep legacy queries for backward compatibility
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-activities'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-chart-data'] });
@@ -138,7 +174,7 @@ export function useDashboardExport() {
 // Hook to get dashboard statistics for a specific group
 export function useGroupDashboardStats(groupId: string) {
   const { data: session } = useSession();
-  
+
   return useQuery<DashboardSummary>({
     queryKey: ['group-dashboard-stats', groupId],
     queryFn: async () => {
@@ -155,7 +191,7 @@ export function useGroupDashboardStats(groupId: string) {
 // Hook to get user's dashboard preferences
 export function useDashboardPreferences() {
   const { data: session } = useSession();
-  
+
   return useQuery<{
     showChart: boolean;
     showActivities: boolean;
@@ -177,7 +213,7 @@ export function useDashboardPreferences() {
 // Hook to update dashboard preferences
 export function useUpdateDashboardPreferences() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (preferences: {
       showChart?: boolean;

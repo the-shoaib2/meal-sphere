@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Get room IDs the user is a member of
     let roomIds = user.rooms.map((membership) => membership.roomId);
-    
+
     // If specific group is requested, filter to that group only
     if (groupId && groupId !== 'all') {
       const isMember = user.rooms.some(membership => membership.roomId === groupId);
@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
       const whereClause = await getPeriodAwareWhereClause(roomId, {
         roomId: roomId,
       });
-      
+
       if (whereClause.id === null) {
         return [];
       }
-      
+
       return prisma.meal.findMany({
         where: whereClause,
         include: {
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         orderBy: { date: 'desc' },
       });
     });
-    
+
     const mealsArrays = await Promise.all(mealsPromises);
     const meals = mealsArrays.flat();
 
@@ -80,11 +80,11 @@ export async function GET(request: NextRequest) {
       const whereClause = await getPeriodAwareWhereClause(roomId, {
         roomId: roomId,
       });
-      
+
       if (whereClause.id === null) {
         return [];
       }
-      
+
       return prisma.extraExpense.findMany({
         where: whereClause,
         include: {
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
         orderBy: { date: 'desc' },
       });
     });
-    
+
     const expensesArrays = await Promise.all(expensesPromises);
     const expenses = expensesArrays.flat();
 
@@ -107,11 +107,11 @@ export async function GET(request: NextRequest) {
       const whereClause = await getPeriodAwareWhereClause(roomId, {
         roomId: roomId,
       });
-      
+
       if (whereClause.id === null) {
         return [];
       }
-      
+
       return prisma.shoppingItem.findMany({
         where: whereClause,
         include: {
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
         orderBy: { date: 'desc' },
       });
     });
-    
+
     const shoppingArrays = await Promise.all(shoppingPromises);
     const shoppingItems = shoppingArrays.flat();
 
@@ -153,18 +153,18 @@ export async function GET(request: NextRequest) {
         const roomMeals = meals.filter(meal => meal.roomId === roomId);
         const roomExpenses = expenses.filter(expense => expense.roomId === roomId);
         const roomShopping = shoppingItems.filter(item => item.roomId === roomId);
-        
+
         const totalMeals = roomMeals.length;
         const totalExpense = roomExpenses.reduce((sum, expense) => sum + expense.amount, 0) +
-                           roomShopping.reduce((sum, item) => sum + (item.quantity || 0), 0);
+          roomShopping.reduce((sum, item) => sum + (item.quantity || 0), 0);
         const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
-        
+
         const dates = [...roomMeals, ...roomExpenses, ...roomShopping].map(item => item.date);
         const startDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => d.getTime()))) : new Date();
         const endDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
-        
+
         const room = roomMeals[0]?.room || roomExpenses[0]?.room || roomShopping[0]?.room;
-        
+
         return {
           id: roomId,
           roomId,
@@ -190,14 +190,14 @@ export async function GET(request: NextRequest) {
       const roomMeals = meals.filter(meal => meal.roomId === roomId);
       const roomExpenses = expenses.filter(expense => expense.roomId === roomId);
       const room = roomMeals[0]?.room || roomExpenses[0]?.room;
-      
+
       const totalMeals = roomMeals.length;
       const totalExpenses = roomExpenses.reduce((sum, expense) => sum + expense.amount, 0) +
-                           shoppingItems.filter(item => item.roomId === roomId)
-                             .reduce((sum, item) => sum + (item.quantity || 0), 0);
+        shoppingItems.filter(item => item.roomId === roomId)
+          .reduce((sum, item) => sum + (item.quantity || 0), 0);
       const averageMealRate = totalMeals > 0 ? totalExpenses / totalMeals : 0;
       const activeDays = new Set(roomMeals.map(meal => meal.date.toDateString())).size;
-      
+
       return {
         roomId,
         roomName: room?.name || 'Unknown Room',

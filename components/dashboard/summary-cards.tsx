@@ -3,12 +3,12 @@
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  Utensils, 
-  DollarSign, 
-  TrendingUp, 
-  Receipt, 
+import {
+  Users,
+  Utensils,
+  DollarSign,
+  TrendingUp,
+  Receipt,
   Calculator,
   Wallet,
   CreditCard
@@ -19,6 +19,7 @@ import { useActiveGroup } from '@/contexts/group-context';
 import { useSession } from 'next-auth/react';
 import { useGroups } from '@/hooks/use-groups';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 interface SummaryCardsProps {
   totalMeals: number;
@@ -46,7 +47,7 @@ export default function SummaryCards({
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
   const { data: userGroups = [] } = useGroups();
-  
+
   // Fetch dashboard summary data using the custom hook
   const { data: summaryData, isLoading: isLoadingSummary, error: summaryError } = useDashboardSummary();
 
@@ -60,7 +61,7 @@ export default function SummaryCards({
   const userActiveRooms = summaryData?.activeRooms ?? initialActiveRooms;
   const totalActiveGroups = summaryData?.totalActiveGroups ?? initialActiveRooms;
   const totalMembers = summaryData?.totalMembers ?? initialTotalMembers;
-  
+
   // Check if user has privileged access to the active group
   const member = activeGroup?.members?.find(m => m.userId === session?.user?.id);
   const userRole = member?.role;
@@ -99,7 +100,7 @@ export default function SummaryCards({
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-muted-foreground text-xs sm:text-sm">
-              {summaryError.message === 'You are not a member of this group' 
+              {summaryError.message === 'You are not a member of this group'
                 ? 'You are not a member of the selected group. Please select a different group.'
                 : 'Failed to load dashboard data. Please try again.'
               }
@@ -118,7 +119,9 @@ export default function SummaryCards({
           <Utensils className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold">{totalUserMeals} / {totalAllMeals}</div>
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+            <NumberTicker value={totalUserMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={totalAllMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" />
+          </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             My meals / Total meals
           </p>
@@ -131,7 +134,9 @@ export default function SummaryCards({
           <Calculator className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold">৳{currentRate.toFixed(2)}</div>
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+            ৳<NumberTicker value={currentRate} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold" />
+          </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             Average per meal
           </p>
@@ -145,7 +150,7 @@ export default function SummaryCards({
         </CardHeader>
         <CardContent>
           <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-            ৳{currentBalance.toFixed(2)}
+            ৳<NumberTicker value={currentBalance} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             Total money in account
@@ -160,7 +165,7 @@ export default function SummaryCards({
         </CardHeader>
         <CardContent>
           <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            ৳{availableBalance.toFixed(2)}
+            ৳<NumberTicker value={availableBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             After meal expenses
@@ -175,7 +180,7 @@ export default function SummaryCards({
         </CardHeader>
         <CardContent>
           <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-            ৳{totalCost.toFixed(2)}
+            ৳<NumberTicker value={totalCost} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600" />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             Total meal expenses
@@ -189,7 +194,9 @@ export default function SummaryCards({
           <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold">{userActiveRooms} / {totalActiveGroups}</div>
+          <div className="text-lg sm:text-xl lg:text-2xl font-bold">
+            <NumberTicker value={userActiveRooms} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={totalActiveGroups} className="text-lg sm:text-xl lg:text-2xl font-bold" />
+          </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             My groups / Total active groups
           </p>
@@ -206,7 +213,7 @@ export default function SummaryCards({
             </CardHeader>
             <CardContent>
               <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ৳{groupData.groupTotalBalance.toFixed(2)}
+                ৳<NumberTicker value={groupData.groupTotalBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
                 {activeGroup.name}
@@ -221,7 +228,7 @@ export default function SummaryCards({
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-                ৳{groupData.totalExpenses.toFixed(2)}
+                ৳<NumberTicker value={groupData.totalExpenses} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600" />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
                 Total expenses
@@ -236,10 +243,10 @@ export default function SummaryCards({
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-                ৳{groupData.mealRate.toFixed(2)}
+                ৳<NumberTicker value={groupData.mealRate} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                {groupData.totalMeals} total meals
+                <NumberTicker value={groupData.totalMeals} className="text-[10px] sm:text-xs" /> total meals
               </p>
             </CardContent>
           </Card>
@@ -251,7 +258,7 @@ export default function SummaryCards({
             </CardHeader>
             <CardContent>
               <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                ৳{groupData.netGroupBalance.toFixed(2)}
+                ৳<NumberTicker value={groupData.netGroupBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`} />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
                 {groupData.netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}

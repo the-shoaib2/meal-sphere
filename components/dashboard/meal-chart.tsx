@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useDashboardChartData } from '@/hooks/use-dashboard';
+import { useDashboardContext } from '@/contexts/dashboard-context';
 import { TrendingUp, Calendar, DollarSign, BarChart3, Info, Smartphone } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NumberTicker } from '@/components/ui/number-ticker';
 
 export default function MealChart() {
-  const { data: chartData, isLoading, error } = useDashboardChartData();
+  const { chartData, isLoading, error } = useDashboardContext();
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -76,7 +77,7 @@ export default function MealChart() {
               </div>
             </div>
           </div>
-          
+
           {/* Stats Summary */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mt-3 sm:mt-4 px-2 sm:px-3 lg:px-4">
             <div className="p-2 sm:p-3 rounded-lg border bg-card">
@@ -136,7 +137,7 @@ export default function MealChart() {
               </Tooltip>
             </div>
           </div>
-          
+
           {/* Responsive stats grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 lg:gap-4 text-xs sm:text-sm">
             <Card className="p-2 border-0 bg-muted/50">
@@ -144,7 +145,9 @@ export default function MealChart() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-[10px] sm:text-xs">Total:</span>
-                  <span className="font-semibold block truncate text-xs sm:text-sm">{totalMeals}</span>
+                  <span className="font-semibold block truncate text-xs sm:text-sm">
+                    <NumberTicker value={totalMeals} />
+                  </span>
                 </div>
               </div>
             </Card>
@@ -153,7 +156,9 @@ export default function MealChart() {
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-[10px] sm:text-xs">Active:</span>
-                  <span className="font-semibold block truncate text-xs sm:text-sm">{daysWithMeals}</span>
+                  <span className="font-semibold block truncate text-xs sm:text-sm">
+                    <NumberTicker value={daysWithMeals} />
+                  </span>
                 </div>
               </div>
             </Card>
@@ -162,7 +167,9 @@ export default function MealChart() {
                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-[10px] sm:text-xs">Avg:</span>
-                  <span className="font-semibold block truncate text-xs sm:text-sm">{averageMealsPerDay}</span>
+                  <span className="font-semibold block truncate text-xs sm:text-sm">
+                    <NumberTicker value={Number(averageMealsPerDay)} decimalPlaces={1} />
+                  </span>
                 </div>
               </div>
             </Card>
@@ -171,7 +178,9 @@ export default function MealChart() {
                 <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-500 flex-shrink-0" />
                 <div className="min-w-0">
                   <span className="text-muted-foreground text-[10px] sm:text-xs">Exp:</span>
-                  <span className="font-semibold block truncate text-xs sm:text-sm">৳{totalExpenses.toFixed(0)}</span>
+                  <span className="font-semibold block truncate text-xs sm:text-sm">
+                    ৳<NumberTicker value={totalExpenses} decimalPlaces={0} />
+                  </span>
                 </div>
               </div>
             </Card>
@@ -184,15 +193,17 @@ export default function MealChart() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-xs sm:text-sm">
-                      {new Date(selectedDayData.date).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric' 
+                      {new Date(selectedDayData.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
                       })}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      {selectedDayData.meals} meals
-                      {selectedDayData.expenses > 0 && ` • ৳${selectedDayData.expenses.toFixed(2)}`}
+                      <NumberTicker value={selectedDayData.meals} /> meals
+                      {selectedDayData.expenses > 0 && (
+                        <> • ৳<NumberTicker value={selectedDayData.expenses} decimalPlaces={2} /></>
+                      )}
                     </p>
                   </div>
                   <Badge variant="outline" className="text-[10px] sm:text-xs">
@@ -203,7 +214,7 @@ export default function MealChart() {
             </Card>
           )}
         </CardHeader>
-        
+
         <CardContent className="p-3 sm:p-4">
           <ScrollArea className="h-[220px] sm:h-[250px] lg:h-[280px] xl:h-[320px] w-full">
             <div className="h-full w-full">
@@ -216,11 +227,11 @@ export default function MealChart() {
                     const hasMeals = day.meals > 0;
                     const isToday = new Date(day.date).toDateString() === new Date().toDateString();
                     const isSelected = selectedDay === day.date;
-                    
+
                     return (
                       <Tooltip key={index}>
                         <TooltipTrigger asChild>
-                          <div 
+                          <div
                             className="flex-1 flex flex-col items-center group relative cursor-pointer"
                             onMouseEnter={() => setHoveredDay(day.date)}
                             onMouseLeave={() => setHoveredDay(null)}
@@ -229,37 +240,34 @@ export default function MealChart() {
                             {/* Bar container */}
                             <div className="relative w-full h-full flex flex-col justify-end">
                               {/* Bar */}
-                              <div 
-                                className={`w-full transition-all duration-300 rounded-t hover:shadow-lg ${
-                                  hasMeals 
-                                    ? isToday
-                                      ? 'bg-gradient-to-t from-primary to-primary/60 ring-2 ring-primary/30'
-                                      : isSelected
-                                        ? 'bg-gradient-to-t from-primary/90 to-primary/50 ring-2 ring-primary/20'
-                                        : 'bg-gradient-to-t from-primary/80 to-primary/40 hover:from-primary hover:to-primary/60' 
-                                    : 'bg-muted/30'
-                                } ${hoveredDay === day.date ? 'scale-105' : ''} ${isSelected ? 'scale-110' : ''}`}
-                                style={{ 
+                              <div
+                                className={`w-full transition-all duration-300 rounded-t hover:shadow-lg ${hasMeals
+                                  ? isToday
+                                    ? 'bg-gradient-to-t from-primary to-primary/60 ring-2 ring-primary/30'
+                                    : isSelected
+                                      ? 'bg-gradient-to-t from-primary/90 to-primary/50 ring-2 ring-primary/20'
+                                      : 'bg-gradient-to-t from-primary/80 to-primary/40 hover:from-primary hover:to-primary/60'
+                                  : 'bg-muted/30'
+                                  } ${hoveredDay === day.date ? 'scale-105' : ''} ${isSelected ? 'scale-110' : ''}`}
+                                style={{
                                   height: `${Math.max(height, 2)}%`,
                                   minHeight: '3px'
                                 }}
                               />
-                              
+
                               {/* Meal count label */}
                               {hasMeals && (
-                                <div className={`absolute -top-5 sm:-top-6 left-1/2 transform -translate-x-1/2 text-[10px] sm:text-xs font-medium transition-opacity ${
-                                  hoveredDay === day.date || isSelected ? 'opacity-100' : 'opacity-0'
-                                }`}>
+                                <div className={`absolute -top-5 sm:-top-6 left-1/2 transform -translate-x-1/2 text-[10px] sm:text-xs font-medium transition-opacity ${hoveredDay === day.date || isSelected ? 'opacity-100' : 'opacity-0'
+                                  }`}>
                                   {day.meals}
                                 </div>
                               )}
                             </div>
-                            
+
                             {/* Date label */}
-                            <div className={`text-[10px] sm:text-xs font-medium mt-1 transition-colors ${
-                              isToday ? 'text-primary font-bold' : 
+                            <div className={`text-[10px] sm:text-xs font-medium mt-1 transition-colors ${isToday ? 'text-primary font-bold' :
                               isSelected ? 'text-primary' : 'text-muted-foreground'
-                            }`}>
+                              }`}>
                               {new Date(day.date).getDate()}
                             </div>
                           </div>
@@ -267,10 +275,10 @@ export default function MealChart() {
                         <TooltipContent side="top" className="max-w-xs">
                           <div className="space-y-1">
                             <p className="font-semibold text-xs sm:text-sm">
-                              {new Date(day.date).toLocaleDateString('en-US', { 
-                                weekday: 'long', 
-                                month: 'short', 
-                                day: 'numeric' 
+                              {new Date(day.date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                month: 'short',
+                                day: 'numeric'
                               })}
                             </p>
                             <p className="text-xs sm:text-sm">Meals: {day.meals}</p>
@@ -286,7 +294,7 @@ export default function MealChart() {
                     );
                   })}
                 </div>
-                
+
                 {/* Legend */}
                 <div className="flex flex-wrap justify-center gap-2 sm:gap-3 lg:gap-4 text-[10px] sm:text-xs pt-3 sm:pt-4 border-t">
                   <div className="flex items-center gap-1.5 sm:gap-2">

@@ -644,4 +644,62 @@ export function usePeriodManagement() {
     handleArchivePeriod,
     handleRestartPeriod,
   };
+}
+
+export function usePeriodMode(groupId?: string) {
+  const queryClient = useQueryClient();
+
+  const { data: periodMode = 'CUSTOM', isLoading } = useQuery<'MONTHLY' | 'CUSTOM'>({
+    queryKey: ['period-mode', groupId],
+    queryFn: async () => {
+      if (!groupId) return 'CUSTOM';
+      const res = await fetch(`/api/groups/${groupId}/period-mode`);
+      if (!res.ok) throw new Error('Failed to fetch period mode');
+      const data = await res.json();
+      return data.periodMode || 'CUSTOM';
+    },
+    enabled: !!groupId,
+    staleTime: 30 * 60 * 1000, // 30 minutes - mode rarely changes
+    gcTime: 60 * 60 * 1000, // 60 minutes cache retention
+    refetchOnWindowFocus: false,
+  });
+
+  const updatePeriodMode = useMutation({
+    mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
+      if (!groupId) throw new Error('No group ID');
+      const res = await fetch(`/api/groups/${groupId}/period-mode`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to update period mode');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['periods', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['currentPeriod', groupId] });
+
+      toast.success(`Period mode updated to ${data.periodMode}`, {
+        description: data.periodMode === 'MONTHLY'
+          ? 'Monthly periods will be created automatically'
+          : 'You can now create custom periods manually',
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update period mode', {
+        description: error.message,
+      });
+    },
+  });
+
+  return {
+    periodMode,
+    isLoading,
+    updatePeriodMode: updatePeriodMode.mutate,
+    isUpdating: updatePeriodMode.isPending,
+  };
 } 

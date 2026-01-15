@@ -41,14 +41,36 @@ function getGroupIdFromUrl(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const groupId = getGroupIdFromUrl(req);
   if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
+
+  // Authenticate user to get correct access rights
+  const session = await getServerSession(authOptions);
+  // If we can't authenticate, we can't reliably check access or get group data
+  // However, proceeding with "system" might have been a legacy hack. 
+  // Let's try to do it properly:
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   const votes = await prisma.vote.findMany({ where: { roomId: String(groupId) } });
 
   // Get group data to calculate majority and get member info
-  const group = await getGroupData(groupId, "system"); // Use "system" as placeholder userId
-  const totalMembers = group?.members?.length || 1;
+  // Using real userId ensures we pass private group checks
+  const group = await getGroupData(groupId, userId);
+
+  if (!group) {
+    // If group is null, user can't access it
+    return NextResponse.json({ error: "Group not found or access denied" }, { status: 404 });
+  }
+
+  // Use the accurate count from database
+  const totalMembers = group.totalMemberCount || group.members?.length || 1;
   const majority = Math.floor(totalMembers / 2) + 1;
 
   // Create a map of userId to user info for quick lookup
+  // Note: group.members is limited to 100, so some voters might be missed.
+  // Ideally we should fetch specific voters, but for now this prevents crashes.
   const userMap = new Map();
   if (group?.members) {
     group.members.forEach((member: any) => {

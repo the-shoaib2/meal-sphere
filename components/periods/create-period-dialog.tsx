@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar, Plus } from 'lucide-react';
@@ -11,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CreatePeriodData } from '@/hooks/use-periods';
 
@@ -19,9 +18,10 @@ interface CreatePeriodDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreatePeriodData) => Promise<void>;
   disabled?: boolean;
+  disabledReason?: string;
 }
 
-export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled }: CreatePeriodDialogProps) {
+export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled, disabledReason }: CreatePeriodDialogProps) {
   const [formData, setFormData] = useState<CreatePeriodData>({
     name: '',
     startDate: new Date(),
@@ -36,7 +36,7 @@ export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled }: C
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       await onSubmit(formData);
       setFormData({
@@ -63,12 +63,23 @@ export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled }: C
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button disabled={disabled}>
-          <Plus className="h-4 w-4 mr-2" />
-          Start New Period
-        </Button>
-      </DialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button disabled={disabled}>
+                <Plus className="h-4 w-4 mr-2" />
+                Start New Period
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          {disabled && disabledReason && (
+            <TooltipContent>
+              <p>{disabledReason}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Start New Meal Period</DialogTitle>

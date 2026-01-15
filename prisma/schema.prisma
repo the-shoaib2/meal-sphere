@@ -176,6 +176,7 @@ model Room {
   category                  String?
   tags                      String[]
   features                  Json? // Store features as JSON
+  periodMode                String                      @default("CUSTOM") // "MONTHLY" or "CUSTOM"
   createdByUser             User                        @relation("RoomCreator", fields: [createdBy], references: [id])
   members                   RoomMember[]
   joinRequests              JoinRequest[]
@@ -225,6 +226,7 @@ model RoomMember {
   @@index([isCurrent])
   @@index([isBanned])
   @@index([userId, isCurrent])
+  @@index([roomId, joinedAt])
 }
 
 /// ACCOUNT MODEL
@@ -532,6 +534,7 @@ model JoinRequest {
   @@unique([userId, roomId])
   @@index([status])
   @@index([createdAt])
+  @@index([roomId, createdAt])
 }
 
 /// GROUP MESSAGE MODEL
@@ -549,6 +552,7 @@ model GroupMessage {
 
   @@index([roomId, pinned])
   @@index([createdAt])
+  @@index([roomId, createdAt])
 }
 
 /// GROUP ACTIVITY LOG MODEL

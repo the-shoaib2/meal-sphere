@@ -16,6 +16,9 @@ import { PeriodOverviewSection } from '@/components/periods/period-overview-sect
 import { useSession } from 'next-auth/react';
 import { CurrentPeriodStatusCard } from '@/components/periods/current-period-status-card';
 import { PeriodManagementSkeleton } from '@/components/periods/period-management-skeleton';
+import { usePeriodMode } from '@/hooks/use-periods';
+import { Calendar, Settings2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 export function PeriodManagement() {
   const {
@@ -51,6 +54,9 @@ export function PeriodManagement() {
   const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
   const isPrivileged = ["OWNER", "ADMIN", "MODERATOR"].includes(currentMember?.role ?? "");
 
+  // Period mode management
+  const { periodMode, isLoading: periodModeLoading, updatePeriodMode, isUpdating } = usePeriodMode(activeGroup?.id);
+
   const [activeTab, setActiveTab] = useState('overview');
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [periodToRestart, setPeriodToRestart] = useState<MealPeriod | null>(null);
@@ -61,6 +67,12 @@ export function PeriodManagement() {
 
   // Combined loading state - show loader if any data is loading
   const isLoading = periodsLoading || currentPeriodLoading || selectedPeriodLoading || summaryLoading || !activeGroup;
+
+  // Handle period mode toggle
+  const handlePeriodModeToggle = (checked: boolean) => {
+    const newMode = checked ? 'MONTHLY' : 'CUSTOM';
+    updatePeriodMode(newMode);
+  };
 
   // Handle restart period with dialog closing
   const handleRestartPeriodWithDialog = async (periodId: string, newName?: string, withData?: boolean) => {
@@ -99,13 +111,44 @@ export function PeriodManagement() {
                 Manage your periods and their statuses.
               </p>
             </div>
+
             {isPrivileged && (
-              <CreatePeriodDialog
-                open={showCreateDialog}
-                onOpenChange={setShowCreateDialog}
-                onSubmit={handleStartPeriod}
-                disabled={!!currentPeriod}
-              />
+              <div className="flex items-center gap-3">
+                {/* Period Mode Toggle */}
+                <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-muted/50">
+                  <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="period-mode-switch">
+                    Mode:
+                  </Label>
+                  <span className={periodMode === 'CUSTOM' ? 'text-sm font-semibold' : 'text-sm text-muted-foreground'}>
+                    Custom
+                  </span>
+                  <Switch
+                    id="period-mode-switch"
+                    checked={periodMode === 'MONTHLY'}
+                    onCheckedChange={handlePeriodModeToggle}
+                    disabled={isUpdating || periodModeLoading}
+                  />
+                  <span className={periodMode === 'MONTHLY' ? 'text-sm font-semibold flex items-center gap-1' : 'text-sm text-muted-foreground flex items-center gap-1'}>
+                    <Calendar className="h-3.5 w-3.5" />
+                    Monthly
+                  </span>
+                </div>
+
+                <CreatePeriodDialog
+                  open={showCreateDialog}
+                  onOpenChange={setShowCreateDialog}
+                  onSubmit={handleStartPeriod}
+                  disabled={!!currentPeriod || periodMode === 'MONTHLY'}
+                  disabledReason={
+                    periodMode === 'MONTHLY'
+                      ? 'Period creation is automatic in Monthly mode'
+                      : currentPeriod
+                        ? 'End the current period before starting a new one'
+                        : undefined
+                  }
+                />
+              </div>
             )}
           </div>
 

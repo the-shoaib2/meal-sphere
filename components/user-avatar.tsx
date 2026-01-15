@@ -48,7 +48,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  
+
 
 
   const handleLogout = async () => {
@@ -78,10 +78,10 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+        <DropdownMenuTrigger asChild suppressHydrationWarning>
+          <Button
+            variant="ghost"
+            size="icon"
             className={`group rounded-full ${className}`}
           >
             <Avatar className="h-8 w-8">
@@ -89,10 +89,10 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
               <AvatarFallback>
                 {user.name
                   ? user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
                   : "U"}
               </AvatarFallback>
             </Avatar>
@@ -106,10 +106,10 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
                 <AvatarFallback className="rounded-full">
                   {user.name
                     ? user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
                     : "U"}
                 </AvatarFallback>
               </Avatar>
@@ -121,7 +121,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild>
               <button
                 className="w-full flex items-center cursor-pointer"
                 onClick={() => handleNavigation('/dashboard')}
@@ -164,7 +164,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
             </DropdownMenuSub>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
             onClick={() => setShowLogoutDialog(true)}
           >

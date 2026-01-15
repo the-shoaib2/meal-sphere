@@ -68,7 +68,7 @@ export function NotificationBell() {
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
+      <PopoverTrigger asChild suppressHydrationWarning>
         <Button variant="ghost" size="icon" className="relative group rounded-lg active:scale-95">
           {unreadCount > 0 ? (
             <div className="relative">

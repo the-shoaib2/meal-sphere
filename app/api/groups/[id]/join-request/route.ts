@@ -88,33 +88,55 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
-    const { id: groupId } = await params;
-
-    // Validate admin access
-    const validation = await validateAdminAccess(groupId);
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Get all join requests for the group
-    const joinRequests = await prisma.joinRequest.findMany({
-      where: {
-        roomId: groupId
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
+    const { id: groupId } = await params;
+
+    // OPTIMIZED: Single query to check membership AND fetch join requests
+    const [membership, joinRequests] = await Promise.all([
+      prisma.roomMember.findUnique({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId: groupId
           }
+        },
+        select: {
+          role: true,
+          isBanned: true
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      }),
+      prisma.joinRequest.findMany({
+        where: {
+          roomId: groupId
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      })
+    ]);
+
+    // Check if user is admin
+    if (!membership || membership.role !== Role.ADMIN) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (membership.isBanned) {
+      return NextResponse.json({ error: 'You are banned from this group' }, { status: 403 });
+    }
 
     return NextResponse.json(joinRequests);
   } catch (error) {
@@ -124,4 +146,4 @@ export async function GET(
       { status: 500 }
     );
   }
-} 
+}

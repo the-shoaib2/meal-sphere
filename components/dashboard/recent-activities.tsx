@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useDashboardActivities } from '@/hooks/use-dashboard';
-import { 
-  Utensils, 
-  CreditCard, 
-  ShoppingBag, 
-  Users, 
+import { useDashboardContext } from '@/contexts/dashboard-context';
+import {
+  Utensils,
+  CreditCard,
+  ShoppingBag,
+  Users,
   Receipt,
   User,
   Activity,
@@ -87,7 +87,7 @@ const formatTimestamp = (timestamp: string) => {
 };
 
 export default function RecentActivities() {
-  const { data: activities, isLoading, error } = useDashboardActivities();
+  const { activities, isLoading, error } = useDashboardContext();
 
   if (isLoading) {
     return (
@@ -186,10 +186,10 @@ export default function RecentActivities() {
               const IconComponent = getActivityIcon(activity.type);
               const iconColor = getActivityColor(activity.type);
               const badge = getActivityBadge(activity.type);
-              
+
               return (
-                <div 
-                  key={activity.id} 
+                <div
+                  key={activity.id}
                   className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/30 transition-colors group"
                 >
                   <div className="mt-0.5 flex-shrink-0">

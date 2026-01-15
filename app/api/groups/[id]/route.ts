@@ -30,33 +30,20 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
+    const session = await getServerSession(authOptions);
 
-    // Validate group access
-    const validation = await validateGroupAccess(id);
-    if (!validation.success || !validation.authResult) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { authResult } = validation;
-    if (!authResult.userId) {
-      return NextResponse.json({ error: 'User ID not found' }, { status: 500 });
-    }
-
-    const groupData = await getGroupData(id, authResult.userId);
+    // Use optimized data fetcher that handles access control internally
+    const groupData = await getGroupData(id, session.user.id);
 
     if (!groupData) {
-      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Group not found or access denied' }, { status: 404 });
     }
 
-    // Return group data with user's role and permissions
-    return NextResponse.json({
-      ...groupData,
-      userRole: authResult.userRole,
-      isMember: authResult.isMember,
-      isAdmin: authResult.isAdmin,
-      isCreator: authResult.isCreator,
-      canAccess: authResult.canAccess
-    });
+    return NextResponse.json(groupData);
 
   } catch (error) {
     console.error('Error fetching group:', error);

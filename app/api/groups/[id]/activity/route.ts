@@ -15,47 +15,53 @@ export async function GET(
 
     const { id } = await context.params;
 
-    // Check if user is admin
-    const membership = await prisma.roomMember.findUnique({
-      where: {
-        userId_roomId: {
-          userId: session.user.id,
+    // OPTIMIZED: Parallel queries for membership check and activity logs
+    const [membership, activities] = await Promise.all([
+      prisma.roomMember.findUnique({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId: id
+          }
+        },
+        select: {
+          role: true,
+          isBanned: true
+        }
+      }),
+      prisma.groupActivityLog.findMany({
+        where: {
           roomId: id
         },
-        role: {
-          in: ['ADMIN', 'MODERATOR']
-        }
-      }
-    });
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 50 // Limit to last 50 activities
+      })
+    ]);
 
-    if (!membership) {
+    // Check if user is admin/moderator after fetching data
+    if (!membership || !['ADMIN', 'MODERATOR'].includes(membership.role)) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Get activity logs
-    const activities = await prisma.groupActivityLog.findMany({
-      where: {
-        roomId: id
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50 // Limit to last 50 activities
-    });
+    if (membership.isBanned) {
+      return new NextResponse("You are banned from this group", { status: 403 });
+    }
 
     return NextResponse.json(activities);
   } catch (error) {
     console.error("Error fetching activity logs:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
-} 
+}
