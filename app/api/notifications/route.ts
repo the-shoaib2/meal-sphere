@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   try {
 
     // Find notifications for the user
+    // Optimization: Select only necessary fields directly from DB
     const notifications = await prisma.notification.findMany({
       where: {
         userId: session.user.id,
@@ -40,21 +41,18 @@ export async function GET(request: Request) {
       orderBy: {
         createdAt: 'desc'
       },
-      take: 50
+      take: 50,
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        read: true,
+        createdAt: true,
+        userId: true
+      }
     })
 
-    // Transform the data to match the expected format
-    const result = notifications.map(notif => ({
-      id: notif.id,
-      type: notif.type,
-      message: notif.message,
-      read: notif.read || false,
-      createdAt: notif.createdAt,
-      userId: notif.userId
-    }))
-
-
-    return NextResponse.json(result, {
+    return NextResponse.json(notifications, {
       headers: {
         'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=60'
       }

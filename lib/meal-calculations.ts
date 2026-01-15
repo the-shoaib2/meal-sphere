@@ -88,6 +88,9 @@ export async function calculateUserMealSummary(
 /**
  * Calculate meal summary for an entire room and period
  */
+/**
+ * Calculate meal summary for an entire room and period
+ */
 export async function calculateRoomMealSummary(
   roomId: string,
   startDate: Date,
@@ -97,72 +100,83 @@ export async function calculateRoomMealSummary(
   // Use periodId for all queries if provided
   const allMealWhere = periodId ? { roomId, periodId } : { roomId, date: { gte: startDate, lte: endDate } }
   const expenseWhere = periodId ? { roomId, periodId } : { roomId, date: { gte: startDate, lte: endDate } }
+  const paymentWhereBase = periodId
+    ? { roomId, periodId, status: PaymentStatus.COMPLETED }
+    : { roomId, date: { gte: startDate, lte: endDate }, status: PaymentStatus.COMPLETED };
 
-  // Get all meals (including guest meals) in the room for the period
-  const mealCount = await prisma.meal.count({ where: allMealWhere })
-  const guestMealCount = await prisma.guestMeal.aggregate({
-    where: allMealWhere,
-    _sum: { count: true },
-  })
-  const totalMeals = mealCount + (guestMealCount._sum.count || 0)
-
-  // Get total expenses for the room in the period
-  const expenses = await prisma.extraExpense.findMany({
-    where: expenseWhere,
-    select: { amount: true },
-  })
-  const totalCost = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-
-  // Calculate meal rate
-  const mealRate = totalMeals > 0 ? totalCost / totalMeals : 0
-
-  // Get all room members
-  const roomMembers = await prisma.roomMember.findMany({
-    where: { roomId },
-    include: {
-      user: { select: { id: true, name: true, image: true } },
-    },
-  })
-
-  // Calculate meal summary for each user
-  const userSummaries: UserMealSummary[] = await Promise.all(
-    roomMembers.map(async (member) => {
-      // Get user's meals (including guest meals)
-      const mealWhere = periodId ? { roomId, userId: member.userId, periodId } : { roomId, userId: member.userId, date: { gte: startDate, lte: endDate } }
-      const userMealCount = await prisma.meal.count({ where: mealWhere })
-      const userGuestMealCount = await prisma.guestMeal.aggregate({
-        where: mealWhere,
-        _sum: { count: true },
-      })
-      const mealCount = userMealCount + (userGuestMealCount._sum.count || 0)
-
-      // Calculate user cost
-      const cost = mealRate * mealCount
-
-      // Get user's payments
-      const paymentWhere = periodId
-        ? { userId: member.userId, roomId, periodId, status: PaymentStatus.COMPLETED }
-        : { userId: member.userId, roomId, date: { gte: startDate, lte: endDate }, status: PaymentStatus.COMPLETED }
-      const payments = await prisma.payment.findMany({
-        where: paymentWhere,
-        select: { amount: true },
-      })
-      const paid = payments.reduce((sum, payment) => sum + payment.amount, 0)
-
-      // Calculate balance
-      const balance = paid - cost
-
-      return {
-        userId: member.userId,
-        userName: member.user.name,
-        userImage: member.user.image || undefined,
-        mealCount,
-        cost,
-        paid,
-        balance,
-      }
+  // 1. Fetch Room Totals (Meals, Guest Meals, Expenses)
+  const [mealCount, guestMealAgg, expenses, roomMembers] = await Promise.all([
+    prisma.meal.count({ where: allMealWhere }),
+    prisma.guestMeal.aggregate({
+      where: allMealWhere,
+      _sum: { count: true },
     }),
-  )
+    prisma.extraExpense.findMany({
+      where: expenseWhere,
+      select: { amount: true },
+    }),
+    prisma.roomMember.findMany({
+      where: { roomId },
+      include: {
+        user: { select: { id: true, name: true, image: true } },
+      },
+    })
+  ]);
+
+  const totalMeals = mealCount + (guestMealAgg._sum.count || 0);
+  const totalCost = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const mealRate = totalMeals > 0 ? totalCost / totalMeals : 0;
+
+  // 2. Bulk Fetch User Stats (Group By User)
+  const [userMealCounts, userGuestMealAggs, userPayments] = await Promise.all([
+    // Group Meals by User
+    prisma.meal.groupBy({
+      by: ['userId'],
+      where: allMealWhere,
+      _count: { id: true },
+    }),
+    // Group Guest Meals by User
+    prisma.guestMeal.groupBy({
+      by: ['userId'],
+      where: allMealWhere,
+      _sum: { count: true },
+    }),
+    // Group Payments by User
+    prisma.payment.groupBy({
+      by: ['userId'],
+      where: paymentWhereBase,
+      _sum: { amount: true },
+    })
+  ]);
+
+  // 3. Create Lookup Maps for O(1) access
+  const mealMap = new Map<string, number>();
+  userMealCounts.forEach(item => mealMap.set(item.userId, item._count.id));
+
+  const guestMealMap = new Map<string, number>();
+  userGuestMealAggs.forEach(item => guestMealMap.set(item.userId, item._sum.count || 0));
+
+  const paymentMap = new Map<string, number>();
+  userPayments.forEach(item => paymentMap.set(item.userId, item._sum.amount || 0));
+
+  // 4. Assemble Results
+  const userSummaries: UserMealSummary[] = roomMembers.map(member => {
+    const userId = member.userId;
+    const userMeals = (mealMap.get(userId) || 0) + (guestMealMap.get(userId) || 0);
+    const cost = mealRate * userMeals;
+    const paid = paymentMap.get(userId) || 0;
+    const balance = paid - cost;
+
+    return {
+      userId,
+      userName: member.user.name,
+      userImage: member.user.image || undefined,
+      mealCount: userMeals,
+      cost,
+      paid,
+      balance,
+    };
+  });
 
   return {
     totalMeals,

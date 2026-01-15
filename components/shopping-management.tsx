@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import PeriodNotFoundCard from "@/components/periods/period-not-found-card";
 import { useCurrentPeriod } from "@/hooks/use-periods";
 import { useGroupAccess } from "@/hooks/use-group-access";
+import { useQuery } from "@tanstack/react-query";
 
 
 export default function ShoppingManagement() {
@@ -43,8 +44,23 @@ export default function ShoppingManagement() {
   // Check user permissions
   const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: activeGroup?.id || "" })
 
-  // Get current period
+  // Get current period and also fetch recent periods if no current one exists
   const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
+
+  // Fetch recent periods to fallback if no active period
+  const { data: periodsData } = useQuery({
+    queryKey: ['periods', activeGroup?.id, 'recent'],
+    queryFn: async () => {
+      if (!activeGroup?.id) return null;
+      const res = await fetch(`/api/periods?groupId=${activeGroup.id}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!activeGroup?.id && !currentPeriod && !isPeriodLoading
+  });
+
+  const mostRecentPeriod = periodsData?.periods?.[0];
+  const effectivePeriod = currentPeriod || mostRecentPeriod;
 
   // Check if user can manage meal settings (only when not loading)
   const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
@@ -56,7 +72,7 @@ export default function ShoppingManagement() {
     togglePurchased,
     deleteItem,
     clearPurchased,
-  } = useShopping()
+  } = useShopping(effectivePeriod?.id)
 
 
 
@@ -149,8 +165,8 @@ export default function ShoppingManagement() {
   const purchasedItems = safeShoppingItems.filter((item: ShoppingItem) => item.purchased)
   const pendingItems = safeShoppingItems.filter((item: ShoppingItem) => !item.purchased)
 
-  // Show PeriodNotFoundCard if no period and not loading, but always show header
-  if (!currentPeriod && !isPeriodLoading) {
+  // Show PeriodNotFoundCard only if NO period exists at all (neither active nor recent)
+  if (!effectivePeriod && !isPeriodLoading) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -263,7 +279,7 @@ export default function ShoppingManagement() {
     );
   }
 
-  
+
 
   return (
     <div className="space-y-6">
@@ -332,112 +348,55 @@ export default function ShoppingManagement() {
         </div>
       ) : (
         <>
-          {pendingItems.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Items to Buy</CardTitle>
-                <CardDescription>Pending items in your shopping list</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {pendingItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 rounded-full"
-                          onClick={() => handleTogglePurchased(item)}
-                          disabled={togglePurchased.isPending}
-                        >
-                          <span className="sr-only">Mark as purchased</span>
-                          <div className="h-4 w-4 rounded-full border bg-white" />
-                        </Button>
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {item.quantity} {item.unit}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-muted-foreground">
-                          Added by {item.addedBy?.name || 'Unknown'}
-                        </span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">More options</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditClick(item)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              <span>Edit</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDeleteClick(item.id)}
-                              disabled={deleteItem.isPending}
+          {safeShoppingItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/10 border-dashed">
+              <div className="bg-background p-3 rounded-full shadow-sm mb-4">
+                <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">Your shopping list is empty</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-6">
+                {effectivePeriod
+                  ? "Everything seems to be stocked up! Add items when you need them."
+                  : "No items found for this period."}
+              </p>
+              <Button onClick={() => setShowAddDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Add First Item
+              </Button>
+            </div>
+          ) : (
+            <>
+              {pendingItems.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Items to Buy</CardTitle>
+                    <CardDescription>Pending items in your shopping list</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {pendingItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full"
+                              onClick={() => handleTogglePurchased(item)}
+                              disabled={togglePurchased.isPending}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Delete</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {purchasedItems.length > 0 && (
-            <Card className="border-green-100">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-green-800">Purchased Items</CardTitle>
-                <CardDescription className="text-green-700">
-                  {purchasedItems.length} item{purchasedItems.length !== 1 ? 's' : ''} purchased
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[40px]">Status</TableHead>
-                      <TableHead>Item</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {purchasedItems.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 rounded-full hover:bg-green-200 border-green-200"
-                            onClick={() => handleTogglePurchased(item)}
-                            disabled={togglePurchased.isPending}
-                          >
-                            <Check className="h-4 w-4 text-green-600" />
-                            <span className="sr-only">Mark as not purchased</span>
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium line-through text-muted-foreground">
-                              {item.name}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {item.quantity} {item.unit}
-                            </span>
+                              <span className="sr-only">Mark as purchased</span>
+                              <div className="h-4 w-4 rounded-full border bg-white" />
+                            </Button>
+                            <div>
+                              <p className="font-medium">{item.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {item.quantity} {item.unit}
+                              </p>
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end items-center space-x-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-muted-foreground">
+                              Added by {item.addedBy?.name || 'Unknown'}
+                            </span>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -461,13 +420,89 @@ export default function ShoppingManagement() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {purchasedItems.length > 0 && (
+                <Card className="border-green-100">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-green-800">Purchased Items</CardTitle>
+                    <CardDescription className="text-green-700">
+                      {purchasedItems.length} item{purchasedItems.length !== 1 ? 's' : ''} purchased
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-[40px]">Status</TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {purchasedItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full hover:bg-green-200 border-green-200"
+                                onClick={() => handleTogglePurchased(item)}
+                                disabled={togglePurchased.isPending}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                                <span className="sr-only">Mark as not purchased</span>
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium line-through text-muted-foreground">
+                                  {item.name}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                  {item.quantity} {item.unit}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end items-center space-x-2">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">More options</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEditClick(item)}>
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => handleDeleteClick(item.id)}
+                                      disabled={deleteItem.isPending}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      <span>Delete</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </>
       )}

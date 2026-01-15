@@ -28,7 +28,7 @@ interface UpdateShoppingItemInput extends Partial<Omit<ShoppingItem, 'id' | 'cre
   id: string;
 }
 
-export function useShopping() {
+export function useShopping(periodId?: string) {
   const { activeGroup } = useActiveGroup();
   const queryClient = useQueryClient();
   const groupId = activeGroup?.id;
@@ -61,10 +61,13 @@ export function useShopping() {
     error,
     refetch,
   } = useQuery<ApiShoppingItem[], Error, ShoppingItem[]>({
-    queryKey: ['shopping', groupId],
+    queryKey: ['shopping', groupId, periodId],
     queryFn: async (): Promise<ApiShoppingItem[]> => {
       if (!groupId) return [];
-      const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping?roomId=${groupId}`);
+      const queryParams = new URLSearchParams({ roomId: groupId });
+      if (periodId) queryParams.append('periodId', periodId);
+
+      const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping?${queryParams.toString()}`);
       return data;
     },
     select: (data) =>

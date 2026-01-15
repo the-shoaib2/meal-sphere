@@ -79,6 +79,34 @@ export default function AnalyticsPage() {
     setSelectedRoomIds([])
   }
 
+  const AnalyticsSkeleton = () => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={true} description="Key metrics for each room.">
+          <Skeleton className="h-[200px] w-full" />
+        </AnalyticsCard>
+      </div>
+
+      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of meals by type.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of expenses by type.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={true} description="Meal rate fluctuations over time.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={true} description="Total expenses per month.">
+          <Skeleton className="h-[250px] w-full" />
+        </AnalyticsCard>
+      </div>
+    </div>
+  )
+
   if (isLoadingRooms) {
     return (
       <div className="space-y-8">
@@ -89,14 +117,7 @@ export default function AnalyticsPage() {
           </div>
           <Skeleton className="h-10 w-48 rounded-md" />
         </div>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-[300px] w-full" />
-          </CardContent>
-        </Card>
+        <AnalyticsSkeleton />
       </div>
     )
   }
@@ -226,7 +247,7 @@ export default function AnalyticsPage() {
         </Card>
       )}
 
-      {isLoading}
+      {isLoading && <AnalyticsSkeleton />}
       {!isLoading && data && renderContent(data)}
       {!isLoading && !data && <p>No data available for the selected view.</p>}
     </div>

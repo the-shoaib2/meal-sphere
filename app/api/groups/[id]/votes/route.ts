@@ -44,35 +44,30 @@ export async function GET(req: NextRequest) {
   const groupId = getGroupIdFromUrl(req);
   if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
 
-  // Authenticate user to get correct access rights
   const session = await getServerSession(authOptions);
-  // If we can't authenticate, we can't reliably check access or get group data
-  // However, proceeding with "system" might have been a legacy hack. 
-  // Let's try to do it properly:
   const userId = session?.user?.id;
 
   if (!userId) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const votes = await prisma.vote.findMany({ where: { roomId: String(groupId) } });
-
-  // Get group data to calculate majority and get member info
-  // Using real userId ensures we pass private group checks
-  const group = await getGroupData(groupId, userId);
+  // Optimization: Parallel fetch of votes and group data
+  const [votes, group] = await Promise.all([
+    prisma.vote.findMany({
+      where: { roomId: String(groupId) },
+      orderBy: { createdAt: 'desc' }
+    }),
+    getGroupData(groupId, userId)
+  ]);
 
   if (!group) {
-    // If group is null, user can't access it
     return NextResponse.json({ error: "Group not found or access denied" }, { status: 404 });
   }
 
-  // Use the accurate count from database
   const totalMembers = group.totalMemberCount || group.members?.length || 1;
   const majority = Math.floor(totalMembers / 2) + 1;
 
   // Create a map of userId to user info for quick lookup
-  // Note: group.members is limited to 100, so some voters might be missed.
-  // Ideally we should fetch specific voters, but for now this prevents crashes.
   const userMap = new Map();
   if (group?.members) {
     group.members.forEach((member: any) => {
@@ -84,47 +79,45 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const formattedVotes = await Promise.all(votes.map(async (vote) => {
-    const options = vote.options ? JSON.parse(vote.options) : [];
-    const results = vote.results ? JSON.parse(vote.results) : {};
+  // Define types for unknown objects
+  type Candidate = { id: string; name: string };
 
-    // Check if vote has expired and update if necessary
+  const formattedVotes = votes.map((vote) => {
+    // Parse JSON once
+    const options: Candidate[] = vote.options ? JSON.parse(vote.options as string) : [];
+    const results: Record<string, string[]> = vote.results ? JSON.parse(vote.results as string) : {};
+
+    // Check if vote has expired (Memory-only check, no DB write)
     let isActive = vote.isActive;
     let endDate = vote.endDate;
-    let winner = null;
+    const now = new Date();
 
-    if (isActive && vote.endDate && new Date() > new Date(vote.endDate)) {
-      // Vote has expired, mark as inactive
+    if (isActive && vote.endDate && now > new Date(vote.endDate)) {
       isActive = false;
-      endDate = new Date();
-
-      // Update the vote in the database
-      await prisma.vote.update({
-        where: { id: vote.id },
-        data: {
-          isActive: false,
-          endDate: new Date(),
-        }
-      });
-
-      // Send notification about expired vote
-      sendNotification(groupId, `Vote "${vote.title}" has expired.`);
+      endDate = now;
+      // We do NOT update DB here to keep GET fast. 
+      // Expiration will be handled eventually by PATCH or background jobs.
     }
 
-    // Calculate total votes and get voter details
-    const totalVotes = Object.values(results).reduce((sum: number, arr: unknown) =>
-      sum + (Array.isArray(arr) ? arr.length : 0), 0
-    );
-
-    // Convert voter IDs to voter objects with user info
+    // Calculate total votes
+    let totalVotes = 0;
     const resultsWithVoters: Record<string, any[]> = {};
+
+    // Process results and build voter objects
     Object.keys(results).forEach(candidateId => {
       const voterIds = results[candidateId] || [];
-      resultsWithVoters[candidateId] = voterIds.map((userId: string) => userMap.get(userId) || { id: userId, name: 'Unknown', image: null });
+      totalVotes += voterIds.length;
+      resultsWithVoters[candidateId] = voterIds.map((vId: string) =>
+        userMap.get(vId) || { id: vId, name: 'Unknown', image: null }
+      );
     });
+
+    let winner: Candidate | null | undefined = null;
 
     // Calculate winner for completed votes
     if (!isActive) {
+
+
       for (const candidate of options) {
         if ((results[candidate.id]?.length || 0) >= majority) {
           winner = candidate;
@@ -132,10 +125,9 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // If no majority winner, find the candidate with most votes (for completed votes)
       if (!winner && totalVotes > 0) {
         let maxVotes = 0;
-        let winningCandidate = null;
+        let winningCandidate: Candidate | null = null;
 
         for (const candidate of options) {
           const candidateVotes = (results[candidate.id]?.length || 0);
@@ -144,10 +136,7 @@ export async function GET(req: NextRequest) {
             winningCandidate = candidate;
           }
         }
-
-        if (winningCandidate) {
-          winner = winningCandidate;
-        }
+        if (winningCandidate) winner = winningCandidate;
       }
     }
 
@@ -165,12 +154,12 @@ export async function GET(req: NextRequest) {
       isActive,
       endDate,
       options,
-      results: resultsWithVoters, // Now contains voter objects instead of just IDs
+      results: resultsWithVoters,
       totalVotes,
       winner: winner || undefined,
       history: voteHistory,
     };
-  }));
+  });
 
   return NextResponse.json({ votes: formattedVotes }, {
     headers: {

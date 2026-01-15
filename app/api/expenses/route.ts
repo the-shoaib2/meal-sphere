@@ -143,6 +143,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const roomId = searchParams.get("roomId")
+    const periodId = searchParams.get("periodId")
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
     const type = searchParams.get("type")
@@ -151,32 +152,36 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Room ID is required" }, { status: 400 })
     }
 
-    // Check if user is a member of the room
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        rooms: {
-          where: { roomId },
+    // Optimization: Run Auth Check and Period Filter generation in parallel
+    const [roomMember, activePeriodFilter] = await Promise.all([
+      prisma.roomMember.findUnique({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId: roomId,
+          },
         },
-      },
-    })
+      }),
+      !periodId ? getPeriodAwareWhereClause(roomId, { roomId }) : Promise.resolve(null)
+    ]);
 
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
-    }
-
-    if (user.rooms.length === 0) {
+    if (!roomMember) {
       return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Get period-aware where clause
-    const whereClause = await getPeriodAwareWhereClause(roomId, {
-      roomId,
-    })
+    let whereClause: any = { roomId };
 
-    // If no active period, return empty array
-    if (whereClause.id === null) {
-      return NextResponse.json([])
+    if (periodId) {
+      // If periodId is explicit, use it.
+      whereClause.periodId = periodId;
+    } else {
+      // Fallback to active period logic
+      if ((activePeriodFilter as any)?.id === null) {
+        return NextResponse.json([], {
+          headers: { 'Cache-Control': 'private, s-maxage=60' }
+        })
+      }
+      whereClause = { ...activePeriodFilter };
     }
 
     // Add date filter if provided
@@ -191,6 +196,11 @@ export async function GET(request: Request) {
     if (type) {
       whereClause.type = type
     }
+
+    // Cache-Control headers optimization
+    const cacheControl = periodId
+      ? 'private, s-maxage=300, stale-while-revalidate=600' // Longer cache for historical data
+      : 'private, s-maxage=30, stale-while-revalidate=60'; // Shorter cache for active data
 
     const expenses = await prisma.extraExpense.findMany({
       where: whereClause,
@@ -211,7 +221,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(expenses, {
       headers: {
-        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+        'Cache-Control': cacheControl
       }
     })
   } catch (error) {

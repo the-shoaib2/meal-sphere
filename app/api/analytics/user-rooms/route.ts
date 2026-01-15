@@ -15,39 +15,40 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        rooms: {
-          include: {
-            room: true,
-          },
-        },
-      },
+    // Get user's room memberships
+    // Avoid 'include: { room: true }' because it crashes if the relation is broken in DB.
+    const memberships = await prisma.roomMember.findMany({
+      where: { userId: session.user.id },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    // Extract Room IDs
+    const memberRoomIds = memberships.map(m => m.roomId);
 
-    // Get room IDs the user is a member of
-    const roomIds = user.rooms.map((membership) => membership.roomId);
-
-    if (roomIds.length === 0) {
+    if (memberRoomIds.length === 0) {
       return NextResponse.json([]);
     }
 
-    // Get room member counts
+    // Fetch existing rooms manually
+    const validRooms = await prisma.room.findMany({
+      where: {
+        id: { in: memberRoomIds }
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    });
+
+    // Get room member counts (safe query, no includes needed if we just group by scalar)
+    // Actually we need to filter roomIds for member counts too
+    const validRoomIds = validRooms.map(r => r.id);
+
     const roomMembers = await prisma.roomMember.findMany({
       where: {
-        roomId: { in: roomIds },
+        roomId: { in: validRoomIds },
       },
       select: {
         roomId: true,
-        room: {
-          select: { name: true },
-        },
       },
     });
 
@@ -56,13 +57,12 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get unique rooms with member counts
-    const uniqueRooms = Array.from(new Set(roomIds)).map(roomId => {
-      const room = user.rooms.find(membership => membership.roomId === roomId)?.room;
+    // Map rooms to response format
+    const uniqueRooms = validRooms.map(room => {
       return {
-        id: roomId,
-        name: room?.name || 'Unknown Room',
-        memberCount: memberCounts[roomId] || 0,
+        id: room.id,
+        name: room.name || 'Unknown Room',
+        memberCount: memberCounts[room.id] || 0,
       };
     });
 

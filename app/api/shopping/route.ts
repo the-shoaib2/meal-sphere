@@ -118,12 +118,13 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const roomId = searchParams.get("roomId")
+    const periodId = searchParams.get("periodId")
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
@@ -131,32 +132,39 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Room ID is required" }, { status: 400 })
     }
 
-    // Check if user is a member of the room
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        rooms: {
-          where: { roomId },
+    // Optimization: Run Auth Check and Period Filter generation in parallel
+    // If periodId is provided, we don't strictly need getPeriodAwareWhereClause which looks for ACTIVE.
+    // But we still need to verify the user is in the room.
+
+    const [roomMember, activePeriodFilter] = await Promise.all([
+      prisma.roomMember.findUnique({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId: roomId,
+          },
         },
-      },
-    })
+      }),
+      !periodId ? getPeriodAwareWhereClause(roomId, { roomId }) : Promise.resolve(null)
+    ]);
 
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 })
-    }
-
-    if (user.rooms.length === 0) {
+    if (!roomMember) {
       return NextResponse.json({ message: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Get period-aware where clause
-    const whereClause = await getPeriodAwareWhereClause(roomId, {
-      roomId,
-    })
+    let whereClause: any = { roomId };
 
-    // If no active period, return empty array
-    if (whereClause.id === null) {
-      return NextResponse.json([])
+    if (periodId) {
+      // If periodId is explicit, use it.
+      whereClause.periodId = periodId;
+    } else {
+      // Fallback to active period logic
+      if ((activePeriodFilter as any)?.id === null) {
+        return NextResponse.json([], {
+          headers: { 'Cache-Control': 'private, s-maxage=60' }
+        })
+      }
+      whereClause = { ...activePeriodFilter };
     }
 
     // Add date filter if provided
@@ -186,7 +194,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(shoppingItems, {
       headers: {
-        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=60'
       }
     })
   } catch (error) {

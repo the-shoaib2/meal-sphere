@@ -170,136 +170,42 @@ export function useMeal(roomId?: string): UseMealReturn {
   const queryClient = useQueryClient();
   const { data: currentPeriod } = useCurrentPeriod();
 
-  // Get the most recent period (including ENDED ones) if no active period
-  const { data: mostRecentPeriod } = useQuery({
-    queryKey: ['mostRecentPeriod', roomId],
+  // Unified Query Hook
+  const { data: unifiedData, isLoading: isLoadingUnified, error: unifiedError } = useQuery({
+    queryKey: ['unified-meal-data', roomId],
     queryFn: async () => {
       if (!roomId) return null;
-
-      try {
-        // First try to get current (active) period
-        const currentResponse = await fetch(`/api/periods/current?groupId=${roomId}`);
-        if (currentResponse.ok) {
-          const currentData = await currentResponse.json();
-          if (currentData.currentPeriod) {
-            return currentData.currentPeriod;
-          }
-        }
-
-        // If no active period, get the most recent period
-        const periodsResponse = await fetch(`/api/periods?groupId=${roomId}`);
-        if (periodsResponse.ok) {
-          const periodsData = await periodsResponse.json();
-          if (periodsData.periods && periodsData.periods.length > 0) {
-            return periodsData.periods[0]; // Most recent period
-          }
-        }
-
-        return null;
-      } catch (error) {
-        console.error('Error fetching most recent period:', error);
-        return null;
+      // We pass the current userId via session, but API also derives it from session.
+      const response = await fetch(`/api/meals/unified?roomId=${roomId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch meal data');
       }
-    },
-    enabled: !!roomId && !currentPeriod,
-  });
-
-  // Use current period if available, otherwise use most recent period
-  const periodToUse = currentPeriod || mostRecentPeriod;
-
-  // Fetch meals
-  const { data: meals = [], isLoading: isLoadingMeals, error: mealsError } = useQuery<Meal[]>({
-    queryKey: ['meals', roomId],
-    queryFn: async () => {
-      if (!roomId) return [];
-      const { data } = await axios.get<Meal[]>(`/api/meals?roomId=${roomId}`);
-      return data;
+      return response.json();
     },
     enabled: !!roomId && !!session?.user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false
   });
 
-  // Fetch guest meals
-  const { data: guestMeals = [], isLoading: isLoadingGuestMeals, error: guestMealsError } = useQuery<GuestMeal[]>({
-    queryKey: ['guest-meals', roomId],
-    queryFn: async () => {
-      if (!roomId) return [];
-      const { data } = await axios.get<GuestMeal[]>(`/api/meals/guest?roomId=${roomId}`);
-      return data;
-    },
-    enabled: !!roomId && !!session?.user?.id,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
-    refetchOnWindowFocus: false
-  });
+  // Derived state from unified data
+  const meals: Meal[] = unifiedData?.meals || [];
+  const guestMeals: GuestMeal[] = unifiedData?.guestMeals || [];
+  const mealSettings: MealSettings | null = unifiedData?.settings || null;
+  const autoMealSettings: AutoMealSettings | null = unifiedData?.autoSettings || null;
+  const userMealStats: UserMealStats | null = unifiedData?.userStats || null;
 
-  // Fetch meal settings
-  const { data: mealSettings = null, isLoading: isLoadingSettings } = useQuery<MealSettings | null>({
-    queryKey: ['meal-settings', roomId],
-    queryFn: async () => {
-      if (!roomId) return null;
-      const { data } = await axios.get<MealSettings>(`/api/meals/settings?roomId=${roomId}`);
-      return data;
-    },
-    enabled: !!roomId && !!session?.user?.id,
-    staleTime: 60 * 60 * 1000, // 60 minutes - settings rarely change
-    gcTime: 90 * 60 * 1000, // 90 minutes cache retention
-    refetchOnWindowFocus: false,
-    select: (data) => data, // placeholder for shape reduction if needed
-  });
+  // Loading states are now consolidated
+  const isLoading = isLoadingUnified;
+  const isLoadingUserStats = isLoadingUnified; // Stats come together now
+  const mealsError = unifiedError;
+  const guestMealsError = unifiedError;
 
-  // Fetch auto meal settings
-  const { data: autoMealSettings = null, isLoading: isLoadingAutoSettings } = useQuery<AutoMealSettings | null>({
-    queryKey: ['auto-meal-settings', roomId, session?.user?.id],
-    queryFn: async () => {
-      if (!roomId || !session?.user?.id) return null;
-      const { data } = await axios.get<AutoMealSettings>(`/api/meals/auto-settings?roomId=${roomId}&userId=${session.user.id}`);
-      return data;
-    },
-    enabled: !!roomId && !!session?.user?.id,
-    staleTime: 60 * 60 * 1000, // 60 minutes - auto settings rarely change
-    gcTime: 90 * 60 * 1000, // 90 minutes cache retention
-    refetchOnWindowFocus: false,
-    select: (data) => data, // placeholder for shape reduction if needed
-  });
-
-  // Prefetch related queries example (call in a useEffect in component):
-  // useEffect(() => {
-  //   if (roomId) {
-  //     queryClient.prefetchQuery(['meals', roomId]);
-  //     queryClient.prefetchQuery(['guest-meals', roomId]);
-  //   }
-  // }, [roomId]);
-
-  // Fetch user meal statistics
-  const { data: userMealStats = null, isLoading: isLoadingUserStats } = useQuery<UserMealStats | null>({
-    queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id],
-    queryFn: async () => {
-      if (!roomId || !session?.user?.id) return null;
-
-      // Only make the API call if we have a period
-      if (!periodToUse?.id) {
-        console.log('No period available, returning null for user stats');
-        return null;
-      }
-
-      const params = new URLSearchParams({
-        roomId,
-        userId: session.user.id,
-        periodId: periodToUse.id
-      });
-
-      console.log('Using period for stats:', periodToUse.name, periodToUse.id, 'Status:', periodToUse.status);
-
-      const { data } = await axios.get<UserMealStats>(`/api/meals/user-stats?${params.toString()}`);
-      return data;
-    },
-    enabled: !!roomId && !!session?.user?.id && !!periodToUse?.id,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
+  // Compatibility flags (unused in unified mode but kept for interface)
+  const isLoadingMeals = isLoadingUnified;
+  const isLoadingGuestMeals = isLoadingUnified;
+  const isLoadingSettings = isLoadingUnified;
+  const isLoadingAutoSettings = isLoadingUnified;
 
   // Toggle meal mutation
   const toggleMealMutation = useMutation({
@@ -312,9 +218,9 @@ export function useMeal(roomId?: string): UseMealReturn {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meals', roomId] }); // Keep legacy for safety if used elsewhere
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
     },
     onError: (error: any) => {
       console.error('Error toggling meal:', error);
@@ -334,9 +240,9 @@ export function useMeal(roomId?: string): UseMealReturn {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] }); // Keep legacy
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
     },
     onError: (error: any) => {
@@ -351,9 +257,9 @@ export function useMeal(roomId?: string): UseMealReturn {
       await axios.patch(`/api/meals/guest/${guestMealId}`, { count });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
       toast.success('Guest meal updated successfully');
     },
     onError: (error: any) => {
@@ -368,9 +274,9 @@ export function useMeal(roomId?: string): UseMealReturn {
       await axios.delete(`/api/meals/guest/${guestMealId}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id] });
       toast.success('Guest meal deleted successfully');
     },
     onError: (error: any) => {
@@ -419,6 +325,7 @@ export function useMeal(roomId?: string): UseMealReturn {
       });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
       toast.success('Auto meals processed successfully');
