@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     // Get user's current group
     const currentGroup = await prisma.roomMember.findFirst({
-      where: { 
+      where: {
         userId: session.user.id,
-        isCurrent: true 
+        isCurrent: true
       }
     });
 
@@ -64,33 +64,31 @@ export async function GET(request: NextRequest) {
     });
 
     // Create a map of all dates in the current month
+    // Create key-value maps for O(1) lookup
+    const mealsMap = new Map(meals.map(m => [m.date.toISOString().split('T')[0], m._count.id]));
+    const expensesMap = new Map(expenses.map(e => [e.date.toISOString().split('T')[0], e._sum.amount]));
+
     const chartData = [];
     const currentDate = new Date(startOfMonth);
 
     while (currentDate <= endOfMonth) {
       const dateString = currentDate.toISOString().split('T')[0];
-      
-      // Find meals for this date
-      const dayMeals = meals.find(m => 
-        m.date.toISOString().split('T')[0] === dateString
-      );
-      
-      // Find expenses for this date
-      const dayExpenses = expenses.find(e => 
-        e.date.toISOString().split('T')[0] === dateString
-      );
 
       chartData.push({
         date: dateString,
-        meals: dayMeals?._count.id || 0,
-        expenses: dayExpenses?._sum.amount || 0,
-        balance: 0 // This could be calculated based on payments vs expenses
+        meals: mealsMap.get(dateString) || 0,
+        expenses: expensesMap.get(dateString) || 0,
+        balance: 0
       });
 
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    return NextResponse.json(chartData);
+    return NextResponse.json(chartData, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600'
+      }
+    });
   } catch (error) {
     console.error('Error fetching dashboard chart data:', error);
     return NextResponse.json({ error: 'Failed to fetch dashboard chart data' }, { status: 500 });

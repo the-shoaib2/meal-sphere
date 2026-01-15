@@ -443,6 +443,7 @@ model ExtraExpense {
 
   @@index([roomId, periodId])
   @@index([roomId, periodId, date])
+  @@index([roomId, date])
 }
 
 model Invitation {
@@ -510,6 +511,8 @@ model Notification {
 
   @@index([userId, read])
   @@index([createdAt])
+  // Optimized for Notification Feed (User + Date)
+  @@index([userId, createdAt])
 }
 
 /// GROUP JOIN REQUEST MODEL

@@ -125,17 +125,30 @@ export async function GET(request: Request) {
         .filter(meal => meal.type === 'DINNER')
         .reduce((sum, meal) => sum + meal.count, 0)
 
-      // Daily breakdown
+      // Daily breakdown - OPTIMIZED with Map grouping (O(N) instead of O(N*M))
       const days = eachDayOfInterval({ start: startDate, end: endDate })
+
+      // Group meals by date using Map for O(1) lookup
+      const mealsByDate = new Map<string, typeof userMeals>();
+      const guestMealsByDate = new Map<string, typeof userGuestMeals>();
+
+      userMeals.forEach(meal => {
+        const dayStr = format(new Date(meal.date), 'yyyy-MM-dd');
+        if (!mealsByDate.has(dayStr)) mealsByDate.set(dayStr, []);
+        mealsByDate.get(dayStr)!.push(meal);
+      });
+
+      userGuestMeals.forEach(meal => {
+        const dayStr = format(new Date(meal.date), 'yyyy-MM-dd');
+        if (!guestMealsByDate.has(dayStr)) guestMealsByDate.set(dayStr, []);
+        guestMealsByDate.get(dayStr)!.push(meal);
+      });
+
       const dailyStats = days.map(day => {
         const dayStr = format(day, 'yyyy-MM-dd')
-        const dayMeals = userMeals.filter(meal => 
-          format(new Date(meal.date), 'yyyy-MM-dd') === dayStr
-        )
-        const dayGuestMeals = userGuestMeals.filter(meal => 
-          format(new Date(meal.date), 'yyyy-MM-dd') === dayStr
-        )
-        
+        const dayMeals = mealsByDate.get(dayStr) || [];
+        const dayGuestMeals = guestMealsByDate.get(dayStr) || [];
+
         return {
           date: dayStr,
           breakfast: dayMeals.filter(meal => meal.type === 'BREAKFAST').length,
@@ -257,17 +270,30 @@ export async function GET(request: Request) {
       .filter(meal => meal.type === 'DINNER')
       .reduce((sum, meal) => sum + meal.count, 0)
 
-    // Daily breakdown
+    // Daily breakdown - OPTIMIZED with Map grouping (O(N) instead of O(N*M))
     const days = eachDayOfInterval({ start: startDate, end: endDate })
+
+    // Group meals by date using Map for O(1) lookup
+    const mealsByDate = new Map<string, typeof userMeals>();
+    const guestMealsByDate = new Map<string, typeof userGuestMeals>();
+
+    userMeals.forEach(meal => {
+      const dayStr = format(new Date(meal.date), 'yyyy-MM-dd');
+      if (!mealsByDate.has(dayStr)) mealsByDate.set(dayStr, []);
+      mealsByDate.get(dayStr)!.push(meal);
+    });
+
+    userGuestMeals.forEach(meal => {
+      const dayStr = format(new Date(meal.date), 'yyyy-MM-dd');
+      if (!guestMealsByDate.has(dayStr)) guestMealsByDate.set(dayStr, []);
+      guestMealsByDate.get(dayStr)!.push(meal);
+    });
+
     const dailyStats = days.map(day => {
       const dayStr = format(day, 'yyyy-MM-dd')
-      const dayMeals = userMeals.filter(meal => 
-        format(new Date(meal.date), 'yyyy-MM-dd') === dayStr
-      )
-      const dayGuestMeals = userGuestMeals.filter(meal => 
-        format(new Date(meal.date), 'yyyy-MM-dd') === dayStr
-      )
-      
+      const dayMeals = mealsByDate.get(dayStr) || [];
+      const dayGuestMeals = guestMealsByDate.get(dayStr) || [];
+
       return {
         date: dayStr,
         breakfast: dayMeals.filter(meal => meal.type === 'BREAKFAST').length,
@@ -328,7 +354,11 @@ export async function GET(request: Request) {
       daily: dailyStats,
     }
 
-    return NextResponse.json(stats)
+    return NextResponse.json(stats, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=120, stale-while-revalidate=300'
+      }
+    })
   } catch (error) {
     console.error("Error fetching user meal stats:", error)
     return NextResponse.json({ error: "Failed to fetch user meal statistics" }, { status: 500 })

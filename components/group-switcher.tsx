@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Users, Check, Loader2 } from "lucide-react"
+import { ChevronsUpDown, Plus, Users, Check, Loader } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import {
@@ -47,7 +47,7 @@ export function GroupSwitcher() {
     return (
       <div className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm">
         <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Loader2 className="size-4 animate-spin" />
+          <Loader className="size-4 animate-spin" />
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">
           <div className="h-4 w-24 bg-muted rounded animate-pulse mb-1"></div>

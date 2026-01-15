@@ -65,7 +65,11 @@ export async function GET(request: Request) {
       })
     }
 
-    return NextResponse.json(autoMealSettings)
+    return NextResponse.json(autoMealSettings, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600'
+      }
+    })
   } catch (error) {
     console.error("Error fetching auto meal settings:", error)
     return NextResponse.json({ error: "Failed to fetch auto meal settings" }, { status: 500 })
@@ -110,8 +114,8 @@ export async function PATCH(request: Request) {
 
     // If user is trying to enable auto meals but admin has disabled it
     if (body.isEnabled && !mealSettings?.autoMealEnabled) {
-      return NextResponse.json({ 
-        error: "Auto meal system is disabled by the group administrator" 
+      return NextResponse.json({
+        error: "Auto meal system is disabled by the group administrator"
       }, { status: 400 })
     }
 

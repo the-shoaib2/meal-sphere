@@ -70,6 +70,20 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Get current period for filtering
+    const currentPeriod = await prisma.mealPeriod.findFirst({
+      where: { roomId, status: 'ACTIVE' }
+    });
+
+    const whereClause: any = {
+      roomId: roomId,
+      ...(currentPeriod ? { periodId: currentPeriod.id } : {})
+    }
+
+    if (Object.keys(dateFilter).length > 0) {
+      whereClause.date = dateFilter
+    }
+
     const guestMeals = await prisma.guestMeal.findMany({
       where: whereClause,
       include: {
@@ -86,7 +100,11 @@ export async function GET(request: Request) {
       },
     })
 
-    return NextResponse.json(guestMeals)
+    return NextResponse.json(guestMeals, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+      }
+    })
   } catch (error) {
     console.error("Error fetching guest meals:", error)
     return NextResponse.json({ error: "Failed to fetch guest meals" }, { status: 500 })
@@ -144,8 +162,8 @@ export async function POST(request: Request) {
     const guestMealLimit = mealSettings?.guestMealLimit || 5
 
     if (totalGuestMeals + count > guestMealLimit) {
-      return NextResponse.json({ 
-        error: `Guest meal limit exceeded. You can only add ${guestMealLimit - totalGuestMeals} more guest meals today.` 
+      return NextResponse.json({
+        error: `Guest meal limit exceeded. You can only add ${guestMealLimit - totalGuestMeals} more guest meals today.`
       }, { status: 400 })
     }
 

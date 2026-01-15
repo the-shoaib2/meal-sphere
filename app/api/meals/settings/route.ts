@@ -58,7 +58,11 @@ export async function GET(request: Request) {
       })
     }
 
-    return NextResponse.json(mealSettings)
+    return NextResponse.json(mealSettings, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600'
+      }
+    })
   } catch (error) {
     console.error("Error fetching meal settings:", error)
     return NextResponse.json({ error: "Failed to fetch meal settings" }, { status: 500 })

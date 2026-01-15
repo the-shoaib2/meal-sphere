@@ -138,13 +138,13 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                 <div key={item.title}>
                                     <button
                                         onClick={() => handleNavigation(item.url)}
-                                        className={`w-full flex items-center px-2 lg:px-3 py-1.5 lg:py-1.5 text-xs lg:text-sm font-medium rounded-md lg:rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-50 text-blue-700' : 'text-muted-foreground hover:bg-transparent'
+                                        className={`w-full flex items-center px-2 lg:px-3 py-1.5 lg:py-1.5 text-xs lg:text-sm font-medium rounded-md lg:rounded-lg hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
                                             }`}
                                     >
                                         {isActive(item.url) && (
-                                            <div className="absolute left-0 top-1 bottom-1 w-0.5 lg:w-1 bg-blue-600 rounded-full" />
+                                            <div className="absolute left-0 top-1 bottom-1 w-0.5 lg:w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
                                         )}
-                                        <item.icon className={`mr-2 lg:mr-3 h-3.5 w-3.5 lg:h-4 lg:w-4 transition-colors ${isActive(item.url) ? 'text-blue-600' : 'text-muted-foreground group-hover:text-blue-600'}`} />
+                                        <item.icon className={`mr-2 lg:mr-3 h-3.5 w-3.5 lg:h-4 lg:w-4 transition-colors ${isActive(item.url) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
                                         <span>{item.title}</span>
                                     </button>
                                 </div>
