@@ -121,19 +121,12 @@ const groupSettingsSchema = z.object({
       .min(2, 'Must have at least 2 members')
       .max(100, 'Maximum 100 members allowed')
       .nullable()
-  ]).optional().transform(val => val === undefined ? null : val),
+  ]).optional(),
   tags: z.array(z.string()).default([]),
-  features: z.record(z.boolean()).default({}),
+  features: z.record(z.string(), z.boolean()).default({}),
 });
 
-type GroupSettingsFormValues = {
-  name: string;
-  description: string;
-  isPrivate: boolean;
-  maxMembers?: number;
-  tags: string[];
-  features: Record<string, boolean>;
-};
+type GroupSettingsFormValues = z.input<typeof groupSettingsSchema>;
 
 interface SettingsTabProps {
   groupId: string;
@@ -276,7 +269,7 @@ export function SettingsTab({
           name: data.name,
           description: data.description,
           isPrivate: data.isPrivate,
-          maxMembers: data.maxMembers,
+          maxMembers: typeof data.maxMembers === 'string' ? (data.maxMembers === '' ? null : Number(data.maxMembers)) : data.maxMembers,
           tags: data.tags,
           features: data.features,
         }
@@ -290,14 +283,14 @@ export function SettingsTab({
         if (prev.isPrivate !== data.isPrivate) toast.success(`Privacy set to ${data.isPrivate ? 'Private' : 'Public'}`);
         if (prev.maxMembers !== (data.maxMembers ?? null)) toast.success('Max members updated');
         // Tags
-        const addedTags = data.tags.filter(t => !prev.tags.includes(t));
-        const removedTags = prev.tags.filter(t => !data.tags.includes(t));
+        const addedTags = (data.tags || []).filter(t => !(prev.tags || []).includes(t));
+        const removedTags = (prev.tags || []).filter(t => !(data.tags || []).includes(t));
         addedTags.forEach(tag => toast.success(`Tag '${tag}' added`));
         removedTags.forEach(tag => toast.success(`Tag '${tag}' removed`));
         // Features
-        Object.keys(data.features).forEach(key => {
-          if (prev.features[key] !== data.features[key]) {
-            toast.success(`${GROUP_FEATURES[key]?.name || key} ${data.features[key] ? 'enabled' : 'disabled'}`);
+        Object.keys(data.features || {}).forEach(key => {
+          if ((prev.features || {})[key] !== (data.features || {})[key]) {
+            toast.success(`${GROUP_FEATURES[key]?.name || key} ${(data.features || {})[key] ? 'enabled' : 'disabled'}`);
           }
         });
       } else {
@@ -392,7 +385,7 @@ export function SettingsTab({
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-10 w-full" />
             </div>
-      </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -767,13 +760,12 @@ export function SettingsTab({
                     placeholder="Enter group name"
                     value={deleteGroupName}
                     onChange={(e) => setDeleteGroupName(e.target.value)}
-                    className={`${
-                      isDeleteNameValid 
-                        ? "border-green-500 focus-visible:ring-green-500" 
-                        : deleteGroupName 
-                          ? "border-destructive focus-visible:ring-destructive" 
-                          : ""
-                    }`}
+                    className={`${isDeleteNameValid
+                      ? "border-green-500 focus-visible:ring-green-500"
+                      : deleteGroupName
+                        ? "border-destructive focus-visible:ring-destructive"
+                        : ""
+                      }`}
                     disabled={deleteGroup.isPending}
                   />
                   {deleteGroupName && !isDeleteNameValid && (
@@ -834,7 +826,7 @@ export function SettingsTab({
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel 
+                  <AlertDialogCancel
                     disabled={isLeaving || leaveGroup.isPending}
                   >
                     Cancel

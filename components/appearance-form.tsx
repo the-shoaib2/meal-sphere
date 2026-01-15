@@ -16,9 +16,7 @@ import { toast } from "react-hot-toast"
 import { Moon, Sun, Laptop } from "lucide-react"
 
 const appearanceFormSchema = z.object({
-  theme: z.enum(["light", "dark", "system"], {
-    required_error: "Please select a theme.",
-  }),
+  theme: z.enum(["light", "dark", "system"]),
 })
 
 type AppearanceFormValues = z.infer<typeof appearanceFormSchema>
@@ -53,47 +51,47 @@ export function AppearanceForm({ user }: AppearanceFormProps) {
     if (revertTimeout) {
       clearTimeout(revertTimeout)
     }
-    
+
     // Store current theme for potential revert
     const originalTheme = currentTheme || 'system'
-    
+
     // Set the preview theme
     setPreviewTheme(theme)
     setTheme(theme)
-    
+
     // Start countdown from 5
     let count = 5
     setCountdown(count)
-    
+
     // Update countdown every second
     const countdownInterval = setInterval(() => {
       count--
       setCountdown(count)
-      
+
       if (count <= 0) {
         clearInterval(countdownInterval)
       }
     }, 1000)
-    
+
     // Set a timeout to revert after 5 seconds if not saved
     const timeout = setTimeout(() => {
       clearInterval(countdownInterval)
-      
+
       // Revert to original theme
       setTheme(originalTheme)
       form.setValue('theme', originalTheme as any)
-      
+
       // Clear preview state
       setPreviewTheme(null)
       setCountdown(0)
-      
+
       // Show message that changes were reverted
       toast("Theme reverted to previous setting")
-      
+
     }, 5000)
-    
+
     setRevertTimeout(timeout as unknown as NodeJS.Timeout)
-    
+
     // Cleanup interval on unmount or when timeout is cleared
     return () => clearInterval(countdownInterval)
   }
@@ -105,14 +103,14 @@ export function AppearanceForm({ user }: AppearanceFormProps) {
       clearTimeout(revertTimeout)
       setRevertTimeout(null)
     }
-    
+
     // Save the theme permanently
     setTheme(data.theme)
     setPreviewTheme(null)
     setCountdown(0)
     toast.success("Appearance updated successfully")
   }
-  
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -190,7 +188,7 @@ export function AppearanceForm({ user }: AppearanceFormProps) {
               )}
             />
             <div className="flex items-center gap-4">
-              <Button 
+              <Button
                 type="submit"
                 className="hover:cursor-pointer transition-colors duration-200"
               >

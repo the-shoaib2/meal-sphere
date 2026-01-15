@@ -18,12 +18,8 @@ import { cn } from "@/lib/utils"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 
 const guestMealSchema = z.object({
-  date: z.date({
-    required_error: "Please select a date",
-  }),
-  type: z.enum(["BREAKFAST", "LUNCH", "DINNER"] as const, {
-    required_error: "Please select a meal type",
-  }),
+  date: z.date(),
+  type: z.enum(["BREAKFAST", "LUNCH", "DINNER"] as const),
   notes: z.string().optional(),
 })
 
@@ -37,7 +33,7 @@ interface GuestMealFormProps {
 export default function GuestMealForm({ roomId, onSuccess }: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
-  
+
   const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId)
 
   const form = useForm<GuestMealFormData>({
@@ -94,7 +90,7 @@ export default function GuestMealForm({ roomId, onSuccess }: GuestMealFormProps)
             Add guest meals for a specific date and time. You can add up to {guestMealLimit} guest meals.
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField

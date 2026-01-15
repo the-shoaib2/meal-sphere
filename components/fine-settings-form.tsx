@@ -16,10 +16,8 @@ import { toast } from "react-hot-toast"
 import { useLanguage } from "@/contexts/language-context"
 
 const fineSettingsFormSchema = z.object({
-  roomId: z.string({
-    required_error: "Please select a room",
-  }),
-  fineAmount: z.coerce.number().min(0),
+  roomId: z.string(),
+  fineAmount: z.number().min(0),
   fineEnabled: z.boolean(),
 })
 

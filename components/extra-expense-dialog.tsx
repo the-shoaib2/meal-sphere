@@ -34,45 +34,14 @@ const expenseFormSchema = z.object({
   description: z.string().min(3, {
     message: "Description must be at least 3 characters.",
   }),
-  amount: z.coerce.number().positive({
-    message: "Amount must be a positive number.",
-  }),
-  date: z.date({
-    required_error: "Please select a date",
-  }),
-  type: z.nativeEnum(ExpenseType, {
-    required_error: "Please select an expense type",
-  }),
-  receipt: z
-    .any()
-    .optional()
-    .refine((files) => {
-      if (!files) return true;
-      if (typeof File !== 'undefined' && files instanceof FileList) {
-        return files.length === 0 || files[0].size <= MAX_FILE_SIZE;
-      }
-      if (typeof File !== 'undefined' && files instanceof File) {
-        return files.size <= MAX_FILE_SIZE;
-      }
-      return true;
-    }, {
-      message: `Max file size is 5MB.`,
-    })
-    .transform((files) => {
-      if (!files) return undefined;
-      if (typeof File !== 'undefined' && files instanceof FileList) {
-        return files.length > 0 ? files[0] : undefined;
-      }
-      if (typeof File !== 'undefined' && files instanceof File) {
-        return files;
-      }
-      return undefined;
-    }),
+  amount: z.number().positive(),
+  date: z.date(),
+  type: z.nativeEnum(ExpenseType),
+  receipt: z.any().optional(),
 })
 
-type ExpenseFormValues = z.infer<typeof expenseFormSchema> & {
-  receipt?: File | undefined;
-}
+type ExpenseFormValues = z.infer<typeof expenseFormSchema>
+
 
 export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: ExtraExpenseDialogProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -133,7 +102,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
       const { receipt, ...expenseData } = data;
-      
+
       if (isEditMode && expense) {
         // For update, convert date to ISO string
         await updateExpense.mutateAsync({
@@ -151,7 +120,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
         });
         toast.success("Expense added successfully!");
       }
-      
+
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -183,9 +152,9 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="What was this expense for?" 
-                        {...field} 
+                      <Input
+                        placeholder="What was this expense for?"
+                        {...field}
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -204,20 +173,20 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                       <FormControl>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">৳</span>
-                          <Input 
-                          type="number" 
-                        step="0.01" 
-                          min="0"
-                        placeholder="0.00" 
-                          className="pl-8"
-                          {...field}
-                          value={field.value || ''}
-                          onChange={(e) => {
-                          const value = parseFloat(e.target.value);
-                          field.onChange(isNaN(value) ? 0 : value);
-                          }}
-                          disabled={isLoading}
-                        />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            className="pl-8"
+                            {...field}
+                            value={field.value || ''}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value);
+                              field.onChange(isNaN(value) ? 0 : value);
+                            }}
+                            disabled={isLoading}
+                          />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -320,20 +289,20 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                     <FormMessage />
                     {previewUrl && (
                       <div className="mt-2">
-                          <img
-                            src={previewUrl}
-                            alt="Receipt preview"
-                            className="max-h-32 w-auto max-w-full rounded-md object-contain"
-                          />
+                        <img
+                          src={previewUrl}
+                          alt="Receipt preview"
+                          className="max-h-32 w-auto max-w-full rounded-md object-contain"
+                        />
                       </div>
                     )}
                   </FormItem>
                 )}
               />
             </div>
-            
+
             <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-4">
-              <Button 
+              <Button
                 type="submit"
                 className="w-full sm:w-auto"
                 disabled={isLoading}
