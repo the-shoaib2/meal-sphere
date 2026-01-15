@@ -22,6 +22,14 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
         }
 
+        // OPTIMIZATION: Start data fetching immediately in parallel with auth check
+        // We trust that 99% of requests are authorized, so the small wasted resources on 403s 
+        // is worth the speed up for 200s.
+        const dataPromise = Promise.all([
+            PeriodService.getPeriods(groupId, includeArchived),
+            PeriodService.getCurrentPeriod(groupId),
+        ]);
+
         // Verify user has access to this group
         const member = await prisma.roomMember.findUnique({
             where: {
@@ -41,15 +49,13 @@ export async function GET(request: NextRequest) {
         });
 
         if (!member) {
+            // If unauthorized, valid promise will effectively be discarded/ignored when we return early
             return NextResponse.json({ error: 'Access denied to this group' }, { status: 403 });
         }
 
         try {
-            // Execute all queries in parallel
-            const [periods, currentPeriod] = await Promise.all([
-                PeriodService.getPeriods(groupId, includeArchived),
-                PeriodService.getCurrentPeriod(groupId),
-            ]);
+            // Await the data that we already started fetching
+            const [periods, currentPeriod] = await dataPromise;
 
             return NextResponse.json({
                 periods,

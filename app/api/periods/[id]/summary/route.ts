@@ -38,13 +38,26 @@ export async function GET(
     const resolvedParams = await params;
     try {
       const summary = await PeriodService.calculatePeriodSummary(resolvedParams.id, groupId);
-      
-      return NextResponse.json({ summary });
+
+      // Determine cache duration based on status
+      // valid statuses: ACTIVE, ENDED, LOCKED, ARCHIVED
+      const isImmutable = ['ENDED', 'LOCKED', 'ARCHIVED'].includes(summary.status);
+
+      // Active: 10s cache
+      // Immutable: 1 hour cache
+      const sMaxAge = isImmutable ? 3600 : 10;
+      const staleWhileRevalidate = isImmutable ? 86400 : 30;
+
+      return NextResponse.json({ summary }, {
+        headers: {
+          'Cache-Control': `private, s-maxage=${sMaxAge}, stale-while-revalidate=${staleWhileRevalidate}`
+        }
+      });
     } catch (dbError: any) {
       // Handle case where database schema hasn't been updated yet
-      if (dbError.message?.includes('Unknown table') || 
-          dbError.message?.includes('doesn\'t exist') ||
-          dbError.message?.includes('MealPeriod')) {
+      if (dbError.message?.includes('Unknown table') ||
+        dbError.message?.includes('doesn\'t exist') ||
+        dbError.message?.includes('MealPeriod')) {
         return NextResponse.json({ error: 'Period not found' }, { status: 404 });
       }
       throw dbError;

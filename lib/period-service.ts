@@ -435,15 +435,9 @@ export class PeriodService {
    * Optimized for performance using database aggregation and parallel execution
    */
   static async calculatePeriodSummary(periodId: string, roomId?: string): Promise<PeriodSummary> {
-    const period = await this.getPeriod(periodId, roomId);
-    if (!period) {
-      throw new Error('Period not found');
-    }
-
-    const { id, name, startDate, endDate, status, isLocked, openingBalance, closingBalance, carryForward, roomId: periodRoomId } = period;
-
-    // Execute all aggregation queries in parallel
+    // Execute period fetch AND all aggregation queries in parallel
     const [
+      period,
       mealsCount,
       guestMealsAgg,
       shoppingAgg,
@@ -451,76 +445,97 @@ export class PeriodService {
       extraExpensesAgg,
       memberCount
     ] = await Promise.all([
-      // Count meals
+      // 1. Fetch period details (lightweight, no relations)
+      prisma.mealPeriod.findUnique({
+        where: { id: periodId },
+      }),
+
+      // 2. Count meals
       prisma.meal.count({
         where: {
           periodId,
-          roomId: periodRoomId, // Include roomId for index usage
+          // We can't use period.roomId here because we haven't fetched it yet.
+          // However, if roomId IS passed to the function, we should usage it for index optimization.
+          ...(roomId && { roomId }),
         },
       }),
 
-      // Sum guest meals count
+      // 3. Sum guest meals count
       prisma.guestMeal.aggregate({
         where: {
           periodId,
-          roomId: periodRoomId,
+          ...(roomId && { roomId }),
         },
-        _sum: {
-          count: true,
-        },
+        _sum: { count: true },
       }),
 
-      // Sum shopping items quantity (and ideally cost if available)
+      // 4. Sum shopping items
       prisma.shoppingItem.aggregate({
         where: {
           periodId,
-          roomId: periodRoomId,
           purchased: true,
+          ...(roomId && { roomId }),
         },
-        _sum: {
-          quantity: true,
-        },
+        _sum: { quantity: true },
       }),
 
-      // Sum completed payments
+      // 5. Sum completed payments
       prisma.payment.aggregate({
         where: {
           periodId,
-          roomId: periodRoomId,
           status: 'COMPLETED',
+          ...(roomId && { roomId }),
         },
-        _sum: {
-          amount: true,
-        },
+        _sum: { amount: true },
       }),
 
-      // Sum extra expenses
+      // 6. Sum extra expenses
       prisma.extraExpense.aggregate({
         where: {
           periodId,
-          roomId: periodRoomId,
+          ...(roomId && { roomId }),
         },
-        _sum: {
-          amount: true,
-        },
+        _sum: { amount: true },
       }),
 
-      // Count active members
-      prisma.roomMember.count({
+      // 7. Count active members (This needs roomId. If not provided, we might need a separate query or accept it's less efficient)
+      // If roomId is NOT provided, we technically can't count members efficiently without fetching period first.
+      // But typically roomId IS provided in the API call.
+      roomId ? prisma.roomMember.count({
         where: {
-          roomId: periodRoomId,
+          roomId: roomId,
           isCurrent: true,
           isBanned: false,
         },
-      }),
+      }) : Promise.resolve(0) // Fallback if no roomId
     ]);
 
+    if (!period) {
+      throw new Error('Period not found');
+    }
+
+    // Security check: if roomId was provided, verify it matches
+    if (roomId && period.roomId !== roomId) {
+      throw new Error('Period does not belong to the specified group');
+    }
+
+    // If we didn't have roomId initially, we missed the member count. 
+    // We could fetch it now, but that defeats the parallel purpose.
+    // Ideally, the caller ALWAYS provides roomId.
+    let finalMemberCount = memberCount;
+    if (!roomId) {
+      // Fallback for rare case where roomId wasn't passed
+      finalMemberCount = await prisma.roomMember.count({
+        where: {
+          roomId: period.roomId,
+          isCurrent: true,
+          isBanned: false
+        }
+      });
+    }
+
     // Extract values with defaults
-    const totalMeals = mealsCount;
-    const totalGuestMeals = guestMealsAgg._sum.count || 0;
-    const totalShoppingAmount = shoppingAgg._sum.quantity || 0;
-    const totalPayments = paymentsAgg._sum.amount || 0;
-    const totalExtraExpenses = extraExpensesAgg._sum.amount || 0;
+    const { id, name, startDate, endDate, status, isLocked, openingBalance, closingBalance, carryForward } = period;
 
     return {
       id,
@@ -529,13 +544,13 @@ export class PeriodService {
       endDate: endDate || null,
       status,
       isLocked,
-      totalMeals,
-      totalGuestMeals,
-      totalShoppingAmount,
-      totalPayments,
-      totalExtraExpenses,
-      memberCount,
-      activeMemberCount: memberCount,
+      totalMeals: mealsCount,
+      totalGuestMeals: guestMealsAgg._sum.count || 0,
+      totalShoppingAmount: shoppingAgg._sum.quantity || 0,
+      totalPayments: paymentsAgg._sum.amount || 0,
+      totalExtraExpenses: extraExpensesAgg._sum.amount || 0,
+      memberCount: finalMemberCount,
+      activeMemberCount: finalMemberCount,
       openingBalance,
       closingBalance,
       carryForward,
