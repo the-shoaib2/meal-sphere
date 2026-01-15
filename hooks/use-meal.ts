@@ -134,29 +134,29 @@ interface UseMealReturn {
   isLoading: boolean;
   isLoadingUserStats: boolean;
   error: Error | null;
-  
+
   // Queries
   useMealsByDate: (date: Date) => Meal[];
   useGuestMealsByDate: (date: Date) => GuestMeal[];
   useMealSummary: (startDate: Date, endDate: Date) => MealSummary[];
   useMealCount: (date: Date, type: MealType) => number;
   useUserMealStats: (month?: string) => UserMealStats | null;
-  
+
   // Mutations
   toggleMeal: (date: Date, type: MealType, userId: string) => Promise<void>;
   addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>;
   updateGuestMeal: (guestMealId: string, count: number) => Promise<void>;
   deleteGuestMeal: (guestMealId: string) => Promise<void>;
-  
+
   // Settings
   updateMealSettings: (settings: Partial<MealSettings>) => Promise<void>;
   updateAutoMealSettings: (settings: Partial<AutoMealSettings>) => Promise<void>;
-  
+
   // Auto Meal Functions
   triggerAutoMeals: (date: Date) => Promise<void>;
   isAutoMealTime: (date: Date, type: MealType) => boolean;
   shouldAutoAddMeal: (date: Date, type: MealType) => boolean;
-  
+
   // Utilities
   hasMeal: (date: Date, type: MealType, userId?: string) => boolean;
   canAddMeal: (date: Date, type: MealType) => boolean;
@@ -169,13 +169,13 @@ export function useMeal(roomId?: string): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const { data: currentPeriod } = useCurrentPeriod();
-  
+
   // Get the most recent period (including ENDED ones) if no active period
   const { data: mostRecentPeriod } = useQuery({
     queryKey: ['mostRecentPeriod', roomId],
     queryFn: async () => {
       if (!roomId) return null;
-      
+
       try {
         // First try to get current (active) period
         const currentResponse = await fetch(`/api/periods/current?groupId=${roomId}`);
@@ -185,7 +185,7 @@ export function useMeal(roomId?: string): UseMealReturn {
             return currentData.currentPeriod;
           }
         }
-        
+
         // If no active period, get the most recent period
         const periodsResponse = await fetch(`/api/periods?groupId=${roomId}`);
         if (periodsResponse.ok) {
@@ -194,7 +194,7 @@ export function useMeal(roomId?: string): UseMealReturn {
             return periodsData.periods[0]; // Most recent period
           }
         }
-        
+
         return null;
       } catch (error) {
         console.error('Error fetching most recent period:', error);
@@ -203,7 +203,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     },
     enabled: !!roomId && !currentPeriod,
   });
-  
+
   // Use current period if available, otherwise use most recent period
   const periodToUse = currentPeriod || mostRecentPeriod;
 
@@ -274,21 +274,21 @@ export function useMeal(roomId?: string): UseMealReturn {
     queryKey: ['user-meal-stats', roomId, session?.user?.id, periodToUse?.id],
     queryFn: async () => {
       if (!roomId || !session?.user?.id) return null;
-      
+
       // Only make the API call if we have a period
       if (!periodToUse?.id) {
         console.log('No period available, returning null for user stats');
         return null;
       }
-      
+
       const params = new URLSearchParams({
         roomId,
         userId: session.user.id,
         periodId: periodToUse.id
       });
-      
+
       console.log('Using period for stats:', periodToUse.name, periodToUse.id, 'Status:', periodToUse.status);
-      
+
       const { data } = await axios.get<UserMealStats>(`/api/meals/user-stats?${params.toString()}`);
       return data;
     },
@@ -438,10 +438,10 @@ export function useMeal(roomId?: string): UseMealReturn {
 
   const useMealCount = useCallback((date: Date, type: MealType): number => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const regularMeals = meals.filter(meal => 
+    const regularMeals = meals.filter(meal =>
       meal.date.startsWith(dateStr) && meal.type === type
     ).length;
-    const guestMealsCount = guestMeals.filter(meal => 
+    const guestMealsCount = guestMeals.filter(meal =>
       meal.date.startsWith(dateStr) && meal.type === type
     ).reduce((sum, meal) => sum + meal.count, 0);
     return regularMeals + guestMealsCount;
@@ -450,13 +450,13 @@ export function useMeal(roomId?: string): UseMealReturn {
   const useMealSummary = useCallback((startDate: Date, endDate: Date): MealSummary[] => {
     const summaries: MealSummary[] = [];
     let currentDate = startOfDay(startDate);
-    
+
     while (currentDate <= endOfDay(endDate)) {
       const dateStr = format(currentDate, 'yyyy-MM-dd');
       const breakfast = useMealCount(currentDate, 'BREAKFAST');
       const lunch = useMealCount(currentDate, 'LUNCH');
       const dinner = useMealCount(currentDate, 'DINNER');
-      
+
       summaries.push({
         date: dateStr,
         breakfast,
@@ -464,65 +464,65 @@ export function useMeal(roomId?: string): UseMealReturn {
         dinner,
         total: breakfast + lunch + dinner
       });
-      
+
       currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
     }
-    
+
     return summaries;
   }, [useMealCount]);
 
   const hasMeal = useCallback((date: Date, type: MealType, userId?: string): boolean => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const targetUserId = userId || session?.user?.id;
-    
+
     if (!targetUserId) return false;
-    
-    return meals.some(meal => 
-      meal.date.startsWith(dateStr) && 
-      meal.type === type && 
+
+    return meals.some(meal =>
+      meal.date.startsWith(dateStr) &&
+      meal.type === type &&
       meal.userId === targetUserId
     );
   }, [meals, session?.user?.id]);
 
   const canAddMeal = useCallback((date: Date, type: MealType): boolean => {
     if (!mealSettings) return true;
-    
+
     const dateStr = format(date, 'yyyy-MM-dd');
-    const todayMeals = meals.filter(meal => 
-      meal.date.startsWith(dateStr) && 
+    const todayMeals = meals.filter(meal =>
+      meal.date.startsWith(dateStr) &&
       meal.userId === session?.user?.id
     ).length;
-    
+
     // Check if user has reached daily meal limit
     if (todayMeals >= (mealSettings?.maxMealsPerDay || 3)) {
       return false;
     }
-    
+
     // Check if meal time has passed for the specific date
     const now = new Date();
     const targetDate = new Date(date);
-    
+
     // Get meal time for the specific type
     let mealTimeStr = '';
     if (type === 'BREAKFAST') mealTimeStr = mealSettings.breakfastTime || '08:00';
     if (type === 'LUNCH') mealTimeStr = mealSettings.lunchTime || '13:00';
     if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00';
-    
+
     // Parse meal time
     const [hours, minutes] = mealTimeStr.split(':').map(Number);
     const mealTime = new Date(targetDate);
     mealTime.setHours(hours, minutes, 0, 0);
-    
+
     // If the target date is today, check if meal time has passed
     if (isSameDay(targetDate, now)) {
       return now < mealTime;
     }
-    
+
     // For future dates, always allow
     if (targetDate > now) {
       return true;
     }
-    
+
     // For past dates, don't allow
     return false;
   }, [mealSettings, meals, session?.user?.id]);
@@ -530,43 +530,43 @@ export function useMeal(roomId?: string): UseMealReturn {
   const isAutoMealTime = useCallback((date: Date, type: MealType): boolean => {
     // Check if auto meal system is enabled by admin
     if (!mealSettings?.autoMealEnabled) return false;
-    
+
     // Check if user has auto meals enabled
     if (!autoMealSettings?.isEnabled) return false;
-    
+
     const now = new Date();
     const currentTime = format(now, 'HH:mm');
     const mealTime = type === 'BREAKFAST' ? mealSettings.breakfastTime :
-                    type === 'LUNCH' ? mealSettings.lunchTime :
-                    mealSettings.dinnerTime;
-    
+      type === 'LUNCH' ? mealSettings.lunchTime :
+        mealSettings.dinnerTime;
+
     return currentTime === mealTime;
   }, [autoMealSettings, mealSettings]);
 
   const shouldAutoAddMeal = useCallback((date: Date, type: MealType): boolean => {
     // Check if auto meal system is enabled by admin
     if (!mealSettings?.autoMealEnabled) return false;
-    
+
     // Check if user has auto meals enabled
     if (!autoMealSettings?.isEnabled) return false;
-    
+
     // Check if this meal type is enabled for the user
     const isEnabled = type === 'BREAKFAST' ? autoMealSettings.breakfastEnabled :
-                     type === 'LUNCH' ? autoMealSettings.lunchEnabled :
-                     autoMealSettings.dinnerEnabled;
-    
+      type === 'LUNCH' ? autoMealSettings.lunchEnabled :
+        autoMealSettings.dinnerEnabled;
+
     if (!isEnabled) return false;
-    
+
     // Check if this meal type is excluded
     if (autoMealSettings.excludedMealTypes.includes(type)) return false;
-    
+
     // Check if the date is excluded
     const dateStr = format(date, 'yyyy-MM-dd');
     if (autoMealSettings.excludedDates.includes(dateStr)) return false;
-    
+
     // Check if user already has this meal
     if (hasMeal(date, type)) return false;
-    
+
     // Check if it's the right time
     return isAutoMealTime(date, type);
   }, [autoMealSettings, mealSettings, hasMeal, isAutoMealTime]);
@@ -575,11 +575,11 @@ export function useMeal(roomId?: string): UseMealReturn {
   const getUserGuestMeals = useCallback((date: Date, userId?: string): GuestMeal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const targetUserId = userId || session?.user?.id;
-    
+
     if (!targetUserId) return [];
-    
-    return guestMeals.filter(meal => 
-      meal.date.startsWith(dateStr) && 
+
+    return guestMeals.filter(meal =>
+      meal.date.startsWith(dateStr) &&
       meal.userId === targetUserId
     );
   }, [guestMeals, session?.user?.id]);
@@ -594,31 +594,31 @@ export function useMeal(roomId?: string): UseMealReturn {
   const getUserMealCount = useCallback((date: Date, type: MealType, userId?: string): number => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const targetUserId = userId || session?.user?.id;
-    
+
     if (!targetUserId) return 0;
-    
-    const regularMeals = meals.filter(meal => 
-      meal.date.startsWith(dateStr) && 
-      meal.type === type && 
+
+    const regularMeals = meals.filter(meal =>
+      meal.date.startsWith(dateStr) &&
+      meal.type === type &&
       meal.userId === targetUserId
     ).length;
-    
-    const guestMealsCount = guestMeals.filter(meal => 
-      meal.date.startsWith(dateStr) && 
-      meal.type === type && 
+
+    const guestMealsCount = guestMeals.filter(meal =>
+      meal.date.startsWith(dateStr) &&
+      meal.type === type &&
       meal.userId === targetUserId
     ).reduce((sum, meal) => sum + meal.count, 0);
-    
+
     return regularMeals + guestMealsCount;
   }, [meals, guestMeals, session?.user?.id]);
 
   // Get user meal stats for a specific month
   const useUserMealStats = useCallback((month?: string): UserMealStats | null => {
     if (!userMealStats) return null;
-    
+
     // If no month specified, return current stats
     if (!month) return userMealStats;
-    
+
     // For now, return current stats. In the future, we could implement month-specific fetching
     return userMealStats;
   }, [userMealStats]);
@@ -662,29 +662,29 @@ export function useMeal(roomId?: string): UseMealReturn {
     isLoading: isLoadingMeals || isLoadingGuestMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats,
     isLoadingUserStats,
     error: mealsError || guestMealsError || null,
-    
+
     // Queries
     useMealsByDate,
     useGuestMealsByDate,
     useMealSummary,
     useMealCount,
     useUserMealStats,
-    
+
     // Mutations
     toggleMeal,
     addGuestMeal,
     updateGuestMeal,
     deleteGuestMeal,
-    
+
     // Settings
     updateMealSettings,
     updateAutoMealSettings,
-    
+
     // Auto Meal Functions
     triggerAutoMeals,
     isAutoMealTime,
     shouldAutoAddMeal,
-    
+
     // Utilities
     hasMeal,
     canAddMeal,

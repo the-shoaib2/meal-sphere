@@ -184,7 +184,11 @@ export async function GET(request: Request) {
       },
     })
 
-    return NextResponse.json(shoppingItems)
+    return NextResponse.json(shoppingItems, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+      }
+    })
   } catch (error) {
     console.error("Error fetching shopping items:", error)
     return NextResponse.json({ message: "Failed to fetch shopping items" }, { status: 500 })
@@ -232,7 +236,7 @@ export async function PATCH(request: Request) {
     // Only allow updating certain fields
     const allowedUpdates = ['name', 'quantity', 'unit', 'purchased']
     const updates = Object.keys(updateData).filter(key => allowedUpdates.includes(key))
-    
+
     if (updates.length === 0) {
       return NextResponse.json({ message: "No valid updates provided" }, { status: 400 })
     }

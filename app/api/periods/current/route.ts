@@ -38,12 +38,16 @@ export async function GET(request: NextRequest) {
 
     try {
       const currentPeriod = await PeriodService.getCurrentPeriod(groupId);
-      return NextResponse.json({ currentPeriod });
+      return NextResponse.json({ currentPeriod }, {
+        headers: {
+          'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+        }
+      });
     } catch (dbError: any) {
       // Handle case where database schema hasn't been updated yet
-      if (dbError.message?.includes('Unknown table') || 
-          dbError.message?.includes('doesn\'t exist') ||
-          dbError.message?.includes('MealPeriod')) {
+      if (dbError.message?.includes('Unknown table') ||
+        dbError.message?.includes('doesn\'t exist') ||
+        dbError.message?.includes('MealPeriod')) {
         return NextResponse.json({ currentPeriod: null });
       }
       throw dbError;

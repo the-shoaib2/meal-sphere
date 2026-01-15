@@ -11,16 +11,16 @@ function sendNotification(groupId: string, message: string) {
 
 // Helper function to handle vote completion
 function handleVoteCompletion(vote: any, winner: any, completionReason: string, totalVotes: number, totalMembers: number) {
-  const voteTypeName = vote.type === 'MEAL_MANAGER' ? 'Manager Election' : 
-                      vote.type === 'MEAL_CHOICE' ? 'Meal Preference' : 
-                      vote.type || 'Vote';
-  
-  const notificationMessage = completionReason === 'majority_reached' 
+  const voteTypeName = vote.type === 'MEAL_MANAGER' ? 'Manager Election' :
+    vote.type === 'MEAL_CHOICE' ? 'Meal Preference' :
+      vote.type || 'Vote';
+
+  const notificationMessage = completionReason === 'majority_reached'
     ? `${voteTypeName} completed! Winner: ${winner.name} (Majority reached)`
     : `${voteTypeName} completed! Winner: ${winner.name} (All members voted)`;
-  
+
   sendNotification(vote.roomId, notificationMessage);
-  
+
   console.log(`Vote ${vote.id} completed:`, {
     title: vote.title,
     winner: winner.name,
@@ -42,12 +42,12 @@ export async function GET(req: NextRequest) {
   const groupId = getGroupIdFromUrl(req);
   if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
   const votes = await prisma.vote.findMany({ where: { roomId: String(groupId) } });
-  
+
   // Get group data to calculate majority and get member info
   const group = await getGroupData(groupId, "system"); // Use "system" as placeholder userId
   const totalMembers = group?.members?.length || 1;
   const majority = Math.floor(totalMembers / 2) + 1;
-  
+
   // Create a map of userId to user info for quick lookup
   const userMap = new Map();
   if (group?.members) {
@@ -59,21 +59,21 @@ export async function GET(req: NextRequest) {
       });
     });
   }
-  
+
   const formattedVotes = await Promise.all(votes.map(async (vote) => {
     const options = vote.options ? JSON.parse(vote.options) : [];
     const results = vote.results ? JSON.parse(vote.results) : {};
-    
+
     // Check if vote has expired and update if necessary
     let isActive = vote.isActive;
     let endDate = vote.endDate;
     let winner = null;
-    
+
     if (isActive && vote.endDate && new Date() > new Date(vote.endDate)) {
       // Vote has expired, mark as inactive
       isActive = false;
       endDate = new Date();
-      
+
       // Update the vote in the database
       await prisma.vote.update({
         where: { id: vote.id },
@@ -82,23 +82,23 @@ export async function GET(req: NextRequest) {
           endDate: new Date(),
         }
       });
-      
+
       // Send notification about expired vote
       sendNotification(groupId, `Vote "${vote.title}" has expired.`);
     }
-    
+
     // Calculate total votes and get voter details
-    const totalVotes = Object.values(results).reduce((sum: number, arr: unknown) => 
+    const totalVotes = Object.values(results).reduce((sum: number, arr: unknown) =>
       sum + (Array.isArray(arr) ? arr.length : 0), 0
     );
-    
+
     // Convert voter IDs to voter objects with user info
     const resultsWithVoters: Record<string, any[]> = {};
     Object.keys(results).forEach(candidateId => {
       const voterIds = results[candidateId] || [];
       resultsWithVoters[candidateId] = voterIds.map((userId: string) => userMap.get(userId) || { id: userId, name: 'Unknown', image: null });
     });
-    
+
     // Calculate winner for completed votes
     if (!isActive) {
       for (const candidate of options) {
@@ -107,12 +107,12 @@ export async function GET(req: NextRequest) {
           break;
         }
       }
-      
+
       // If no majority winner, find the candidate with most votes (for completed votes)
       if (!winner && totalVotes > 0) {
         let maxVotes = 0;
         let winningCandidate = null;
-        
+
         for (const candidate of options) {
           const candidateVotes = (results[candidate.id]?.length || 0);
           if (candidateVotes > maxVotes) {
@@ -120,13 +120,13 @@ export async function GET(req: NextRequest) {
             winningCandidate = candidate;
           }
         }
-        
+
         if (winningCandidate) {
           winner = winningCandidate;
         }
       }
     }
-    
+
     // Add completion metadata for history
     const voteHistory = {
       completedAt: !isActive ? endDate : null,
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
       majority,
       participationRate: totalMembers > 0 ? ((totalVotes / totalMembers) * 100).toFixed(1) : '0'
     };
-    
+
     return {
       ...vote,
       isActive,
@@ -147,8 +147,13 @@ export async function GET(req: NextRequest) {
       history: voteHistory,
     };
   }));
-  
-  return NextResponse.json({ votes: formattedVotes });
+
+  return NextResponse.json({ votes: formattedVotes }, {
+    headers: {
+      'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=30',
+      'Vary': 'Cookie'
+    }
+  });
 }
 
 // POST: Create a new vote for a group
@@ -184,7 +189,7 @@ export async function POST(req: NextRequest) {
     group_decision: "GROUP_DECISION"
   };
   const prismaType = (typeMap[data.type] as VoteType) || VoteType.GROUP_DECISION;
-  
+
   // Check if there's already an active vote of this type in the group
   const existingActiveVote = await prisma.vote.findFirst({
     where: {
@@ -193,7 +198,7 @@ export async function POST(req: NextRequest) {
       isActive: true
     }
   });
-  
+
   // Also check for any existing vote of this type by the same user
   const existingUserVote = await prisma.vote.findFirst({
     where: {
@@ -202,17 +207,17 @@ export async function POST(req: NextRequest) {
       userId: String(adminUserId)
     }
   });
-  
+
   if (existingActiveVote) {
-    const voteTypeName = data.type === 'manager' ? 'Manager Election' : 
-                        data.type === 'meal' ? 'Meal Preference' : 
-                        data.type || 'vote';
-    
-    return NextResponse.json({ 
-      error: `An active ${voteTypeName} already exists in this group. Please check the active votes section above and wait for it to complete or expire before creating a new one.` 
+    const voteTypeName = data.type === 'manager' ? 'Manager Election' :
+      data.type === 'meal' ? 'Meal Preference' :
+        data.type || 'vote';
+
+    return NextResponse.json({
+      error: `An active ${voteTypeName} already exists in this group. Please check the active votes section above and wait for it to complete or expire before creating a new one.`
     }, { status: 409 });
   }
-  
+
   // If user has a completed vote of this type, allow creating a new one
   if (existingUserVote && !existingUserVote.isActive) {
     console.log(`User ${adminUserId} has a completed ${prismaType} vote, allowing new vote creation`);
@@ -245,12 +250,12 @@ export async function POST(req: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 100));
     } catch (archiveError) {
       console.error('Failed to archive old vote:', archiveError);
-      return NextResponse.json({ 
-        error: 'Failed to create new vote. Please try again or contact support.' 
+      return NextResponse.json({
+        error: 'Failed to create new vote. Please try again or contact support.'
       }, { status: 500 });
     }
   }
-  
+
   // Store candidates in options as JSON
   const candidates = validCandidates.map((c: any) => ({ id: c.id, name: c.name, image: c.image }));
   // Use provided startDate/endDate or defaults
@@ -273,25 +278,27 @@ export async function POST(req: NextRequest) {
       }
     });
     sendNotification(groupId, `A new ${data.type || "custom"} vote has started.`);
-    return NextResponse.json({ vote: {
-      ...vote,
-      options: candidates,
-      results: {},
-    } }, { status: 201 });
+    return NextResponse.json({
+      vote: {
+        ...vote,
+        options: candidates,
+        results: {},
+      }
+    }, { status: 201 });
   } catch (err: any) {
     if (err.code === 'P2002') {
       // This happens when the same user tries to create multiple votes of the same type
-      const voteTypeName = data.type === 'manager' ? 'Manager Election' : 
-                          data.type === 'meal' ? 'Meal Preference' : 
-                          data.type || 'vote';
-      
-      return NextResponse.json({ 
-        error: `You have already created a ${voteTypeName} in this group. The system is trying to archive the previous vote to allow a new one. Please try again in a moment, or ask another admin to create the vote.` 
+      const voteTypeName = data.type === 'manager' ? 'Manager Election' :
+        data.type === 'meal' ? 'Meal Preference' :
+          data.type || 'vote';
+
+      return NextResponse.json({
+        error: `You have already created a ${voteTypeName} in this group. The system is trying to archive the previous vote to allow a new one. Please try again in a moment, or ask another admin to create the vote.`
       }, { status: 409 });
     }
     console.error('Vote creation error:', err);
-    return NextResponse.json({ 
-      error: 'Failed to create vote. Please try again.' 
+    return NextResponse.json({
+      error: 'Failed to create vote. Please try again.'
     }, { status: 500 });
   }
 }
@@ -331,7 +338,7 @@ export async function PATCH(req: NextRequest) {
   let winner = null;
   let endDate = vote.endDate;
   let completionReason = null;
-  
+
   // Check if any candidate has reached majority
   for (const candidate of options) {
     if ((results[candidate.id]?.length || 0) >= majority) {
@@ -342,13 +349,13 @@ export async function PATCH(req: NextRequest) {
       break;
     }
   }
-  
+
   // If no majority reached, check if all members have voted
   if (isActive && totalVotes >= totalMembers) {
     // Find the candidate with the most votes
     let maxVotes = 0;
     let winningCandidate = null;
-    
+
     for (const candidate of options) {
       const candidateVotes = (results[candidate.id]?.length || 0);
       if (candidateVotes > maxVotes) {
@@ -356,7 +363,7 @@ export async function PATCH(req: NextRequest) {
         winningCandidate = candidate;
       }
     }
-    
+
     if (winningCandidate) {
       isActive = false;
       winner = winningCandidate;
@@ -364,31 +371,33 @@ export async function PATCH(req: NextRequest) {
       completionReason = 'all_members_voted';
     }
   }
-  
+
   // Update vote with completion information
   const updateData: any = {
     results: JSON.stringify(results),
     isActive,
     endDate,
   };
-  
+
   const updatedVote = await prisma.vote.update({
     where: { id: String(voteId) },
     data: updateData
   });
-  
+
   // Send notifications for completed votes
   if (!isActive && winner && completionReason) {
     handleVoteCompletion(vote, winner, completionReason, totalVotes, totalMembers);
   }
-  
-  return NextResponse.json({ vote: {
-    ...updatedVote,
-    options,
-    results,
-    winner: !isActive && winner ? winner : undefined,
-    totalVotes,
-  } });
+
+  return NextResponse.json({
+    vote: {
+      ...updatedVote,
+      options,
+      results,
+      winner: !isActive && winner ? winner : undefined,
+      totalVotes,
+    }
+  });
 }
 
 // DELETE: Delete a vote (admin only)

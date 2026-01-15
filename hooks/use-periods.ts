@@ -47,7 +47,7 @@ export interface MemberPeriodBreakdown {
 
 export function usePeriods(includeArchived = false) {
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery({
     queryKey: ['periods', activeGroup?.id, includeArchived],
     queryFn: async () => {
@@ -62,12 +62,14 @@ export function usePeriods(includeArchived = false) {
       return data.periods;
     },
     enabled: !!activeGroup?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
 export function useCurrentPeriod() {
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery({
     queryKey: ['currentPeriod', activeGroup?.id],
     queryFn: async () => {
@@ -86,12 +88,14 @@ export function useCurrentPeriod() {
       return data.currentPeriod; // This can be null if no period exists or schema not updated
     },
     enabled: !!activeGroup?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
 export function usePeriod(periodId: string) {
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery({
     queryKey: ['period', periodId, activeGroup?.id],
     queryFn: async () => {
@@ -106,12 +110,14 @@ export function usePeriod(periodId: string) {
       return data.period;
     },
     enabled: !!activeGroup?.id && !!periodId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
 export function usePeriodSummary(periodId: string) {
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery({
     queryKey: ['periodSummary', periodId, activeGroup?.id],
     queryFn: async () => {
@@ -126,12 +132,14 @@ export function usePeriodSummary(periodId: string) {
       return data.summary as PeriodSummary;
     },
     enabled: !!activeGroup?.id && !!periodId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
 export function usePeriodsByMonth(year: number, month: number) {
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery({
     queryKey: ['periodsByMonth', year, month, activeGroup?.id],
     queryFn: async () => {
@@ -146,6 +154,8 @@ export function usePeriodsByMonth(year: number, month: number) {
       return data.periods;
     },
     enabled: !!activeGroup?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -186,7 +196,7 @@ export function useStartPeriod() {
     onError: (error: Error) => {
       // Enhanced error handling with specific messages
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('already an active period')) {
         toast.error('Cannot start new period', {
           description: 'There is already an active period. Please end the current period first before starting a new one.',
@@ -260,7 +270,7 @@ export function useEndPeriod() {
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('No active period found')) {
         toast.error('No active period', {
           description: 'There is no active period to end.',
@@ -314,7 +324,7 @@ export function useLockPeriod() {
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found', {
           description: 'The specified period could not be found.',
@@ -373,7 +383,7 @@ export function useUnlockPeriod() {
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found', {
           description: 'The specified period could not be found.',
@@ -430,7 +440,7 @@ export function useArchivePeriod() {
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found', {
           description: 'The specified period could not be found.',
@@ -461,7 +471,7 @@ export function useRestartPeriod() {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      
+
       const response = await fetch(`/api/periods/${periodId}/restart?groupId=${activeGroup.id}`, {
         method: 'POST',
         headers: {
@@ -469,7 +479,7 @@ export function useRestartPeriod() {
         },
         body: JSON.stringify({ newName, withData }),
       });
-      
+
       if (!response.ok) {
         let errorMessage = 'Failed to restart period';
         try {
@@ -481,7 +491,7 @@ export function useRestartPeriod() {
         }
         throw new Error(errorMessage);
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -493,7 +503,7 @@ export function useRestartPeriod() {
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
-      
+
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found', {
           description: 'The specified period could not be found.',
@@ -590,22 +600,22 @@ export function usePeriodManagement() {
   return {
     // Group context
     activeGroup,
-    
+
     // Data
     periods,
     currentPeriod,
     selectedPeriod,
     periodSummary,
-    
+
     // Loading states
     periodsLoading,
     currentPeriodLoading,
     selectedPeriodLoading,
     summaryLoading,
-    
+
     // Error states
     periodsError,
-    
+
     // Mutations
     startPeriodMutation,
     endPeriodMutation,
@@ -613,7 +623,7 @@ export function usePeriodManagement() {
     unlockPeriodMutation,
     archivePeriodMutation,
     restartPeriodMutation,
-    
+
     // UI state
     selectedPeriodId,
     setSelectedPeriodId,
@@ -623,7 +633,7 @@ export function usePeriodManagement() {
     setShowEndDialog,
     showArchiveDialog,
     setShowArchiveDialog,
-    
+
     // Handlers
     handleStartPeriod,
     handleEndPeriod,

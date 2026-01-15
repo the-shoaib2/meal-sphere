@@ -85,6 +85,8 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
       }
       return failureCount < 3;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -97,6 +99,8 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
       return res.json();
     },
     enabled: !!roomId && !!userId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -114,17 +118,19 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
       return res.json();
     },
     enabled: !!roomId && !!userId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 }
 
 export function useAddTransaction() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (transaction: { 
-      roomId: string; 
-      targetUserId: string; 
-      amount: number; 
+    mutationFn: async (transaction: {
+      roomId: string;
+      targetUserId: string;
+      amount: number;
       type: string;
       description?: string;
     }) => {
@@ -193,7 +199,7 @@ export function useDeleteTransaction() {
 
 export function useUpdateBalance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, balance }: { id: string; balance: number }) => {
       const res = await fetch(`/api/account-balance?id=${id}`, {
@@ -213,7 +219,7 @@ export function useUpdateBalance() {
 
 export function useCreateBalance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ userId, roomId, balance }: { userId: string; roomId: string; balance: number }) => {
       const res = await fetch('/api/account-balance', {
@@ -233,11 +239,11 @@ export function useCreateBalance() {
 
 export function useDeleteBalance() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/account-balance?id=${id}`, { 
-        method: 'DELETE' 
+      const res = await fetch(`/api/account-balance?id=${id}`, {
+        method: 'DELETE'
       });
       if (!res.ok) throw new Error('Failed to delete balance');
       return res.json();
@@ -264,7 +270,7 @@ export type DashboardSummary = {
 export function useDashboardSummary() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  
+
   return useQuery<DashboardSummary>({
     queryKey: ['dashboard-summary', activeGroup?.id],
     queryFn: async () => {

@@ -53,30 +53,32 @@ export function useExtraExpense() {
       return data;
     },
     enabled: !!groupId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Add a new extra expense
   const addExpense = useMutation<ExtraExpense, Error, AddExtraExpenseInput>({
     mutationFn: async (newExpense): Promise<ExtraExpense> => {
       if (!groupId) throw new Error('No active group selected');
-      
+
       const formData = new FormData();
       formData.append('roomId', groupId);
       formData.append('description', newExpense.description);
       formData.append('amount', newExpense.amount.toString());
       formData.append('date', newExpense.date.toISOString());
       formData.append('type', newExpense.type);
-      
+
       if (newExpense.receipt) {
         formData.append('receipt', newExpense.receipt);
       }
-      
+
       const { data } = await axios.post<ExtraExpense>('/api/expenses', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
+
       return data;
     },
     onSuccess: () => {
@@ -88,24 +90,24 @@ export function useExtraExpense() {
   const updateExpense = useMutation<ExtraExpense, Error, UpdateExtraExpenseInput>({
     mutationFn: async (updatedExpense): Promise<ExtraExpense> => {
       const { id, receipt, ...rest } = updatedExpense;
-      
+
       const formData = new FormData();
       Object.entries(rest).forEach(([key, value]) => {
         if (value !== undefined) {
           formData.append(key, String(value));
         }
       });
-      
+
       if (receipt) {
         formData.append('receipt', receipt);
       }
-      
+
       const { data } = await axios.patch<ExtraExpense>(`/api/expenses/${id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
+
       return data;
     },
     onSuccess: () => {

@@ -67,7 +67,7 @@ export function useShopping() {
       const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping?roomId=${groupId}`);
       return data;
     },
-    select: (data) => 
+    select: (data) =>
       data.map((item) => ({
         id: item.id,
         name: item.name,
@@ -85,19 +85,21 @@ export function useShopping() {
         updatedAt: item.updatedAt
       })),
     enabled: !!groupId, // Only run the query when groupId is available
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Add a new item to the shopping list
   const addItem = useMutation<ShoppingItem, Error, AddShoppingItemInput>({
     mutationFn: async (newItem): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
-      
+
       const formData = new FormData();
       formData.append('roomId', groupId);
       formData.append('description', newItem.name);
       formData.append('amount', (newItem.quantity || 0).toString());
       formData.append('date', new Date().toISOString());
-      
+
       const { data } = await axios.post<ShoppingItem>('/api/shopping', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',

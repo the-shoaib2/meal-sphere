@@ -209,7 +209,11 @@ export async function GET(request: Request) {
       },
     })
 
-    return NextResponse.json(expenses)
+    return NextResponse.json(expenses, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+      }
+    })
   } catch (error) {
     console.error("Error fetching expenses:", error)
     return NextResponse.json({ message: "Failed to fetch expenses" }, { status: 500 })
