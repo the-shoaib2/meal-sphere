@@ -15,9 +15,9 @@ export async function GET(request: Request) {
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-  
+
   try {
-    
+
     // Find notifications for the user
     const notifications = await prisma.notification.findMany({
       where: {
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       },
       take: 50
     })
-    
+
     // Transform the data to match the expected format
     const result = notifications.map(notif => ({
       id: notif.id,
@@ -52,8 +52,13 @@ export async function GET(request: Request) {
       createdAt: notif.createdAt,
       userId: notif.userId
     }))
-    
-    return NextResponse.json(result)
+
+
+    return NextResponse.json(result, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=60'
+      }
+    })
   } catch (error) {
     console.error("Error fetching notifications:", error)
     return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 })
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    
+
     const body = await request.json()
     const { userId, type, message } = body
 
@@ -90,14 +95,14 @@ export async function POST(request: Request) {
     }
 
     const result = await prisma.notification.create({ data: notification })
-    
+
     if (!result) {
       throw new Error('Failed to insert notification')
     }
 
     // Fetch the inserted notification to return
     const insertedNotification = await prisma.notification.findUnique({ where: { id: result.id } })
-    
+
     if (!insertedNotification) {
       throw new Error('Failed to fetch created notification')
     }

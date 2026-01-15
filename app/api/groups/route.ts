@@ -91,12 +91,12 @@ export async function POST(req: Request) {
     if (!group) {
       throw new Error('Failed to create group: No group was returned from database');
     }
-    
+
     return NextResponse.json(group);
   } catch (error) {
     console.error('Error in group creation:', error);
-    return NextResponse.json({ 
-      error: 'Failed to create group', 
+    return NextResponse.json({
+      error: 'Failed to create group',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     const searchParams = req.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const isMember = searchParams.get('isMember') === 'true';
@@ -115,9 +115,9 @@ export async function GET(req: NextRequest) {
     // If user is not authenticated, only return public groups
     if (!session?.user?.id) {
       const publicGroups = await prisma.room.findMany({
-        where: { 
+        where: {
           isPrivate: false,
-          isActive: true 
+          isActive: true
         },
         include: {
           createdByUser: {
@@ -142,32 +142,35 @@ export async function GET(req: NextRequest) {
 
     // For authenticated users, only return groups where they are members
     const memberGroups = await prisma.roomMember.findMany({
-      where: { 
+      where: {
         userId: session.user.id,
         room: { isActive: true }
       },
       include: {
         room: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isPrivate: true,
+            createdAt: true,
+            updatedAt: true,
             createdByUser: {
               select: {
                 id: true,
                 name: true,
-                email: true,
                 image: true,
               },
             },
+            // Optimize: Instead of fetching all members, just fetch the current user's role and member count
             members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true,
-                  },
-                },
+              where: {
+                userId: session.user.id
               },
+              select: {
+                role: true,
+                joinedAt: true
+              }
             },
             _count: {
               select: {
@@ -185,12 +188,19 @@ export async function GET(req: NextRequest) {
     // Transform the data to match the expected format
     const groups = memberGroups.map(member => ({
       ...member.room,
-      userRole: member.role,
-      joinedAt: member.joinedAt,
-      isCurrentMember: true
+      userRole: member.room.members[0]?.role || 'MEMBER', // Since we filtered members by userId, the first one is the current user
+      joinedAt: member.room.members[0]?.joinedAt || new Date(),
+      memberCount: member.room._count.members,
+      isCurrentMember: true,
+      // Compatibility fields if needed by frontend, though we should update frontend types to be leaner
+      members: [] // Returning empty array to satisfy type if strict, or we can omit
     }));
 
-    return NextResponse.json(groups);
+    return NextResponse.json(groups, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+      }
+    });
   } catch (error) {
     console.error('Error fetching groups:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

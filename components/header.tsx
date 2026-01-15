@@ -3,14 +3,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Menu, Search, Utensils, Maximize2, Minimize2 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
 import { NotificationBell } from "./notification-bell"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { UserAvatar } from "@/components/user-avatar"
-import { AppSidebar } from "@/components/app-sidebar"
+import { SidebarContent } from "@/components/sidebar-content"
 import { useEffect, useState } from "react"
 import screenfull from "screenfull"
 
@@ -18,6 +17,7 @@ export function Header() {
   const { data: session } = useSession()
   const isMobile = useIsMobile()
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (screenfull.isEnabled) {
@@ -38,46 +38,69 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 backdrop-blur-md px-4 md:px-6">
-      <div className="flex items-center gap-2 md:gap-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="h-4" />
-        <Link href="/" className="flex items-center gap-2 font-semibold justify-center md:justify-start w-full md:w-auto">
-          <Utensils className="h-6 w-6" />
-          <span className="text-xl">MealSphere</span>
-        </Link>
-      </div>
-      <div className="flex-1 flex justify-center">
-        <form className="hidden rounded-full md:flex w-full max-w-[450px] ">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search meals, members, or rooms..."
-              className="w-full appearance-none bg-background pl-9 pr-4 shadow-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
-            />
+    <header className="sticky top-0 z-30 flex h-14 items-center backdrop-blur-md border-b border-border/40">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile Sidebar Trigger */}
+          <div className="lg:hidden">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="mr-2">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72">
+                <SheetHeader className="px-4 py-4 border-b">
+                  <SheetTitle className="text-left flex items-center gap-2">
+                    <Utensils className="h-5 w-5" />
+                    MealSphere
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="h-full overflow-y-auto">
+                  <SidebarContent onNavigate={() => setIsMobileMenuOpen(false)} />
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
-        </form>
-      </div>
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleFullscreen}
-          className="hidden md:flex"
-          title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="h-5 w-5" />
-          ) : (
-            <Maximize2 className="h-5 w-5" />
-          )}
-          <span className="sr-only">{isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</span>
-        </Button>
-       
-        <NotificationBell />
-        
-        {/* <UserAvatar user={session?.user} /> */}
+
+          <Link href="/" className="flex items-center gap-2 font-semibold justify-center md:justify-start w-full md:w-auto">
+            <Utensils className="h-6 w-6 hidden md:block" />
+            <span className="text-xl">MealSphere</span>
+          </Link>
+        </div>
+        <div className="flex-1 flex justify-center">
+          <form className="hidden rounded-full md:flex w-full max-w-[450px] ">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search meals, members, or rooms..."
+                className="w-full appearance-none bg-background pl-9 pr-4 shadow-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
+              />
+            </div>
+          </form>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleFullscreen}
+            className="hidden md:flex"
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-5 w-5" />
+            ) : (
+              <Maximize2 className="h-5 w-5" />
+            )}
+            <span className="sr-only">{isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</span>
+          </Button>
+
+          <NotificationBell />
+
+          <UserAvatar user={session?.user} />
+        </div>
       </div>
     </header>
   )

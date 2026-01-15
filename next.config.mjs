@@ -8,17 +8,34 @@ const nextConfig = {
         hostname: 'lh3.googleusercontent.com',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   // Add pageExtensions to ensure Next.js recognizes all page files
   pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
   // Add trailingSlash to ensure consistent URL handling
   trailingSlash: false,
   // Configure experimental features
-  // Configure experimental features
   experimental: {
-    // serverActions are now stable in Next.js 14+
-    // optimizePackageImports is also stable or moved
+    // Optimize package imports to reduce bundle size
+    optimizePackageImports: [
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-toast',
+      'lucide-react',
+      'date-fns',
+      'recharts',
+    ],
   },
+  // Keep Prisma client external for server components (stable in Next.js 16)
+  serverComponentsExternalPackages: ['@prisma/client'],
+  // Enable SWC minification for faster builds
+  swcMinify: true,
   // Add output configuration
   output: 'standalone',
   // Skip static page generation during build

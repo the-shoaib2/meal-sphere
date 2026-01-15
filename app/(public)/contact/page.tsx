@@ -103,7 +103,7 @@ export default function ContactPage() {
         const svg = await response.text()
         const captchaId = response.headers.get('X-Captcha-ID')
         const captchaText = response.headers.get('X-Captcha-Text')
-        
+
         setCaptchaImage(svg)
         setCaptchaId(captchaId || "")
         setCaptchaText(captchaText || "")
@@ -148,7 +148,7 @@ export default function ContactPage() {
   // Handle initial form validation and show CAPTCHA
   const handleShowCaptcha = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // Validate form fields
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.subject || !formData.message) {
       toast({
@@ -213,10 +213,10 @@ export default function ContactPage() {
           description: result.message,
           variant: "default"
         })
-        
+
         // Show success state
         setIsSuccess(true)
-        
+
         // Reset form and hide CAPTCHA
         setFormData({
           firstName: "",
@@ -228,7 +228,7 @@ export default function ContactPage() {
         setCaptchaInput("")
         setShowCaptcha(false)
         setCaptchaImage("")
-        
+
         // Hide success state after 5 seconds
         setTimeout(() => {
           setIsSuccess(false)
@@ -286,16 +286,16 @@ export default function ContactPage() {
     <div className="min-h-screen bg-background relative">
       {/* Backdrop blur background */}
       <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 backdrop-blur-3xl -z-10" />
-      
+
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto text-center">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -316,7 +316,7 @@ export default function ContactPage() {
       </motion.section>
 
       {/* Contact Methods */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -327,29 +327,29 @@ export default function ContactPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {data?.contactMethods?.map((method, index) => {
               const IconComponent = iconMap[method.icon as keyof typeof iconMap] || MessageCircle
-              
+
               return (
-              <motion.div
-                key={method.title}
-                variants={cardVariants}
-                whileHover="hover"
-                className="group"
-              >
-                <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
-                  <CardContent className="pt-6">
-                    <motion.div 
-                      className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                <motion.div
+                  key={method.title}
+                  variants={cardVariants}
+                  whileHover="hover"
+                  className="group"
+                >
+                  <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                    <CardContent className="pt-6">
+                      <motion.div
+                        className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.2 }}
+                      >
                         <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
-                    </motion.div>
-                    <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{method.title}</h3>
-                    <p className="text-sm sm:text-base text-muted-foreground mb-3">{method.description}</p>
-                    <p className="text-primary font-medium">{method.contact}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      </motion.div>
+                      <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{method.title}</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground mb-3">{method.description}</p>
+                      <p className="text-primary font-medium">{method.contact}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )
             }) || Array.from({ length: 3 }).map((_, i) => (
               <motion.div
@@ -360,7 +360,7 @@ export default function ContactPage() {
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                   <CardContent className="pt-6">
-                    <motion.div 
+                    <motion.div
                       className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
@@ -379,7 +379,7 @@ export default function ContactPage() {
       </motion.section>
 
       {/* Contact Form & Info */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -391,10 +391,10 @@ export default function ContactPage() {
             {/* Contact Form */}
             <motion.div variants={itemVariants} className="order-2 lg:order-1">
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6">Send us a Message</h2>
-              
-0              {isSuccess ? (
+
+              0              {isSuccess ? (
                 // Success State
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="text-center py-8"
@@ -421,7 +421,7 @@ export default function ContactPage() {
                   <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">First Name *</label>
-                      <Input 
+                      <Input
                         placeholder="Enter your firstname"
                         className="backdrop-blur-sm"
                         value={formData.firstName}
@@ -431,8 +431,8 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-2">Last Name *</label>
-                      <Input 
-                        placeholder="Enter your lastname" 
+                      <Input
+                        placeholder="Enter your lastname"
                         className="backdrop-blur-sm"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange("lastName", e.target.value)}
@@ -442,9 +442,9 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Email *</label>
-                    <Input 
-                      type="email" 
-                      placeholder="john@example.com" 
+                    <Input
+                      type="email"
+                      placeholder="john@example.com"
                       className="backdrop-blur-sm"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
@@ -453,8 +453,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Subject *</label>
-                    <Input 
-                      placeholder="How can we help you?" 
+                    <Input
+                      placeholder="How can we help you?"
                       className="backdrop-blur-sm"
                       value={formData.subject}
                       onChange={(e) => handleInputChange("subject", e.target.value)}
@@ -463,7 +463,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Message *</label>
-                    <Textarea 
+                    <Textarea
                       placeholder="Tell us more about your question or feedback..."
                       rows={6}
                       className="backdrop-blur-sm"
@@ -473,8 +473,8 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full group"
                   >
                     <ArrowRight className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
@@ -489,7 +489,7 @@ export default function ContactPage() {
                     <p className="text-sm text-muted-foreground mb-4">
                       Please complete the security verification to send your message.
                     </p>
-                    
+
                     {/* Form Summary */}
                     <div className="space-y-2 text-sm">
                       <p><strong>From:</strong> {formData.firstName} {formData.lastName} ({formData.email})</p>
@@ -502,12 +502,12 @@ export default function ContactPage() {
                   <div className="space-y-4">
                     <div className="text-center">
                       <label className="block text-sm font-medium text-foreground mb-3">Enter the code below *</label>
-                      
+
                       {/* CAPTCHA Image Container */}
                       <div className="flex justify-center items-center gap-3 mb-4">
                         {captchaImage && (
                           <div className="flex justify-center">
-                            <div 
+                            <div
                               className="overflow-hidden rounded-lg inline-block border border-border/50 shadow-sm"
                               dangerouslySetInnerHTML={{ __html: captchaImage }}
                             />
@@ -524,7 +524,7 @@ export default function ContactPage() {
                           <RefreshCw className="w-4 h-4" />
                         </Button>
                       </div>
-                      
+
                       {/* CAPTCHA Input */}
                       <div className="flex items-center justify-center gap-3 max-w-xs mx-auto">
                         <Input
@@ -546,18 +546,18 @@ export default function ContactPage() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-3">
-                    <Button 
+                    <Button
                       type="button"
-                      variant="outline" 
+                      variant="outline"
                       onClick={handleBackToForm}
                       className="flex-1"
                     >
                       Back to Form
                     </Button>
-                    <Button 
+                    <Button
                       type="button"
                       onClick={handleSubmitWithCaptcha}
-                      className="flex-1 group" 
+                      className="flex-1 group"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -643,7 +643,7 @@ export default function ContactPage() {
       </motion.section>
 
       {/* FAQ Section */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -651,7 +651,7 @@ export default function ContactPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-4xl mx-auto">
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="text-center mb-8 sm:mb-12"
           >
@@ -705,7 +705,7 @@ export default function ContactPage() {
       </motion.section>
 
       {/* Support Channels */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -713,13 +713,13 @@ export default function ContactPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 backdrop-blur-sm"
       >
         <div className="max-w-7xl mx-auto text-center">
-          <motion.h2 
+          <motion.h2
             variants={itemVariants}
             className="text-2xl sm:text-3xl font-bold text-foreground mb-4 sm:mb-6"
           >
             Need More Help?
           </motion.h2>
-          <motion.p 
+          <motion.p
             variants={itemVariants}
             className="text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto"
           >
@@ -728,32 +728,32 @@ export default function ContactPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {data?.supportChannels?.map((channel, index) => {
               const IconComponent = iconMap[channel.icon as keyof typeof iconMap] || MessageCircle
-              
+
               return (
                 <motion.div key={channel.title} variants={cardVariants} whileHover="hover" className="group">
-              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
-                <CardContent className="pt-6">
-                  <motion.div 
-                    className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ duration: 0.2 }}
-                  >
+                  <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
+                    <CardContent className="pt-6">
+                      <motion.div
+                        className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.2 }}
+                      >
                         <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-primary group-hover:scale-110 transition-transform" />
-                  </motion.div>
+                      </motion.div>
                       <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{channel.title}</h3>
                       <p className="text-sm sm:text-base text-muted-foreground mb-4">{channel.description}</p>
-                  <Button variant="outline" className="w-full group">
+                      <Button variant="outline" className="w-full group">
                         <span className="group-hover:scale-105 transition-transform">{channel.cta}</span>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )
             }) || Array.from({ length: 3 }).map((_, i) => (
               <motion.div key={i} variants={cardVariants} whileHover="hover" className="group">
                 <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                   <CardContent className="pt-6">
-                    <motion.div 
+                    <motion.div
                       className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
@@ -774,7 +774,7 @@ export default function ContactPage() {
       </motion.section>
 
       {/* CTA Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -782,7 +782,7 @@ export default function ContactPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-primary backdrop-blur-sm"
       >
         <div className="max-w-4xl mx-auto text-center text-primary-foreground">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -791,7 +791,7 @@ export default function ContactPage() {
           >
             {data?.cta?.title || "Ready to Get Started?"}
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -800,7 +800,7 @@ export default function ContactPage() {
           >
             {data?.cta?.subtitle || "Join thousands of roommates who are already using MealSphere to simplify their shared living experience."}
           </motion.p>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

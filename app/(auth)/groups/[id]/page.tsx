@@ -67,15 +67,15 @@ export default function GroupPage() {
 
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  
+
   // Get the active tab from URL search params, default to 'members'
   const [activeTab, setActiveTab] = useState(() => {
     const tabFromUrl = searchParams?.get('tab');
-    return tabFromUrl && ['members', 'join-requests', 'activity', 'settings'].includes(tabFromUrl) 
-      ? tabFromUrl 
+    return tabFromUrl && ['members', 'join-requests', 'activity', 'settings'].includes(tabFromUrl)
+      ? tabFromUrl
       : 'members';
   });
-  
+
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -98,7 +98,7 @@ export default function GroupPage() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY > lastScrollY) {
         // Scrolling down
         setIsHeaderVisible(true);
@@ -106,7 +106,7 @@ export default function GroupPage() {
         // Scrolling up
         setIsHeaderVisible(false);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
@@ -134,10 +134,10 @@ export default function GroupPage() {
 
     try {
       setIsLeaving(true);
-      
+
       // Use the leaveGroup mutation from useGroups hook
       await leaveGroup.mutateAsync(groupId);
-      
+
       // The mutation will handle the toast and navigation automatically
       // No need to manually show toast or navigate here
     } catch (error) {
@@ -151,7 +151,7 @@ export default function GroupPage() {
 
   if (isLoading || isLeaving || !group) {
     return (
-      <div className="container mx-auto px-0">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:gap-6">
           {/* Header Skeleton */}
           <div className="flex items-center gap-4 px-4 sm:px-0">
@@ -303,10 +303,9 @@ export default function GroupPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div 
-        className={`sticky top-0 z-30 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${
-          isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
-        }`}
+      <div
+        className={`sticky top-0 z-30 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+          }`}
       >
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />

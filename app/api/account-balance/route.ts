@@ -331,7 +331,11 @@ export async function GET(request: NextRequest) {
         } : null,
       };
 
-      return NextResponse.json(response);
+      return NextResponse.json(response, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+        },
+      });
     }
 
     const targetUserId = userId || session.user.id;
@@ -373,7 +377,11 @@ export async function GET(request: NextRequest) {
       Object.assign(response, availableBalanceData);
     }
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
 
   } catch (error: any) {
     console.error('Error in GET /api/account-balance:', error);

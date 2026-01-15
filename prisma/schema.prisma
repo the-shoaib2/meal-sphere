@@ -304,6 +304,7 @@ model Meal {
   @@index([roomId, date])
   @@index([userId, date])
   @@index([type, date])
+  @@index([roomId, periodId, date])
 }
 
 /// GUEST MEAL MODEL
@@ -353,6 +354,7 @@ model ShoppingItem {
   @@index([purchased])
   @@index([createdAt])
   @@index([userId])
+  @@index([roomId, periodId, purchased])
 }
 
 /// PAYMENT MODEL
@@ -378,6 +380,7 @@ model Payment {
   @@index([roomId, status, date])
   @@index([userId, status, date])
   @@index([method, status])
+  @@index([roomId, periodId, status])
 }
 
 /// BKASH PAYMENT MODEL
@@ -439,6 +442,7 @@ model ExtraExpense {
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@index([roomId, periodId])
+  @@index([roomId, periodId, date])
 }
 
 model Invitation {

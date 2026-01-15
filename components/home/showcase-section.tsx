@@ -51,7 +51,7 @@ export default function ShowcaseSection() {
                 <div className="bg-gray-800 rounded-lg p-2 shadow-2xl">
                   <Card className="overflow-hidden transition-all duration-300 bg-white/90 dark:bg-gray-900/80 border-0 shadow-none rounded-md">
                     <CardContent className="p-0">
-                      <AspectRatio ratio={16/9} className="bg-muted rounded-md">
+                      <AspectRatio ratio={16 / 9} className="bg-muted rounded-md">
                         <img
                           src="/Screenshot-desktop.png"
                           alt="Desktop view screenshot"
@@ -78,7 +78,7 @@ export default function ShowcaseSection() {
                 <div className="bg-gray-800 rounded-2xl p-1.5 shadow-2xl">
                   <Card className="overflow-hidden transition-all duration-300 dark:bg-gray-900/80 border-0 shadow-none rounded-xl">
                     <CardContent className="p-0">
-                      <AspectRatio ratio={9/18} className="bg-muted rounded-xl">
+                      <AspectRatio ratio={9 / 18} className="bg-muted rounded-xl">
                         <img
                           src="/Screenshot-phone.png"
                           alt="Phone view screenshot"
@@ -123,7 +123,7 @@ export default function ShowcaseSection() {
               <div className="bg-gray-800 rounded-lg p-2 shadow-2xl">
                 <Card className="overflow-hidden transition-all duration-300 bg-white/90 dark:bg-gray-900/80 border-0 shadow-none rounded-md">
                   <CardContent className="p-0">
-                    <AspectRatio ratio={16/9} className="bg-muted rounded-md">
+                    <AspectRatio ratio={16 / 9} className="bg-muted rounded-md">
                       <img
                         src={data.screenshots.desktop.image}
                         alt={data.screenshots.desktop.alt}
@@ -152,7 +152,7 @@ export default function ShowcaseSection() {
               <div className="bg-gray-800 rounded-2xl p-1.5 shadow-2xl">
                 <Card className="overflow-hidden transition-all duration-300 dark:bg-gray-900/80 border-0 shadow-none rounded-xl">
                   <CardContent className="p-0">
-                    <AspectRatio ratio={9/18} className="bg-muted rounded-xl">
+                    <AspectRatio ratio={9 / 18} className="bg-muted rounded-xl">
                       <img
                         src={data.screenshots.mobile.image}
                         alt={data.screenshots.mobile.alt}

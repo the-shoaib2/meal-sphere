@@ -24,7 +24,7 @@ import { useSession } from "next-auth/react"
 import { Badge } from "@/components/ui/badge"
 
 export default function DashboardPage() {
-  const { data: session } = useSession(); 
+  const { data: session } = useSession();
   const { data: dashboardData, isLoading } = useDashboardSummary();
   const { mutate: refreshDashboard, isPending: isRefreshing } = useDashboardRefresh();
 
@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Enhanced Header with title and buttons */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="space-y-1">
@@ -54,7 +54,7 @@ export default function DashboardPage() {
             <Skeleton className="h-8 sm:h-10 w-28 sm:w-36 rounded-md" />
           </div>
         </div>
-        
+
         {/* Summary Cards Section */}
         <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2">
@@ -77,7 +77,7 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        
+
         {/* Main Content Section */}
         <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2">
@@ -112,7 +112,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
-            
+
             {/* Recent Activities */}
             <div className="lg:col-span-3">
               <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
@@ -169,7 +169,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-     
+
       {/* Summary Cards Section */}
       <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center gap-2">
@@ -196,9 +196,9 @@ export default function DashboardPage() {
             <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             <h2 className="text-base sm:text-lg lg:text-xl font-semibold">Analytics & Activities</h2>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="text-xs sm:text-sm h-7 sm:h-8 lg:h-9 px-2 sm:px-3 w-full sm:w-auto"
             onClick={() => refreshDashboard()}
             disabled={isRefreshing}

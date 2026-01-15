@@ -99,7 +99,7 @@ export default function CreateGroupPage() {
   };
 
   return (
-    <div className="container mx-auto ">
+    <div className="space-y-6">
       <div className="max-w-2xl mx-auto">
         <Button
           variant="ghost"

@@ -3,12 +3,9 @@ import { authOptions } from "@/lib/auth/auth"
 import { getServerSession } from "next-auth"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
-import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset } from "@/components/ui/sidebar"
 import { Header } from "@/components/header"
 import { GroupProvider } from "@/contexts/group-context"
-import { LoadingBar } from "@/components/loading-bar"
 import { redirect } from "next/navigation"
 
 export default async function AuthLayout({
@@ -17,30 +14,26 @@ export default async function AuthLayout({
   children: React.ReactNode
 }>) {
   const session = await getServerSession(authOptions)
-  
-  // If no session, redirect to login instead of throwing error
-  // This handles the transition from JWT to database sessions
+
+  // If no session, redirect to login
   if (!session) {
     redirect('/login?error=session_expired')
   }
 
   return (
     <GroupProvider>
-      <LoadingBar />
-      <div className="flex h-screen w-full overflow-hidden">
-        <SidebarProvider>
-          <AppSidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Header />
-            <SidebarInset className="flex-1 flex flex-col overflow-hidden">
-              <main className="flex-1 overflow-y-auto">
-                <div className="p-4">
-                  {children}
-                </div>
-              </main>
-            </SidebarInset>
+      <div className="flex flex-col min-h-screen w-full">
+        <Header />
+        <div className="flex flex-1 max-w-7xl mx-auto w-full">
+          <div className="flex flex-1 w-full">
+            <AppSidebar />
+            <main className="flex-1 bg-background overflow-auto">
+              <div className="w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 min-w-0">
+                {children}
+              </div>
+            </main>
           </div>
-        </SidebarProvider>
+        </div>
       </div>
       <ToastProvider />
     </GroupProvider>

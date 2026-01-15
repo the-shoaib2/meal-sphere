@@ -129,23 +129,40 @@ export async function GET(
     }
 
     // Calculate data for this specific group
+    // Optimization: calculateAvailableBalance already calls calculateBalance and calculateMealRate internally using Promise.all
     const balanceData = await calculateAvailableBalance(session.user.id, groupId);
-    const currentBalance = await calculateBalance(session.user.id, groupId);
-    const { mealRate, totalMeals, totalExpenses } = await calculateMealRate(groupId);
+
+    // We need currentBalance explicitly which is returned by calculateBalance.
+    // To avoid calling it again, we should refactor availableBalance to return all components or run them in parallel here.
+
+    // Better approach: Run them purely in parallel here to avoid hidden dependencies
+    const [userMealCount, { mealRate, totalMeals, totalExpenses }, currentBalance] = await Promise.all([
+      calculateUserMealCount(session.user.id, groupId),
+      calculateMealRate(groupId),
+      calculateBalance(session.user.id, groupId)
+    ]);
+
+    const totalSpent = userMealCount * mealRate;
+    const availableBalance = currentBalance - totalSpent;
 
     return NextResponse.json({
-      totalUserMeals: balanceData.mealCount,
+      totalUserMeals: userMealCount,
       totalAllMeals: totalMeals,
       currentRate: mealRate,
       currentBalance,
-      availableBalance: balanceData.availableBalance,
-      totalCost: balanceData.totalSpent,
+      availableBalance,
+      totalCost: totalSpent,
       activeRooms: 1, // This group only
       totalActiveGroups: 1, // This group only
       totalMembers: membership.room.members?.length || 0,
       groupId,
       groupName: membership.room.name,
+    }, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=120'
+      }
     });
+
   } catch (error) {
     console.error('Error fetching group dashboard summary:', error);
     return NextResponse.json({ error: 'Failed to fetch group dashboard summary' }, { status: 500 });

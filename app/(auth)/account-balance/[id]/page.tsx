@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
+import {
   useGetBalance,
   useGetTransactions,
   useAddTransaction,
@@ -26,13 +26,13 @@ import {
   type AccountTransaction
 } from '@/hooks/use-account-balance';
 import { useCurrentPeriod } from '@/hooks/use-periods';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { 
+import {
   Table,
   TableHeader,
   TableBody,
@@ -55,7 +55,7 @@ import { User, DollarSign, Plus, ArrowLeft, TrendingUp, TrendingDown, Edit, Tras
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -86,7 +86,7 @@ export default function UserAccountBalancePage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  
+
   // State for Add/Edit Transaction Dialog
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<AccountTransaction | null>(null);
@@ -109,7 +109,7 @@ export default function UserAccountBalancePage() {
   const allFilteredTransactions = transactions?.filter(
     t => t.targetUserId === userId || (t.userId === userId && t.targetUserId === userId)
   ) || [];
-  
+
   // Filter out negative amounts for display in the list (but keep them for calculations)
   const filteredTransactions = allFilteredTransactions.filter(t => t.amount > 0);
 
@@ -132,7 +132,7 @@ export default function UserAccountBalancePage() {
     setTransactionType(transaction.type);
     setIsTransactionDialogOpen(true);
   };
-  
+
   const openDeleteDialog = (transactionId: string) => {
     setTransactionToDelete(transactionId);
     setIsDeleteDialogOpen(true);
@@ -172,7 +172,7 @@ export default function UserAccountBalancePage() {
         });
         toast.success('Transaction added successfully');
       }
-      
+
       setIsTransactionDialogOpen(false);
       refetchBalance();
       refetchTransactions();
@@ -204,7 +204,7 @@ export default function UserAccountBalancePage() {
   const availableBalance = userBalance?.balance || 0;
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={() => router.back()}>
@@ -422,7 +422,7 @@ export default function UserAccountBalancePage() {
 }
 
 const UserBalanceSkeleton = () => (
-  <div className="container mx-auto py-6 space-y-6">
+  <div className="space-y-6">
     {/* Header Skeleton */}
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-center gap-3">

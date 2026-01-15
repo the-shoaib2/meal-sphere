@@ -21,12 +21,12 @@ export default function GroupsPage() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Get the active tab from URL search params, default to 'all-groups'
   const [activeTab, setActiveTab] = useState(() => {
     const tabFromUrl = searchParams?.get('tab');
-    return tabFromUrl && ['all-groups', 'my-groups', 'discover'].includes(tabFromUrl) 
-      ? tabFromUrl 
+    return tabFromUrl && ['all-groups', 'my-groups', 'discover'].includes(tabFromUrl)
+      ? tabFromUrl
       : 'all-groups';
   });
 
@@ -38,6 +38,7 @@ export default function GroupsPage() {
 
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
+    window.dispatchEvent(new Event('routeChangeStart'));
     setActiveTab(value);
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', value);
@@ -68,7 +69,7 @@ export default function GroupsPage() {
   // Apply search filter with type safety
   const searchedGroups = filteredGroups.filter((group: Group) => {
     if (!group) return false;
-    const query = searchQuery.toLowerCase(); 
+    const query = searchQuery.toLowerCase();
     return (
       group.name?.toLowerCase().includes(query) ||
       (group.description?.toLowerCase().includes(query) ?? false)
@@ -80,7 +81,7 @@ export default function GroupsPage() {
 
   if (isLoadingState) {
     return (
-      <div className="container mx-auto ">
+      <div className="space-y-6">
         <div className="flex items-center justify-between mb-8">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-32" />
@@ -96,7 +97,7 @@ export default function GroupsPage() {
 
   if (errorState) {
     return (
-      <div className="container mx-auto ">
+      <div className="space-y-6">
         <EmptyState
           icon={<AlertCircle />}
           title="Error loading groups"
@@ -112,7 +113,7 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="container mx-auto ">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
@@ -266,7 +267,7 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
   // Get the first 3 members to display
   const displayedMembers = group.members?.slice(0, 3) || [];
   const hasMoreMembers = (group.memberCount || 0) > 3;
-  
+
   // Get the admin (first member with ADMIN role or first member if no admin found)
   const admin = group.members?.find(member => member.role === 'ADMIN') || group.members?.[0];
 
@@ -305,9 +306,9 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
             <p className="text-xs font-medium text-muted-foreground">Admin</p>
             <div className="flex items-center gap-2">
               {admin.user.image ? (
-                <img 
-                  src={admin.user.image} 
-                  alt={admin.user.name || 'Admin'} 
+                <img
+                  src={admin.user.image}
+                  alt={admin.user.name || 'Admin'}
                   className="h-6 w-6 rounded-full"
                 />
               ) : (
@@ -332,14 +333,14 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
               Members ({group.memberCount || 0})
             </p>
           </div>
-          
+
           <div className="flex -space-x-2">
             {displayedMembers.map((member) => (
               <div key={member.id} className="relative group/member">
                 {member.user.image ? (
-                  <img 
-                    src={member.user.image} 
-                    alt={member.user.name || 'Member'} 
+                  <img
+                    src={member.user.image}
+                    alt={member.user.name || 'Member'}
                     className="h-8 w-8 rounded-full border-2 border-background"
                   />
                 ) : (

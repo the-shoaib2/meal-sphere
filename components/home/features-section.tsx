@@ -41,7 +41,7 @@ export default function FeaturesSection() {
               </p>
             </div>
           </div>
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
             {/* Fallback features */}
             {[
               { title: "Meal Tracking", description: "Track daily meals with ease", icon: Utensils },
@@ -85,10 +85,10 @@ export default function FeaturesSection() {
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
           {data.features.map((feature, index) => {
             const IconComponent = iconMap[feature.icon as keyof typeof iconMap] || Utensils
-            
+
             return (
               <motion.div
                 key={feature.id}

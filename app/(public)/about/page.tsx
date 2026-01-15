@@ -86,16 +86,16 @@ export default function AboutPage() {
     <div className="min-h-screen bg-background relative">
       {/* Backdrop blur background */}
       <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/5 backdrop-blur-3xl -z-10" />
-      
+
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto text-center">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -111,7 +111,7 @@ export default function AboutPage() {
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
               {data?.hero?.subtitle || "MealSphere was born from a simple observation: shared living can be challenging, but it doesn't have to be."}
             </p>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
@@ -131,7 +131,7 @@ export default function AboutPage() {
       </motion.section>
 
       {/* Stats */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -141,8 +141,8 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             {data?.stats?.map((stat, index) => (
-              <motion.div 
-                key={stat.label} 
+              <motion.div
+                key={stat.label}
                 variants={itemVariants}
                 className="text-center"
               >
@@ -150,8 +150,8 @@ export default function AboutPage() {
                 <div className="text-sm sm:text-base text-muted-foreground">{stat.label}</div>
               </motion.div>
             )) || Array.from({ length: 4 }).map((_, i) => (
-              <motion.div 
-                key={i} 
+              <motion.div
+                key={i}
                 variants={itemVariants}
                 className="text-center"
               >
@@ -164,7 +164,7 @@ export default function AboutPage() {
       </motion.section>
 
       {/* Our Story */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -183,7 +183,7 @@ export default function AboutPage() {
                 ))}
               </div>
             </motion.div>
-            <motion.div 
+            <motion.div
               variants={itemVariants}
               className="relative order-1 lg:order-2"
             >
@@ -196,7 +196,7 @@ export default function AboutPage() {
       </motion.section>
 
       {/* Mission & Vision */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -236,7 +236,7 @@ export default function AboutPage() {
       </motion.section>
 
       {/* Values */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -244,7 +244,7 @@ export default function AboutPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="text-center mb-8 sm:mb-12"
           >
@@ -256,7 +256,7 @@ export default function AboutPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {data?.values?.map((value, index) => {
               const IconComponent = iconMap[value.icon as keyof typeof iconMap] || Heart
-              
+
               return (
                 <motion.div
                   key={value.title}
@@ -266,7 +266,7 @@ export default function AboutPage() {
                 >
                   <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                     <CardContent className="pt-6">
-                      <motion.div 
+                      <motion.div
                         className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ duration: 0.2 }}
@@ -281,7 +281,7 @@ export default function AboutPage() {
               )
             }) || Array.from({ length: 6 }).map((_, i) => {
               const IconComponent = iconMap[Object.keys(iconMap)[i % Object.keys(iconMap).length] as keyof typeof iconMap] || Heart
-              
+
               return (
                 <motion.div
                   key={i}
@@ -291,7 +291,7 @@ export default function AboutPage() {
                 >
                   <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                     <CardContent className="pt-6">
-                      <motion.div 
+                      <motion.div
                         className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ duration: 0.2 }}
@@ -310,7 +310,7 @@ export default function AboutPage() {
       </motion.section>
 
       {/* Team */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -318,7 +318,7 @@ export default function AboutPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30 backdrop-blur-sm"
       >
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="text-center mb-8 sm:mb-12"
           >
@@ -337,7 +337,7 @@ export default function AboutPage() {
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                   <CardContent className="pt-6">
-                    <motion.div 
+                    <motion.div
                       className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
@@ -362,7 +362,7 @@ export default function AboutPage() {
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5 backdrop-blur-sm">
                   <CardContent className="pt-6">
-                    <motion.div 
+                    <motion.div
                       className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
@@ -384,7 +384,7 @@ export default function AboutPage() {
       </motion.section>
 
       {/* CTA Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -392,7 +392,7 @@ export default function AboutPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-primary backdrop-blur-sm"
       >
         <div className="max-w-4xl mx-auto text-center text-primary-foreground">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -401,7 +401,7 @@ export default function AboutPage() {
           >
             {data?.cta?.title || "Join Us in Building Better Communities"}
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -410,7 +410,7 @@ export default function AboutPage() {
           >
             {data?.cta?.subtitle || "Whether you're a roommate, landlord, or just someone who believes in the power of community, we'd love to hear from you."}
           </motion.p>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

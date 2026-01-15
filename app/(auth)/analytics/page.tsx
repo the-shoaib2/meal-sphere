@@ -81,7 +81,7 @@ export default function AnalyticsPage() {
 
   if (isLoadingRooms) {
     return (
-      <div className="space-y-8 p-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <Skeleton className="h-9 w-48 rounded-md" />
@@ -168,7 +168,7 @@ export default function AnalyticsPage() {
   );
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold">Analytics</h1>

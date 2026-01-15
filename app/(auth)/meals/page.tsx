@@ -11,9 +11,9 @@ export default function MealsPage() {
 
   // Always render MealManagement, let it handle loading and skeletons
   if (!activeGroup?.id) return <MealManagementSkeleton />;
-  
+
   return (
-    <div className="container mx-auto">
+    <div className="space-y-6">
       <MealManagement
         roomId={activeGroup.id}
         groupName={activeGroup.name}

@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/contexts/language-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
 import InternetStatusBanner from "@/components/internet-status-card"
+import { LoadingBar } from "@/components/loading-bar"
 
 // Force all routes to be dynamic - prevents build-time pre-rendering
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,7 @@ export default async function RootLayout({
               <LanguageProvider>
                 <NotificationProvider>
                   <>
+                    <LoadingBar />
                     <InternetStatusBanner />
                     <div className="flex-1 flex flex-col">
                       {children}

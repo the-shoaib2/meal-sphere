@@ -26,7 +26,7 @@ export default function BkashPaymentPage() {
 
   useEffect(() => {
     if (!searchParams) return;
-    
+
     // Check for success or error in URL params
     const successParam = searchParams.get("success")
     const errorParam = searchParams.get("error")
@@ -66,7 +66,7 @@ export default function BkashPaymentPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="space-y-6">
       <Button variant="ghost" onClick={handleBack} className="mb-4">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Payments

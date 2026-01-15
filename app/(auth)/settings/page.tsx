@@ -22,7 +22,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto space-y-4">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Profile Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">

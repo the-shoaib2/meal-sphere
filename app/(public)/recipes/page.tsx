@@ -67,14 +67,14 @@ export default function RecipesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto text-center">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -89,7 +89,7 @@ export default function RecipesPage() {
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8 px-4">
               {data?.hero?.subtitle || "Explore our curated collection of delicious recipes perfect for roommates and shared living spaces."}
             </p>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
@@ -109,7 +109,7 @@ export default function RecipesPage() {
       </motion.section>
 
       {/* Recipe Categories */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -117,7 +117,7 @@ export default function RecipesPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8"
       >
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="text-center mb-8 sm:mb-12"
           >
@@ -136,7 +136,7 @@ export default function RecipesPage() {
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
                   <CardContent className="pt-6">
-                    <motion.div 
+                    <motion.div
                       className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center text-xl sm:text-2xl group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
@@ -157,7 +157,7 @@ export default function RecipesPage() {
               >
                 <Card className="text-center hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/20 group-hover:bg-primary/5">
                   <CardContent className="pt-6">
-                    <motion.div 
+                    <motion.div
                       className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center text-xl sm:text-2xl group-hover:bg-primary/20 transition-colors"
                       whileHover={{ scale: 1.1, rotate: 5 }}
                       transition={{ duration: 0.2 }}
@@ -175,7 +175,7 @@ export default function RecipesPage() {
       </motion.section>
 
       {/* Featured Recipes */}
-      <motion.section 
+      <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, margin: "-100px" }}
@@ -183,7 +183,7 @@ export default function RecipesPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30"
       >
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             variants={itemVariants}
             className="text-center mb-8 sm:mb-12"
           >
@@ -201,7 +201,7 @@ export default function RecipesPage() {
                 className="group"
               >
                 <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20">
-                  <motion.div 
+                  <motion.div
                     className="h-32 sm:h-48 bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.3 }}
@@ -251,7 +251,7 @@ export default function RecipesPage() {
                 className="group"
               >
                 <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-primary/20">
-                  <motion.div 
+                  <motion.div
                     className="h-32 sm:h-48 bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors"
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.3 }}
@@ -295,7 +295,7 @@ export default function RecipesPage() {
       </motion.section>
 
       {/* CTA Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -303,7 +303,7 @@ export default function RecipesPage() {
         className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-primary"
       >
         <div className="max-w-4xl mx-auto text-center text-primary-foreground">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -312,7 +312,7 @@ export default function RecipesPage() {
           >
             {data?.cta?.title || "Ready to Start Cooking?"}
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -321,7 +321,7 @@ export default function RecipesPage() {
           >
             {data?.cta?.subtitle || "Join thousands of roommates who are already enjoying better meals together"}
           </motion.p>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
