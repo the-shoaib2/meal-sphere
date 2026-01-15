@@ -27,7 +27,7 @@
   "crons": [
     {
       "path": "/api/cron/auto-meals",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
