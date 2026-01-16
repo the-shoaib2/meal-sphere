@@ -304,7 +304,7 @@ export default function GroupPage() {
   return (
     <div className="flex flex-col gap-4">
       <div
-        className={`sticky top-0 z-30 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+        className={`sticky top-0 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
           }`}
       >
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
