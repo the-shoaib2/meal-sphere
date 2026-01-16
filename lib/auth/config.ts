@@ -77,7 +77,7 @@ export const cookieConfig = {
 
 // Session configuration
 export const sessionConfig = {
-  strategy: "database" as const,
+  strategy: "jwt" as const,
   maxAge: 30 * 24 * 60 * 60, // 30 days
 };
 

@@ -69,7 +69,7 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
   return useQuery<GroupBalanceSummary | null>({
     queryKey: ['group-balances', roomId, includeDetails],
     queryFn: async () => {
-      const res = await fetch(`/api/account-balance?roomId=${roomId}&all=true&includeDetails=${includeDetails}`);
+      const res = await fetch(`/api/account-balance?roomId=${roomId}&all=true&includeDetails=${includeDetails}`, { cache: 'no-store' });
       if (res.status === 403) {
         // User doesn't have privileged access, return null instead of throwing
         return null;
@@ -95,7 +95,7 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
   return useQuery<UserBalance>({
     queryKey: ['user-balance', roomId, userId, includeDetails],
     queryFn: async () => {
-      const res = await fetch(`/api/account-balance?roomId=${roomId}&userId=${userId}&includeDetails=${includeDetails}`);
+      const res = await fetch(`/api/account-balance?roomId=${roomId}&userId=${userId}&includeDetails=${includeDetails}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch user balance');
       return res.json();
     },
@@ -115,7 +115,7 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
         userId,
         ...(periodId && { periodId }),
       });
-      const res = await fetch(`/api/account-balance/transactions?${params}`);
+      const res = await fetch(`/api/account-balance/transactions?${params}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch transactions');
       return res.json();
     },
@@ -277,7 +277,7 @@ export function useDashboardSummary() {
   return useQuery<DashboardSummary>({
     queryKey: ['dashboard-summary', activeGroup?.id],
     queryFn: async () => {
-      const res = await fetch('/api/dashboard/summary');
+      const res = await fetch('/api/dashboard/summary', { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch dashboard summary');
       return res.json();
     },

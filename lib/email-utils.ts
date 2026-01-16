@@ -290,10 +290,10 @@ export async function sendEmail(to: string, template: EmailTemplate): Promise<vo
 }
 
 // Create a verification token
-export async function createVerificationToken(email: string): Promise<string> {
+export async function createVerificationToken(email: string, expiresIn: number = 24 * 60 * 60 * 1000): Promise<string> {
   const token = randomBytes(32).toString("hex")
   const hashedToken = createHash("sha256").update(token).digest("hex")
-  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  const expires = new Date(Date.now() + expiresIn)
 
   await prisma.verificationToken.deleteMany({
     where: { identifier: email },

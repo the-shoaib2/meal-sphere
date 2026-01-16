@@ -148,7 +148,10 @@ export async function GET(request: NextRequest) {
             period: targetPeriod
         }, {
             headers: {
-                'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=30'
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'Surrogate-Control': 'no-store'
             }
         });
 

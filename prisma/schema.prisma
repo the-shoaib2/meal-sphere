@@ -180,7 +180,7 @@ model Room {
   category                  String?
   tags                      String[]
   features                  Json? // Store features as JSON
-  periodMode                String                      @default("CUSTOM") // "MONTHLY" or "CUSTOM"
+  periodMode                String                      @default("MONTHLY") // "MONTHLY" or "CUSTOM"
   createdByUser             User                        @relation("RoomCreator", fields: [createdBy], references: [id])
   members                   RoomMember[]
   joinRequests              JoinRequest[]

@@ -76,6 +76,13 @@ export default function DashboardPage() {
     redirect("/login")
   }
 
+  // Effect for room selection
+  useEffect(() => {
+    if (userRooms.length > 0 && selectedRoomIds.length === 0) {
+      setSelectedRoomIds(userRooms.slice(0, 3).map(room => room.id))
+    }
+  }, [userRooms, selectedRoomIds.length])
+
   // Check if user has no groups - show empty state
   if (!isLoadingGroups && userGroups.length === 0) {
     return (
@@ -92,13 +99,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  // Effect for room selection
-  useEffect(() => {
-    if (userRooms.length > 0 && selectedRoomIds.length === 0) {
-      setSelectedRoomIds(userRooms.slice(0, 3).map(room => room.id))
-    }
-  }, [userRooms, selectedRoomIds.length])
 
   const handleRoomToggle = (roomId: string) => {
     setSelectedRoomIds(prev =>

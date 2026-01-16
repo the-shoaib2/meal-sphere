@@ -64,10 +64,18 @@ export function useShopping(periodId?: string) {
     queryKey: ['shopping', groupId, periodId],
     queryFn: async (): Promise<ApiShoppingItem[]> => {
       if (!groupId) return [];
-      const queryParams = new URLSearchParams({ roomId: groupId });
-      if (periodId) queryParams.append('periodId', periodId);
-
-      const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping?${queryParams.toString()}`);
+      const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        params: {
+          roomId: groupId,
+          periodId: periodId || undefined,
+          _t: new Date().getTime()
+        }
+      });
       return data;
     },
     select: (data) =>

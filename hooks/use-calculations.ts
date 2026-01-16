@@ -77,13 +77,21 @@ export function useRoomCalculations({
         throw new Error('User or group not available');
       }
 
-      const params = {
-        roomId: resolvedRoomId,
-        startDate: startDate?.toISOString(),
-        endDate: endDate?.toISOString(),
-      };
+        const params = {
+          roomId: resolvedRoomId,
+          startDate: startDate?.toISOString(),
+          endDate: endDate?.toISOString(),
+          _t: new Date().getTime(),
+        };
 
-      const { data } = await axios.get<RoomMealSummary>('/api/calculations', { params });
+      const { data } = await axios.get<RoomMealSummary>('/api/calculations', {
+        params,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       return data;
     },
     enabled: isEnabled,
@@ -147,9 +155,17 @@ export function useUserCalculations({
         userId,
         startDate: startDate?.toISOString(),
         endDate: endDate?.toISOString(),
+        _t: new Date().getTime(),
       };
 
-      const { data } = await axios.get<MealSummary>('/api/calculations', { params });
+      const { data } = await axios.get<MealSummary>('/api/calculations', {
+        params,
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       return data;
     },
     enabled: isEnabled,

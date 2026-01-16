@@ -1,14 +1,14 @@
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { PrismaClient, User as PrismaUser } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma"
+import { User } from "next-auth";
 
 // Create Google provider with explicit environment variable access
 export const googleProvider = GoogleProvider({
-  clientId: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  clientId: process.env.GOOGLE_CLIENT_ID || "",
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
   httpOptions: {
     timeout: 10000 // Increase timeout to 10 seconds
   },
@@ -43,7 +43,7 @@ export const credentialsProvider = CredentialsProvider({
         role: true,
         password: true
       }
-    }) as (PrismaUser & { password: string | null }) | null;
+    }) as (User & { password: string | null }) | null;
 
     if (!user || !user.password) {
       throw new Error("Invalid credentials");

@@ -176,7 +176,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     queryFn: async () => {
       if (!roomId) return null;
       // We pass the current userId via session, but API also derives it from session.
-      const response = await fetch(`/api/meals/unified?roomId=${roomId}`);
+      const response = await fetch(`/api/meals/unified?roomId=${roomId}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch meal data');
       }

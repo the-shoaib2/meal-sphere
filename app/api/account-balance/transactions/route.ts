@@ -94,12 +94,13 @@ export async function GET(request: NextRequest) {
 
     // Cache shorter for active period, longer for past periods (if periodId was explicit)
     const isHistorical = periodId && periodId !== currentPeriod?.id;
-    const cacheControl = isHistorical
-      ? 'private, s-maxage=300, stale-while-revalidate=600'
-      : 'private, s-maxage=10, stale-while-revalidate=30';
-
     return NextResponse.json(transactions, {
-      headers: { 'Cache-Control': cacheControl }
+      headers: { 
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
+      }
     });
 
   } catch (error: any) {

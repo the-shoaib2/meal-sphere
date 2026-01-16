@@ -1,4 +1,5 @@
 "use client"
+// Re-exporting session provider
 
 import type React from "react"
 import { Session } from "next-auth"

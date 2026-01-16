@@ -126,8 +126,14 @@ export async function POST(request: Request) {
     // Create verification token
     const token = await createVerificationToken(validatedData.email);
 
-    // Send verification email
-    await sendVerificationEmail(validatedData.email, validatedData.name, token);
+    // Send verification email (non-blocking)
+    try {
+      await sendVerificationEmail(validatedData.email, validatedData.name, token);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      // Continue with successful registration response even if email fails
+      // This is crucial for development or misconfigured SMTP
+    }
 
     return NextResponse.json(
       { message: "User registered successfully" },

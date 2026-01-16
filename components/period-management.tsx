@@ -55,7 +55,7 @@ export function PeriodManagement() {
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const currentUserId = session?.user?.id;
   const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
-  const isPrivileged = ["ADMIN", "MANAGER",  "MODERATOR"].includes(currentMember?.role ?? "");
+  const isPrivileged = ["ADMIN", "MANAGER", "MODERATOR"].includes(currentMember?.role ?? "");
 
   // Period mode management
   const { periodMode, isLoading: periodModeLoading, updatePeriodMode, isUpdating } = usePeriodMode(activeGroup?.id);
@@ -132,28 +132,30 @@ export function PeriodManagement() {
               </p>
             </div>
 
-            {isPrivileged && (
+            {(isPrivileged || session?.user?.role === 'SUPER_ADMIN') && (
               <div className="flex items-center gap-3">
-                {/* Period Mode Toggle */}
-                <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-muted/50">
-                  <Settings2 className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="period-mode-switch">
-                    Mode:
-                  </Label>
-                  <span className={periodMode === 'CUSTOM' ? 'text-sm font-semibold' : 'text-sm text-muted-foreground'}>
-                    Custom
-                  </span>
-                  <Switch
-                    id="period-mode-switch"
-                    checked={periodMode === 'MONTHLY'}
-                    onCheckedChange={handlePeriodModeToggle}
-                    disabled={isUpdating || periodModeLoading}
-                  />
-                  <span className={periodMode === 'MONTHLY' ? 'text-sm font-semibold flex items-center gap-1' : 'text-sm text-muted-foreground flex items-center gap-1'}>
-                    <Calendar className="h-3.5 w-3.5" />
-                    Monthly
-                  </span>
-                </div>
+                {/* Period Mode Toggle - Only for SUPER_ADMIN */}
+                {session?.user?.role === 'SUPER_ADMIN' && (
+                  <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-muted/50">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="period-mode-switch">
+                      Mode:
+                    </Label>
+                    <span className={periodMode === 'CUSTOM' ? 'text-sm font-semibold' : 'text-sm text-muted-foreground'}>
+                      Custom
+                    </span>
+                    <Switch
+                      id="period-mode-switch"
+                      checked={periodMode === 'MONTHLY'}
+                      onCheckedChange={handlePeriodModeToggle}
+                      disabled={isUpdating || periodModeLoading}
+                    />
+                    <span className={periodMode === 'MONTHLY' ? 'text-sm font-semibold flex items-center gap-1' : 'text-sm text-muted-foreground flex items-center gap-1'}>
+                      <Calendar className="h-3.5 w-3.5" />
+                      Monthly
+                    </span>
+                  </div>
+                )}
 
                 <CreatePeriodDialog
                   open={showCreateDialog}

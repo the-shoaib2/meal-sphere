@@ -6,6 +6,9 @@ import { createNotification } from "@/lib/notification-utils"
 import { uploadReceipt } from "@/lib/upload-utils"
 import { NotificationType } from "@prisma/client"
 import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/period-utils"
+import { cacheGetOrSet } from "@/lib/cache-service"
+import { getShoppingCacheKey, CACHE_TTL } from "@/lib/cache-keys"
+import { invalidateShoppingCache } from "@/lib/cache-invalidation"
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -104,6 +107,12 @@ export async function POST(request: Request) {
       })
     }
 
+    // Invalidate cache
+    const currentPeriod = await prisma.mealPeriod.findFirst({
+        where: { roomId: roomId, status: 'ACTIVE' }
+    });
+    await invalidateShoppingCache(roomId, currentPeriod?.id);
+
     return NextResponse.json({
       message: "Shopping item added successfully",
       shoppingItem,
@@ -175,26 +184,38 @@ export async function GET(request: Request) {
       }
     }
 
-    const shoppingItems = await prisma.shoppingItem.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
+    const cacheKey = getShoppingCacheKey(roomId, periodId || (activePeriodFilter as any)?.id || 'active');
+    
+    // Get from cache or fetch from DB
+    const shoppingItems = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        return await prisma.shoppingItem.findMany({
+          where: whereClause,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
           },
-        },
+          orderBy: {
+            date: "desc",
+          },
+        })
       },
-      orderBy: {
-        date: "desc",
-      },
-    })
+      { ttl: CACHE_TTL.MEALS_LIST } // Using MEALS_LIST TTL (2 min) as similar data urgency
+    );
 
     return NextResponse.json(shoppingItems, {
       headers: {
-        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=60'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
       }
     })
   } catch (error) {
@@ -270,6 +291,9 @@ export async function PATCH(request: Request) {
       },
     })
 
+    // Invalidate cache
+    await invalidateShoppingCache(currentItem.room.id, currentItem.periodId || undefined);
+
     return NextResponse.json(updatedItem)
   } catch (error) {
     console.error("Error updating shopping item:", error)
@@ -327,6 +351,9 @@ export async function DELETE(request: Request) {
     await prisma.shoppingItem.delete({
       where: { id }
     })
+
+    // Invalidate cache
+    await invalidateShoppingCache(currentItem.room.id, currentItem.periodId || undefined);
 
     return NextResponse.json({ message: "Item deleted successfully" })
   } catch (error) {

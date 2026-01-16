@@ -128,7 +128,14 @@ export function useUserRooms() {
       }
 
       try {
-        const { data } = await axios.get<UserRoom[]>('/api/analytics/user-rooms');
+        const { data } = await axios.get<UserRoom[]>('/api/analytics/user-rooms', {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          params: { _t: new Date().getTime() }
+        });
         return data;
       } catch (error) {
         console.error('Error fetching user rooms:', error);
@@ -156,7 +163,13 @@ export function useAnalytics() {
       try {
         const { data } = await axios.get<AnalyticsData>('/api/analytics', {
           params: {
-            groupId: activeGroup?.id || 'all'
+            groupId: activeGroup?.id || 'all',
+            _t: new Date().getTime()
+          },
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
           }
         });
         return data;
@@ -185,7 +198,13 @@ export function useSelectedRoomsAnalytics(selectedRoomIds: string[]) {
       try {
         const { data } = await axios.get<AnalyticsData>('/api/analytics/selected-rooms', {
           params: {
-            roomIds: selectedRoomIds.join(',')
+            roomIds: selectedRoomIds.join(','),
+            _t: new Date().getTime()
+          },
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
           }
         });
         return data;
@@ -211,7 +230,14 @@ export function useRoomAnalytics(roomId?: string) {
       }
 
       try {
-        const { data } = await axios.get<AnalyticsData>(`/api/analytics/room/${roomId}`);
+        const { data } = await axios.get<AnalyticsData>(`/api/analytics/room/${roomId}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          params: { _t: new Date().getTime() }
+        });
         return data;
       } catch (error) {
         console.error('Error fetching room analytics data:', error);
@@ -235,7 +261,14 @@ export function useAllRoomsAnalytics() {
       }
 
       try {
-        const { data } = await axios.get<AnalyticsData>('/api/analytics/all-rooms');
+        const { data } = await axios.get<AnalyticsData>('/api/analytics/all-rooms', {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          params: { _t: new Date().getTime() }
+        });
         return data;
       } catch (error) {
         console.error('Error fetching all rooms analytics data:', error);

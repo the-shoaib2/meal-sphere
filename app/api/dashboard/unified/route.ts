@@ -290,8 +290,10 @@ export async function GET(request: NextRequest) {
         // Return with cache headers
         return NextResponse.json(data, {
             headers: {
-                'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=120',
-                'X-Cache-Status': 'HIT' // Will be overridden if cache miss
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'Surrogate-Control': 'no-store'
             }
         });
 

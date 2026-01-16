@@ -410,9 +410,9 @@ export default function RegisterForm() {
         <CardHeader className="space-y-2">
           <CardTitle className="text-xl font-bold text-center">
             Sign Up
-            {/* {currentStep === 1 && 'Your Information'}
-          {currentStep === 2 && 'Create Password'}
-          {currentStep === 3 && 'Verify You\'re Human'} */}
+            {currentStep === 1 && 'Your Information'}
+            {currentStep === 2 && 'Create Password'}
+            {currentStep === 3 && 'Verify You\'re Human'}
           </CardTitle>
           <CardDescription className="text-center text-xs">
             {currentStep === 1 && 'Enter your name and email address'}
@@ -715,7 +715,7 @@ export default function RegisterForm() {
                   setIsLoading(false);
                 }
               }}
-              disabled={isLoading || isLoadingCaptcha || !isStepValid(currentStep)}
+              disabled={isLoading || isLoadingCaptcha}
               className="ml-auto min-w-32 justify-center"
             >
               {isLoading ? (

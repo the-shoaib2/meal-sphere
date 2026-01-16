@@ -17,7 +17,7 @@ const ratelimit = redis
       // Strict limit for auth routes: 5 requests per 60s
       auth: new Ratelimit({
         redis: redis,
-        limiter: Ratelimit.slidingWindow(5, "60 s"),
+        limiter: Ratelimit.slidingWindow(20, "10 s"),
         analytics: true,
         prefix: "ratelimit_auth",
       }),

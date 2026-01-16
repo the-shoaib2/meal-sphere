@@ -163,8 +163,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ votes: formattedVotes }, {
     headers: {
-      'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=30',
-      'Vary': 'Cookie'
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
     }
   });
 }

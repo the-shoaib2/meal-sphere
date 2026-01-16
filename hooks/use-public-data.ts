@@ -24,7 +24,7 @@ export function usePublicData<T>({ endpoint, enabled = true }: UsePublicDataOpti
     setError(null)
 
     try {
-      const response = await fetch(`/api/public/${endpoint}`)
+      const response = await fetch(`/api/public/${endpoint}`, { cache: 'no-store' })
       
       if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.status}`)

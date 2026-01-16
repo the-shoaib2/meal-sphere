@@ -49,7 +49,14 @@ export function useVoting() {
       assertOnline();
       if (!activeGroup?.id) return [];
 
-      const res = await axios.get<VotesResponse>(`/api/groups/${activeGroup.id}/votes`);
+      const res = await axios.get<VotesResponse>(`/api/groups/${activeGroup.id}/votes`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        params: { _t: new Date().getTime() }
+      });
       return res.data.votes || [];
     },
     enabled: !!activeGroup?.id,

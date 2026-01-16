@@ -40,7 +40,10 @@ export async function GET(request: NextRequest) {
       const currentPeriod = await PeriodService.getCurrentPeriod(groupId);
       return NextResponse.json({ currentPeriod }, {
         headers: {
-          'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store'
         }
       });
     } catch (dbError: any) {

@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 // Import configurations and utilities
 import { validateEnvironmentVariables, cookieConfig, sessionConfig, pagesConfig } from '@/lib/auth/config';
 import { providers } from '@/lib/auth/providers';
-import { sessionCallback, signInCallback, eventsCallbacks } from '@/lib/auth/callbacks';
+import { sessionCallback, signInCallback, eventsCallbacks, jwtCallback } from '@/lib/auth/callbacks';
 
 // Import types
 import '@/lib/auth/types';
@@ -22,7 +22,8 @@ export const authOptions: AuthOptions = {
   cookies: cookieConfig,
   callbacks: {
     session: sessionCallback,
-    signIn: signInCallback
+    signIn: signInCallback,
+    jwt: jwtCallback
   },
   pages: pagesConfig,
   secret: process.env.NEXTAUTH_SECRET,

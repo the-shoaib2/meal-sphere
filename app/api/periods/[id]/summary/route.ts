@@ -39,18 +39,12 @@ export async function GET(
     try {
       const summary = await PeriodService.calculatePeriodSummary(resolvedParams.id, groupId);
 
-      // Determine cache duration based on status
-      // valid statuses: ACTIVE, ENDED, LOCKED, ARCHIVED
-      const isImmutable = ['ENDED', 'LOCKED', 'ARCHIVED'].includes(summary.status);
-
-      // Active: 10s cache
-      // Immutable: 1 hour cache
-      const sMaxAge = isImmutable ? 3600 : 10;
-      const staleWhileRevalidate = isImmutable ? 86400 : 30;
-
       return NextResponse.json({ summary }, {
         headers: {
-          'Cache-Control': `private, s-maxage=${sMaxAge}, stale-while-revalidate=${staleWhileRevalidate}`
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store'
         }
       });
     } catch (dbError: any) {

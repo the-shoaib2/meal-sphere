@@ -49,7 +49,17 @@ export function useExtraExpense() {
     queryKey: ['extraExpenses', groupId],
     queryFn: async (): Promise<ExtraExpense[]> => {
       if (!groupId) return [];
-      const { data } = await axios.get<ExtraExpense[]>(`/api/expenses?roomId=${groupId}`);
+      const { data } = await axios.get<ExtraExpense[]>(`/api/expenses`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        params: {
+            roomId: groupId,
+            _t: new Date().getTime()
+        }
+      });
       return data;
     },
     enabled: !!groupId,

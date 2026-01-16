@@ -1,13 +1,34 @@
-import { PrismaClient } from "@prisma/client";
 import { updateSessionWithDeviceInfo } from '@/lib/auth/session-manager';
 import { getLocationFromIP } from '@/lib/location-utils';
 
 import { prisma } from "@/lib/prisma"
 
+// JWT callback
+export async function jwtCallback({ token, user, account, profile }: any) {
+  // Initial sign in
+  if (user) {
+    token.id = user.id;
+    token.role = user.role;
+    token.name = user.name;
+    token.email = user.email;
+    token.picture = user.image;
+  }
+  return token;
+}
+
 // Session callback
 export async function sessionCallback({ session, token, user }: any) {
   // Add user info to the session
-  if (user) {
+  // When using JWT strategy, user info comes from the token
+  if (token) {
+    session.user.id = token.id;
+    session.user.name = token.name;
+    session.user.email = token.email;
+    session.user.image = token.picture;
+    session.user.role = token.role;
+  }
+  // When using Database strategy, user info comes from the user object
+  else if (user) {
     session.user.id = user.id;
     session.user.name = user.name || undefined;
     session.user.email = user.email || undefined;
@@ -71,7 +92,7 @@ export async function signInCallback(params: any) {
       } else {
         // Check if user has a Google account linked
         const hasGoogleAccount = existingUser.accounts.some(
-          acc => acc.provider === 'google' && acc.providerAccountId === account.providerAccountId
+          (acc: any) => acc.provider === 'google' && acc.providerAccountId === account.providerAccountId
         );
 
         if (!hasGoogleAccount) {
@@ -94,6 +115,25 @@ export async function signInCallback(params: any) {
         // Update the user object with existing user's data
         user.id = existingUser.id;
         user.role = existingUser.role;
+      }
+    } else if (account?.provider === 'credentials') {
+      // Ensure credentials account exists
+      const existingAccount = await prisma.account.findFirst({
+        where: {
+          userId: user.id,
+          provider: 'credentials'
+        }
+      });
+
+      if (!existingAccount) {
+        await prisma.account.create({
+          data: {
+            userId: user.id,
+            type: 'credentials',
+            provider: 'credentials',
+            providerAccountId: user.id,
+          }
+        });
       }
     }
 

@@ -67,7 +67,7 @@ export function useExcel() {
       if (endDate) params.append('endDate', endDate.toISOString())
       if (userId) params.append('userId', userId)
 
-      const response = await fetch(`/api/excel/export?${params.toString()}`)
+      const response = await fetch(`/api/excel/export?${params.toString()}`, { cache: 'no-store' })
 
       if (!response.ok) {
         throw new Error("Failed to export data")
@@ -196,7 +196,7 @@ export function useExcel() {
     setIsDownloadingTemplate(true)
 
     try {
-      const response = await fetch("/api/excel/template")
+      const response = await fetch("/api/excel/template", { cache: 'no-store' })
 
       if (!response.ok) {
         throw new Error("Failed to download template")

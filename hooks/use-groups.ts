@@ -24,7 +24,8 @@ type JoinGroupInput = {
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Room, User } from '@prisma/client';
+import { Room } from '@prisma/client';
+import { User } from 'next-auth';
 
 export interface Group extends Omit<Room, 'createdBy'> {
   createdByUser: Pick<User, 'id' | 'name' | 'email' | 'image'>;
@@ -118,7 +119,14 @@ export function useGroups(): UseGroupsReturn {
       if (!session?.user?.id) return [];
       // Always fetch from API on reload
       try {
-        const { data } = await axios.get<Group[]>('/api/groups');
+        const { data } = await axios.get<Group[]>('/api/groups', {
+          headers: { 
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          params: { _t: new Date().getTime() }
+        });
 
         // Set the data in React Query cache for future use
         queryClient.setQueryData(['user-groups', session.user.id], data);
@@ -154,7 +162,18 @@ export function useGroups(): UseGroupsReturn {
         if (!session?.user?.id) return [];
         try {
           const { data } = await axios.get<Group[]>(
-            `/api/groups?filter=${filter}`
+            `/api/groups`,
+            { 
+              headers: { 
+                'Cache-Control': 'no-store, no-cache, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              },
+              params: { 
+                filter,
+                _t: new Date().getTime()
+              }
+            }
           );
           return data;
         } catch (error) {
@@ -189,6 +208,12 @@ export function useGroups(): UseGroupsReturn {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        params: {
+          _t: new Date().getTime()
         },
         validateStatus: (status) => {
           // Don't throw for 403 (password required) or 401 (wrong password)
@@ -478,7 +503,14 @@ export function useGroups(): UseGroupsReturn {
       queryFn: async () => {
         if (!session?.user?.id) return [];
         try {
-          const { data } = await axios.get<JoinRequest[]>(`/api/groups/${groupId}/join-request`);
+          const { data } = await axios.get<JoinRequest[]>(`/api/groups/${groupId}/join-request`, {
+            headers: { 
+              'Cache-Control': 'no-store, no-cache, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            },
+            params: { _t: new Date().getTime() }
+          });
           return data;
         } catch (error) {
           console.error(`Error fetching join requests for group ${groupId}:`, error);

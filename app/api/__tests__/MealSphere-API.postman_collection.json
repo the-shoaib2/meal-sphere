@@ -114,11 +114,20 @@
                                     "// Check for session cookie",
                                     "var cookie = pm.cookies.get(\"next-auth.session-token\") || pm.cookies.get(\"__Secure-next-auth.session-token\");",
                                     "",
-                                    "if (cookie) {",
-                                    "    pm.collectionVariables.set(\"authToken\", cookie);",
-                                    "    console.log(\"Token set from cookie\");",
+                                    "// Also check response body for token as fallback",
+                                    "var jsonData = {};",
+                                    "try {",
+                                    "    jsonData = pm.response.json();",
+                                    "} catch (e) {}",
+                                    "var bodyToken = jsonData.token || jsonData.sessionToken;",
+                                    "",
+                                    "var finalToken = cookie || bodyToken;",
+                                    "",
+                                    "if (finalToken) {",
+                                    "    pm.collectionVariables.set(\"authToken\", finalToken);",
+                                    "    console.log(\"Token set successfully\");",
                                     "} else {",
-                                    "    console.log(\"No session cookie found\");",
+                                    "    console.log(\"No session token found in cookies or response body\");",
                                     "}"
                                 ],
                                 "type": "text/javascript"
@@ -201,7 +210,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"email\": \"john@example.com\"\n}"
+                            "raw": "{\n  \"email\": \"[EMAIL_ADDRESS]\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/auth/forgot-password",
@@ -1272,7 +1281,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"currentPassword\": \"oldpassword\",\n  \"newPassword\": \"newpassword123\"\n}"
+                            "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\",\n  \"confirmPassword\": \"newpassword123\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/api/user/password",
@@ -1330,7 +1339,7 @@
                         "method": "GET",
                         "header": [],
                         "url": {
-                            "raw": "{{baseUrl}}/api/user/check-exists?email=user@example.com",
+                            "raw": "{{baseUrl}}/api/user/check-exists?email={{userEmail}}",
                             "host": [
                                 "{{baseUrl}}"
                             ],

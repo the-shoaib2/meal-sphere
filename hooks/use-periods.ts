@@ -60,7 +60,7 @@ function useUnifiedPeriods(includeArchived = false) {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch(`/api/periods/unified?groupId=${activeGroup.id}&includeArchived=${includeArchived}`);
+      const response = await fetch(`/api/periods/unified?groupId=${activeGroup.id}&includeArchived=${includeArchived}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch periods data');
       }
@@ -111,7 +111,7 @@ export function usePeriod(periodId: string) {
         return null;
       }
       // Only fetch the specific period if not found in cache
-      const response = await fetch(`/api/periods/${periodId}?groupId=${activeGroup.id}`);
+      const response = await fetch(`/api/periods/${periodId}?groupId=${activeGroup.id}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch period');
       }
@@ -134,7 +134,7 @@ export function usePeriodSummary(periodId: string) {
       if (!activeGroup?.id || !periodId) {
         return null;
       }
-      const response = await fetch(`/api/periods/${periodId}/summary?groupId=${activeGroup.id}`);
+      const response = await fetch(`/api/periods/${periodId}/summary?groupId=${activeGroup.id}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch period summary');
       }
@@ -156,7 +156,7 @@ export function usePeriodsByMonth(year: number, month: number) {
       if (!activeGroup?.id) {
         return [];
       }
-      const response = await fetch(`/api/periods/by-month?groupId=${activeGroup.id}&year=${year}&month=${month}`);
+      const response = await fetch(`/api/periods/by-month?groupId=${activeGroup.id}&year=${year}&month=${month}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch periods by month');
       }
@@ -712,7 +712,7 @@ export function usePeriodMode(groupId?: string) {
     queryKey: ['period-mode', groupId],
     queryFn: async () => {
       if (!groupId) return 'CUSTOM';
-      const res = await fetch(`/api/groups/${groupId}/period-mode`);
+      const res = await fetch(`/api/groups/${groupId}/period-mode`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch period mode');
       const data = await res.json();
       return data.periodMode || 'CUSTOM';

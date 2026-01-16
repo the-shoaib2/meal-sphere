@@ -198,9 +198,9 @@ export async function GET(request: Request) {
     }
 
     // Cache-Control headers optimization
-    const cacheControl = periodId
-      ? 'private, s-maxage=300, stale-while-revalidate=600' // Longer cache for historical data
-      : 'private, s-maxage=30, stale-while-revalidate=60'; // Shorter cache for active data
+    // const cacheControl = periodId
+    //   ? 'private, s-maxage=300, stale-while-revalidate=600' // Longer cache for historical data
+    //   : 'private, s-maxage=30, stale-while-revalidate=60'; // Shorter cache for active data
 
     const expenses = await prisma.extraExpense.findMany({
       where: whereClause,
@@ -221,7 +221,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(expenses, {
       headers: {
-        'Cache-Control': cacheControl
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
       }
     })
   } catch (error) {

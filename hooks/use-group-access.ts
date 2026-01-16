@@ -65,7 +65,7 @@ export function useGroupAccess({
       // Check if this is an invite token
       if (checkIsInviteToken(groupId)) {
         // For invite tokens, fetch token details
-        const tokenResponse = await fetch(`/api/groups/join/${groupId}`);
+        const tokenResponse = await fetch(`/api/groups/join/${groupId}`, { cache: 'no-store' });
         const tokenData = await tokenResponse.json();
 
         if (!tokenResponse.ok) {
@@ -87,7 +87,7 @@ export function useGroupAccess({
       }
 
       // Regular group access check
-      const groupResponse = await fetch(`/api/groups/${groupId}/access`);
+      const groupResponse = await fetch(`/api/groups/${groupId}/access`, { cache: 'no-store' });
       const groupData = await groupResponse.json();
 
       if (!groupResponse.ok) {

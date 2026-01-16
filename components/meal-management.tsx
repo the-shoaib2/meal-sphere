@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
 import { useCurrentPeriod } from "@/hooks/use-periods"
-import { canEditMealsForDate, isPeriodLocked } from "@/lib/period-utils"
+import { canEditMealsForDate, isPeriodLocked } from "@/lib/period-utils-shared"
 import GuestMealForm from "@/components/meal/guest-meal-form"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
 import MealCalendar from "@/components/meal/meal-calendar"
@@ -230,7 +230,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     )
   }
 
-  
+
 
   // Get meal counts for calendar display
   const getMealCountsForMonth = () => {
@@ -269,28 +269,28 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     // For regular users, check if meal time has passed
     const now = new Date()
     const targetDate = new Date(selectedDate)
-    
+
     // Get meal time for the specific type
     let mealTimeStr = ''
     if (type === 'BREAKFAST') mealTimeStr = mealSettings?.breakfastTime || '08:00'
     if (type === 'LUNCH') mealTimeStr = mealSettings?.lunchTime || '13:00'
     if (type === 'DINNER') mealTimeStr = mealSettings?.dinnerTime || '20:00'
-    
+
     // Parse meal time
     const [hours, minutes] = mealTimeStr.split(':').map(Number)
     const mealTime = new Date(targetDate)
     mealTime.setHours(hours, minutes, 0, 0)
-    
+
     // If the target date is today, check if meal time has passed
     if (isSameDay(targetDate, now)) {
       return now < mealTime
     }
-    
+
     // For future dates, always allow
     if (targetDate > now) {
       return true
     }
-    
+
     // For past dates, don't allow
     return false
   }
@@ -356,7 +356,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                             'bg-blue-100 text-blue-700'
                         const shouldAutoAdd = shouldAutoAddForUser(mealType)
                         const isAutoTime = isAutoTimeForMeal(mealType)
-                        
+
                         // Check if meal time has passed for today
                         const now = new Date()
                         const isTodaySelected = isSameDay(selectedDate, now)

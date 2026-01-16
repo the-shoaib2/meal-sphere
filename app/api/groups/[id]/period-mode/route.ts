@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 // Enable aggressive caching for better performance
-export const revalidate = 60; // Cache for 60 seconds
+// Enable aggressive caching for better performance
+export const revalidate = 0; // Cache for 0 seconds
 
 export async function GET(
     req: NextRequest,
@@ -37,9 +38,10 @@ export async function GET(
             {
                 headers: {
                     // Cache for 60 seconds, allow stale content for 2 minutes while revalidating
-                    'Cache-Control': 'public, max-age=60, stale-while-revalidate=120',
-                    // Add ETag for conditional requests
-                    'ETag': `"${groupId}-${room.periodMode || 'CUSTOM'}"`,
+                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
+                    'Surrogate-Control': 'no-store'
                 },
             }
         );
@@ -73,17 +75,10 @@ export async function PATCH(
             );
         }
 
-        // Check if user is admin/moderator
-        const member = await prisma.roomMember.findFirst({
-            where: {
-                roomId: groupId,
-                userId: session.user.id,
-            },
-        });
-
-        if (!member || !['ADMIN', 'MODERATOR', 'MANAGER'].includes(member.role)) {
+        // Check if user is SUPER_ADMIN - Restricted change
+        if (session.user.role !== 'SUPER_ADMIN') {
             return NextResponse.json(
-                { error: 'Insufficient permissions. Only admins can change period mode.' },
+                { error: 'Insufficient permissions. Only super admins can change period mode.' },
                 { status: 403 }
             );
         }

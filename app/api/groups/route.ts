@@ -44,6 +44,7 @@ export async function POST(req: Request) {
         fineEnabled: false,
         isActive: true,
         createdBy: session.user.id,
+        periodMode: 'MONTHLY',
         memberCount: 1,
         bannerUrl: '', // Provide default empty string for required field
         features: {
@@ -198,7 +199,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(groups, {
       headers: {
-        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
       }
     });
   } catch (error) {

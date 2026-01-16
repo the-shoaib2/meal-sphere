@@ -67,7 +67,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(autoMealSettings, {
       headers: {
-        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
       }
     })
   } catch (error) {
