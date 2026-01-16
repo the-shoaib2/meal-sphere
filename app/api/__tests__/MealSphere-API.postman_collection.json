@@ -36,6 +36,23 @@
             "type": "string"
         }
     ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "var token = pm.collectionVariables.get(\"authToken\");",
+                    "if (token) {",
+                    "    pm.request.headers.add({",
+                    "        key: 'Cookie',",
+                    "        value: \"next-auth.session-token=\" + token + \"; __Secure-next-auth.session-token=\" + token",
+                    "    });",
+                    "}"
+                ]
+            }
+        }
+    ],
     "item": [
         {
             "name": "Authentication",
