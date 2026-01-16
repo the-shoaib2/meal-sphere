@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client'
+import { GroupRole } from '@prisma/client'
 
 // Excel Export Types
 export type ExcelExportType = 'meals' | 'shopping' | 'payments' | 'expenses' | 'balances' | 'calculations' | 'all'
@@ -24,9 +24,9 @@ export interface ExcelImportOptions {
 }
 
 // Role-based Access Control
-export const PRIVILEGED_ROLES: Role[] = ['ADMIN', 'MANAGER', 'MEAL_MANAGER']
-export const EXPORT_ALLOWED_ROLES: Role[] = ['ADMIN', 'MANAGER', 'MEAL_MANAGER', 'MEMBER']
-export const IMPORT_ALLOWED_ROLES: Role[] = ['ADMIN', 'MANAGER', 'MEAL_MANAGER']
+export const PRIVILEGED_ROLES: GroupRole[] = ['ADMIN', 'MANAGER', 'MEAL_MANAGER']
+export const EXPORT_ALLOWED_ROLES: GroupRole[] = ['ADMIN', 'MANAGER', 'MEAL_MANAGER', 'MEMBER']
+export const IMPORT_ALLOWED_ROLES: GroupRole[] = ['ADMIN', 'MANAGER', 'MEAL_MANAGER']
 
 export interface ExcelPermissionResult {
   canExport: boolean
@@ -36,7 +36,7 @@ export interface ExcelPermissionResult {
   canExportIndividual: boolean
   allowedExportTypes: ExcelExportType[]
   allowedImportTypes: ExcelImportType[]
-  userRole: Role | null
+  userRole: GroupRole | null
   isPrivileged: boolean
 }
 

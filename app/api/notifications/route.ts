@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
     // Check if user has permission to create notification for this user
     // Only allow creating notifications for self or if admin/manager
-    if (userId !== session.user.id && session.user.role !== "ADMIN") {
+    if (userId !== session.user.id && session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Unauthorized to create notification for this user" }, { status: 403 })
     }
 

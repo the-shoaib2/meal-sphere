@@ -2,17 +2,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Role } from "@prisma/client";
+import { GroupRole } from "@prisma/client";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Shield, 
-  Users, 
-  Clock, 
+import {
+  User,
+  Mail,
+  Calendar,
+  Shield,
+  Users,
+  Clock,
   Activity,
   ShoppingBag,
   Receipt,
@@ -26,7 +26,7 @@ interface UserProfileDialogProps {
     name: string | null;
     email: string | null;
     image: string | null;
-    role: Role;
+    role: GroupRole;
     createdAt: string;
     joinedAt: string;
     isActive: boolean;
@@ -42,8 +42,8 @@ interface UserProfileDialogProps {
 }
 
 export function UserProfileDialog({ user, isOpen, onClose }: UserProfileDialogProps) {
-  const getRoleBadge = (role: Role) => {
-    const roleMap: Partial<Record<Role, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
+  const getRoleBadge = (role: GroupRole) => {
+    const roleMap: Partial<Record<GroupRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
       ADMIN: { label: 'Admin', variant: 'default' },
       MODERATOR: { label: 'Moderator', variant: 'secondary' },
       MANAGER: { label: 'Manager', variant: 'secondary' },
@@ -55,7 +55,7 @@ export function UserProfileDialog({ user, isOpen, onClose }: UserProfileDialogPr
     };
 
     const roleInfo = roleMap[role] || { label: role, variant: 'outline' as const };
-    
+
     return (
       <Badge variant={roleInfo.variant} className="text-xs">
         {roleInfo.label}
@@ -72,7 +72,7 @@ export function UserProfileDialog({ user, isOpen, onClose }: UserProfileDialogPr
         <div className="relative">
           {/* Cover Image */}
           <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-t-lg" />
-          
+
           {/* Profile Section */}
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 space-y-4 sm:space-y-0 sm:space-x-4">

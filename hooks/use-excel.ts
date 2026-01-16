@@ -2,16 +2,16 @@ import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
-import { 
-  ExcelExportOptions, 
+import {
+  ExcelExportOptions,
   ExcelImportOptions,
   ExcelExportType,
   ExcelExportScope,
   ExcelDateRange,
-  ExcelPermissionResult 
+  ExcelPermissionResult
 } from "@/types/excel"
 import { getExcelPermissions } from "@/lib/excel-permissions"
-import { Role } from "@prisma/client"
+import { GroupRole } from "@prisma/client"
 
 export function useExcel() {
   const [isExporting, setIsExporting] = useState(false)
@@ -22,15 +22,15 @@ export function useExcel() {
   const { data: session } = useSession()
 
   // Get user permissions
-  const permissions = getExcelPermissions(activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role as Role | null)
+  const permissions = getExcelPermissions(activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role as GroupRole | null)
 
-  const exportToExcel = async ({ 
-    type, 
-    scope = 'user', 
+  const exportToExcel = async ({
+    type,
+    scope = 'user',
     dateRange = 'month',
     startDate,
     endDate,
-    userId 
+    userId
   }: ExcelExportOptions) => {
     if (!activeGroup?.id) {
       toast({
@@ -109,7 +109,7 @@ export function useExcel() {
     } catch (error) {
       console.error(`Error exporting ${type}:`, error)
       const errorMessage = error instanceof Error ? error.message : "Failed to export data"
-      
+
       toast({
         title: "Export failed",
         description: `Failed to export ${type} data. Please try again.`,
@@ -168,10 +168,10 @@ export function useExcel() {
           description: `Imported ${data.importedRows} rows from ${data.totalRows} total rows`,
         })
 
-        return { 
-          success: true, 
-          importedRows: data.importedRows, 
-          totalRows: data.totalRows 
+        return {
+          success: true,
+          importedRows: data.importedRows,
+          totalRows: data.totalRows
         }
       } else {
         throw new Error(data.error || "Failed to import data")
@@ -179,7 +179,7 @@ export function useExcel() {
     } catch (error) {
       console.error("Error importing data:", error)
       const errorMessage = error instanceof Error ? error.message : "Failed to import data"
-      
+
       toast({
         title: "Import failed",
         description: "Failed to import data. Please check your file and try again.",
@@ -238,7 +238,7 @@ export function useExcel() {
     } catch (error) {
       console.error("Error downloading template:", error)
       const errorMessage = error instanceof Error ? error.message : "Failed to download template"
-      
+
       toast({
         title: "Download failed",
         description: "Failed to download template. Please try again.",
@@ -303,12 +303,12 @@ export function useExcel() {
     isDownloadingTemplate,
     activeGroup,
     permissions,
-    
+
     // Actions
     exportToExcel,
     importFromExcel,
     downloadTemplate,
-    
+
     // Utilities
     hasActiveGroup: !!activeGroup?.id,
     canExport: permissions.canExport,

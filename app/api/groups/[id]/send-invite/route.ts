@@ -8,7 +8,7 @@ import { z } from "zod";
 // Validation schema for the request body
 const inviteSchema = z.object({
   emails: z.array(z.string().email()).min(1).max(10),
-  role: z.enum(["MEMBER", "ADMIN"]).default("MEMBER"),
+  role: z.enum(["USER", "SUPER_ADMIN"]).default("USER"),
 });
 
 type RouteParams = {
@@ -202,8 +202,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: `Successfully sent ${invitations.length} invitation(s). ${skippedEmails.existingMembers.length > 0 || skippedEmails.pendingInvitations.length > 0
-          ? `(${skippedEmails.existingMembers.length} already members, ${skippedEmails.pendingInvitations.length} pending invitations)`
-          : ''
+        ? `(${skippedEmails.existingMembers.length} already members, ${skippedEmails.pendingInvitations.length} pending invitations)`
+        : ''
         }`,
       invitations: invitations.map(inv => ({
         code: inv.code,
