@@ -1,31 +1,8 @@
 {
-  "version": 2,
-  "builds": [
+  "crons": [
     {
-      "src": "package.json",
-      "use": "@vercel/next"
+      "path": "/api/cron",
+      "schedule": "0 10 * * *"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/_next/static/(.*)",
-      "dest": "/_next/static/$1"
-    },
-    {
-      "src": "/_next/image/(.*)",
-      "dest": "/_next/image/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
-   "crons": [{
-    "path": "/api/cron",
-    "schedule": "0 10 * * *"
-  }]
+  ]
 }

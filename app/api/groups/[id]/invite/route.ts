@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { Role } from '@prisma/client';
+import { GroupRole } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 interface InviteTokenResponse {
@@ -9,7 +9,7 @@ interface InviteTokenResponse {
   token: string;
   roomId: string;
   createdBy: string;
-  role: Role;
+  role: GroupRole;
   expiresAt: Date | null;
   createdAt: Date;
   createdByUser?: {
@@ -25,7 +25,7 @@ interface CreateInviteTokenResponse {
     token: string;
     inviteUrl: string;
     expiresAt: Date | null;
-    role: Role;
+    role: GroupRole;
   };
 }
 
@@ -55,7 +55,7 @@ export async function POST(
           where: {
             userId: session.user.id,
             role: {
-              in: [Role.ADMIN, Role.MANAGER, Role.MODERATOR, Role.SUPER_ADMIN]
+              in: [GroupRole.ADMIN, GroupRole.MODERATOR]
             }
           }
         }
@@ -100,7 +100,7 @@ export async function POST(
         token,
         roomId: groupId,
         createdBy: session.user.id,
-        role: role as Role,
+        role: role as GroupRole,
         expiresAt
       },
       include: {
@@ -176,7 +176,7 @@ export async function GET(
       where: {
         roomId: groupId,
         userId,
-        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'SUPER_ADMIN'] },
+        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER'] },
       },
     });
 
@@ -254,7 +254,7 @@ export async function DELETE(
       where: {
         roomId: groupId,
         userId,
-        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER', 'SUPER_ADMIN'] },
+        role: { in: ['ADMIN', 'MODERATOR', 'MANAGER'] },
       },
     });
 

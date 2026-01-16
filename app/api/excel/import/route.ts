@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user permissions
-    const permissions = getExcelPermissions(roomMember.role)
+    const permissions = getExcelPermissions(roomMember.role as any)
 
     // Validate import options
     const validation = validateImportOptions({ type }, permissions)
