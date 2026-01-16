@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { usePeriodManagement } from '@/hooks/use-periods';
-import { PeriodStatus, MealPeriod } from '@prisma/client';
+// Use any for types if Prisma client is still generating
+type PeriodStatus = any;
+type MealPeriod = any;
 import { CreatePeriodDialog } from '@/components/periods/create-period-dialog';
 import { PeriodArchiveDialog } from '@/components/periods/period-archive-dialog';
 import { RestartPeriodDialog } from '@/components/periods/restart-period-dialog';
@@ -54,8 +56,8 @@ export function PeriodManagement() {
   const { data: session } = useSession();
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const currentUserId = session?.user?.id;
-  const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
-  const isPrivileged = ["ADMIN", "MANAGER", "MODERATOR"].includes(currentMember?.role ?? "");
+  const userRole = activeGroup?.userRole || (currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId)?.role : undefined);
+  const isPrivileged = ["ADMIN", "MANAGER", "MODERATOR"].includes(userRole ?? "");
 
   // Period mode management
   const { periodMode, isLoading: periodModeLoading, updatePeriodMode, isUpdating } = usePeriodMode(activeGroup?.id);
@@ -134,41 +136,21 @@ export function PeriodManagement() {
 
             {(isPrivileged || session?.user?.role === 'SUPER_ADMIN') && (
               <div className="flex items-center gap-3">
-                {/* Period Mode Toggle - Only for SUPER_ADMIN */}
-                {session?.user?.role === 'SUPER_ADMIN' && (
-                  <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-muted/50">
-                    <Settings2 className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="period-mode-switch">
-                      Mode:
-                    </Label>
-                    <span className={periodMode === 'CUSTOM' ? 'text-sm font-semibold' : 'text-sm text-muted-foreground'}>
-                      Custom
-                    </span>
-                    <Switch
-                      id="period-mode-switch"
-                      checked={periodMode === 'MONTHLY'}
-                      onCheckedChange={handlePeriodModeToggle}
-                      disabled={isUpdating || periodModeLoading}
-                    />
-                    <span className={periodMode === 'MONTHLY' ? 'text-sm font-semibold flex items-center gap-1' : 'text-sm text-muted-foreground flex items-center gap-1'}>
-                      <Calendar className="h-3.5 w-3.5" />
-                      Monthly
-                    </span>
-                  </div>
-                )}
-
                 <CreatePeriodDialog
                   open={showCreateDialog}
                   onOpenChange={setShowCreateDialog}
                   onSubmit={handleStartPeriod}
-                  disabled={!!currentPeriod || periodMode === 'MONTHLY'}
+                  disabled={!!currentPeriod}
                   disabledReason={
-                    periodMode === 'MONTHLY'
-                      ? 'Period creation is automatic in Monthly mode'
-                      : currentPeriod
-                        ? 'End the current period before starting a new one'
-                        : undefined
+                    currentPeriod
+                      ? 'End the current period before starting a new one'
+                      : undefined
                   }
+                  periodMode={periodMode}
+                  onPeriodModeToggle={handlePeriodModeToggle}
+                  periodModeLoading={periodModeLoading}
+                  isUpdatingMode={isUpdating}
+                  currentPeriodExists={!!currentPeriod}
                 />
               </div>
             )}

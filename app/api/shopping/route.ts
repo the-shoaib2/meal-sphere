@@ -23,12 +23,31 @@ export async function POST(request: Request) {
     }
 
     // Parse form data
-    const formData = await request.formData()
-    const roomId = formData.get("roomId") as string
-    const description = formData.get("description") as string
-    const amount = Number.parseFloat(formData.get("amount") as string)
-    const date = new Date(formData.get("date") as string)
-    const receiptFile = formData.get("receipt") as File | null
+    // Parse request data based on Content-Type
+    const contentType = request.headers.get("content-type") || "";
+    
+    let roomId: string;
+    let description: string;
+    let amount: number;
+    let date: Date;
+    let receiptFile: File | null = null;
+
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+      roomId = body.roomId;
+      description = body.description;
+      amount = Number.parseFloat(body.amount);
+      date = new Date(body.date);
+    } else if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
+      const formData = await request.formData();
+      roomId = formData.get("roomId") as string;
+      description = formData.get("description") as string;
+      amount = Number.parseFloat(formData.get("amount") as string);
+      date = new Date(formData.get("date") as string);
+      receiptFile = formData.get("receipt") as File | null;
+    } else {
+      return NextResponse.json({ message: "Unsupported Content-Type" }, { status: 415 });
+    }
 
     // Validate data
     if (!roomId || !description || isNaN(amount) || !date) {

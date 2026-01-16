@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating period:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to create period' },
-      { status: 500 }
+      { status: 400 }
     );
   }
 } 

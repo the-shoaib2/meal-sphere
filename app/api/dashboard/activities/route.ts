@@ -41,7 +41,10 @@ export async function GET(request: NextRequest) {
           roomId,
           date: { gte: thirtyDaysAgo }
         },
-        include: {
+        select: {
+          id: true,
+          type: true,
+          date: true,
           user: { select: { name: true, image: true } }
         },
         orderBy: { date: 'desc' },
@@ -54,7 +57,12 @@ export async function GET(request: NextRequest) {
           roomId,
           date: { gte: thirtyDaysAgo }
         },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          method: true,
+          amount: true,
+          date: true,
           user: { select: { name: true, image: true } }
         },
         orderBy: { date: 'desc' },
@@ -67,7 +75,11 @@ export async function GET(request: NextRequest) {
           roomId,
           date: { gte: thirtyDaysAgo }
         },
-        include: {
+        select: {
+          id: true,
+          purchased: true,
+          name: true,
+          date: true,
           user: { select: { name: true, image: true } }
         },
         orderBy: { date: 'desc' },
@@ -80,7 +92,12 @@ export async function GET(request: NextRequest) {
           roomId,
           date: { gte: thirtyDaysAgo }
         },
-        include: {
+        select: {
+          id: true,
+          type: true,
+          description: true,
+          amount: true,
+          date: true,
           user: { select: { name: true, image: true } }
         },
         orderBy: { date: 'desc' },
@@ -93,7 +110,10 @@ export async function GET(request: NextRequest) {
           roomId,
           createdAt: { gte: thirtyDaysAgo }
         },
-        include: {
+        select: {
+          id: true,
+          type: true,
+          createdAt: true,
           user: { select: { name: true, image: true } }
         },
         orderBy: { createdAt: 'desc' },

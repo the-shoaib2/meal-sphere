@@ -18,7 +18,7 @@ export function NoPeriodState({
     title = "No Active Period",
     description = "There is no active period for this group. A period is required to track meals, expenses, and payments.",
     isPrivileged = false,
-    periodMode = 'CUSTOM',
+    periodMode = 'MONTHLY',
     onCreatePeriod,
     className = "",
 }: NoPeriodStateProps) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,25 @@ interface CreatePeriodDialogProps {
   onSubmit: (data: CreatePeriodData) => Promise<void>;
   disabled?: boolean;
   disabledReason?: string;
+  periodMode?: 'MONTHLY' | 'CUSTOM';
+  onPeriodModeToggle?: (checked: boolean) => void;
+  periodModeLoading?: boolean;
+  isUpdatingMode?: boolean;
+  currentPeriodExists?: boolean;
 }
 
-export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled, disabledReason }: CreatePeriodDialogProps) {
+export function CreatePeriodDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  disabled,
+  disabledReason,
+  periodMode = 'CUSTOM',
+  onPeriodModeToggle,
+  periodModeLoading,
+  isUpdatingMode,
+  currentPeriodExists
+}: CreatePeriodDialogProps) {
   const [formData, setFormData] = useState<CreatePeriodData>({
     name: '',
     startDate: new Date(),
@@ -31,7 +47,24 @@ export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled, dis
     notes: '',
   });
 
+  // Sync name when monthly mode is active
+  React.useEffect(() => {
+    if (periodMode === 'MONTHLY' && !formData.name) {
+      setFormData(prev => ({
+        ...prev,
+        name: format(new Date(), 'MMMM yyyy')
+      }));
+    }
+  }, [periodMode, formData.name]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleModeChange = (checked: boolean) => {
+    if (onPeriodModeToggle) {
+      onPeriodModeToggle(checked);
+    }
+    // Dialog stays open to allow user to see the change
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +121,30 @@ export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled, dis
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Period Mode Toggle - Moved inside Dialog */}
+          <div className="flex items-center justify-center p-2 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Settings2 className={cn("h-4 w-4", periodMode === 'CUSTOM' ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-sm font-medium", periodMode === 'CUSTOM' ? "text-foreground" : "text-muted-foreground")}>
+                  Custom
+                </span>
+              </div>
+              <Switch
+                id="dialog-period-mode-switch"
+                checked={periodMode === 'MONTHLY'}
+                onCheckedChange={handleModeChange}
+                disabled={isUpdatingMode || periodModeLoading || (periodMode === 'MONTHLY' && currentPeriodExists)}
+              />
+              <div className="flex items-center gap-2">
+                <Calendar className={cn("h-4 w-4", periodMode === 'MONTHLY' ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-sm font-medium", periodMode === 'MONTHLY' ? "text-foreground" : "text-muted-foreground")}>
+                  Monthly
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Period Name</Label>
             <Input
@@ -96,62 +153,65 @@ export function CreatePeriodDialog({ open, onOpenChange, onSubmit, disabled, dis
               onChange={(e) => handleInputChange('name', e.target.value)}
               placeholder="e.g., January 2024, Q1 2024"
               required
+              disabled={periodMode === 'MONTHLY'}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !formData.startDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {formData.startDate ? format(formData.startDate, 'PPP') : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={formData.startDate}
-                    onSelect={(date) => date && handleInputChange('startDate', date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+          {periodMode === 'CUSTOM' && (
+            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !formData.startDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <Calendar className="mr-1 h-4 w-4" />
+                      {formData.startDate ? format(formData.startDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={formData.startDate}
+                      onSelect={(date) => date && handleInputChange('startDate', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-            <div className="space-y-2">
-              <Label>End Date (Optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !formData.endDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {formData.endDate ? format(formData.endDate, 'PPP') : <span>Pick a date (optional)</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={formData.endDate || undefined}
-                    onSelect={(date) => handleInputChange('endDate', date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="space-y-2">
+                <Label>End Date (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !formData.endDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <Calendar className="mr-1 h-4 w-4" />
+                      {formData.endDate ? format(formData.endDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={formData.endDate || undefined}
+                      onSelect={(date) => handleInputChange('endDate', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="openingBalance">Opening Balance</Label>

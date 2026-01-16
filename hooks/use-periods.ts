@@ -700,7 +700,7 @@ export function usePeriodMode(groupId?: string) {
     });
 
     return {
-      periodMode: unified.data?.periodMode || 'CUSTOM',
+      periodMode: unified.data?.periodMode || 'MONTHLY',
       isLoading: unified.isLoading,
       updatePeriodMode: updatePeriodMode.mutate,
       isUpdating: updatePeriodMode.isPending,
@@ -708,14 +708,14 @@ export function usePeriodMode(groupId?: string) {
   }
 
   // Fallback to legacy individual fetch for other groups (rare case)
-  const { data: periodMode = 'CUSTOM', isLoading } = useQuery<'MONTHLY' | 'CUSTOM'>({
+  const { data: periodMode = 'MONTHLY', isLoading } = useQuery<'MONTHLY' | 'CUSTOM'>({
     queryKey: ['period-mode', groupId],
     queryFn: async () => {
-      if (!groupId) return 'CUSTOM';
+      if (!groupId) return 'MONTHLY';
       const res = await fetch(`/api/groups/${groupId}/period-mode`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch period mode');
       const data = await res.json();
-      return data.periodMode || 'CUSTOM';
+      return data.periodMode || 'MONTHLY';
     },
     enabled: !!groupId,
     staleTime: 30 * 60 * 1000,

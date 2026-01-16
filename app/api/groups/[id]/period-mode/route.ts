@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 // Enable aggressive caching for better performance
-// Enable aggressive caching for better performance
 export const revalidate = 0; // Cache for 0 seconds
 
 export async function GET(
@@ -34,7 +33,7 @@ export async function GET(
 
         // Return with aggressive cache headers for maximum performance
         return NextResponse.json(
-            { periodMode: room.periodMode || 'CUSTOM' },
+            { periodMode: room.periodMode || 'MONTHLY' },
             {
                 headers: {
                     // Cache for 60 seconds, allow stale content for 2 minutes while revalidating
@@ -75,11 +74,55 @@ export async function PATCH(
             );
         }
 
-        // Check if user is SUPER_ADMIN - Restricted change
-        if (session.user.role !== 'SUPER_ADMIN') {
+        // Check if user is global SUPER_ADMIN
+        const isSuperAdmin = session.user.role === 'SUPER_ADMIN';
+
+        // Get group information
+        const room = await prisma.room.findUnique({
+            where: { id: groupId },
+            select: { periodMode: true }
+        });
+
+        if (!room) {
+            return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+        }
+
+        // Get member info within this group
+        const member = await prisma.roomMember.findFirst({
+            where: {
+                roomId: groupId,
+                userId: session.user.id,
+            },
+        });
+
+        // Check permissions
+        let canChange = isSuperAdmin;
+        if (member) {
+            if (['ADMIN', 'MANAGER', 'MODERATOR'].includes(member.role)) {
+                canChange = true;
+            }
+        }
+
+        if (!canChange) {
             return NextResponse.json(
-                { error: 'Insufficient permissions. Only super admins can change period mode.' },
+                { error: 'Insufficient permissions. Only admins or authorized staff can change period mode.' },
                 { status: 403 }
+            );
+        }
+
+        // Check if there's an active period
+        const activePeriod = await prisma.mealPeriod.findFirst({
+            where: {
+                roomId: groupId,
+                status: 'ACTIVE',
+            },
+        });
+
+        // 1. If currently in MONTHLY mode and has an active period, cannot change mode
+        if (room.periodMode === 'MONTHLY' && activePeriod) {
+            return NextResponse.json(
+                { error: 'Cannot change period mode while a monthly period is active. Please end the current period first.' },
+                { status: 400 }
             );
         }
 
@@ -89,30 +132,21 @@ export async function PATCH(
             data: { periodMode: mode },
         });
 
-        // If switching to MONTHLY mode, create current month period if it doesn't exist
-        if (mode === 'MONTHLY') {
+        // 2. If switching to MONTHLY mode, create current month period if no active period exists
+        if (mode === 'MONTHLY' && !activePeriod) {
             const now = new Date();
-            const monthName = format(now, 'MMMM yyyy'); // e.g., "January 2024"
+            const monthName = format(now, 'MMMM yyyy');
             const startDate = startOfMonth(now);
 
-            // Check if a period with this name already exists
-            const existingPeriod = await prisma.mealPeriod.findFirst({
+            // Check if a period with this name already exists (any status)
+            const existingMonthPeriod = await prisma.mealPeriod.findFirst({
                 where: {
                     roomId: groupId,
                     name: monthName,
                 },
             });
 
-            // Check if there's an active period
-            const activePeriod = await prisma.mealPeriod.findFirst({
-                where: {
-                    roomId: groupId,
-                    status: 'ACTIVE',
-                },
-            });
-
-            // Only create if no period exists for this month and no active period
-            if (!existingPeriod && !activePeriod) {
+            if (!existingMonthPeriod) {
                 await prisma.mealPeriod.create({
                     data: {
                         name: monthName,

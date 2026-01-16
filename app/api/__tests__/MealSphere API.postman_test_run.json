@@ -1,0 +1,952 @@
+{
+	"id": "8175c1b4-55de-44bd-903a-498aafc51ccf",
+	"name": "MealSphere API",
+	"timestamp": "2026-01-16T22:51:03.904Z",
+	"collection_id": "39827908-739d172a-fda3-4bc4-857f-005e63bd6d99",
+	"folder_id": 0,
+	"environment_id": "39827908-40c30c29-3473-45a4-ba4a-cfcb50424f39",
+	"totalPass": 0,
+	"delay": 0,
+	"persist": true,
+	"status": "finished",
+	"startedAt": "2026-01-16T22:50:31.318Z",
+	"totalFail": 0,
+	"results": [
+		{
+			"id": "b6afce9b-6b77-4b5f-931e-2139af7c4ea0",
+			"name": "Login",
+			"url": "http://localhost:3000/api/auth/callback/credentials",
+			"time": 260,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				317,
+				358,
+				377,
+				355,
+				260
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "a9878ccb-e870-41ac-b768-eb9687cf8fb1",
+			"name": "Get Sessions",
+			"url": "http://localhost:3000/api/auth/sessions",
+			"time": 347,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				433,
+				295,
+				282,
+				249,
+				347
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "c18faf1c-a9e3-46ce-a881-a27c3b8ca7ec",
+			"name": "Get Group by ID",
+			"url": "http://localhost:3000/api/groups/696abfeedf6a107987844935",
+			"time": 205,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				448,
+				210,
+				167,
+				157,
+				205
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "03234117-f236-4be8-991c-cf00053fcc65",
+			"name": "Get Join Requests",
+			"url": "http://localhost:3000/api/groups/696abfeedf6a107987844935/join-request",
+			"time": 107,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				175,
+				129,
+				136,
+				107,
+				107
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "d77cb18c-2e67-42ed-91c3-5e5403aac528",
+			"name": "Get Meals",
+			"url": "http://localhost:3000/api/meals?roomId=696abfeedf6a107987844935",
+			"time": 153,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				315,
+				315,
+				231,
+				186,
+				153
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "e7bc4b87-6078-4c2e-a82f-504ee4b56797",
+			"name": "Create/Toggle Meal",
+			"url": "http://localhost:3000/api/meals",
+			"time": 181,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				284,
+				161,
+				175,
+				157,
+				181
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "98f924eb-80fb-4c1c-90d9-95423f026b7d",
+			"name": "Get Meal by ID",
+			"url": "http://localhost:3000/api/meals/:id",
+			"time": 118,
+			"responseCode": {
+				"code": 500,
+				"name": "Internal Server Error"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				222,
+				122,
+				149,
+				208,
+				118
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "5ab2aa75-0dae-4631-84d9-b416d34a7e4f",
+			"name": "Get Meal Settings",
+			"url": "http://localhost:3000/api/meals/settings?roomId=696abfeedf6a107987844935",
+			"time": 231,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				438,
+				177,
+				177,
+				158,
+				231
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "a8fb2d46-8b4d-4587-be9f-b941fb0a4ad9",
+			"name": "Get Guest Meals",
+			"url": "http://localhost:3000/api/meals/guest?roomId=696abfeedf6a107987844935",
+			"time": 241,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				440,
+				239,
+				207,
+				206,
+				241
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "532c8a4e-8595-4ac0-85a4-7884dd5cc0b7",
+			"name": "Get Expenses",
+			"url": "http://localhost:3000/api/expenses?roomId=696abfeedf6a107987844935",
+			"time": 139,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				196,
+				136,
+				141,
+				127,
+				139
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "dc0e1eeb-34aa-42a2-9f6a-de64ce248d87",
+			"name": "Create Expense",
+			"url": "http://localhost:3000/api/expenses",
+			"time": 291,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				231,
+				297,
+				304,
+				215,
+				291
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "f4b8f397-c449-4fc5-865c-13819452f554",
+			"name": "Get Expense by ID",
+			"url": "http://localhost:3000/api/expenses/:id",
+			"time": 61,
+			"responseCode": {
+				"code": 405,
+				"name": "Method Not Allowed"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				126,
+				65,
+				90,
+				61,
+				61
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "8aca97a4-3846-43e4-9e40-a84b73a42de5",
+			"name": "Get Payments",
+			"url": "http://localhost:3000/api/payments?roomId=696abfeedf6a107987844935",
+			"time": 168,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				320,
+				172,
+				154,
+				213,
+				168
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "60d40039-7328-42ed-93b0-4819dff39c09",
+			"name": "Create Payment",
+			"url": "http://localhost:3000/api/payments",
+			"time": 346,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				343,
+				300,
+				252,
+				258,
+				346
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "b854fd34-a10a-4a77-a0b2-956c658cead7",
+			"name": "Get Profile",
+			"url": "http://localhost:3000/api/user/profile",
+			"time": 95,
+			"responseCode": {
+				"code": 405,
+				"name": "Method Not Allowed"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				159,
+				86,
+				65,
+				61,
+				95
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "23f96551-de7b-4e6a-a0e0-bf87e8f153fb",
+			"name": "Check User Exists",
+			"url": "http://localhost:3000/api/user/check-exists?email=user@example.com",
+			"time": 57,
+			"responseCode": {
+				"code": 405,
+				"name": "Method Not Allowed"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				96,
+				63,
+				75,
+				74,
+				57
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "30377e73-583c-4dde-9b31-c5a036158bab",
+			"name": "Get Unified Dashboard",
+			"url": "http://localhost:3000/api/dashboard/unified?roomId=696abfeedf6a107987844935",
+			"time": 86,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				150,
+				73,
+				58,
+				86,
+				86
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "7fe08684-bc81-4aa0-8fe2-73dab5cbbf44",
+			"name": "Get Chart Data",
+			"url": "http://localhost:3000/api/dashboard/chart-data?roomId=696abfeedf6a107987844935",
+			"time": 228,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				379,
+				308,
+				308,
+				263,
+				228
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "74186103-8325-45de-b0ed-7ce9c69f5fea",
+			"name": "Get Activities",
+			"url": "http://localhost:3000/api/dashboard/activities?roomId=696abfeedf6a107987844935",
+			"time": 361,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				384,
+				331,
+				263,
+				378,
+				361
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "83d87e7f-9785-4e3f-9738-6009c8819a9c",
+			"name": "Get Notifications",
+			"url": "http://localhost:3000/api/notifications",
+			"time": 125,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				142,
+				186,
+				120,
+				132,
+				125
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "e9820d1c-6b95-4c10-8828-a90ef2694b6e",
+			"name": "Get Periods",
+			"url": "http://localhost:3000/api/periods?roomId=696abfeedf6a107987844935",
+			"time": 69,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				138,
+				73,
+				66,
+				63,
+				69
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "c7d72682-64a7-4785-8a54-821b44fc6ee8",
+			"name": "Create Period",
+			"url": "http://localhost:3000/api/periods",
+			"time": 66,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				161,
+				74,
+				86,
+				74,
+				66
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "d9c1b647-e36f-4ec8-8c3a-ab23dd508077",
+			"name": "Get Current Period",
+			"url": "http://localhost:3000/api/periods/current?roomId=696abfeedf6a107987844935",
+			"time": 70,
+			"responseCode": {
+				"code": 400,
+				"name": "Bad Request"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				128,
+				143,
+				124,
+				61,
+				70
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "b0184729-9928-44a0-b1a8-ccf2ae07d00c",
+			"name": "Get Shopping List",
+			"url": "http://localhost:3000/api/shopping?roomId=696abfeedf6a107987844935",
+			"time": 129,
+			"responseCode": {
+				"code": 200,
+				"name": "OK"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				211,
+				136,
+				189,
+				139,
+				129
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "a634dedf-9087-4875-a4ce-b414fdada1e8",
+			"name": "Add Shopping Item",
+			"url": "http://localhost:3000/api/shopping",
+			"time": 55,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				134,
+				111,
+				102,
+				107,
+				55
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "d5930b6d-0560-4224-a0fa-e59a80aa0d58",
+			"name": "Get Analytics",
+			"url": "http://localhost:3000/api/analytics?roomId=696abfeedf6a107987844935",
+			"time": 5,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				515,
+				327,
+				320,
+				320,
+				5
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "2037c7d9-7d34-4532-8bab-522939da983e",
+			"name": "Get User Rooms Analytics",
+			"url": "http://localhost:3000/api/analytics/user-rooms",
+			"time": 8,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				333,
+				269,
+				196,
+				240,
+				8
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "ec38e7b7-5078-4f8d-b858-cc91e465eb89",
+			"name": "Get Account Balance",
+			"url": "http://localhost:3000/api/account-balance?roomId=696abfeedf6a107987844935",
+			"time": 4,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				390,
+				320,
+				304,
+				246,
+				4
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "20acaff6-f2ad-4431-91a1-35830edbba13",
+			"name": "Get Transactions",
+			"url": "http://localhost:3000/api/account-balance/transactions?roomId=696abfeedf6a107987844935",
+			"time": 5,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				114,
+				69,
+				84,
+				83,
+				5
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "c8f3fd62-55a0-4d94-ba98-85355dd4ab20",
+			"name": "Export Meals",
+			"url": "http://localhost:3000/api/excel/export/meals?roomId=696abfeedf6a107987844935",
+			"time": 4,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				484,
+				264,
+				283,
+				329,
+				4
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		},
+		{
+			"id": "4c254895-d331-4e51-9a0f-7420dafe3ecc",
+			"name": "Export Payments",
+			"url": "http://localhost:3000/api/excel/export/payments?roomId=696abfeedf6a107987844935",
+			"time": 4,
+			"responseCode": {
+				"code": 429,
+				"name": "Too Many Requests"
+			},
+			"tests": {},
+			"testPassFailCounts": {},
+			"times": [
+				309,
+				212,
+				261,
+				260,
+				4
+			],
+			"allTests": [
+				{},
+				{},
+				{},
+				{},
+				{}
+			]
+		}
+	],
+	"count": 5,
+	"totalTime": 30074,
+	"collection": {
+		"requests": [
+			{
+				"id": "b6afce9b-6b77-4b5f-931e-2139af7c4ea0",
+				"method": "POST"
+			},
+			{
+				"id": "a9878ccb-e870-41ac-b768-eb9687cf8fb1",
+				"method": "GET"
+			},
+			{
+				"id": "c18faf1c-a9e3-46ce-a881-a27c3b8ca7ec",
+				"method": "GET"
+			},
+			{
+				"id": "03234117-f236-4be8-991c-cf00053fcc65",
+				"method": "GET"
+			},
+			{
+				"id": "d77cb18c-2e67-42ed-91c3-5e5403aac528",
+				"method": "GET"
+			},
+			{
+				"id": "e7bc4b87-6078-4c2e-a82f-504ee4b56797",
+				"method": "POST"
+			},
+			{
+				"id": "98f924eb-80fb-4c1c-90d9-95423f026b7d",
+				"method": "GET"
+			},
+			{
+				"id": "5ab2aa75-0dae-4631-84d9-b416d34a7e4f",
+				"method": "GET"
+			},
+			{
+				"id": "a8fb2d46-8b4d-4587-be9f-b941fb0a4ad9",
+				"method": "GET"
+			},
+			{
+				"id": "532c8a4e-8595-4ac0-85a4-7884dd5cc0b7",
+				"method": "GET"
+			},
+			{
+				"id": "dc0e1eeb-34aa-42a2-9f6a-de64ce248d87",
+				"method": "POST"
+			},
+			{
+				"id": "f4b8f397-c449-4fc5-865c-13819452f554",
+				"method": "GET"
+			},
+			{
+				"id": "8aca97a4-3846-43e4-9e40-a84b73a42de5",
+				"method": "GET"
+			},
+			{
+				"id": "60d40039-7328-42ed-93b0-4819dff39c09",
+				"method": "POST"
+			},
+			{
+				"id": "b854fd34-a10a-4a77-a0b2-956c658cead7",
+				"method": "GET"
+			},
+			{
+				"id": "23f96551-de7b-4e6a-a0e0-bf87e8f153fb",
+				"method": "GET"
+			},
+			{
+				"id": "30377e73-583c-4dde-9b31-c5a036158bab",
+				"method": "GET"
+			},
+			{
+				"id": "7fe08684-bc81-4aa0-8fe2-73dab5cbbf44",
+				"method": "GET"
+			},
+			{
+				"id": "74186103-8325-45de-b0ed-7ce9c69f5fea",
+				"method": "GET"
+			},
+			{
+				"id": "83d87e7f-9785-4e3f-9738-6009c8819a9c",
+				"method": "GET"
+			},
+			{
+				"id": "e9820d1c-6b95-4c10-8828-a90ef2694b6e",
+				"method": "GET"
+			},
+			{
+				"id": "c7d72682-64a7-4785-8a54-821b44fc6ee8",
+				"method": "POST"
+			},
+			{
+				"id": "d9c1b647-e36f-4ec8-8c3a-ab23dd508077",
+				"method": "GET"
+			},
+			{
+				"id": "b0184729-9928-44a0-b1a8-ccf2ae07d00c",
+				"method": "GET"
+			},
+			{
+				"id": "a634dedf-9087-4875-a4ce-b414fdada1e8",
+				"method": "POST"
+			},
+			{
+				"id": "d5930b6d-0560-4224-a0fa-e59a80aa0d58",
+				"method": "GET"
+			},
+			{
+				"id": "2037c7d9-7d34-4532-8bab-522939da983e",
+				"method": "GET"
+			},
+			{
+				"id": "ec38e7b7-5078-4f8d-b858-cc91e465eb89",
+				"method": "GET"
+			},
+			{
+				"id": "20acaff6-f2ad-4431-91a1-35830edbba13",
+				"method": "GET"
+			},
+			{
+				"id": "c8f3fd62-55a0-4d94-ba98-85355dd4ab20",
+				"method": "GET"
+			},
+			{
+				"id": "4c254895-d331-4e51-9a0f-7420dafe3ecc",
+				"method": "GET"
+			}
+		]
+	}
+}

@@ -115,17 +115,28 @@ export class PeriodService {
    * Validate period uniqueness for a group
    */
   static async validatePeriodUniqueness(roomId: string, data: CreatePeriodData, excludePeriodId?: string) {
-    // Check for duplicate period name
-    const existingPeriodWithSameName = await prisma.mealPeriod.findFirst({
-      where: {
-        roomId,
-        name: data.name,
-        ...(excludePeriodId && { id: { not: excludePeriodId } }),
-      },
-    });
+    // Auto-resolve duplicate names by appending a suffix
+    let originalName = data.name;
+    let counter = 1;
+    let finalName = originalName;
 
-    if (existingPeriodWithSameName) {
-      throw new Error(`A period with the name "${data.name}" already exists in this group. Please choose a different name.`);
+    while (true) {
+        const existing = await prisma.mealPeriod.findFirst({
+            where: {
+                roomId,
+                name: finalName,
+                ...(excludePeriodId && { id: { not: excludePeriodId } }),
+            },
+            select: { id: true }
+        });
+
+        if (!existing) {
+            data.name = finalName;
+            break;
+        }
+
+        counter++;
+        finalName = `${originalName} (${counter})`;
     }
 
     // Check for overlapping periods (only if endDate is provided)
@@ -226,7 +237,7 @@ export class PeriodService {
 
     // Send notifications to all members
     await Promise.all(
-      currentMembers.map((member) =>
+      currentMembers.map((member: any) =>
         createNotification({
           userId: member.userId,
           type: 'PERIOD_STARTED',
@@ -275,6 +286,20 @@ export class PeriodService {
       },
     });
 
+    // AUTO-OFF MONTHLY MODE:
+    // When a period ends, if the group was in MONTHLY mode, switch it back to CUSTOM.
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      select: { periodMode: true }
+    });
+
+    if (room?.periodMode === 'MONTHLY') {
+      await prisma.room.update({
+        where: { id: roomId },
+        data: { periodMode: 'CUSTOM' }
+      });
+    }
+
 
 
     // Send notifications to all members
@@ -287,7 +312,7 @@ export class PeriodService {
     });
 
     await Promise.all(
-      currentMembers.map((member) =>
+      currentMembers.map((member: any) =>
         createNotification({
           userId: member.userId,
           type: 'PERIOD_ENDED',
@@ -352,7 +377,7 @@ export class PeriodService {
     });
 
     await Promise.all(
-      currentMembers.map((member) =>
+      currentMembers.map((member: any) =>
         createNotification({
           userId: member.userId,
           type: 'PERIOD_LOCKED',
@@ -667,16 +692,19 @@ export class PeriodService {
       throw new Error('Period not found');
     }
 
+    // If it's active, we end it automatically before archiving
+    const archiveData: any = {
+        status: PeriodStatus.ARCHIVED,
+    };
+
     if (period.status === PeriodStatus.ACTIVE) {
-      throw new Error('Cannot archive an active period');
+        archiveData.endDate = new Date();
     }
 
     // Archive the period
     const updatedPeriod = await prisma.mealPeriod.update({
       where: { id: periodId },
-      data: {
-        status: PeriodStatus.ARCHIVED,
-      },
+      data: archiveData,
     });
 
     return updatedPeriod;

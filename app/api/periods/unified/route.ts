@@ -73,12 +73,12 @@ export async function GET(request: NextRequest) {
         }
 
         // Extract current period from the results (already fetched)
-        const currentPeriod = periods.find(p => p.status === 'ACTIVE') || null;
+        const currentPeriod = periods.find((p: any) => p.status === 'ACTIVE') || null;
 
         return NextResponse.json({
             periods,
             currentPeriod,
-            periodMode: member.room.periodMode || 'CUSTOM',
+            periodMode: member.room.periodMode || 'MONTHLY',
         }, {
             headers: {
                 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

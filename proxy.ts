@@ -21,10 +21,13 @@ const ratelimit = redis
         analytics: true,
         prefix: "ratelimit_auth",
       }),
-      // General API limit: 50 requests per 10s
+      // General API limit: 100 requests per 10s
       api: new Ratelimit({
         redis: redis,
-        limiter: Ratelimit.slidingWindow(50, "10 s"),
+        limiter: Ratelimit.slidingWindow(
+          process.env.NODE_ENV === "development" ? 1000 : 100, 
+          "10 s"
+        ),
         analytics: true,
         prefix: "ratelimit_api",
       }),
