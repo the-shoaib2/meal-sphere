@@ -55,7 +55,7 @@ export function PeriodManagement() {
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const currentUserId = session?.user?.id;
   const currentMember = currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId) : undefined;
-  const isPrivileged = ["SUPER_ADMIN", "ADMIN", "MODERATOR"].includes(currentMember?.role ?? "");
+  const isPrivileged = ["ADMIN", "MANAGER",  "MODERATOR"].includes(currentMember?.role ?? "");
 
   // Period mode management
   const { periodMode, isLoading: periodModeLoading, updatePeriodMode, isUpdating } = usePeriodMode(activeGroup?.id);

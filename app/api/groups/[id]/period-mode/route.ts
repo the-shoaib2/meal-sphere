@@ -81,7 +81,7 @@ export async function PATCH(
             },
         });
 
-        if (!member || !['ADMIN', 'MODERATOR', 'SUPER_ADMIN'].includes(member.role)) {
+        if (!member || !['ADMIN', 'MODERATOR', 'MANAGER'].includes(member.role)) {
             return NextResponse.json(
                 { error: 'Insufficient permissions. Only admins can change period mode.' },
                 { status: 403 }
