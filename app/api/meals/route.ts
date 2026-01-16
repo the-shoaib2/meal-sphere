@@ -3,7 +3,10 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/prisma"
 import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod } from "@/lib/period-utils"
-
+import { cacheGetOrSet } from "@/lib/cache-service"
+import { getMealsCacheKey, CACHE_TTL } from "@/lib/cache-keys"
+import { invalidateMealCache } from "@/lib/cache-invalidation"
+import { getMealsOptimized } from "@/lib/query-helpers"
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
@@ -38,17 +41,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
   }
 
-  // Build query filters
-  const dateFilter: any = {}
-
-  if (startDate) {
-    dateFilter.gte = new Date(startDate)
-  }
-
-  if (endDate) {
-    dateFilter.lte = new Date(endDate)
-  }
-
   try {
     // Get period-aware where clause
     const whereClause = await getPeriodAwareWhereClause(roomId, {
@@ -60,26 +52,42 @@ export async function GET(request: Request) {
       return NextResponse.json([])
     }
 
-    // Add date filter if provided
-    if (Object.keys(dateFilter).length > 0) {
-      whereClause.date = dateFilter
-    }
+    // Generate cache key
+    const periodId = whereClause.periodId as string | undefined
+    const cacheKey = getMealsCacheKey(roomId, periodId, startDate || undefined, endDate || undefined)
 
-    const meals = await prisma.meal.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
+    // Try to get from cache or fetch fresh data
+    const meals = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // Add date filter if provided
+        const dateFilter: any = {}
+        if (startDate) dateFilter.gte = new Date(startDate)
+        if (endDate) dateFilter.lte = new Date(endDate)
+
+        const finalWhere = { ...whereClause }
+        if (Object.keys(dateFilter).length > 0) {
+          finalWhere.date = dateFilter
+        }
+
+        return await prisma.meal.findMany({
+          where: finalWhere,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              },
+            },
           },
-        },
+          orderBy: {
+            date: "desc",
+          },
+        })
       },
-      orderBy: {
-        date: "desc",
-      },
-    })
+      { ttl: CACHE_TTL.MEALS_LIST }
+    )
 
     return NextResponse.json(meals, {
       headers: {
@@ -148,6 +156,9 @@ export async function POST(request: Request) {
         },
       })
 
+      // Invalidate cache
+      await invalidateMealCache(roomId, currentPeriod?.id)
+
       return NextResponse.json({ message: "Meal removed successfully" })
     } else {
       // Create new meal with period ID
@@ -161,6 +172,9 @@ export async function POST(request: Request) {
       const meal = await prisma.meal.create({
         data: mealData,
       })
+
+      // Invalidate cache
+      await invalidateMealCache(roomId, currentPeriod?.id)
 
       return NextResponse.json(meal)
     }

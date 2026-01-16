@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/prisma"
-
+import { cacheGetOrSet } from "@/lib/cache-service"
+import { getPaymentsCacheKey, CACHE_TTL } from "@/lib/cache-keys"
+import { invalidatePaymentCache } from "@/lib/cache-invalidation"
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
@@ -18,30 +20,44 @@ export async function GET(request: Request) {
   const roomId = searchParams.get("roomId")
 
   try {
-    const whereClause: any = {
-      userId: session.user.id,
-    }
+    // Generate cache key
+    const cacheKey = getPaymentsCacheKey(session.user.id, roomId || undefined)
 
-    if (roomId) {
-      whereClause.roomId = roomId
-    }
+    // Try to get from cache or fetch fresh data
+    const payments = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        const whereClause: any = {
+          userId: session.user.id,
+        }
 
-    const payments = await prisma.payment.findMany({
-      where: whereClause,
-      include: {
-        room: {
-          select: {
-            id: true,
-            name: true,
+        if (roomId) {
+          whereClause.roomId = roomId
+        }
+
+        return await prisma.payment.findMany({
+          where: whereClause,
+          include: {
+            room: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
-        },
+          orderBy: {
+            date: "desc",
+          },
+        })
       },
-      orderBy: {
-        date: "desc",
-      },
-    })
+      { ttl: CACHE_TTL.CALCULATIONS_ACTIVE }
+    )
 
-    return NextResponse.json(payments)
+    return NextResponse.json(payments, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=120, stale-while-revalidate=300'
+      }
+    })
   } catch (error) {
     console.error("Error fetching payments:", error)
     return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 })
@@ -89,6 +105,9 @@ export async function POST(request: Request) {
         status: "COMPLETED", // For simplicity, assuming payment is completed
       },
     })
+
+    // Invalidate cache
+    await invalidatePaymentCache(session.user.id, roomId)
 
     return NextResponse.json(payment)
   } catch (error) {

@@ -52,11 +52,7 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(notifications, {
-      headers: {
-        'Cache-Control': 'private, s-maxage=30, stale-while-revalidate=60'
-      }
-    })
+    return NextResponse.json(notifications)
   } catch (error) {
     console.error("Error fetching notifications:", error)
     return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 })

@@ -157,10 +157,6 @@ export async function GET(
       totalMembers: membership.room.members?.length || 0,
       groupId,
       groupName: membership.room.name,
-    }, {
-      headers: {
-        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=120'
-      }
     });
 
   } catch (error) {

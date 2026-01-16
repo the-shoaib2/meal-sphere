@@ -156,11 +156,7 @@ export async function GET(request: NextRequest) {
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 10);
 
-    return NextResponse.json(allActivities, {
-      headers: {
-        'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=300'
-      }
-    });
+    return NextResponse.json(allActivities);
   } catch (error) {
     console.error('Error fetching dashboard activities:', error);
     return NextResponse.json({ error: 'Failed to fetch dashboard activities' }, { status: 500 });

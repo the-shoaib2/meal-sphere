@@ -84,11 +84,7 @@ export async function GET(request: NextRequest) {
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    return NextResponse.json(chartData, {
-      headers: {
-        'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600'
-      }
-    });
+    return NextResponse.json(chartData);
   } catch (error) {
     console.error('Error fetching dashboard chart data:', error);
     return NextResponse.json({ error: 'Failed to fetch dashboard chart data' }, { status: 500 });

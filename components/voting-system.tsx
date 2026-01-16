@@ -2,39 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Check, Clock, Plus, Loader2, RotateCcw } from "lucide-react"
+import { Loader2, RotateCcw } from "lucide-react"
 import useVoting from "@/hooks/use-voting"
 import { useGroups } from "@/hooks/use-groups"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format, addDays, isAfter, isBefore, startOfDay } from "date-fns"
-import { TimePicker } from "@/components/ui/time-picker"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Role } from "@prisma/client"
 import CreateVoteDialog from "./voting/create-vote-dialog"
 import ActiveVoteCard from "./voting/active-vote-card"
 import PastVoteCard from "./voting/past-vote-card"
@@ -73,6 +46,24 @@ export default function VotingSystem() {
   const [endDate, setEndDate] = useState<Date>(() => addDays(startOfDay(new Date()), 1))
   const [endTimeStr, setEndTimeStr] = useState("")
   const [createVoteError, setCreateVoteError] = useState<string | null>(null)
+
+  // Ensure endDate is always at most 2 days after startDate
+  // IMPORTANT: This useEffect must be called before any conditional returns
+  useEffect(() => {
+    if (isAfter(endDate, addDays(startDate, 2))) {
+      setEndDate(addDays(startDate, 2))
+    }
+    if (isBefore(endDate, startDate)) {
+      setEndDate(startDate)
+    }
+  }, [startDate, endDate])
+
+  // Keep selectedRoom in sync with activeGroup
+  useEffect(() => {
+    if (activeGroup && selectedRoom !== activeGroup.id) {
+      setSelectedRoom(activeGroup.id)
+    }
+  }, [activeGroup, selectedRoom])
 
   // Check if user has no groups - show empty state
   if (groups.length === 0 && !initialLoading) {
@@ -176,11 +167,6 @@ export default function VotingSystem() {
     setSelectedCandidate("");
   };
 
-  // Keep selectedRoom in sync with activeGroup
-  if (activeGroup && selectedRoom !== activeGroup.id) {
-    setSelectedRoom(activeGroup.id)
-  }
-
   // Reset candidate selection when dialog opens
   const handleOpenChange = (open: boolean) => {
     setShowCreateDialog(open)
@@ -193,16 +179,6 @@ export default function VotingSystem() {
       setCreateVoteError(null)
     }
   }
-
-  // Ensure endDate is always at most 2 days after startDate
-  useEffect(() => {
-    if (isAfter(endDate, addDays(startDate, 2))) {
-      setEndDate(addDays(startDate, 2))
-    }
-    if (isBefore(endDate, startDate)) {
-      setEndDate(startDate)
-    }
-  }, [startDate, endDate])
 
   function getDefaultStartTimeStr() {
     const now = new Date();

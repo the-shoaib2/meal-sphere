@@ -84,12 +84,8 @@ export function usePeriods(includeArchived = false) {
 export function useCurrentPeriod() {
   const unified = useUnifiedPeriods(false);
 
-  // Side effect to update localStorage (preserved from original hook)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && unified.data?.currentPeriod && unified.data.currentPeriod.roomId) {
-      localStorage.setItem(`current-period-${unified.data.currentPeriod.roomId}`, JSON.stringify(unified.data.currentPeriod));
-    }
-  }, [unified.data?.currentPeriod]);
+
+
 
   return {
     ...unified,

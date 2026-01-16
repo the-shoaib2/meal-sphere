@@ -13,6 +13,8 @@ export const dynamic = 'force-dynamic';
 
 
 
+import getRedisClient from '@/lib/redis';
+
 const registerSchema = z.object({
   name: z.string().min(2).max(50),
   email: z.string().email(),
@@ -20,7 +22,6 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   captchaSessionId: z.string().min(1, 'CAPTCHA session ID is required'),
   captchaText: z.string().min(1, 'CAPTCHA text is required'),
-  storedCaptchaText: z.string().min(1, 'Stored CAPTCHA text is required')
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"]
@@ -46,15 +47,32 @@ export async function POST(request: Request) {
     // Validate request body
     const validatedData = registerSchema.parse(body);
 
-    // Validate CAPTCHA directly
-    const isValidCaptcha = validatedData.captchaText.toUpperCase() === validatedData.storedCaptchaText.toUpperCase();
+    const redis = getRedisClient();
+    if (!redis) {
+       return NextResponse.json({ message: "Service unavailable" }, { status: 503 });
+    }
 
-    if (!isValidCaptcha) {
-      return NextResponse.json(
-        { message: "Invalid CAPTCHA" },
+    // Verify CAPTCHA
+    const validCaptchaText = await redis.get(`captcha:${validatedData.captchaSessionId}`);
+    
+    if (!validCaptchaText) {
+       return NextResponse.json(
+        { message: "CAPTCHA expired or invalid. Please refresh." },
         { status: 400 }
       );
     }
+    
+    const isValidCaptcha = validatedData.captchaText.toUpperCase() === validCaptchaText.toUpperCase();
+
+    if (!isValidCaptcha) {
+      return NextResponse.json(
+        { message: "Incorrect CAPTCHA text" },
+        { status: 400 }
+      );
+    }
+    
+    // Invalidate CAPTCHA after use
+    await redis.del(`captcha:${validatedData.captchaSessionId}`);
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({

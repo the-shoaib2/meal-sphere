@@ -65,27 +65,15 @@ export async function GET(request: Request) {
       endDate = monthRange.endDate
     }
 
-    // Determine Cache Strategy
-    // If we are looking at a specific closed period (by ID or Date), we can cache longer.
-    // If we are looking at the ACTIVE period, we cache shorter (1-5 mins).
-    const isHistorical = !currentPeriod && (startDateParam || periodId);
-    const cacheControl = isHistorical
-      ? 'private, s-maxage=300, stale-while-revalidate=600'
-      : 'private, s-maxage=30, stale-while-revalidate=60';
-
     // If userId is provided, calculate for specific user
     if (userId) {
       const summary = await calculateUserMealSummary(userId, roomId, startDate, endDate, periodId)
-      return NextResponse.json(summary, {
-        headers: { 'Cache-Control': cacheControl }
-      })
+      return NextResponse.json(summary)
     }
     // Otherwise calculate for the entire room
     else {
       const summary = await calculateRoomMealSummary(roomId, startDate, endDate, periodId)
-      return NextResponse.json(summary, {
-        headers: { 'Cache-Control': cacheControl }
-      })
+      return NextResponse.json(summary)
     }
   } catch (error) {
     console.error("Error calculating meal summary:", error)

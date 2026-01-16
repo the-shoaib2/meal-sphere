@@ -119,10 +119,7 @@ export function useGroups(): UseGroupsReturn {
       // Always fetch from API on reload
       try {
         const { data } = await axios.get<Group[]>('/api/groups');
-        // Save to localStorage for future use
-        if (typeof window !== 'undefined' && data.length > 0) {
-          localStorage.setItem(`groups-${session.user.id}`, JSON.stringify(data));
-        }
+
         // Set the data in React Query cache for future use
         queryClient.setQueryData(['user-groups', session.user.id], data);
         return data;
@@ -278,15 +275,7 @@ export function useGroups(): UseGroupsReturn {
     onSuccess: (data: Group) => {
       // Optimistically add the new group to the cache
       queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => [data, ...old]);
-      // Also update localStorage
-      if (typeof window !== 'undefined' && session?.user?.id) {
-        const prev = localStorage.getItem(`groups-${session.user.id}`);
-        let groups: Group[] = [];
-        if (prev) {
-          try { groups = JSON.parse(prev); } catch { }
-        }
-        localStorage.setItem(`groups-${session.user.id}`, JSON.stringify([data, ...groups]));
-      }
+
       // Optionally, redirect to the new group page
       router.push(`/groups/${data.id}`);
       toast.success('Group created successfully');
@@ -316,10 +305,7 @@ export function useGroups(): UseGroupsReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group'] });
       queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      // Clear localStorage cache to force fresh data
-      if (typeof window !== 'undefined' && session?.user?.id) {
-        localStorage.removeItem(`groups-${session.user.id}`);
-      }
+
       toast.success('Successfully joined the group!');
     },
     onError: (error) => {
@@ -404,10 +390,7 @@ export function useGroups(): UseGroupsReturn {
       // Clear any join request status for this group
       queryClient.setQueryData(['join-request-status', groupId], null);
 
-      // Clear localStorage cache to force fresh data
-      if (typeof window !== 'undefined' && session?.user?.id) {
-        localStorage.removeItem(`groups-${session.user.id}`);
-      }
+
 
       toast.success('You have left the group successfully');
       router.push('/groups');
@@ -470,10 +453,7 @@ export function useGroups(): UseGroupsReturn {
     onSuccess: () => {
       // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      // Clear localStorage cache to force fresh data
-      if (typeof window !== 'undefined' && session?.user?.id) {
-        localStorage.removeItem(`groups-${session.user.id}`);
-      }
+
       toast.success('Group deleted successfully');
       router.push('/groups');
     },
