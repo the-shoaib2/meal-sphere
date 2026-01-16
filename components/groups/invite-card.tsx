@@ -18,7 +18,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Role } from "@prisma/client";
+import { GroupRole } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,7 +55,7 @@ interface GroupData {
 interface InviteTokenData {
   token: string;
   expiresAt: string | null;
-  role: Role;
+  role: GroupRole;
   inviteUrl: string;
 }
 
@@ -73,22 +73,22 @@ interface InviteStatus {
   };
 }
 
-const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
-  { value: Role.MEMBER, label: 'Member', description: 'Can view and participate in group activities' },
-  { value: Role.ADMIN, label: 'Admin', description: 'Full access to group settings and management' },
-  { value: Role.MODERATOR, label: 'Moderator', description: 'Can manage members and content' },
-  { value: Role.MANAGER, label: 'Manager', description: 'Can manage group operations' },
-  { value: Role.LEADER, label: 'Leader', description: 'Can lead group activities' },
-  { value: Role.MEAL_MANAGER, label: 'Meal Manager', description: 'Can manage group meals' },
-  { value: Role.ACCOUNTANT, label: 'Accountant', description: 'Can manage group finances' },
-  { value: Role.MARKET_MANAGER, label: 'Market Manager', description: 'Can manage group markets' }
+const ROLE_OPTIONS: { value: GroupRole; label: string; description: string }[] = [
+  { value: GroupRole.MEMBER, label: 'Member', description: 'Can view and participate in group activities' },
+  { value: GroupRole.ADMIN, label: 'Admin', description: 'Full access to group settings and management' },
+  { value: GroupRole.MODERATOR, label: 'Moderator', description: 'Can manage members and content' },
+  { value: GroupRole.MANAGER, label: 'Manager', description: 'Can manage group operations' },
+  { value: GroupRole.LEADER, label: 'Leader', description: 'Can lead group activities' },
+  { value: GroupRole.MEAL_MANAGER, label: 'Meal Manager', description: 'Can manage group meals' },
+  { value: GroupRole.ACCOUNTANT, label: 'Accountant', description: 'Can manage group finances' },
+  { value: GroupRole.MARKET_MANAGER, label: 'Market Manager', description: 'Can manage group markets' }
 ];
 
 const EXPIRATION_OPTIONS = [
-  { value: 1/24, label: '1 hour' },
-  { value: 3/24, label: '3 hours' },
-  { value: 6/24, label: '6 hours' },
-  { value: 12/24, label: '12 hours' },
+  { value: 1 / 24, label: '1 hour' },
+  { value: 3 / 24, label: '3 hours' },
+  { value: 6 / 24, label: '6 hours' },
+  { value: 12 / 24, label: '12 hours' },
   { value: 1, label: '1 day' },
   { value: 3, label: '3 days' },
   { value: 7, label: '7 days' },
@@ -99,7 +99,7 @@ const EXPIRATION_OPTIONS = [
 
 export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role>('MEMBER');
+  const [selectedRole, setSelectedRole] = useState<GroupRole>('MEMBER');
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [isGenerating, setIsGenerating] = useState(false);
   const [inviteToken, setInviteToken] = useState<InviteTokenData | null>(null);
@@ -115,9 +115,9 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   const { toast: uiToast } = useToast();
   const { useGroupDetails } = useGroups();
   const router = useRouter();
-  
+
   const { data: group, isLoading, error } = useGroupDetails(groupId);
-  
+
   useEffect(() => {
     if (error) {
       uiToast({
@@ -131,10 +131,10 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   const generateInviteToken = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Use the appropriate expiry time based on active tab
       const expiryTime = activeTab === 'custom' ? customExpiry : expiresInDays;
-      
+
       const response = await fetch(`/api/groups/${groupId}/invite`, {
         method: 'POST',
         headers: {
@@ -152,7 +152,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       }
 
       const data = await response.json();
-      
+
       if (!data.success || !data.data?.token) {
         throw new Error('Invalid response from server');
       }
@@ -212,7 +212,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
 
   const handleShare = async () => {
     if (!inviteToken?.inviteUrl) return;
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -270,22 +270,22 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send invitation');
       }
-      
+
       setInviteStatus({
         success: true,
         message: data.message,
         details: data.details || data.skipped
       });
-      
+
       uiToast({
         title: 'Success',
         description: data.message,
       });
-      
+
       // Only clear emails that were successfully sent
       if (data.invitations?.length > 0) {
-        setEmails(emails.filter(email => 
-          data.skipped?.existingMembers.includes(email) || 
+        setEmails(emails.filter(email =>
+          data.skipped?.existingMembers.includes(email) ||
           data.skipped?.pendingInvitations.includes(email)
         ));
       }
@@ -306,19 +306,19 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   if (isLoading || !group) {
     return (
       <div className="space-y-4 p-4">
-          <Skeleton className="h-10 w-[120px]" />
+        <Skeleton className="h-10 w-[120px]" />
       </div>
     );
   }
 
   const { name, isPrivate, memberCount, maxMembers } = group;
   const isGroupFull = maxMembers ? memberCount >= maxMembers : false;
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className={className}
           disabled={isGroupFull}
         >
@@ -341,7 +341,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
             <TabsTrigger value="custom" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Custom Invite</TabsTrigger>
             <TabsTrigger value="email" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Email Invite</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="link" className="space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
               <div className="grid flex-1 gap-1 w-full">
@@ -421,10 +421,10 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   {loading ? (
                     <Skeleton className="h-[120px] w-[120px] rounded-lg" />
                   ) : inviteToken ? (
-                    <QRCodeSVG 
-                      value={inviteToken.inviteUrl} 
-                      size={120} 
-                      level="H" 
+                    <QRCodeSVG
+                      value={inviteToken.inviteUrl}
+                      size={120}
+                      level="H"
                       includeMargin={false}
                       className="p-1 bg-white rounded-lg"
                     />
@@ -504,7 +504,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor="custom-role">Default Role</Label>
-                  <Select value={selectedRole} onValueChange={(value: Role) => setSelectedRole(value)}>
+                  <Select value={selectedRole} onValueChange={(value: GroupRole) => setSelectedRole(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
@@ -574,7 +574,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                         <div>
                           <span className="text-sm font-medium">Expires: </span>
                           <span className="text-sm">
-                            {inviteToken.expiresAt 
+                            {inviteToken.expiresAt
                               ? new Date(inviteToken.expiresAt).toLocaleString()
                               : 'Never expires'
                             }
@@ -666,18 +666,18 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
           </TabsContent>
 
           <TabsContent value="email" className="space-y-4">
-          <form onSubmit={handleGenerateInvite} className="space-y-4">
-            <div className="space-y-2">
+            <form onSubmit={handleGenerateInvite} className="space-y-4">
+              <div className="space-y-2">
                 <Label htmlFor="email">Email Addresses (up to 10)</Label>
                 <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                id="email"
-                type="email"
+                  <Input
+                    id="email"
+                    type="email"
                     value={currentEmail}
                     onChange={(e) => setCurrentEmail(e.target.value)}
-                placeholder="Enter email address"
-                disabled={isGenerating}
-              />
+                    placeholder="Enter email address"
+                    disabled={isGenerating}
+                  />
                   <Button
                     type="button"
                     onClick={handleAddEmail}
@@ -686,21 +686,20 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                   >
                     Add
                   </Button>
-            </div>
+                </div>
                 {emails.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {emails.map((email) => {
                       const isPending = inviteStatus?.details?.pendingInvitations.includes(email);
                       const isMember = inviteStatus?.details?.existingMembers.includes(email);
-                      
+
                       return (
                         <Badge
                           key={email}
                           variant={isPending || isMember ? "outline" : "secondary"}
-                          className={`flex items-center gap-1 px-3 py-1.5 text-xs ${
-                            isPending ? "border-amber-500 text-amber-500" :
+                          className={`flex items-center gap-1 px-3 py-1.5 text-xs ${isPending ? "border-amber-500 text-amber-500" :
                             isMember ? "border-green-500 text-green-500" : ""
-                          }`}
+                            }`}
                         >
                           {isPending ? (
                             <AlertCircle className="h-3 w-3" />
@@ -716,7 +715,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveEmail(email)}
-                disabled={isGenerating}
+                              disabled={isGenerating}
                               className="h-4 w-4 p-0 hover:bg-transparent"
                             >
                               <X className="h-3 w-3" />
@@ -735,11 +734,10 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
               </div>
 
               {inviteStatus && (
-                <div className={`p-3 rounded-md text-sm ${
-                  inviteStatus.success 
-                    ? "bg-green-50 dark:bg-green-900/20" 
-                    : "bg-amber-50 dark:bg-amber-900/20"
-                }`}>
+                <div className={`p-3 rounded-md text-sm ${inviteStatus.success
+                  ? "bg-green-50 dark:bg-green-900/20"
+                  : "bg-amber-50 dark:bg-amber-900/20"
+                  }`}>
                   <div className="flex items-start">
                     {inviteStatus.success ? (
                       <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -747,11 +745,10 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                       <AlertCircle className="h-4 w-4 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
                     )}
                     <div>
-                      <p className={`font-medium ${
-                        inviteStatus.success 
-                          ? "text-green-800 dark:text-green-200" 
-                          : "text-amber-800 dark:text-amber-200"
-                      }`}>
+                      <p className={`font-medium ${inviteStatus.success
+                        ? "text-green-800 dark:text-green-200"
+                        : "text-amber-800 dark:text-amber-200"
+                        }`}>
                         {inviteStatus.message}
                       </p>
                       {inviteStatus.details && (
@@ -773,9 +770,9 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isGenerating || emails.length === 0}
               >
                 {isGenerating ? (

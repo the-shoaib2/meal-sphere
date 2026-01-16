@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Role } from '@prisma/client';
+import { GroupRole } from '@prisma/client';
 import { Shield, UserCog, Users, ChefHat, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -21,17 +21,17 @@ interface ChangeRoleDialogProps {
     user: {
       name: string;
     };
-    role: Role;
+    role: GroupRole;
   } | null;
   groupId: string;
   onSuccess: () => void;
 }
 
 const ROLE_OPTIONS = [
-  { role: Role.ADMIN, label: 'Admin', icon: Shield },
-  { role: Role.MODERATOR, label: 'Moderator', icon: UserCog },
-  { role: Role.MEMBER, label: 'Member', icon: Users },
-  { role: Role.MEAL_MANAGER, label: 'Meal Manager', icon: ChefHat },
+  { role: GroupRole.ADMIN, label: 'Admin', icon: Shield },
+  { role: GroupRole.MODERATOR, label: 'Moderator', icon: UserCog },
+  { role: GroupRole.MEMBER, label: 'Member', icon: Users },
+  { role: GroupRole.MEAL_MANAGER, label: 'Meal Manager', icon: ChefHat },
 ];
 
 export function ChangeRoleDialog({
@@ -43,9 +43,9 @@ export function ChangeRoleDialog({
 }: ChangeRoleDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingRole, setLoadingRole] = useState<Role | null>(null);
+  const [loadingRole, setLoadingRole] = useState<GroupRole | null>(null);
 
-  const handleRoleChange = async (newRole: Role) => {
+  const handleRoleChange = async (newRole: GroupRole) => {
     if (!member) return;
     setIsLoading(true);
     setLoadingRole(newRole);
