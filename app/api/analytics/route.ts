@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { generateMealCountData, generateExpenseData, generateMealRateTrendData, generateMonthlyExpenseData } from '@/lib/utils/chart-utils';
 import { getPeriodAwareWhereClause, validateActivePeriod } from '@/lib/utils/period-utils';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { getAnalyticsCacheKey, CACHE_TTL } from '@/lib/cache/cache-keys';
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -21,9 +23,34 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get('groupId');
 
+    // Cache key based on user and group
+    const cacheKey = getAnalyticsCacheKey(groupId || 'all', session.user.id);
+
+    // Wrap entire analytics logic in cache
+    const analyticsData = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        return await fetchAnalyticsData(session.user.id, groupId);
+      },
+      { ttl: CACHE_TTL.ANALYTICS } // 5 minutes
+    );
+
+    return NextResponse.json(analyticsData);
+  } catch (error) {
+    console.error('Error in analytics API:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch analytics data' },
+      { status: 500 }
+    );
+  }
+}
+
+// Extract analytics logic into separate function
+async function fetchAnalyticsData(userId: string, groupId: string | null) {
+
     // Get user's room memberships.
     const memberships = await prisma.roomMember.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       select: { roomId: true }
     });
 
@@ -193,7 +220,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({
+    return {
       meals,
       expenses,
       shoppingItems,
@@ -203,14 +230,5 @@ export async function GET(request: NextRequest) {
       monthlyExpenses,
       mealRateTrend,
       roomStats,
-    });
-
-  } catch (error) {
-    console.error('Analytics API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+    };
 }
-

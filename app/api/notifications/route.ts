@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/services/prisma"
 import { NotificationType } from '@prisma/client'
+import { cacheGetOrSet } from '@/lib/cache/cache-service'
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -17,40 +18,47 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Cache key for user notifications
+    const cacheKey = `notifications:${session.user.id}:list`;
 
-    // Find notifications for the user
-    // Optimization: Select only necessary fields directly from DB
-    const notifications = await prisma.notification.findMany({
-      where: {
-        userId: session.user.id,
-        type: {
-          in: [
-            NotificationType.MEMBER_ADDED,
-            NotificationType.MEMBER_REMOVED,
-            NotificationType.MEAL_CREATED,
-            NotificationType.MEAL_UPDATED,
-            NotificationType.MEAL_DELETED,
-            NotificationType.PAYMENT_CREATED,
-            NotificationType.PAYMENT_UPDATED,
-            NotificationType.PAYMENT_DELETED,
-            NotificationType.JOIN_REQUEST_APPROVED,
-            NotificationType.JOIN_REQUEST_REJECTED
-          ]
-        }
+    const notifications = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // Find notifications for the user
+        return await prisma.notification.findMany({
+          where: {
+            userId: session.user.id,
+            type: {
+              in: [
+                NotificationType.MEMBER_ADDED,
+                NotificationType.MEMBER_REMOVED,
+                NotificationType.MEAL_CREATED,
+                NotificationType.MEAL_UPDATED,
+                NotificationType.MEAL_DELETED,
+                NotificationType.PAYMENT_CREATED,
+                NotificationType.PAYMENT_UPDATED,
+                NotificationType.PAYMENT_DELETED,
+                NotificationType.JOIN_REQUEST_APPROVED,
+                NotificationType.JOIN_REQUEST_REJECTED
+              ]
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 50,
+          select: {
+            id: true,
+            type: true,
+            message: true,
+            read: true,
+            createdAt: true,
+            userId: true
+          }
+        });
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50,
-      select: {
-        id: true,
-        type: true,
-        message: true,
-        read: true,
-        createdAt: true,
-        userId: true
-      }
-    })
+      { ttl: 30 } // 30 seconds
+    );
 
     return NextResponse.json(notifications)
   } catch (error) {

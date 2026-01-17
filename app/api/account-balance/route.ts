@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
 import { hasBalancePrivilege, canViewUserBalance } from '@/lib/auth/balance-permissions';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
@@ -218,34 +220,43 @@ export async function GET(request: NextRequest) {
       where: { userId: session.user.id, roomId },
     });
 
-    const hasPrivilege = hasBalancePrivilege(member?.role);
-
     if (!member) {
       return NextResponse.json({ error: 'You are not a member of this room' }, { status: 403 });
     }
 
-    // Fetch current period ONCE for the entire request
-    const currentPeriod = await getCurrentPeriod(roomId);
-    const periodId = currentPeriod?.id;
-
     if (getAll) {
-      if (!hasPrivilege) {
+      // Quick permission check first
+      const member = await prisma.roomMember.findFirst({
+        where: { userId: session.user.id, roomId },
+        select: { role: true }
+      });
+
+      if (!member || !hasBalancePrivilege(member.role)) {
         return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
       }
 
-      const members = await prisma.roomMember.findMany({
-        where: { roomId },
-        include: { user: { select: { id: true, name: true, image: true, email: true } } },
-      });
+      // Cache key without periodId to avoid expensive lookup before cache check
+      const cacheKey = `balance:all:${roomId}:user=${session.user.id}:details=${includeDetails}`;
 
-      // 1. Fetch ALL transactions for the room/period at once, grouped by targetUserId
-      const transactionsGrouped = await prisma.accountTransaction.groupBy({
-        by: ['targetUserId'],
-        where: {
-          roomId,
-          periodId: periodId,
-        },
-        _sum: {
+      const balanceData = await cacheGetOrSet(
+        cacheKey,
+        async () => {
+          // Now do expensive operations inside cache
+          const currentPeriod = await getCurrentPeriod(roomId);
+          const periodId = currentPeriod?.id;
+          const members = await prisma.roomMember.findMany({
+            where: { roomId },
+            include: { user: { select: { id: true, name: true, image: true, email: true } } },
+          });
+
+          // 1. Fetch ALL transactions for the room/period at once, grouped by targetUserId
+          const transactionsGrouped = await prisma.accountTransaction.groupBy({
+            by: ['targetUserId'],
+            where: {
+              roomId,
+              periodId: periodId,
+            },
+            _sum: {
           amount: true,
         },
       });
@@ -290,7 +301,19 @@ export async function GET(request: NextRequest) {
           const availableBalance = basicBalance - totalSpent;
 
           return {
-            ...m,
+            id: m.id,
+            userId: m.userId,
+            roomId: m.roomId,
+            role: m.role,
+            isCurrent: m.isCurrent,
+            isBanned: m.isBanned,
+            joinedAt: m.joinedAt ? new Date(m.joinedAt).toISOString() : null,
+            user: {
+              id: m.user.id,
+              name: m.user.name,
+              email: m.user.email,
+              image: m.user.image,
+            },
             balance: basicBalance,
             availableBalance,
             totalSpent,
@@ -300,29 +323,44 @@ export async function GET(request: NextRequest) {
         }
 
         return {
-          ...m,
+          id: m.id,
+          userId: m.userId,
+          roomId: m.roomId,
+          role: m.role,
+          isCurrent: m.isCurrent,
+          isBanned: m.isBanned,
+          joinedAt: m.joinedAt ? new Date(m.joinedAt).toISOString() : null,
+          user: {
+            id: m.user.id,
+            name: m.user.name,
+            email: m.user.email,
+            image: m.user.image,
+          },
           balance: basicBalance,
         };
       });
 
-      const response: any = {
+      return {
         members: membersWithBalances,
-        groupTotalBalance,
-        totalExpenses,
-        mealRate,
-        totalMeals,
-        netGroupBalance: groupTotalBalance - totalExpenses,
+        groupTotalBalance: Number(groupTotalBalance) || 0,
+        totalExpenses: Number(totalExpenses) || 0,
+        mealRate: Number(mealRate) || 0,
+        totalMeals: Number(totalMeals) || 0,
+        netGroupBalance: Number(groupTotalBalance - totalExpenses) || 0,
         currentPeriod: currentPeriod ? {
           id: currentPeriod.id,
           name: currentPeriod.name,
-          startDate: currentPeriod.startDate,
-          endDate: currentPeriod.endDate,
+          startDate: currentPeriod.startDate ? new Date(currentPeriod.startDate).toISOString() : null,
+          endDate: currentPeriod.endDate ? new Date(currentPeriod.endDate).toISOString() : null,
           status: currentPeriod.status,
           isLocked: currentPeriod.isLocked,
         } : null,
       };
+    },
+    { ttl: CACHE_TTL.CALCULATIONS_ACTIVE } // 3 minutes
+  );
 
-      return NextResponse.json(response, {
+      return NextResponse.json(balanceData, {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
           'Pragma': 'no-cache',
@@ -331,6 +369,10 @@ export async function GET(request: NextRequest) {
         },
       });
     }
+
+    // For single user balance (non-cached path), get period now
+    const currentPeriod = await getCurrentPeriod(roomId);
+    const periodId = currentPeriod?.id;
 
     const targetUserId = userId || session.user.id;
     

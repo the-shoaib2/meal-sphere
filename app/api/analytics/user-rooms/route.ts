@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -15,56 +17,61 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's room memberships
-    // Avoid 'include: { room: true }' because it crashes if the relation is broken in DB.
-    const memberships = await prisma.roomMember.findMany({
-      where: { userId: session.user.id },
-    });
+    // Cache key based on user ID
+    const cacheKey = `analytics:user-rooms:${session.user.id}`;
 
-    // Extract Room IDs
-    const memberRoomIds = memberships.map(m => m.roomId);
+    const uniqueRooms = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // Get user's room memberships
+        const memberships = await prisma.roomMember.findMany({
+          where: { userId: session.user.id },
+        });
 
-    if (memberRoomIds.length === 0) {
-      return NextResponse.json([]);
-    }
+        // Extract Room IDs
+        const memberRoomIds = memberships.map(m => m.roomId);
 
-    // Fetch existing rooms manually
-    const validRooms = await prisma.room.findMany({
-      where: {
-        id: { in: memberRoomIds }
+        if (memberRoomIds.length === 0) {
+          return [];
+        }
+
+        // Fetch existing rooms manually
+        const validRooms = await prisma.room.findMany({
+          where: {
+            id: { in: memberRoomIds }
+          },
+          select: {
+            id: true,
+            name: true
+          }
+        });
+
+        // Get room member counts
+        const validRoomIds = validRooms.map(r => r.id);
+
+        const roomMembers = await prisma.roomMember.findMany({
+          where: {
+            roomId: { in: validRoomIds },
+          },
+          select: {
+            roomId: true,
+          },
+        });
+
+        const memberCounts = roomMembers.reduce((acc, member) => {
+          acc[member.roomId] = (acc[member.roomId] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Map rooms to response format
+        return validRooms.map(room => ({
+          id: room.id,
+          name: room.name || 'Unknown Room',
+          memberCount: memberCounts[room.id] || 0,
+        }));
       },
-      select: {
-        id: true,
-        name: true
-      }
-    });
-
-    // Get room member counts (safe query, no includes needed if we just group by scalar)
-    // Actually we need to filter roomIds for member counts too
-    const validRoomIds = validRooms.map(r => r.id);
-
-    const roomMembers = await prisma.roomMember.findMany({
-      where: {
-        roomId: { in: validRoomIds },
-      },
-      select: {
-        roomId: true,
-      },
-    });
-
-    const memberCounts = roomMembers.reduce((acc, member) => {
-      acc[member.roomId] = (acc[member.roomId] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Map rooms to response format
-    const uniqueRooms = validRooms.map(room => {
-      return {
-        id: room.id,
-        name: room.name || 'Unknown Room',
-        memberCount: memberCounts[room.id] || 0,
-      };
-    });
+      { ttl: CACHE_TTL.ANALYTICS } // 5 minutes
+    );
 
     return NextResponse.json(uniqueRooms);
 
