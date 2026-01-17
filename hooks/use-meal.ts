@@ -292,6 +292,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
       toast.success('Meal settings updated successfully');
     },
     onError: (error: any) => {
@@ -307,6 +308,7 @@ export function useMeal(roomId?: string): UseMealReturn {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
       toast.success('Auto meal settings updated successfully');
     },
     onError: (error: any) => {

@@ -21,10 +21,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { 
-  capitalizeDeviceType, 
-  formatLocation, 
-  formatIpAddress, 
+import {
+  capitalizeDeviceType,
+  formatLocation,
+  formatIpAddress,
   getBrowserInfo,
   getCurrentSessionTokenFromBrowser,
   isCurrentSession
@@ -123,10 +123,10 @@ export function SecurityForm({ user }: SecurityFormProps) {
       const response = await fetch('/api/auth/sessions')
       if (response.ok) {
         const data = await response.json()
-        
+
         // Get current session token using the utility function
         const currentSessionToken = getCurrentSessionTokenFromBrowser()
-        
+
         // Mark current session
         const sessionsWithCurrent = data.map((session: Session) => ({
           ...session,
@@ -160,7 +160,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
       const confirmed = window.confirm(
         `Are you sure you want to revoke ${selectedSessions.length} selected sessions?`
       )
-      
+
       if (!confirmed) {
         return
       }
@@ -183,7 +183,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
 
       const result = await response.json()
       toast.success(result.message || 'Selected sessions have been revoked')
-      
+
       // Check if logout is required
       if (result.logoutRequired) {
         toast.success('Your current session was revoked. You will be logged out.')
@@ -195,7 +195,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
         }, 2000)
         return // Don't refresh sessions or clear selection since we're logging out
       }
-      
+
       setSelectedSessions([])
       // Refresh sessions list only if not logging out
       await fetchSessions()
@@ -238,7 +238,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
 
       const result = await response.json()
       toast.success(result.message || 'All sessions have been revoked')
-      
+
       // For revoke all, always logout since current session is included
       toast.success('All sessions have been revoked. You will be logged out.')
       // Call logout API to properly clear session
@@ -247,7 +247,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
       setTimeout(() => {
         window.location.href = '/login'
       }, 2000)
-      
+
     } catch (error: any) {
       console.error('Error revoking all sessions:', error)
       toast.error(error.message || 'Failed to revoke all sessions')
@@ -427,7 +427,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                 {sessions.length} active sessions
               </Badge>
             </div>
-            
+
             {/* Mobile Card View */}
             {isMobile && (
               <div className="space-y-3">
@@ -447,13 +447,12 @@ export function SecurityForm({ user }: SecurityFormProps) {
                   ))
                 ) : (
                   sessions.map((session) => (
-                    <div 
-                      key={session.id} 
-                      className={`p-4 border rounded-lg space-y-3 ${
-                        session.isCurrent 
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm' 
+                    <div
+                      key={session.id}
+                      className={`p-4 border rounded-lg space-y-3 ${session.isCurrent
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
                           : ''
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -471,9 +470,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                             disabled={session.isCurrent}
                           />
                           <div className="flex items-center gap-2">
-                            <span className={`text-sm font-medium truncate max-w-[120px] ${
-                              session.isCurrent ? 'text-blue-900' : ''
-                            }`}>
+                            <span className={`text-sm font-medium truncate max-w-[120px] ${session.isCurrent ? 'text-blue-900' : ''
+                              }`}>
                               {session.deviceModel || capitalizeDeviceType(session.deviceType) || 'Unknown Device'}
                             </span>
                             {session.isCurrent && (
@@ -485,7 +483,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground">
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">Location:</span>
@@ -504,8 +502,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                         <div className="space-y-1">
                           <span className="font-medium text-foreground">Last Active:</span>
                           <div className="truncate">
-                            {session.updatedAt ? new Date(session.updatedAt).toLocaleString() : 
-                             new Date(session.expires).toLocaleDateString()}
+                            {session.updatedAt ? new Date(session.updatedAt).toLocaleString() :
+                              new Date(session.expires).toLocaleDateString()}
                           </div>
                         </div>
                         {session.deviceModel && (
@@ -531,7 +529,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                           </div>
                         )}
                       </div>
-                      
+
                       {session.isCurrent && (
                         <div className="pt-2 border-t border-blue-200">
                           <div className="flex items-center gap-2 text-xs text-blue-700">
@@ -610,8 +608,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                               </TableCell>
                               <TableCell>
                                 <div className="max-w-[140px] truncate" title={session.updatedAt ? new Date(session.updatedAt).toLocaleString() : new Date(session.expires).toLocaleString()}>
-                                  {session.updatedAt ? new Date(session.updatedAt).toLocaleString() : 
-                                   new Date(session.expires).toLocaleString()}
+                                  {session.updatedAt ? new Date(session.updatedAt).toLocaleString() :
+                                    new Date(session.expires).toLocaleString()}
                                 </div>
                               </TableCell>
                               <TableCell>

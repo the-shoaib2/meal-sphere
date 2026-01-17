@@ -69,9 +69,9 @@ export default function GuestMealForm({ roomId, onSuccess }: GuestMealFormProps)
 
   if (!isGuestMealsAllowed) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Guest meals are not allowed in this group.</p>
-      </div>
+      <Badge variant="outline" className="border-dashed text-red-500 bg-red-50 font-normal">
+        Guest meals disabled
+      </Badge>
     )
   }
 

@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "react-hot-toast"
-import { useLanguage } from "@/contexts/language-context"
 
 const fineSettingsFormSchema = z.object({
   roomId: z.string(),
@@ -32,7 +31,6 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
-  const { t } = useLanguage()
 
   const form = useForm<FineSettingsFormValues>({
     resolver: zodResolver(fineSettingsFormSchema),
@@ -91,18 +89,18 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("market.fineAmount")}</CardTitle>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">Fine Settings</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="roomId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("meals.room")}</FormLabel>
+                  <FormLabel>Room</FormLabel>
                   <Select
                     onValueChange={(value) => {
                       field.onChange(value)
@@ -132,11 +130,13 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
               name="fineAmount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("market.fineAmount")}</FormLabel>
+                  <FormLabel>Fine Amount</FormLabel>
                   <FormControl>
                     <Input type="number" min={0} step={0.01} {...field} />
                   </FormControl>
-                  <FormDescription>The amount to fine members who miss their market duty.</FormDescription>
+                  <FormDescription className="text-xs">
+                    Amount to fine members who miss market duty
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -145,10 +145,12 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
               control={form.control}
               name="fineEnabled"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">{t("market.enableFine")}</FormLabel>
-                    <FormDescription>Enable or disable fines for missed market duties.</FormDescription>
+                    <FormLabel className="text-sm">Enable Fine</FormLabel>
+                    <FormDescription className="text-xs">
+                      Enable or disable fines for missed duties
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -156,8 +158,8 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : t("button.save")}
+            <Button type="submit" disabled={isLoading} size="sm">
+              {isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </form>
         </Form>

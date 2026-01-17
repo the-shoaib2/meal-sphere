@@ -14,7 +14,7 @@ interface AutoMealSettingsDialogProps {
 
 const AutoMealSettingsDialog: React.FC<AutoMealSettingsDialogProps> = ({ open, onOpenChange, autoMealSettings, updateAutoMealSettings }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-[500px] rounded-lg">
+    <DialogContent className="sm:max-w-[350px]">
       <DialogHeader>
         <DialogTitle>Auto Meal Settings</DialogTitle>
         <DialogDescription>
@@ -26,9 +26,9 @@ const AutoMealSettingsDialog: React.FC<AutoMealSettingsDialogProps> = ({ open, o
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <Label>Enable Auto Meals</Label>
-            <p className="text-sm text-muted-foreground">
+            {/* <p className="text-sm text-muted-foreground">
               Automatically add meals based on your schedule
-            </p>
+            </p> */}
           </div>
           <Switch
             checked={autoMealSettings?.isEnabled || false}
@@ -38,8 +38,8 @@ const AutoMealSettingsDialog: React.FC<AutoMealSettingsDialogProps> = ({ open, o
         <Separator />
         {autoMealSettings?.isEnabled && (
           <div className="space-y-3">
-            <Label>Meal Types</Label>
-            <div className="space-y-2">
+            <Label className="text-muted-foreground">Meal Types</Label>
+            <div className="pt-2 space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm">Breakfast</Label>
                 <Switch

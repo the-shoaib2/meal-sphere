@@ -159,7 +159,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
           Manage meals for {groupName || "your group"}
           {userRole && (
             <span className="ml-2">
-              • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs">{userRole}</Badge>
+              • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs bg-blue-600">{userRole}</Badge>
             </span>
           )}
           {currentPeriod && (
@@ -436,12 +436,12 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             </Card>
           </div>
 
-          {/* User Meal Summary */}
+          {/* User Meal Summary
           <MealSummary
             selectedDate={selectedDate}
             useMealCount={useMealCount}
 
-          />
+          /> */}
         </TabsContent>
 
         {/* Meal List */}

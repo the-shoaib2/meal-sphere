@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "react-hot-toast"
 import { useProfileImage } from "@/hooks/use-profile-image"
+import { Pencil, X, Check } from "lucide-react"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -33,10 +34,10 @@ interface ProfileFormProps {
 export function ProfileForm({ user }: ProfileFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const { image, updateImage, getInitials, isLoaded } = useProfileImage({
     initialImage: user.image,
     onImageUpdate: async (imageUrl) => {
-      // Update the form value when image changes
       form.setValue("image", imageUrl)
     }
   })
@@ -67,6 +68,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
       }
 
       toast.success("Profile updated successfully")
+      setIsEditing(false)
       router.refresh()
     } catch (error) {
       console.error(error)
@@ -76,14 +78,63 @@ export function ProfileForm({ user }: ProfileFormProps) {
     }
   }
 
+  const handleCancel = () => {
+    form.reset({
+      name: user.name || "",
+      email: user.email || "",
+      image: user.image || "",
+    })
+    updateImage(user.image || "")
+    setIsEditing(false)
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Profile Information</CardTitle>
-        <CardDescription className="text-sm">Update your profile information and email address.</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg">Profile Information</CardTitle>
+            <CardDescription className="text-sm">Your personal information</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            {!isEditing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={isLoading}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={form.handleSubmit(onSubmit)}
+                  disabled={isLoading}
+                  className="gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  {isLoading ? "Saving..." : "Save"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-3 mb-4">
+      <CardContent className="space-y-4">
+        <div className="flex items-center space-x-3">
           <Avatar className="h-16 w-16">
             {isLoaded && image ? (
               <AvatarImage src={image} alt={user.name || "User"} />
@@ -97,7 +148,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
           </div>
         </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -105,7 +156,12 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your name" {...field} />
+                    <Input
+                      placeholder="Your name"
+                      {...field}
+                      disabled={!isEditing}
+                      className={!isEditing ? "bg-muted" : ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,9 +174,18 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your email" {...field} />
+                    <Input
+                      placeholder="Your email"
+                      {...field}
+                      disabled={!isEditing}
+                      className={!isEditing ? "bg-muted" : ""}
+                    />
                   </FormControl>
-                  <FormDescription className="text-xs">Changing your email will require verification.</FormDescription>
+                  {isEditing && (
+                    <FormDescription className="text-xs">
+                      Changing your email will require verification.
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -132,12 +197,16 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>Profile Image URL</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="https://example.com/image.jpg" 
+                    <Input
+                      placeholder="https://example.com/image.jpg"
                       {...field}
+                      disabled={!isEditing}
+                      className={!isEditing ? "bg-muted" : ""}
                       onChange={(e) => {
                         field.onChange(e)
-                        updateImage(e.target.value)
+                        if (isEditing) {
+                          updateImage(e.target.value)
+                        }
                       }}
                     />
                   </FormControl>
@@ -145,9 +214,6 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isLoading} size="sm">
-              {isLoading ? "Saving..." : "Save Changes"}
-            </Button>
           </form>
         </Form>
       </CardContent>
