@@ -41,6 +41,7 @@ interface ActiveVoteCardProps {
   isSubmitting: boolean;
   hasVoted: (vote: ActiveVote) => boolean;
   isAdmin?: boolean;
+  currentUserId?: string;
   refreshVotes?: () => void;
   candidateOptions: Candidate[];
   voteTypeOptions: { value: string; label: string; backend: string }[];
@@ -59,6 +60,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
   isSubmitting,
   hasVoted,
   isAdmin = false,
+  currentUserId,
   refreshVotes,
   candidateOptions,
   voteTypeOptions,
@@ -94,13 +96,13 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
       const end = new Date(endDate);
       const now = new Date();
       const diff = end.getTime() - now.getTime();
-      
+
       if (diff <= 0) return 'Ended';
-      
+
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      
+
       if (days > 0) return `${days}d ${hours}h left`;
       if (hours > 0) return `${hours}h ${minutes}m left`;
       return `${minutes}m left`;
@@ -184,7 +186,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
               <Clock className="mr-1 h-3 w-3" />
               {isExpiringSoon(vote.endDate) ? "Expiring Soon" : "Active"}
             </Badge>
-            {isAdmin && (
+            {(isAdmin || vote.userId === currentUserId) && (
               <div className="z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -245,9 +247,8 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
             </div>
           </div>
           {timeLeft && (
-            <div className={`text-xs font-medium flex items-center gap-1 ${
-              isExpiringSoon(vote.endDate) ? 'text-orange-600' : 'text-primary'
-            }`}>
+            <div className={`text-xs font-medium flex items-center gap-1 ${isExpiringSoon(vote.endDate) ? 'text-orange-600' : 'text-primary'
+              }`}>
               <Clock className="h-3 w-3" />
               {timeLeft}
               {isExpiringSoon(vote.endDate) && (
@@ -296,9 +297,9 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
                       </div>
                       {votesForCandidate > 0 && (
                         <div className="mt-1">
-                          <VoterStack 
-                            voters={votersForCandidate} 
-                            size="sm" 
+                          <VoterStack
+                            voters={votersForCandidate}
+                            size="sm"
                             maxVisible={3}
                           />
                         </div>

@@ -28,11 +28,7 @@ export function GroupSwitcher() {
   const { startLoading } = useLoading()
   const hasGroups = groups.length > 0
 
-  React.useEffect(() => {
-    if (groups.length > 0 && !activeGroup) {
-      setActiveGroup(groups[0])
-    }
-  }, [groups, activeGroup, setActiveGroup])
+
 
   const handleGroupSelect = (group: Group) => {
     setActiveGroup(group)

@@ -2,17 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
+import { hasBalancePrivilege, canModifyTransactions, canDeleteTransactions } from '@/lib/auth/balance-permissions';
 
-const PRIVILEGED_ROLES = [
-  'ADMIN',
-  'ACCOUNTANT',
-];
-
-function isPrivileged(role?: string) {
-  return !!role && PRIVILEGED_ROLES.includes(role);
-}
-
-async function checkPrivileges(userId: string, roomId: string) {
+async function checkEditPrivileges(userId: string, roomId: string) {
   const userInRoom = await prisma.roomMember.findFirst({
     where: { userId, roomId },
     select: { role: true },
@@ -22,8 +14,23 @@ async function checkPrivileges(userId: string, roomId: string) {
     throw new Error('Not a member of this room');
   }
 
-  if (!isPrivileged(userInRoom.role)) {
+  if (!canModifyTransactions(userInRoom.role)) {
     throw new Error('Insufficient permissions');
+  }
+}
+
+async function checkDeletePrivileges(userId: string, roomId: string) {
+  const userInRoom = await prisma.roomMember.findFirst({
+    where: { userId, roomId },
+    select: { role: true },
+  });
+
+  if (!userInRoom) {
+    throw new Error('Not a member of this room');
+  }
+
+  if (!canDeleteTransactions(userInRoom.role)) {
+    throw new Error('Only ADMIN can delete transactions');
   }
 }
 
@@ -50,7 +57,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
     }
 
-    await checkPrivileges(session.user.id, transaction.roomId);
+    await checkEditPrivileges(session.user.id, transaction.roomId);
 
     const updatedTransaction = await prisma.accountTransaction.update({
       where: { id: transactionId },
@@ -89,7 +96,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
     }
 
-    await checkPrivileges(session.user.id, transaction.roomId);
+    await checkDeletePrivileges(session.user.id, transaction.roomId);
 
     await prisma.accountTransaction.delete({
       where: { id: transactionId },

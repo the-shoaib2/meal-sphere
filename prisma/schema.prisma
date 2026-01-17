@@ -201,6 +201,8 @@ model Room {
   @@index([isActive])
   @@index([createdAt])
   @@index([category])
+  @@index([createdBy, isActive]) 
+  @@index([isPrivate, isActive, createdAt]) 
 }
 
 /// ROOM MEMBER MODEL
@@ -226,6 +228,8 @@ model RoomMember {
   @@index([isBanned])
   @@index([userId, isCurrent])
   @@index([roomId, joinedAt])
+  @@index([userId, roomId, isCurrent]) 
+  @@index([roomId, role, isBanned]) 
 }
 
 /// ACCOUNT MODEL
@@ -308,6 +312,8 @@ model Meal {
   @@index([type, date])
   @@index([roomId, periodId, date])
   @@index([periodId])
+  @@index([roomId, userId, date])
+  @@index([roomId, type, date])
 }
 
 /// GUEST MEAL MODEL
@@ -361,6 +367,8 @@ model ShoppingItem {
   @@index([roomId, periodId, purchased])
   @@index([periodId])
   @@index([name])
+  @@index([roomId, userId, purchased])
+  @@index([roomId, date, purchased])
 }
 
 /// PAYMENT MODEL
@@ -388,6 +396,8 @@ model Payment {
   @@index([method, status])
   @@index([roomId, periodId, status])
   @@index([periodId])
+  @@index([roomId, userId, date]) // Dashboard: user payment history
+  @@index([userId, roomId, status]) // Dashboard: payment status queries
 }
 
 /// BKASH PAYMENT MODEL
@@ -453,7 +463,9 @@ model ExtraExpense {
   @@index([roomId, periodId, date])
   @@index([roomId, date])
   @@index([periodId])
-  @@index([description]) // Search optimization
+  @@index([description])
+  @@index([roomId, userId, date])
+  @@index([roomId, type, date])
 }
 
 model Invitation {
@@ -479,6 +491,8 @@ model Invitation {
   @@index([expiresAt])
   @@index([usedAt])
   @@index([createdAt])
+  @@index([groupId, expiresAt, usedAt]) 
+  @@index([email, expiresAt]) 
 }
 
 /// VOTE MODEL
@@ -542,6 +556,8 @@ model JoinRequest {
   @@index([status])
   @@index([createdAt])
   @@index([roomId, createdAt])
+  @@index([roomId, status, createdAt]) // Group: Pending requests by group
+  @@index([userId, status]) // Group: User's pending requests
 }
 
 /// GROUP MESSAGE MODEL
@@ -577,6 +593,7 @@ model GroupActivityLog {
   @@index([roomId, type])
   @@index([roomId, createdAt])
   @@index([createdAt])
+  @@index([roomId, userId, createdAt])
 }
 
 model InviteToken {
@@ -698,6 +715,8 @@ model AccountTransaction {
   @@index([type])
   @@index([periodId])
   @@index([roomId, targetUserId])
+  @@index([roomId, userId, periodId])
+  @@index([targetUserId, roomId, periodId])
 }
 
 /// MEAL PERIOD MODEL

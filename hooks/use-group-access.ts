@@ -18,6 +18,7 @@ interface UseGroupAccessReturn {
   error: string | null;
   isMember: boolean;
   userRole: string | null;
+  permissions: string[];
   canAccess: boolean;
   isInviteToken: boolean;
   actualGroupId: string | null;
@@ -26,6 +27,7 @@ interface UseGroupAccessReturn {
 interface GroupAccessData {
   isMember: boolean;
   userRole: string | null;
+  permissions?: string[];
   canAccess: boolean;
   actualGroupId: string | null;
   groupData?: any;
@@ -97,6 +99,7 @@ export function useGroupAccess({
       return {
         isMember: groupData.isMember,
         userRole: groupData.userRole,
+        permissions: groupData.permissions || [],
         canAccess: groupData.canAccess,
         actualGroupId: groupId,
         groupData,
@@ -136,6 +139,7 @@ export function useGroupAccess({
     error: errorMessage,
     isMember: accessData?.isMember || false,
     userRole: accessData?.userRole || null,
+    permissions: accessData?.permissions || [],
     canAccess: accessData?.canAccess || false,
     isInviteToken,
     actualGroupId: accessData?.actualGroupId || null,

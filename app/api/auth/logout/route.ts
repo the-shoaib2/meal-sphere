@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions, getCurrentSessionInfo } from '@/lib/auth/auth'
 import { prisma } from '@/lib/prisma'
+import { cacheDeletePattern } from '@/lib/cache-service'
+import { getUserRelatedPatterns } from '@/lib/cache-keys'
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -25,6 +27,22 @@ export async function POST(request: NextRequest) {
       await prisma.session.delete({
         where: { id: currentSession.id }
       })
+    }
+
+    // Clear user-specific cache
+    try {
+      const patterns = getUserRelatedPatterns(session.user.id)
+      console.log(`[Logout] Clearing cache for user ${session.user.id} with patterns:`, patterns)
+      
+      const results = await Promise.all(
+        patterns.map(pattern => cacheDeletePattern(pattern))
+      )
+      
+      const deletedCount = results.reduce((acc, curr) => acc + curr, 0)
+      console.log(`[Logout] Cleared ${deletedCount} cache keys`)
+    } catch (cacheError) {
+      // Don't fail the logout if cache clearing fails
+      console.error('[Logout] Failed to clear user cache:', cacheError)
     }
 
     // Create response with cleared cookies

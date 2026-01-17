@@ -6,7 +6,7 @@
 export const CACHE_PREFIXES = {
   DASHBOARD: 'dashboard',
   ANALYTICS: 'analytics',
-  CALCULATIONS: 'calc',
+  CALCULATIONS: 'calculations',
   MEALS: 'meals',
   PAYMENTS: 'payments',
   EXPENSES: 'expenses',
@@ -14,16 +14,22 @@ export const CACHE_PREFIXES = {
   USERS: 'users',
   ROOMS: 'rooms',
   PERIODS: 'periods',
+  GROUPS: 'groups',
+  GROUP_MEMBERS: 'group_members',
+  GROUP_ROLE: 'group_role',
+  JOIN_REQUESTS: 'join_requests',
+  INVITATIONS: 'invitations',
 } as const;
 
 export const CACHE_TTL = {
   // Short TTL for frequently changing data
   ACTIVE_PERIOD: 60, // 1 minute
-  DASHBOARD: 60, // 1 minute
+  DASHBOARD: 120, // 2 minutes (increased from 60s)
   MEALS_LIST: 120, // 2 minutes
+  ACTIVITIES: 120, // 2 minutes (new for activity feeds)
   
   // Medium TTL for semi-static data
-  CALCULATIONS_ACTIVE: 120, // 2 minutes
+  CALCULATIONS_ACTIVE: 180, // 3 minutes (increased from 120s)
   ANALYTICS: 300, // 5 minutes
   USER_STATS: 300, // 5 minutes
   
@@ -34,6 +40,14 @@ export const CACHE_TTL = {
   // Very long TTL for rarely changing data
   ROOM_INFO: 7200, // 2 hours
   USER_INFO: 7200, // 2 hours
+  
+  // Group-specific TTLs
+  GROUPS_LIST: 120, // 2 minutes
+  GROUP_DETAILS: 180, // 3 minutes
+  GROUP_MEMBERS: 120, // 2 minutes
+  GROUP_ROLE: 300, // 5 minutes (rarely changes)
+  JOIN_REQUESTS: 60, // 1 minute
+  INVITATIONS: 180, // 3 minutes
 } as const;
 
 /**
@@ -163,5 +177,8 @@ export function getUserRelatedPatterns(userId: string): string[] {
     getCachePattern(CACHE_PREFIXES.ANALYTICS, '*', userId),
     getCachePattern(CACHE_PREFIXES.PAYMENTS, userId),
     getCachePattern(CACHE_PREFIXES.USERS, userId),
+    // Specific pattern for groups list as used in api/groups/route.ts
+    // Note: The API uses a hardcoded prefix 'groups_list' instead of CACHE_PREFIXES.GROUPS
+    `groups_list:${userId}:*`,
   ];
 }

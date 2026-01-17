@@ -61,7 +61,7 @@ export function useDashboardUnified() {
 
       return res.json();
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes (increased from 2)
     enabled: !!session?.user?.id && !!activeGroup?.id,
     refetchOnWindowFocus: false,
   });
@@ -91,7 +91,7 @@ export function useDashboardSummary() {
       const data = await res.json();
       return data;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes - shorter for more responsive updates
+    staleTime: 5 * 60 * 1000, // 5 minutes (increased from 2)
     enabled: !!session?.user?.id && !!activeGroup?.id,
     refetchOnWindowFocus: false,
   });

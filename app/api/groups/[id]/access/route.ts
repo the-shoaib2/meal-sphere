@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkGroupAccess } from '@/lib/auth/group-auth';
 import { prisma } from '@/lib/prisma';
+import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
+import { Role } from '@prisma/client';
 
 export async function GET(
   request: NextRequest,
@@ -30,9 +32,17 @@ export async function GET(
       groupData = group;
     }
 
+
+
+    // Calculate permissions based on role
+    const permissions = authResult.userRole 
+      ? (ROLE_PERMISSIONS[authResult.userRole as Role] || []) 
+      : [];
+
     return NextResponse.json({
       isMember: authResult.isMember,
       userRole: authResult.userRole,
+      permissions,
       canAccess: authResult.canAccess,
       isAdmin: authResult.isAdmin,
       isCreator: authResult.isCreator,

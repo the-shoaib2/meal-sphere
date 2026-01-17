@@ -172,24 +172,24 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: Create a new vote for a group
-// Only admins can create votes, but only non-admins can be candidates.
+// Any group member can create votes, but only non-admins can be candidates.
 export async function POST(req: NextRequest) {
   const groupId = getGroupIdFromUrl(req);
   if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
 
-  // Check admin access
-  const adminCheck = await validateAdminAccess(groupId);
-  if (!adminCheck.success) {
-    return NextResponse.json({ error: adminCheck.error || "Admin access required" }, { status: adminCheck.status || 403 });
+  // Check member access (any member can create votes)
+  const memberCheck = await checkGroupAccess(groupId);
+  if (!memberCheck.isAuthenticated) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
-  if (!adminCheck.authResult) {
-    return NextResponse.json({ error: "Admin check failed" }, { status: 500 });
+  if (!memberCheck.isMember) {
+    return NextResponse.json({ error: "You must be a group member to create votes" }, { status: 403 });
   }
-  const adminUserId = adminCheck.authResult.userId;
+  const creatorUserId = memberCheck.userId;
 
   const data = await req.json();
   // Fetch group members to filter candidates
-  const group = await getGroupData(groupId, adminUserId!);
+  const group = await getGroupData(groupId, creatorUserId!);
   if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
   const nonAdminMembers = group.members.filter((m: any) => ![Role.ADMIN, Role.MANAGER].includes(m.role));
   // Only allow non-admins as candidates
@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
     where: {
       roomId: String(groupId),
       type: prismaType,
-      userId: String(adminUserId)
+      userId: String(creatorUserId)
     }
   });
 
@@ -235,14 +235,14 @@ export async function POST(req: NextRequest) {
 
   // If user has a completed vote of this type, allow creating a new one
   if (existingUserVote && !existingUserVote.isActive) {
-    console.log(`User ${adminUserId} has a completed ${prismaType} vote, allowing new vote creation`);
+    console.log(`User ${creatorUserId} has a completed ${prismaType} vote, allowing new vote creation`);
     try {
       // Check if a GROUP_DECISION vote already exists for this user/room
       const existingGroupDecisionVote = await prisma.vote.findFirst({
         where: {
           roomId: String(groupId),
           type: VoteType.GROUP_DECISION,
-          userId: String(adminUserId)
+          userId: String(creatorUserId)
         }
       });
       if (existingGroupDecisionVote) {
@@ -285,7 +285,7 @@ export async function POST(req: NextRequest) {
         startDate,
         endDate,
         isActive: true,
-        userId: String(adminUserId),
+        userId: String(creatorUserId),
         roomId: String(groupId),
         options: JSON.stringify(candidates),
         results: JSON.stringify({}), // empty at start
@@ -415,16 +415,40 @@ export async function PATCH(req: NextRequest) {
   });
 }
 
-// DELETE: Delete a vote (admin only)
+// DELETE: Delete a vote (creator or admin only)
 export async function DELETE(req: NextRequest) {
   const groupId = getGroupIdFromUrl(req);
   if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
   const { voteId } = await req.json();
-  // Check admin access
-  const adminCheck = await validateAdminAccess(groupId);
-  if (!adminCheck.success) {
-    return NextResponse.json({ error: adminCheck.error || "Admin access required" }, { status: adminCheck.status || 403 });
+  
+  // Check group access
+  const access = await checkGroupAccess(groupId);
+  if (!access.isAuthenticated) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
+  if (!access.isMember) {
+    return NextResponse.json({ error: "Not a group member" }, { status: 403 });
+  }
+
+  // Fetch the vote to check ownership
+  const vote = await prisma.vote.findFirst({ 
+    where: { id: String(voteId), roomId: String(groupId) } 
+  });
+  
+  if (!vote) {
+    return NextResponse.json({ error: "Vote not found" }, { status: 404 });
+  }
+
+  // Check if user is vote creator or admin
+  const isCreator = vote.userId === access.userId;
+  const isAdmin = access.isAdmin;
+
+  if (!isCreator && !isAdmin) {
+    return NextResponse.json({ 
+      error: "Only the vote creator or group admin can delete this vote" 
+    }, { status: 403 });
+  }
+
   try {
     await prisma.vote.delete({ where: { id: String(voteId) } });
     return NextResponse.json({ success: true });
@@ -433,16 +457,40 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PUT: Edit a vote (admin only)
+// PUT: Edit a vote (creator or admin only)
 export async function PUT(req: NextRequest) {
   const groupId = getGroupIdFromUrl(req);
   if (!groupId) return NextResponse.json({ error: "Group ID not found" }, { status: 400 });
   const { voteId, title, description, endDate, options, type, candidates } = await req.json();
-  // Check admin access
-  const adminCheck = await validateAdminAccess(groupId);
-  if (!adminCheck.success) {
-    return NextResponse.json({ error: adminCheck.error || "Admin access required" }, { status: adminCheck.status || 403 });
+  
+  // Check group access
+  const access = await checkGroupAccess(groupId);
+  if (!access.isAuthenticated) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
+  if (!access.isMember) {
+    return NextResponse.json({ error: "Not a group member" }, { status: 403 });
+  }
+
+  // Fetch the vote to check ownership
+  const vote = await prisma.vote.findFirst({ 
+    where: { id: String(voteId), roomId: String(groupId) } 
+  });
+  
+  if (!vote) {
+    return NextResponse.json({ error: "Vote not found" }, { status: 404 });
+  }
+
+  // Check if user is vote creator or admin
+  const isCreator = vote.userId === access.userId;
+  const isAdmin = access.isAdmin;
+
+  if (!isCreator && !isAdmin) {
+    return NextResponse.json({ 
+      error: "Only the vote creator or group admin can edit this vote" 
+    }, { status: 403 });
+  }
+
   try {
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;

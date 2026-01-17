@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Group } from '@/hooks/use-groups';
+import { Group, useGroups } from '@/hooks/use-groups';
 
 type GroupContextType = {
   activeGroup: Group | null;
@@ -20,6 +20,7 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { data: groups = [] } = useGroups();
   const queryClient = useQueryClient();
 
   // Clear active group when user logs out
@@ -33,6 +34,13 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       groupsCache.clear();
     }
   }, [status, queryClient]);
+
+  // Automatically set the first group as active if none is selected
+  useEffect(() => {
+    if (status === 'authenticated' && groups.length > 0 && !activeGroup) {
+      setActiveGroup(groups[0]);
+    }
+  }, [status, groups, activeGroup]);
 
   // Invalidate dashboard queries when active group changes
   useEffect(() => {

@@ -3,18 +3,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { getCurrentPeriod } from '@/lib/period-utils';
+import { hasBalancePrivilege, canViewUserBalance } from '@/lib/auth/balance-permissions';
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
-
-const PRIVILEGED_ROLES = [
-  'ADMIN',
-  'ACCOUNTANT',
-];
-
-function isPrivileged(role?: string) {
-  return !!role && PRIVILEGED_ROLES.includes(role);
-}
 
 // Optimized: Accepts periodId to avoid DB lookup
 async function calculateBalance(userId: string, roomId: string, periodId: string | null | undefined): Promise<number> {
@@ -226,7 +218,7 @@ export async function GET(request: NextRequest) {
       where: { userId: session.user.id, roomId },
     });
 
-    const hasPrivilege = isPrivileged(member?.role);
+    const hasPrivilege = hasBalancePrivilege(member?.role);
 
     if (!member) {
       return NextResponse.json({ error: 'You are not a member of this room' }, { status: 403 });
@@ -341,8 +333,10 @@ export async function GET(request: NextRequest) {
     }
 
     const targetUserId = userId || session.user.id;
-    if (targetUserId !== session.user.id && !hasPrivilege) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    
+    // Strict permission check: users can only view their own balance unless they have privilege
+    if (!canViewUserBalance(member?.role, session.user.id, targetUserId)) {
+      return NextResponse.json({ error: 'Insufficient permissions to view this balance' }, { status: 403 });
     }
 
     // Optimization: Calculate everything in parallel, passing the pre-fetched periodId
@@ -353,9 +347,10 @@ export async function GET(request: NextRequest) {
       availableBalanceData = await calculateAvailableBalance(targetUserId, roomId, periodId);
     }
 
-    const [targetUser, balance] = await Promise.all([
+    const [targetUser, balance, targetMember] = await Promise.all([
       prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, name: true, image: true, email: true } }),
       calculateBalance(targetUserId, roomId, periodId),
+      prisma.roomMember.findFirst({ where: { userId: targetUserId, roomId }, select: { role: true } }),
     ]);
 
     if (!targetUser) {
@@ -365,6 +360,7 @@ export async function GET(request: NextRequest) {
     const response: any = {
       user: targetUser,
       balance,
+      role: targetMember?.role || 'MEMBER', // Include the user's role in the group
       currentPeriod: currentPeriod ? {
         id: currentPeriod.id,
         name: currentPeriod.name,
@@ -418,8 +414,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You are not a member of this room' }, { status: 403 });
     }
 
-    // Admins can create transactions for anyone. Regular members can only create PAYMENTS for themselves to admins.
-    if (!isPrivileged(member.role)) {
+    // Privileged users can create transactions for anyone. Regular members can only create PAYMENTS for themselves to privileged users.
+    if (!hasBalancePrivilege(member.role)) {
       if (type !== 'PAYMENT') {
         return NextResponse.json({ error: 'Members can only create payment transactions.' }, { status: 403 });
       }
@@ -427,7 +423,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'You can only make payments for yourself.' }, { status: 403 });
       }
       const targetMember = await prisma.roomMember.findFirst({ where: { userId: targetUserId, roomId } });
-      if (!targetMember || !isPrivileged(targetMember.role)) {
+      if (!targetMember || !hasBalancePrivilege(targetMember.role)) {
         return NextResponse.json({ error: 'Payments can only be made to privileged members.' }, { status: 403 });
       }
     }

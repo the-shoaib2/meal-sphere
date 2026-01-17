@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { cacheGetOrSet } from '@/lib/cache-service';
 import { getDashboardCacheKey, CACHE_TTL } from '@/lib/cache-keys';
-import { getUserBalance, getUserMealCount, calculateMealRate } from '@/lib/query-helpers';
+import { getUserBalance, getUserMealCount, calculateMealRate, getRecentActivitiesOptimized } from '@/lib/query-helpers';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
                         userId: session.user.id,
                         roomId: groupId
                     },
-                    include: { 
+                    select: { 
                         room: { 
                             select: {
                                 id: true,
@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
                 }
 
                 const roomId = groupId;
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
                 const now = new Date();
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -65,11 +65,7 @@ export async function GET(request: NextRequest) {
                     userMealCount,
                     { mealRate, totalMeals, totalExpenses },
                     currentBalance,
-                    meals,
-                    payments,
-                    shoppingItems,
-                    expenses,
-                    activities,
+                    recentActivities,
                     mealsByDate,
                     expensesByDate,
                 ] = await Promise.all([
@@ -78,82 +74,8 @@ export async function GET(request: NextRequest) {
                     calculateMealRate(roomId),
                     getUserBalance(session.user.id, roomId),
 
-                    // Activities data - optimized with selective fields
-                    prisma.meal.findMany({
-                        where: {
-                            roomId,
-                            date: { gte: thirtyDaysAgo }
-                        },
-                        select: {
-                            id: true,
-                            date: true,
-                            type: true,
-                            user: { select: { name: true, image: true } }
-                        },
-                        orderBy: { date: 'desc' },
-                        take: 10
-                    }),
-                    prisma.payment.findMany({
-                        where: {
-                            roomId,
-                            date: { gte: thirtyDaysAgo }
-                        },
-                        select: {
-                            id: true,
-                            date: true,
-                            amount: true,
-                            method: true,
-                            status: true,
-                            user: { select: { name: true, image: true } }
-                        },
-                        orderBy: { date: 'desc' },
-                        take: 10
-                    }),
-                    prisma.shoppingItem.findMany({
-                        where: {
-                            roomId,
-                            date: { gte: thirtyDaysAgo }
-                        },
-                        select: {
-                            id: true,
-                            name: true,
-                            date: true,
-                            purchased: true,
-                            user: { select: { name: true, image: true } }
-                        },
-                        orderBy: { date: 'desc' },
-                        take: 10
-                    }),
-                    prisma.extraExpense.findMany({
-                        where: {
-                            roomId,
-                            date: { gte: thirtyDaysAgo }
-                        },
-                        select: {
-                            id: true,
-                            description: true,
-                            amount: true,
-                            date: true,
-                            type: true,
-                            user: { select: { name: true, image: true } }
-                        },
-                        orderBy: { date: 'desc' },
-                        take: 10
-                    }),
-                    prisma.groupActivityLog.findMany({
-                        where: {
-                            roomId,
-                            createdAt: { gte: thirtyDaysAgo }
-                        },
-                        select: {
-                            id: true,
-                            type: true,
-                            createdAt: true,
-                            user: { select: { name: true, image: true } }
-                        },
-                        orderBy: { createdAt: 'desc' },
-                        take: 10
-                    }),
+                    // Activities data - using optimized helper (7 days instead of 30)
+                    getRecentActivitiesOptimized(roomId, 7, 10),
 
                     // Chart data - using aggregations
                     prisma.meal.groupBy({
@@ -203,9 +125,9 @@ export async function GET(request: NextRequest) {
                     groupName: membership.room.name,
                 };
 
-                // Format activities
+                // Format activities from optimized helper
                 const allActivities = [
-                    ...meals.map(meal => ({
+                    ...recentActivities.meals.map((meal: any) => ({
                         id: meal.id,
                         type: 'MEAL' as const,
                         title: `${meal.type.toLowerCase()} added`,
@@ -215,7 +137,7 @@ export async function GET(request: NextRequest) {
                         amount: undefined,
                         icon: 'Utensils'
                     })),
-                    ...payments.map(payment => ({
+                    ...recentActivities.payments.map((payment: any) => ({
                         id: payment.id,
                         type: 'PAYMENT' as const,
                         title: `Payment ${payment.status.toLowerCase()}`,
@@ -225,7 +147,7 @@ export async function GET(request: NextRequest) {
                         amount: payment.amount,
                         icon: 'CreditCard'
                     })),
-                    ...shoppingItems.map(item => ({
+                    ...recentActivities.shopping.map((item: any) => ({
                         id: item.id,
                         type: 'SHOPPING' as const,
                         title: item.purchased ? 'Item purchased' : 'Item added to list',
@@ -235,7 +157,7 @@ export async function GET(request: NextRequest) {
                         amount: undefined,
                         icon: 'ShoppingBag'
                     })),
-                    ...expenses.map(expense => ({
+                    ...recentActivities.expenses.map((expense: any) => ({
                         id: expense.id,
                         type: 'EXPENSE' as const,
                         title: `${expense.type.toLowerCase()} expense added`,
@@ -245,7 +167,7 @@ export async function GET(request: NextRequest) {
                         amount: expense.amount,
                         icon: 'Receipt'
                     })),
-                    ...activities.map(activity => ({
+                    ...recentActivities.activities.map((activity: any) => ({
                         id: activity.id,
                         type: 'ACTIVITY' as const,
                         title: activity.type.replace(/_/g, ' ').toLowerCase(),
@@ -259,8 +181,8 @@ export async function GET(request: NextRequest) {
                     .slice(0, 10);
 
                 // Format chart data
-                const mealsMap = new Map(mealsByDate.map(m => [m.date.toISOString().split('T')[0], m._count.id]));
-                const expensesMap = new Map(expensesByDate.map(e => [e.date.toISOString().split('T')[0], e._sum.amount]));
+                const mealsMap = new Map(mealsByDate.map((m: any) => [m.date.toISOString().split('T')[0], m._count.id]));
+                const expensesMap = new Map(expensesByDate.map((e: any) => [e.date.toISOString().split('T')[0], e._sum.amount]));
 
                 const chartData = [];
                 const currentDate = new Date(startOfMonth);

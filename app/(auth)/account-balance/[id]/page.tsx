@@ -108,11 +108,8 @@ export default function UserAccountBalancePage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
 
-  const userId = params?.id as string;
 
-  const userRole = activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role || 'MEMBER';
-  const targetUserRole = activeGroup?.members?.find(m => m.userId === userId)?.role || 'MEMBER';
-  const hasPrivilege = isPrivileged(userRole);
+  const userId = params?.id as string;
 
   // Sync dialog state with search params
   const searchParams = useSearchParams();
@@ -125,6 +122,25 @@ export default function UserAccountBalancePage() {
   const { data: currentPeriod } = useCurrentPeriod();
   const { data: userBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useGetBalance(activeGroup?.id || '', userId);
   const { data: transactions, isLoading: isLoadingTransactions, refetch: refetchTransactions } = useGetTransactions(activeGroup?.id || '', userId, currentPeriod?.id);
+
+  // Fetch current user's balance to get their role (for privilege check)
+  const { data: currentUserBalance } = useGetBalance(activeGroup?.id || '', session?.user?.id || '');
+
+  // Get current user's role - prioritize API response over activeGroup.members
+  const currentUserMember = activeGroup?.members?.find(m => m.userId === session?.user?.id);
+  const userRole = currentUserBalance?.role || currentUserMember?.role || 'MEMBER';
+
+  // Get target user's role - prioritize API response over activeGroup.members
+  // The API response is more reliable as it's fetched directly from the database
+  const targetUserRole = userBalance?.role ||
+    activeGroup?.members?.find(m => m.userId === userId)?.role ||
+    'MEMBER';
+
+  // Check if current user has privileged access (ADMIN or ACCOUNTANT)
+  const hasPrivilege = isPrivileged(userRole);
+  const isAdmin = userRole === 'ADMIN';
+
+  // Debug logging for role detection
 
   // Filter transactions to only those involving this user (as receiver or self-transactions)
   const allFilteredTransactions = transactions?.filter(
@@ -143,6 +159,14 @@ export default function UserAccountBalancePage() {
     setTransactionAmount('');
     setTransactionDescription('');
     setTransactionType('ADJUSTMENT');
+    setIsTransactionDialogOpen(true);
+  };
+
+  const openAddBalanceDialog = () => {
+    setEditingTransaction(null);
+    setTransactionAmount('');
+    setTransactionDescription('');
+    setTransactionType('PAYMENT');
     setIsTransactionDialogOpen(true);
   };
 
@@ -233,11 +257,13 @@ export default function UserAccountBalancePage() {
           </Button>
           <h1 className="text-2xl font-bold">Account Details</h1>
         </div>
-        {hasPrivilege && (
-          <Button className="w-full sm:w-auto" onClick={openAddTransactionDialog}>
-            <Plus className="h-4 w-4 mr-2" /> Add Transaction
-          </Button>
-        )}
+        <div className="flex gap-2 w-full sm:w-auto">
+          {hasPrivilege && (
+            <Button className="flex-1 sm:flex-none" onClick={openAddBalanceDialog}>
+              <Plus className="h-4 w-4 mr-2" /> Add Balance
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Combined User Info and Stats Card */}
@@ -361,14 +387,18 @@ export default function UserAccountBalancePage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  {/* ADMIN and ACCOUNTANT can edit transactions */}
                                   <DropdownMenuItem onClick={() => openEditTransactionDialog(t)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     <span>Edit</span>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => openDeleteDialog(t.id)} className="text-red-500 focus:text-red-500">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                  </DropdownMenuItem>
+                                  {/* Only ADMIN can delete transactions */}
+                                  {isAdmin && (
+                                    <DropdownMenuItem onClick={() => openDeleteDialog(t.id)} className="text-red-500 focus:text-red-500">
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      <span>Delete</span>
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>

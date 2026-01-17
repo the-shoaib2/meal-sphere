@@ -2,19 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
+import { hasBalancePrivilege, canViewUserBalance } from '@/lib/auth/balance-permissions';
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
-
-const PRIVILEGED_ROLES = [
-  'SUPER_ADMIN',
-  'ADMIN',
-  'MANAGER',
-];
-
-function isPrivileged(role?: string) {
-  return !!role && PRIVILEGED_ROLES.includes(role);
-}
 
 // GET: /api/account-balance/transactions?roomId=...&userId=...
 export async function GET(request: NextRequest) {
@@ -48,12 +39,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'You are not a member of this room' }, { status: 403 });
     }
 
-    const hasPrivilege = isPrivileged(member.role);
     const targetUserId = userId || session.user.id;
 
     // Users can only view their own transactions unless they have privileges
-    if (targetUserId !== session.user.id && !hasPrivilege) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+    if (!canViewUserBalance(member.role, session.user.id, targetUserId)) {
+      return NextResponse.json({ error: 'Insufficient permissions to view these transactions' }, { status: 403 });
     }
 
     // Use requested periodId or fallback to current active.

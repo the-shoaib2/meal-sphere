@@ -82,11 +82,12 @@ export default function VotingSystem() {
     );
   }
 
-  // Determine if current user is admin in the group
+  // Get current user info
   const currentUserId = session?.user?.id
   const currentMember = activeGroup?.members?.find((m: any) => m.userId === currentUserId)
   const adminRoles = ["ADMIN"];
   const isAdmin = Boolean(currentMember && adminRoles.includes(String(currentMember.role)));
+  const isMember = Boolean(currentMember);
 
   // When group switcher changes, update selectedRoom and activeGroup
   const handleRoomChange = (roomId: string) => {
@@ -219,7 +220,7 @@ export default function VotingSystem() {
             )}
             Refresh
           </Button>
-          {isAdmin && (
+          {isMember && (
             <CreateVoteDialog
               open={showCreateDialog}
               onOpenChange={handleOpenChange}
@@ -273,6 +274,7 @@ export default function VotingSystem() {
                 isSubmitting={isSubmitting}
                 hasVoted={hasVoted}
                 isAdmin={isAdmin}
+                currentUserId={currentUserId}
                 refreshVotes={handleRefreshVotes}
                 candidateOptions={nonAdminMembers.map(m => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
                 voteTypeOptions={VOTE_TYPE_OPTIONS}
@@ -288,7 +290,7 @@ export default function VotingSystem() {
         ) : (
           <NoActiveVotesCard
             handleRefreshVotes={handleRefreshVotes}
-            isAdmin={isAdmin}
+            isMember={isMember}
             setShowCreateDialog={setShowCreateDialog}
           />
         )}

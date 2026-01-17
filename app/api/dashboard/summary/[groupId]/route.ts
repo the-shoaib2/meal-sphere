@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
+import { cacheGetOrSet } from '@/lib/cache-service';
+import { getDashboardCacheKey, CACHE_TTL } from '@/lib/cache-keys';
 
 async function calculateBalance(userId: string, roomId: string): Promise<number> {
   // Calculate money received (targetUserId = user)
@@ -115,52 +117,66 @@ export async function GET(
   const { groupId } = await params;
 
   try {
-    // Check if user is a member of this group
-    const membership = await prisma.roomMember.findFirst({
-      where: {
-        userId: session.user.id,
-        roomId: groupId
+    // Generate cache key
+    const cacheKey = getDashboardCacheKey(session.user.id, groupId);
+
+    // Wrap entire response in cache
+    const data = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // Check if user is a member of this group
+        const membership = await prisma.roomMember.findFirst({
+          where: {
+            userId: session.user.id,
+            roomId: groupId
+          },
+          select: { 
+            room: { 
+              select: { 
+                id: true, 
+                name: true, 
+                _count: { select: { members: true } } 
+              } 
+            } 
+          },
+        });
+
+        if (!membership) {
+          throw new Error('You are not a member of this group');
+        }
+
+        // Run all queries in parallel
+        const [userMealCount, { mealRate, totalMeals, totalExpenses }, currentBalance] = await Promise.all([
+          calculateUserMealCount(session.user.id, groupId),
+          calculateMealRate(groupId),
+          calculateBalance(session.user.id, groupId)
+        ]);
+
+        const totalSpent = userMealCount * mealRate;
+        const availableBalance = currentBalance - totalSpent;
+
+        return {
+          totalUserMeals: userMealCount,
+          totalAllMeals: totalMeals,
+          currentRate: mealRate,
+          currentBalance,
+          availableBalance,
+          totalCost: totalSpent,
+          activeRooms: 1, // This group only
+          totalActiveGroups: 1, // This group only
+          totalMembers: membership.room._count.members || 0,
+          groupId,
+          groupName: membership.room.name,
+        };
       },
-      include: { room: { include: { members: true } } },
-    });
+      { ttl: CACHE_TTL.DASHBOARD }
+    );
 
-    if (!membership) {
-      return NextResponse.json({ error: 'You are not a member of this group' }, { status: 403 });
-    }
-
-    // Calculate data for this specific group
-    // Optimization: calculateAvailableBalance already calls calculateBalance and calculateMealRate internally using Promise.all
-    const balanceData = await calculateAvailableBalance(session.user.id, groupId);
-
-    // We need currentBalance explicitly which is returned by calculateBalance.
-    // To avoid calling it again, we should refactor availableBalance to return all components or run them in parallel here.
-
-    // Better approach: Run them purely in parallel here to avoid hidden dependencies
-    const [userMealCount, { mealRate, totalMeals, totalExpenses }, currentBalance] = await Promise.all([
-      calculateUserMealCount(session.user.id, groupId),
-      calculateMealRate(groupId),
-      calculateBalance(session.user.id, groupId)
-    ]);
-
-    const totalSpent = userMealCount * mealRate;
-    const availableBalance = currentBalance - totalSpent;
-
-    return NextResponse.json({
-      totalUserMeals: userMealCount,
-      totalAllMeals: totalMeals,
-      currentRate: mealRate,
-      currentBalance,
-      availableBalance,
-      totalCost: totalSpent,
-      activeRooms: 1, // This group only
-      totalActiveGroups: 1, // This group only
-      totalMembers: membership.room.members?.length || 0,
-      groupId,
-      groupName: membership.room.name,
-    });
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error('Error fetching group dashboard summary:', error);
-    return NextResponse.json({ error: 'Failed to fetch group dashboard summary' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch group dashboard summary';
+    return NextResponse.json({ error: message }, { status: error instanceof Error && error.message.includes('not a member') ? 403 : 500 });
   }
 } 

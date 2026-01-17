@@ -5,11 +5,11 @@ import { Vote, Plus, RotateCcw } from "lucide-react";
 
 interface NoActiveVotesCardProps {
   handleRefreshVotes: () => void;
-  isAdmin: boolean;
+  isMember: boolean;
   setShowCreateDialog: (open: boolean) => void;
 }
 
-const NoActiveVotesCard: React.FC<NoActiveVotesCardProps> = ({ handleRefreshVotes, isAdmin, setShowCreateDialog }) => (
+const NoActiveVotesCard: React.FC<NoActiveVotesCardProps> = ({ handleRefreshVotes, isMember, setShowCreateDialog }) => (
   <Card className="md:col-span-2">
     <CardContent className="flex flex-col items-center justify-center p-6 text-center">
       <div className="rounded-full bg-primary/10 p-3 mb-4">
@@ -18,9 +18,9 @@ const NoActiveVotesCard: React.FC<NoActiveVotesCardProps> = ({ handleRefreshVote
       <h3 className="text-lg font-medium">No Active Votes</h3>
       <p className="text-sm text-muted-foreground mt-2 mb-4 max-w-md">
         There are no active votes in this room at the moment.
-        {isAdmin && (
+        {isMember && (
           <span className="block mt-1 text-xs text-muted-foreground">
-            As an admin, you can create a new vote to get started.
+            You can create a new vote to get started.
           </span>
         )}
       </p>
@@ -29,7 +29,7 @@ const NoActiveVotesCard: React.FC<NoActiveVotesCardProps> = ({ handleRefreshVote
           <RotateCcw className="mr-2 h-4 w-4" />
           Refresh
         </Button>
-        {isAdmin && (
+        {isMember && (
           <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Create Vote

@@ -18,7 +18,7 @@ import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, Arr
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
 
-// Using the same PRIVILEGED_ROLES from the main panel
+// Using the same PRIVILEGED_ROLES from centralized configuration
 const PRIVILEGED_ROLES = ['ADMIN', 'ACCOUNTANT'];
 
 function isPrivileged(role?: string) {
@@ -70,16 +70,6 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div>
-          <h2 className="text-xl font-semibold">Group Overview</h2>
-          <p className="text-sm text-muted-foreground">Detailed summary of all group activity.</p>
-        </div>
-        <Button onClick={handleAddTransaction} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
-          <DollarSign className="h-4 w-4" />
-          <span>Add Transaction</span>
-        </Button>
-      </div>
 
       <div className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">

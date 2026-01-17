@@ -42,6 +42,7 @@ export interface Group extends Omit<Room, 'createdBy'> {
     };
   }>;
   userRole?: string;
+  permissions?: string[];
   joinedAt?: string;
   _count?: {
     members: number;
@@ -86,7 +87,7 @@ interface UseGroupsReturn {
   data: Group[];
   isLoading: boolean;
   error: Error | null;
-  useGroupsList: (options: { filter: 'my' | 'public' }) => {
+  useGroupsList: (options: { filter: 'my' | 'public' | 'all' }) => {
     data: Group[];
     isLoading: boolean;
     error: Error | null;
@@ -117,17 +118,8 @@ export function useGroups(): UseGroupsReturn {
     queryKey: ['user-groups', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return [];
-      // Always fetch from API on reload
       try {
-        const { data } = await axios.get<Group[]>('/api/groups', {
-          headers: { 
-            'Cache-Control': 'no-store, no-cache, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-          params: { _t: new Date().getTime() }
-        });
-
+        const { data } = await axios.get<Group[]>('/api/groups');
         // Set the data in React Query cache for future use
         queryClient.setQueryData(['user-groups', session.user.id], data);
         return data;
@@ -137,8 +129,8 @@ export function useGroups(): UseGroupsReturn {
       }
     },
     enabled: !!session?.user?.id && status === 'authenticated',
-    staleTime: Infinity,
-    gcTime: Infinity,
+    staleTime: 5 * 60 * 1000, // 5 minutes (changed from Infinity)
+    gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -155,7 +147,7 @@ export function useGroups(): UseGroupsReturn {
   const isLoading = status === 'loading' || isLoadingGroups;
 
   // Get groups list based on filter
-  const useGroupsList = ({ filter }: { filter: 'my' | 'public' }) => {
+  const useGroupsList = ({ filter }: { filter: 'my' | 'public' | 'all' }) => {
     const { data: groupsList = [], isLoading: listLoading, error: listError } = useQuery<Group[], Error>({
       queryKey: ['groups', filter],
       queryFn: async () => {
@@ -163,17 +155,7 @@ export function useGroups(): UseGroupsReturn {
         try {
           const { data } = await axios.get<Group[]>(
             `/api/groups`,
-            { 
-              headers: { 
-                'Cache-Control': 'no-store, no-cache, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-              },
-              params: { 
-                filter,
-                _t: new Date().getTime()
-              }
-            }
+            { params: { filter } }
           );
           return data;
         } catch (error) {
@@ -208,12 +190,6 @@ export function useGroups(): UseGroupsReturn {
         withCredentials: true,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        params: {
-          _t: new Date().getTime()
         },
         validateStatus: (status) => {
           // Don't throw for 403 (password required) or 401 (wrong password)
@@ -503,14 +479,7 @@ export function useGroups(): UseGroupsReturn {
       queryFn: async () => {
         if (!session?.user?.id) return [];
         try {
-          const { data } = await axios.get<JoinRequest[]>(`/api/groups/${groupId}/join-request`, {
-            headers: { 
-              'Cache-Control': 'no-store, no-cache, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            },
-            params: { _t: new Date().getTime() }
-          });
+          const { data } = await axios.get<JoinRequest[]>(`/api/groups/${groupId}/join-request`);
           return data;
         } catch (error) {
           console.error(`Error fetching join requests for group ${groupId}:`, error);
@@ -518,7 +487,7 @@ export function useGroups(): UseGroupsReturn {
         }
       },
       enabled: !!session?.user?.id && !!groupId,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5)
       refetchOnWindowFocus: false
     });
 

@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { cacheGetOrSet } from '@/lib/cache-service';
+import { CACHE_TTL } from '@/lib/cache-keys';
+import { getUserGroups, getPublicGroups } from '@/lib/group-query-helpers';
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -109,100 +112,47 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
-    const isMember = searchParams.get('isMember') === 'true';
-    const includePrivate = searchParams.get('includePrivate') === 'true';
+    const filter = searchParams.get('filter') || 'my';
 
-    // If user is not authenticated, only return public groups
-    if (!session?.user?.id) {
-      const publicGroups = await prisma.room.findMany({
-        where: {
-          isPrivate: false,
-          isActive: true
-        },
-        include: {
-          createdByUser: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          },
-          _count: {
-            select: {
-              members: true
+    // Generate cache key based on user and filter
+    const cacheKey = `groups_list:${session?.user?.id || 'anonymous'}:${filter}`;
+
+    const groups = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // If user is not authenticated OR filter is 'public', return public groups
+        if (!session?.user?.id || filter === 'public') {
+          return await getPublicGroups(50, session?.user?.id);
+        }
+
+        // For 'all' filter - return both user's groups and public groups
+        if (filter === 'all') {
+          const [userGroups, publicGroups] = await Promise.all([
+            getUserGroups(session.user.id, false),
+            getPublicGroups(50, session.user.id)
+          ]);
+
+          // Merge and deduplicate
+          const groupMap = new Map();
+          [...userGroups, ...publicGroups].forEach(g => {
+            if (!groupMap.has(g.id)) {
+              groupMap.set(g.id, g);
             }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+          });
 
-      return NextResponse.json(publicGroups);
-    }
+          return Array.from(groupMap.values())
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        }
 
-    // For authenticated users, only return groups where they are members
-    const memberGroups = await prisma.roomMember.findMany({
-      where: {
-        userId: session.user.id,
-        room: { isActive: true }
+        // Default: for authenticated users, return groups where they are members
+        return await getUserGroups(session.user.id, false);
       },
-      include: {
-        room: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            isPrivate: true,
-            createdAt: true,
-            updatedAt: true,
-            createdByUser: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-              },
-            },
-            // Optimize: Instead of fetching all members, just fetch the current user's role and member count
-            members: {
-              where: {
-                userId: session.user.id
-              },
-              select: {
-                role: true,
-                joinedAt: true
-              }
-            },
-            _count: {
-              select: {
-                members: true
-              }
-            }
-          },
-        },
-      },
-      orderBy: {
-        room: { createdAt: 'desc' }
-      }
-    });
-
-    // Transform the data to match the expected format
-    const groups = memberGroups.map(member => ({
-      ...member.room,
-      userRole: member.room.members[0]?.role || 'MEMBER', // Since we filtered members by userId, the first one is the current user
-      joinedAt: member.room.members[0]?.joinedAt || new Date(),
-      memberCount: member.room._count.members,
-      isCurrentMember: true,
-      // Compatibility fields if needed by frontend, though we should update frontend types to be leaner
-      members: [] // Returning empty array to satisfy type if strict, or we can omit
-    }));
+      { ttl: CACHE_TTL.GROUPS_LIST }
+    );
 
     return NextResponse.json(groups, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
+        'Cache-Control': 'public, max-age=60, s-maxage=120',
       }
     });
   } catch (error) {

@@ -28,6 +28,7 @@ export type MemberWithBalance = {
 export type UserBalance = {
   user: { id: string; name: string; image?: string; email?: string };
   balance: number;
+  role?: string; 
   availableBalance?: number;
   totalSpent?: number;
   mealCount?: number;

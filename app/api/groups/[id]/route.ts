@@ -3,9 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-import { Role } from '@prisma/client';
 import { validateGroupAccess, validateAdminAccess, getGroupData } from '@/lib/auth/group-auth';
+import { cacheGetOrSet, cacheDelete } from '@/lib/cache-service';
+import { CACHE_TTL } from '@/lib/cache-keys';
+import { getGroupWithMembers } from '@/lib/group-query-helpers';
 
 // Schema for updating a group
 const updateGroupSchema = z.object({
@@ -36,17 +37,33 @@ export async function GET(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Use optimized data fetcher that handles access control internally
-    const groupData = await getGroupData(id, session.user.id);
+    // Use cached helper for group data
+    const cacheKey = `group_details:${id}:${session.user.id}`;
+    
+    const groupData = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // Use optimized data fetcher that handles access control internally
+        const data = await getGroupData(id, session.user.id);
+        if (!data) {
+          throw new Error('Group not found or access denied');
+        }
+        return data;
+      },
+      { ttl: CACHE_TTL.GROUP_DETAILS }
+    );
 
-    if (!groupData) {
-      return NextResponse.json({ error: 'Group not found or access denied' }, { status: 404 });
-    }
-
-    return NextResponse.json(groupData);
+    return NextResponse.json(groupData, {
+      headers: {
+        'Cache-Control': 'public, max-age=120, s-maxage=180',
+      }
+    });
 
   } catch (error) {
     console.error('Error fetching group:', error);
+    if (error instanceof Error && error.message.includes('not found')) {
+      return NextResponse.json({ error: 'Group not found or access denied' }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -81,6 +98,13 @@ export async function PATCH(
         }
       }
     });
+
+    // Invalidate caches
+    await Promise.all([
+      cacheDelete(`group_details:${id}:*`),
+      cacheDelete(`groups_list:*`),
+      cacheDelete(`group_with_members:${id}:*`)
+    ]);
 
     return NextResponse.json(updatedGroup);
   } catch (error) {

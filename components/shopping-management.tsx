@@ -314,7 +314,7 @@ export default function ShoppingManagement() {
             <CardContent>
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={i} className="flex items-center justify-between p-4 rounded-lg">
                     <div className="flex items-center space-x-4">
                       <Skeleton className="h-8 w-8 rounded-full" />
                       <div>
@@ -333,7 +333,7 @@ export default function ShoppingManagement() {
           </Card>
 
           {/* Purchased Items Skeleton */}
-          <Card className="border-green-100">
+          <Card className="">
             <CardHeader className="pb-2">
               <Skeleton className="h-6 w-32 mb-2" />
               <Skeleton className="h-4 w-40" />

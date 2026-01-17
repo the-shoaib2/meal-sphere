@@ -320,3 +320,201 @@ export async function aggregateExpensesByDate(
     _sum: { amount: true },
   });
 }
+
+/**
+ * Get user meal count by date range with caching
+ */
+export async function getUserMealCountByDateRange(
+  userId: string,
+  roomId: string,
+  startDate: Date,
+  endDate: Date,
+  periodId?: string
+): Promise<number> {
+  const dateKey = `${startDate.toISOString()}_${endDate.toISOString()}`;
+  const cacheKey = `meal_count_range:${userId}:${roomId}:${dateKey}${periodId ? `:${periodId}` : ''}`;
+  
+  return cacheGetOrSet(
+    cacheKey,
+    async () => {
+      const where: any = { 
+        userId, 
+        roomId,
+        date: { gte: startDate, lte: endDate }
+      };
+      if (periodId) where.periodId = periodId;
+      
+      return await prisma.meal.count({ where });
+    },
+    { ttl: CACHE_TTL.MEALS_LIST }
+  );
+}
+
+/**
+ * Get room activity summary (aggregated counts)
+ */
+export async function getRoomActivitySummary(
+  roomId: string,
+  startDate: Date,
+  endDate: Date,
+  periodId?: string
+) {
+  const dateKey = `${startDate.toISOString()}_${endDate.toISOString()}`;
+  const cacheKey = `activity_summary:${roomId}:${dateKey}${periodId ? `:${periodId}` : ''}`;
+  
+  return cacheGetOrSet(
+    cacheKey,
+    async () => {
+      const where: any = { 
+        roomId,
+        date: { gte: startDate, lte: endDate }
+      };
+      if (periodId) where.periodId = periodId;
+
+      const [mealCount, paymentCount, expenseCount, shoppingCount] = await Promise.all([
+        prisma.meal.count({ where }),
+        prisma.payment.count({ where: { ...where, date: { gte: startDate, lte: endDate } } }),
+        prisma.extraExpense.count({ where }),
+        prisma.shoppingItem.count({ where }),
+      ]);
+
+      return {
+        mealCount,
+        paymentCount,
+        expenseCount,
+        shoppingCount,
+        totalActivities: mealCount + paymentCount + expenseCount + shoppingCount,
+      };
+    },
+    { ttl: CACHE_TTL.ANALYTICS }
+  );
+}
+
+/**
+ * Batch get user balances for multiple users
+ */
+export async function getBatchUserBalances(
+  userIds: string[],
+  roomId: string,
+  periodId?: string
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  
+  const uniqueIds = [...new Set(userIds)];
+  const where: any = { roomId, targetUserId: { in: uniqueIds } };
+  if (periodId) where.periodId = periodId;
+  
+  const transactions = await prisma.accountTransaction.groupBy({
+    by: ['targetUserId'],
+    where,
+    _sum: { amount: true },
+  });
+  
+  const balanceMap = new Map<string, number>();
+  transactions.forEach((t: { targetUserId: string; _sum: { amount: number | null } }) => {
+    balanceMap.set(t.targetUserId, t._sum.amount || 0);
+  });
+  
+  // Fill in zeros for users with no transactions
+  uniqueIds.forEach(id => {
+    if (!balanceMap.has(id)) {
+      balanceMap.set(id, 0);
+    }
+  });
+  
+  return balanceMap;
+}
+
+/**
+ * Get recent activities optimized for dashboard
+ */
+export async function getRecentActivitiesOptimized(
+  roomId: string,
+  days: number = 7,
+  limit: number = 10
+) {
+  const cacheKey = `recent_activities:${roomId}:${days}:${limit}`;
+  
+  return cacheGetOrSet(
+    cacheKey,
+    async () => {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      
+      // Fetch limited data from each source
+      const itemsPerSource = Math.ceil(limit / 2); // Get more than needed, then sort
+      
+      const [meals, payments, expenses, shopping, activities] = await Promise.all([
+        prisma.meal.findMany({
+          where: { roomId, date: { gte: startDate } },
+          select: {
+            id: true,
+            date: true,
+            type: true,
+            user: { select: { name: true, image: true } }
+          },
+          orderBy: { date: 'desc' },
+          take: itemsPerSource
+        }),
+        prisma.payment.findMany({
+          where: { roomId, date: { gte: startDate } },
+          select: {
+            id: true,
+            date: true,
+            amount: true,
+            method: true,
+            status: true,
+            user: { select: { name: true, image: true } }
+          },
+          orderBy: { date: 'desc' },
+          take: itemsPerSource
+        }),
+        prisma.extraExpense.findMany({
+          where: { roomId, date: { gte: startDate } },
+          select: {
+            id: true,
+            date: true,
+            description: true,
+            amount: true,
+            type: true,
+            user: { select: { name: true, image: true } }
+          },
+          orderBy: { date: 'desc' },
+          take: itemsPerSource
+        }),
+        prisma.shoppingItem.findMany({
+          where: { roomId, date: { gte: startDate } },
+          select: {
+            id: true,
+            name: true,
+            date: true,
+            purchased: true,
+            user: { select: { name: true, image: true } }
+          },
+          orderBy: { date: 'desc' },
+          take: itemsPerSource
+        }),
+        prisma.groupActivityLog.findMany({
+          where: { roomId, createdAt: { gte: startDate } },
+          select: {
+            id: true,
+            type: true,
+            createdAt: true,
+            user: { select: { name: true, image: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: itemsPerSource
+        })
+      ]);
+
+      return {
+        meals,
+        payments,
+        expenses,
+        shopping,
+        activities
+      };
+    },
+    { ttl: CACHE_TTL.DASHBOARD }
+  );
+}
