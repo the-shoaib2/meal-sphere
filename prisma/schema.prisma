@@ -149,10 +149,18 @@ model User {
   accountTransactionsCreated  AccountTransaction[]        @relation("TransactionCreator")
   createdPeriods              MealPeriod[]                @relation("CreatedPeriods")
 
+  // Privacy Settings
+  isSearchable      Boolean @default(true)
+  showEmail         Boolean @default(false)
+  profileVisibility String  @default("PUBLIC") // PUBLIC, AUTHENTICATED, PRIVATE
+
   @@index([resetToken])
   @@index([emailVerified, isActive])
   @@index([createdAt])
   @@index([name])
+  // Privacy Indexes
+  @@index([name, isSearchable])
+  @@index([email, isSearchable])
 }
 
 /// ROOM MODEL

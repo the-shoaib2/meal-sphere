@@ -3,21 +3,9 @@
 import * as React from "react"
 import { Search, Loader2, X, User, Home, ShoppingBag, Receipt, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useDebounce } from "@/hooks/use-debounce" // Assuming you have this or wil create it. usage: useDebounce(value, delay)
-import { Button } from "@/components/ui/button"
+import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
-import {
-    CommandDialog,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-    CommandSeparator,
-} from "@/components/ui/command"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
-// Using a custom Popper/Dropdown approach for the input search to control it fully
 
 interface SearchResult {
     id: string
@@ -82,13 +70,13 @@ export function HeaderSearch() {
     }, [])
 
     return (
-        <div className="relative w-full max-w-[450px] hidden md:block" ref={inputRef as any}>
+        <div className="relative w-full max-w-[450px] md:w-[300px] lg:w-[450px]" ref={inputRef as any}>
             <form onSubmit={handleSubmit} className="relative w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                     ref={inputRef}
                     type="search"
-                    placeholder="Search meals, members, or rooms..."
+                    placeholder="Search..."
                     className="w-full appearance-none bg-background pl-9 pr-10 shadow-none transition-all duration-200 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary rounded-full"
                     value={query}
                     onChange={(e) => {
@@ -130,6 +118,8 @@ export function HeaderSearch() {
                                         {result.type === 'room' && <Home className="h-4 w-4" />}
                                         {result.type === 'shopping' && <ShoppingBag className="h-4 w-4" />}
                                         {result.type === 'expense' && <Receipt className="h-4 w-4" />}
+                                        {/* Fallback for unknown types */}
+                                        {!['user', 'room', 'shopping', 'expense'].includes(result.type) && <Search className="h-4 w-4" />}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 overflow-hidden">

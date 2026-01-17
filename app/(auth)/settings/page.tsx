@@ -7,6 +7,7 @@ import { AppearanceForm } from "@/components/settings/appearance-form"
 import { EmailVerificationCard } from "@/components/settings/email-verification-card"
 import { ActiveSessionsCard } from "@/components/settings/active-sessions-card"
 import { ChangePasswordCard } from "@/components/settings/change-password-card"
+import { PrivacyForm } from "@/components/settings/privacy-form"
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -34,8 +35,9 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <ProfileForm user={user} />
+        <PrivacyForm user={user} />
         <AppearanceForm user={user} />
         <EmailVerificationCard user={user} />
         <ActiveSessionsCard user={user} />

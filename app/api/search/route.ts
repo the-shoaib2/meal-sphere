@@ -30,46 +30,54 @@ export async function GET(req: NextRequest) {
             shoppingItems,
             extraExpenses
         ] = await Promise.all([
-            // 1. Search Users
+            // 1. Search Users (Respect Privacy)
             prisma.user.findMany({
                 where: {
                     OR: [
                         { name: { contains: query, mode: 'insensitive' } },
                         { email: { contains: query, mode: 'insensitive' } }
                     ],
-                    isActive: true
+                    isActive: true,
+                    isSearchable: true
                 },
                 take: 5,
-                select: { id: true, name: true, email: true, image: true }
+                select: { id: true, name: true, email: true, image: true, showEmail: true }
             }),
 
-            // 2. Search Rooms
+            // 2. Search Rooms (Respect Privacy)
             prisma.room.findMany({
                 where: {
                     OR: [
                         { name: { contains: query, mode: 'insensitive' } },
                         { description: { contains: query, mode: 'insensitive' } }
                     ],
-                    isActive: true
+                    isActive: true,
+                    isPrivate: false // Only Public rooms
                 },
                 take: 5,
                 select: { id: true, name: true, description: true, category: true }
             }),
 
-            // 3. Search Shopping Items (Proxy for "Meals/Food")
+            // 3. Search Shopping Items (Proxy for "Meals/Food") - Only in Public Rooms
             prisma.shoppingItem.findMany({
                 where: {
-                    name: { contains: query, mode: 'insensitive' }
+                    name: { contains: query, mode: 'insensitive' },
+                    room: {
+                        isPrivate: false // Only from public rooms
+                    }
                 },
                 take: 5,
                 orderBy: { date: 'desc' },
                 include: { room: { select: { name: true } } }
             }),
 
-            // 4. Search Extra Expenses (Proxy for "Other costs")
+            // 4. Search Extra Expenses (Proxy for "Other costs") - Only in Public Rooms
             prisma.extraExpense.findMany({
                 where: {
-                    description: { contains: query, mode: 'insensitive' }
+                    description: { contains: query, mode: 'insensitive' },
+                    room: {
+                        isPrivate: false // Only from public rooms
+                    }
                 },
                 take: 5,
                 orderBy: { date: 'desc' },
@@ -83,7 +91,7 @@ export async function GET(req: NextRequest) {
                 id: u.id,
                 type: 'user',
                 title: u.name,
-                subtitle: u.email,
+                subtitle: u.showEmail ? u.email : 'MealSphere User', // Respect showEmail
                 image: u.image,
                 url: `/profile/${u.id}`
             })),
