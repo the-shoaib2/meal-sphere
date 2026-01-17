@@ -118,18 +118,18 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
     return (
         <div className="flex flex-col h-full bg-background/95 backdrop-blur-sm">
-            <div className="space-y-0.5 lg:space-y-2 py-1 lg:py-2">
+            <div className="space-y-0.5 lg:space-y-2">
                 {/* Group Switcher Section */}
-                <div className="px-2 pb-2">
-                    <GroupSwitcher />
-                </div>
+                {/* <div className="px-2"> */}
+                <GroupSwitcher />
+                {/* </div> */}
 
                 {/* Navigation Items */}
-                <div className="space-y-0.5 lg:space-y-1 px-2">
+                <div className="space-y-0.5 lg:space-y-1">
                     {data.navItems.map((item, index) => {
                         if ('category' in item) {
                             return (
-                                <div key={`category-${index}`} className="px-2 lg:px-3 py-0.5 lg:py-0.5 text-[10px] lg:text-xs font-semibold text-muted-foreground tracking-wider mt-1.5 lg:mt-2.5 first:mt-0 uppercase opacity-70">
+                                <div key={`category-${index}`} className="px-2 lg:px-3 py-0.5 lg:py-0.5 text-[10px] font-semibold text-muted-foreground tracking-wider mt-1.5 lg:mt-2.5 first:mt-0 uppercase opacity-70">
                                     {item.category}
                                 </div>
                             )
@@ -154,7 +154,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                 </div>
 
                 {/* Account Section */}
-                <div className="pt-2 lg:pt-3 border-t border-border/40 px-2 mt-auto">
+                <div className="pt-2 lg:pt-3 border-t border-border/40 mt-auto">
                     <div className="space-y-1">
                         {data.account.map((item) => {
                             const isDestructive = item.variant === "destructive"
