@@ -52,7 +52,7 @@ export function useDashboardUnified() {
       }
 
       const url = `/api/dashboard/unified?groupId=${activeGroup.id}`;
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetch(url);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -81,7 +81,7 @@ export function useDashboardSummary() {
       }
 
       const url = `/api/dashboard/summary/${activeGroup.id}`;
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetch(url);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -108,7 +108,7 @@ export function useDashboardActivities() {
         throw new Error('No active group selected');
       }
 
-      const res = await fetch('/api/dashboard/activities', { cache: 'no-store' });
+      const res = await fetch('/api/dashboard/activities');
       if (!res.ok) throw new Error('Failed to fetch dashboard activities');
       return res.json();
     },
@@ -129,7 +129,7 @@ export function useDashboardChartData() {
         throw new Error('No active group selected');
       }
 
-      const res = await fetch('/api/dashboard/chart-data', { cache: 'no-store' });
+      const res = await fetch('/api/dashboard/chart-data');
       if (!res.ok) throw new Error('Failed to fetch dashboard chart data');
       return res.json();
     },
@@ -178,7 +178,7 @@ export function useGroupDashboardStats(groupId: string) {
   return useQuery<DashboardSummary>({
     queryKey: ['group-dashboard-stats', groupId],
     queryFn: async () => {
-      const res = await fetch(`/api/dashboard/group-stats?groupId=${groupId}`, { cache: 'no-store' });
+      const res = await fetch(`/api/dashboard/group-stats?groupId=${groupId}`);
       if (!res.ok) throw new Error('Failed to fetch group dashboard stats');
       return res.json();
     },
@@ -200,7 +200,7 @@ export function useDashboardPreferences() {
   }>({
     queryKey: ['dashboard-preferences'],
     queryFn: async () => {
-      const res = await fetch('/api/dashboard/preferences', { cache: 'no-store' });
+      const res = await fetch('/api/dashboard/preferences');
       if (!res.ok) throw new Error('Failed to fetch dashboard preferences');
       return res.json();
     },

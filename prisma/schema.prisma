@@ -201,8 +201,8 @@ model Room {
   @@index([isActive])
   @@index([createdAt])
   @@index([category])
-  @@index([createdBy, isActive]) 
-  @@index([isPrivate, isActive, createdAt]) 
+  @@index([createdBy, isActive])
+  @@index([isPrivate, isActive, createdAt])
 }
 
 /// ROOM MEMBER MODEL
@@ -228,8 +228,9 @@ model RoomMember {
   @@index([isBanned])
   @@index([userId, isCurrent])
   @@index([roomId, joinedAt])
-  @@index([userId, roomId, isCurrent]) 
-  @@index([roomId, role, isBanned]) 
+  @@index([userId, roomId, isCurrent])
+  @@index([roomId, role, isBanned])
+  @@index([roomId, isBanned])
 }
 
 /// ACCOUNT MODEL
@@ -314,6 +315,7 @@ model Meal {
   @@index([periodId])
   @@index([roomId, userId, date])
   @@index([roomId, type, date])
+  @@index([roomId, periodId, userId])
 }
 
 /// GUEST MEAL MODEL
@@ -491,8 +493,8 @@ model Invitation {
   @@index([expiresAt])
   @@index([usedAt])
   @@index([createdAt])
-  @@index([groupId, expiresAt, usedAt]) 
-  @@index([email, expiresAt]) 
+  @@index([groupId, expiresAt, usedAt])
+  @@index([email, expiresAt])
 }
 
 /// VOTE MODEL
@@ -520,6 +522,8 @@ model Vote {
   @@unique([userId, roomId, type])
   @@index([roomId, type, candidateId])
   @@index([createdAt])
+  @@index([roomId, isActive, endDate])
+  @@index([roomId, type, endDate])
 }
 
 /// NOTIFICATION MODEL
@@ -537,6 +541,7 @@ model Notification {
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([userId, type, read])
+  @@index([userId, type, createdAt])
 }
 
 /// GROUP JOIN REQUEST MODEL
@@ -717,6 +722,7 @@ model AccountTransaction {
   @@index([roomId, targetUserId])
   @@index([roomId, userId, periodId])
   @@index([targetUserId, roomId, periodId])
+  @@index([roomId, periodId, targetUserId])
 }
 
 /// MEAL PERIOD MODEL

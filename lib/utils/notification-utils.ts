@@ -180,3 +180,89 @@ export async function notifyAllRoomMembers(roomId: string, notificationType: Not
     throw error;
   }
 }
+
+/**
+ * Batch create notifications - OPTIMIZED for performance
+ * Uses a single createMany transaction instead of multiple creates
+ * Much faster for notifying multiple users (e.g., all room members)
+ */
+export async function createBatchNotifications(
+  notifications: Array<{
+    userId: string;
+    type: NotificationType;
+    message: string;
+  }>
+) {
+  try {
+    if (!notifications || notifications.length === 0) {
+      return { count: 0 };
+    }
+
+    // Validate all notifications
+    for (const notif of notifications) {
+      validateUserId(notif.userId);
+      if (!notif.message?.trim()) {
+        throw new Error('Message is required for all notifications');
+      }
+    }
+
+    // Batch insert all notifications in a single transaction
+    const notificationData = notifications.map(n => ({
+      userId: n.userId,
+      type: n.type,
+      message: n.message,
+      read: false,
+    }));
+
+    return await prisma.notification.createMany({
+      data: notificationData,
+    });
+  } catch (error) {
+    console.error('Error creating batch notifications:', error);
+    throw error instanceof Error ? error : new Error('Failed to create batch notifications');
+  }
+}
+
+/**
+ * Notify room members efficiently - OPTIMIZED version using batch insert
+ * Use this instead of notifyAllRoomMembers for better performance
+ */
+export async function notifyRoomMembersBatch(
+  roomId: string, 
+  notificationType: NotificationType, 
+  message: string,
+  excludeUserId?: string
+) {
+  try {
+    if (!roomId?.trim()) throw new Error('Room ID is required');
+    if (!message?.trim()) throw new Error('Message is required');
+
+    // Get all members of the room (excluding specified user if provided)
+    const whereClause: { roomId: string; userId?: { not: string } } = { roomId };
+    if (excludeUserId) {
+      whereClause.userId = { not: excludeUserId };
+    }
+    
+    const roomMembers = await prisma.roomMember.findMany({
+      where: whereClause,
+      select: { userId: true },
+    });
+
+    if (!roomMembers.length) {
+      console.warn(`No members found for room ${roomId}`);
+      return { count: 0 };
+    }
+
+    // Batch create all notifications at once
+    return await createBatchNotifications(
+      roomMembers.map(member => ({
+        userId: member.userId,
+        type: notificationType,
+        message,
+      }))
+    );
+  } catch (error) {
+    console.error('Error notifying room members in batch:', error);
+    throw error;
+  }
+}

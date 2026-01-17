@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import { prisma } from "@/lib/services/prisma"
-import { createNotification } from "@/lib/utils/notification-utils"
+import { notifyRoomMembersBatch } from "@/lib/utils/notification-utils"
 import { uploadReceipt } from "@/lib/utils/upload-utils"
 import { NotificationType } from "@prisma/client"
 import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/utils/period-utils"
@@ -103,28 +103,16 @@ export async function POST(request: Request) {
     // Get room details for notification
     const room = await prisma.room.findUnique({
       where: { id: roomId },
+      select: { name: true },
     })
 
-    // Create notifications for room members
-    const roomMembers = await prisma.roomMember.findMany({
-      where: {
-        roomId,
-        userId: {
-          not: user.id, // Exclude the user who added the shopping item
-        },
-      },
-      include: {
-        user: true,
-      },
-    })
-
-    for (const member of roomMembers) {
-      await createNotification({
-        userId: member.user.id,
-        type: NotificationType.PAYMENT_CREATED,
-        message: `${user.name} added a new shopping item of ${amount} for ${description} in ${room?.name}.`,
-      })
-    }
+    // Create notifications for room members efficiently (batch insert)
+    await notifyRoomMembersBatch(
+      roomId,
+      NotificationType.PAYMENT_CREATED,
+      `${user.name} added a new shopping item of ${amount} for ${description} in ${room?.name || 'the group'}.`,
+      user.id // Exclude the user who added the shopping item
+    )
 
     // Invalidate cache
     const currentPeriod = await prisma.mealPeriod.findFirst({

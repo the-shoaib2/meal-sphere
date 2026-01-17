@@ -6,6 +6,7 @@ import { createCustomNotification } from "@/lib/utils/notification-utils"
 import { uploadReceipt } from "@/lib/utils/upload-utils"
 import { ExpenseType, NotificationType } from '@prisma/client'
 import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/utils/period-utils"
+import { notifyRoomMembersBatch } from "@/lib/utils/notification-utils"
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -101,27 +102,16 @@ export async function POST(request: Request) {
     // Get room details for notification
     const room = await prisma.room.findUnique({
       where: { id: roomId },
+      select: { name: true },
     })
 
-    // Create notifications for room members
-    const roomMembers = await prisma.roomMember.findMany({
-      where: {
-        roomId,
-        userId: {
-          not: user.id, // Exclude the user who added the expense
-        },
-      },
-      include: {
-        user: true,
-      },
-    })
-
-    for (const member of roomMembers) {
-      await createCustomNotification(
-        member.user.id,
-        `${user.name} added a new ${type.toLowerCase()} expense of ${amount} for ${description} in ${room?.name}.`
-      )
-    }
+    // Create notifications for room members efficiently (batch insert)
+    await notifyRoomMembersBatch(
+      roomId,
+      NotificationType.GENERAL,
+      `${user.name} added a new ${type.toLowerCase()} expense of ${amount} for ${description} in ${room?.name || 'the group'}.`,
+      user.id // Exclude the user who added the expense
+    )
 
     return NextResponse.json({
       message: "Expense added successfully",

@@ -20,7 +20,7 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const [activeGroup, setActiveGroup] = useState<Group | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { data: groups = [] } = useGroups();
+  const { data: groups = [], isLoading: groupsLoading } = useGroups();
   const queryClient = useQueryClient();
 
   // Clear active group when user logs out
@@ -56,8 +56,8 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
     }
   }, [status]);
 
-  // Set loading state based on session status
-  const contextIsLoading = status === 'loading' || isLoading;
+  // Set loading state based on session status, groups loading, and active group initialization
+  const contextIsLoading = status === 'loading' || isLoading || (status === 'authenticated' && groupsLoading) || (status === 'authenticated' && !groupsLoading && groups.length > 0 && !activeGroup);
 
   return (
     <GroupContext.Provider value={{ activeGroup, setActiveGroup, isLoading: contextIsLoading }}>
