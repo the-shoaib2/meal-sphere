@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             type: 'MEAL' as const,
             title: `${meal.type.toLowerCase()} added`,
             description: `${meal.user.name} added ${meal.type.toLowerCase()}`,
-            timestamp: meal.date.toISOString(),
+            timestamp: new Date(meal.date).toISOString(),
             user: meal.user,
             amount: undefined,
             icon: 'Utensils'
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
             type: 'PAYMENT' as const,
             title: `Payment ${payment.status.toLowerCase()}`,
             description: `${payment.user.name} made a ${payment.method.toLowerCase()} payment`,
-            timestamp: payment.date.toISOString(),
+            timestamp: new Date(payment.date).toISOString(),
             user: payment.user,
             amount: payment.amount,
             icon: 'CreditCard'
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
             type: 'SHOPPING' as const,
             title: item.purchased ? 'Item purchased' : 'Item added to list',
             description: `${item.user.name} ${item.purchased ? 'purchased' : 'added'} ${item.name}`,
-            timestamp: item.date.toISOString(),
+            timestamp: new Date(item.date).toISOString(),
             user: item.user,
             amount: undefined,
             icon: 'ShoppingBag'
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
             type: 'EXPENSE' as const,
             title: `${expense.type.toLowerCase()} expense added`,
             description: `${expense.user.name} added ${expense.description}`,
-            timestamp: expense.date.toISOString(),
+            timestamp: new Date(expense.date).toISOString(),
             user: expense.user,
             amount: expense.amount,
             icon: 'Receipt'
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             type: 'ACTIVITY' as const,
             title: activity.type.replace(/_/g, ' ').toLowerCase(),
             description: `${activity.user.name} performed an action`,
-            timestamp: activity.createdAt.toISOString(),
+            timestamp: new Date(activity.createdAt).toISOString(),
             user: activity.user,
             amount: undefined,
             icon: 'Users'
