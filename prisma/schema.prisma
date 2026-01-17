@@ -732,6 +732,7 @@ model AccountTransaction {
   @@index([roomId, userId, periodId])
   @@index([targetUserId, roomId, periodId])
   @@index([roomId, periodId, targetUserId])
+  @@index([roomId, periodId, createdAt]) // Optimized: Sorting transactions
 }
 
 /// MEAL PERIOD MODEL
@@ -767,4 +768,5 @@ model MealPeriod {
   @@index([createdAt])
   @@index([isLocked])
   @@index([roomId, status])
+  @@index([roomId, startDate]) // Optimized: Sorting periods
 }

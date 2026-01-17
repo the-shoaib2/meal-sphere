@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
-import { hasBalancePrivilege, canViewUserBalance } from '@/lib/auth/balance-permissions';
+import { canViewUserBalance } from '@/lib/auth/balance-permissions';
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';
@@ -55,32 +55,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([]);
     }
 
-    const whereClause: any = {
-      roomId,
-      periodId: activePeriodId,
-      OR: [
-        { userId: targetUserId },
-        { targetUserId: targetUserId },
-      ],
-    };
+    // Optimization: Split complex OR query into two index-optimized queries
+    // Query 1: Transactions where user is SENDER (uses index [roomId, userId, periodId])
+    // Query 2: Transactions where user is RECEIVER (uses index [roomId, periodId, targetUserId])
+    
+    const [sentTransactions, receivedTransactions] = await Promise.all([
+        prisma.accountTransaction.findMany({
+            where: {
+                roomId,
+                periodId: activePeriodId,
+                userId: targetUserId
+            },
+            include: {
+                user: { select: { id: true, name: true, image: true, email: true } },
+                targetUser: { select: { id: true, name: true, image: true, email: true } },
+                creator: { select: { id: true, name: true, image: true, email: true } },
+            },
+            orderBy: { createdAt: 'desc' }
+        }),
+        prisma.accountTransaction.findMany({
+            where: {
+                roomId,
+                periodId: activePeriodId,
+                targetUserId: targetUserId
+            },
+            include: {
+                user: { select: { id: true, name: true, image: true, email: true } },
+                targetUser: { select: { id: true, name: true, image: true, email: true } },
+                creator: { select: { id: true, name: true, image: true, email: true } },
+            },
+            orderBy: { createdAt: 'desc' }
+        })
+    ]);
 
-    const transactions = await prisma.accountTransaction.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: { id: true, name: true, image: true, email: true },
-        },
-        targetUser: {
-          select: { id: true, name: true, image: true, email: true },
-        },
-        creator: {
-          select: { id: true, name: true, image: true, email: true },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    // Merge and sort in memory (much faster than DB OR scan)
+    const transactions = [...sentTransactions, ...receivedTransactions]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Cache shorter for active period, longer for past periods (if periodId was explicit)
     const isHistorical = periodId && periodId !== currentPeriod?.id;

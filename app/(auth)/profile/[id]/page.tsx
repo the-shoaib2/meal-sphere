@@ -26,7 +26,7 @@ interface UserProfile {
     name: string
     email: string
     image: string | null
-    role: string
+    role?: string
     createdAt: string
     rooms: RoomMember[]
 }
@@ -89,9 +89,11 @@ export default function ProfilePage() {
                 <div className="flex-1 text-center md:text-left space-y-2 pt-2">
                     <div className="flex flex-col md:flex-row items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
-                        <Badge variant={user.role === 'ADMIN' ? 'destructive' : 'secondary'} className="uppercase text-xs" >
-                            {user.role}
-                        </Badge>
+                        {user.role && (
+                            <Badge variant={user.role === 'ADMIN' ? 'destructive' : 'secondary'} className="uppercase text-xs" >
+                                {user.role}
+                            </Badge>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-1 text-muted-foreground">
@@ -125,7 +127,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <p className="text-muted-foreground font-medium">Role</p>
-                                <p className="capitalize">{user.role.toLowerCase().replace('_', ' ')}</p>
+                                <p className="capitalize">{(user.role || 'Member').toLowerCase().replace('_', ' ')}</p>
                             </div>
                             <div>
                                 <p className="text-muted-foreground font-medium">Status</p>

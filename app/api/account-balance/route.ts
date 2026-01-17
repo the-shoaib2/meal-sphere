@@ -12,7 +12,6 @@ import {
   calculateMealRate,
   calculateUserMealCount,
   calculateGroupTotalBalance,
-  calculateAvailableBalance,
   getGroupBalanceSummary
 } from '@/lib/services/balance-service';
 
@@ -75,18 +74,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions to view this balance' }, { status: 403 });
     }
 
-    // Optimization: Calculate everything in parallel, passing the pre-fetched periodId
-    // For single user, we may need meal rate if includeDetails is true
-    let availableBalanceData: any = null;
-
-    if (includeDetails) {
-      availableBalanceData = await calculateAvailableBalance(targetUserId, roomId, periodId);
-    }
-
-    const [targetUser, balance, targetMember] = await Promise.all([
-      prisma.user.findUnique({ where: { id: targetUserId }, select: { id: true, name: true, image: true, email: true } }),
+    // Optimization: Calculate everything in parallel
+    // We fetch all necessary data points at once instead of sequential or redundant calls
+    const [targetUser, memberRole, userBalance, mealStats] = await Promise.all([
+      // 1. User details
+      prisma.user.findUnique({ 
+        where: { id: targetUserId }, 
+        select: { id: true, name: true, image: true, email: true } 
+      }),
+      // 2. Member role
+      prisma.roomMember.findFirst({ 
+        where: { userId: targetUserId, roomId }, 
+        select: { role: true } 
+      }),
+      // 3. User's direct balance (transactions)
       calculateBalance(targetUserId, roomId, periodId),
-      prisma.roomMember.findFirst({ where: { userId: targetUserId, roomId }, select: { role: true } }),
+      // 4. Meal stats (only if details needed)
+      includeDetails ? (async () => {
+         // parallelize sub-tasks for meal stats
+         const [count, expenseTotal] = await Promise.all([
+            calculateUserMealCount(targetUserId, roomId, periodId),
+            calculateTotalExpenses(roomId, periodId)
+         ]);
+         const { mealRate } = await calculateMealRate(roomId, periodId, expenseTotal);
+         return { count, mealRate };
+      })() : Promise.resolve(null)
     ]);
 
     if (!targetUser) {
@@ -95,8 +107,8 @@ export async function GET(request: NextRequest) {
 
     const response: any = {
       user: targetUser,
-      balance,
-      role: targetMember?.role || 'MEMBER', // Include the user's role in the group
+      balance: userBalance,
+      role: memberRole?.role || 'MEMBER',
       currentPeriod: currentPeriod ? {
         id: currentPeriod.id,
         name: currentPeriod.name,
@@ -107,8 +119,17 @@ export async function GET(request: NextRequest) {
       } : null,
     };
 
-    if (availableBalanceData) {
-      Object.assign(response, availableBalanceData);
+    if (includeDetails && mealStats) {
+       const { count, mealRate } = mealStats;
+       const totalSpent = count * mealRate;
+       const availableBalance = userBalance - totalSpent;
+
+       Object.assign(response, {
+         availableBalance,
+         totalSpent,
+         mealCount: count,
+         mealRate
+       });
     }
 
     return NextResponse.json(response, {
