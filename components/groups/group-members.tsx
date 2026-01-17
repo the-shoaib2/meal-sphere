@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSession } from 'next-auth/react';
 import { InviteCard } from './invite-card';
-import { GroupRole } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { UserProfileDialog } from './user-profile-dialog';
 
 type User = {
@@ -41,7 +41,7 @@ type User = {
 
 type Member = {
   id: string;
-  role: GroupRole;
+  role: Role;
   joinedAt: string;
   userId: string;
   roomId: string;
@@ -169,8 +169,8 @@ export function GroupMembers({
     }
   };
 
-  const getRoleBadge = (role: GroupRole) => {
-    const roleMap: Partial<Record<GroupRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
+  const getRoleBadge = (role: Role) => {
+    const roleMap: Partial<Record<Role, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
       ADMIN: { label: 'Admin', variant: 'default' },
       MODERATOR: { label: 'Moderator', variant: 'secondary' },
       MANAGER: { label: 'Manager', variant: 'secondary' },

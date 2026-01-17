@@ -4,13 +4,8 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/prisma';
 
 const PRIVILEGED_ROLES = [
-  'SUPER_ADMIN',
   'ADMIN',
   'ACCOUNTANT',
-  'MANAGER',
-  'MODERATOR',
-  'MEAL_MANAGER',
-  'MARKET_MANAGER',
 ];
 
 function isPrivileged(role?: string) {

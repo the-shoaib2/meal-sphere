@@ -21,7 +21,6 @@ export async function GET(
                     name: true,
                     email: true,
                     image: true,
-                    role: true,
                     createdAt: true,
                     rooms: {
                         select: {

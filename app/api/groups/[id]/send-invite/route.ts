@@ -111,7 +111,7 @@ export async function POST(
             select: {
               id: true
             }
-          }).then(users => users.map(u => u.id))
+          }).then((users: { id: string }[]) => users.map((u: { id: string }) => u.id))
         }
       },
       select: {
@@ -123,13 +123,13 @@ export async function POST(
     const existingMemberEmails = await prisma.user.findMany({
       where: {
         id: {
-          in: existingMembers.map(m => m.userId)
+          in: existingMembers.map((m: { userId: string }) => m.userId)
         }
       },
       select: {
         email: true
       }
-    }).then(users => users.map(u => u.email));
+    }).then((users: { email: string }[]) => users.map((u: { email: string }) => u.email));
 
     // Check for existing invitations
     const existingInvitations = await prisma.invitation.findMany({
@@ -147,13 +147,13 @@ export async function POST(
     // Filter out emails that are already members or have pending invitations
     const validEmails = uniqueEmails.filter(email => {
       const isMember = existingMemberEmails.includes(email);
-      const hasInvitation = existingInvitations.some(i => i.email === email);
+      const hasInvitation = existingInvitations.some((i: any) => i.email === email);
       return !isMember && !hasInvitation;
     });
 
     const skippedEmails = {
       existingMembers: existingMemberEmails,
-      pendingInvitations: existingInvitations.map(i => i.email)
+      pendingInvitations: existingInvitations.map((i: any) => i.email)
     };
 
     // If all emails are either members or have pending invitations, return success
@@ -163,7 +163,7 @@ export async function POST(
         message: `All emails are already members or have pending invitations`,
         details: {
           existingMembers: existingMemberEmails,
-          pendingInvitations: existingInvitations.map(i => i.email)
+          pendingInvitations: existingInvitations.map((i: any) => i.email)
         }
       });
     }
@@ -175,7 +175,7 @@ export async function POST(
           data: {
             code: Math.random().toString(36).substring(2, 15),
             email: email,
-            role: role,
+            role: role as any,
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
             groupId,
             createdBy: session.user.id
@@ -205,7 +205,7 @@ export async function POST(
         ? `(${skippedEmails.existingMembers.length} already members, ${skippedEmails.pendingInvitations.length} pending invitations)`
         : ''
         }`,
-      invitations: invitations.map(inv => ({
+      invitations: invitations.map((inv: any) => ({
         code: inv.code,
         email: inv.email,
         expiresAt: inv.expiresAt,

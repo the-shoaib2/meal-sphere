@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GroupRole } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -26,7 +26,7 @@ interface UserProfileDialogProps {
     name: string | null;
     email: string | null;
     image: string | null;
-    role: GroupRole;
+    role: Role;
     createdAt: string;
     joinedAt: string;
     isActive: boolean;
@@ -42,8 +42,8 @@ interface UserProfileDialogProps {
 }
 
 export function UserProfileDialog({ user, isOpen, onClose }: UserProfileDialogProps) {
-  const getRoleBadge = (role: GroupRole) => {
-    const roleMap: Partial<Record<GroupRole, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
+  const getRoleBadge = (role: Role) => {
+    const roleMap: Partial<Record<Role, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }>> = {
       ADMIN: { label: 'Admin', variant: 'default' },
       MODERATOR: { label: 'Moderator', variant: 'secondary' },
       MANAGER: { label: 'Manager', variant: 'secondary' },

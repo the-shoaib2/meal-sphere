@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/table';
 import {
   DollarSign,
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Receipt, 
-  Utensils, 
+  ArrowUpRight,
+  ArrowDownLeft,
+  Receipt,
+  Utensils,
   Calculator,
   TrendingUp,
   TrendingDown
@@ -48,6 +48,12 @@ export default function MemberView({ balance, transactions, userRole, session }:
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-sm text-muted-foreground font-medium">Your Role:</span>
+        <Badge variant="outline" className="font-semibold px-2 py-0.5">
+          {userRole?.replace('_', ' ')}
+        </Badge>
+      </div>
       {/* Main Balance Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>

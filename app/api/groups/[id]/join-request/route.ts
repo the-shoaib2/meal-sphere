@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
-import { GroupRole } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { validateGroupAccess, validateAdminAccess } from '@/lib/auth/group-auth';
 
 type RouteParams = {
@@ -130,7 +130,7 @@ export async function GET(
     ]);
 
     // Check if user is admin
-    if (!membership || membership.role !== GroupRole.ADMIN) {
+    if (!membership || membership.role !== Role.ADMIN) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

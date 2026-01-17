@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,17 +69,29 @@ import {
 } from "@/components/ui/tooltip"
 
 const PRIVILEGED_ROLES = [
-  'SUPER_ADMIN',
   'ADMIN',
-  'MANAGER',
-  'MODERATOR',
-  'MEAL_MANAGER',
-  'MARKET_MANAGER',
+  'ACCOUNTANT',
 ];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
 }
+
+const getRoleBadgeVariant = (role: string) => {
+  switch (role) {
+    case 'ADMIN': return 'default';
+    case 'ACCOUNTANT': return 'default';
+    default: return 'outline';
+  }
+};
+
+const getRoleBadgeStyle = (role: string) => {
+  switch (role) {
+    case 'ADMIN': return 'bg-blue-600 hover:bg-blue-700';
+    case 'ACCOUNTANT': return 'bg-green-600 hover:bg-green-700';
+    default: return '';
+  }
+};
 
 export default function UserAccountBalancePage() {
   const params = useParams();
@@ -99,7 +111,16 @@ export default function UserAccountBalancePage() {
   const userId = params?.id as string;
 
   const userRole = activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role || 'MEMBER';
+  const targetUserRole = activeGroup?.members?.find(m => m.userId === userId)?.role || 'MEMBER';
   const hasPrivilege = isPrivileged(userRole);
+
+  // Sync dialog state with search params
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('add') === 'true' && !isTransactionDialogOpen) {
+      openAddTransactionDialog();
+    }
+  }, [searchParams]);
 
   const { data: currentPeriod } = useCurrentPeriod();
   const { data: userBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useGetBalance(activeGroup?.id || '', userId);
@@ -232,7 +253,15 @@ export default function UserAccountBalancePage() {
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="text-lg font-semibold">{userBalance?.user?.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{userBalance?.user?.name}</h3>
+                  <Badge
+                    variant={getRoleBadgeVariant(targetUserRole)}
+                    className={getRoleBadgeStyle(targetUserRole)}
+                  >
+                    {targetUserRole.replace('_', ' ')}
+                  </Badge>
+                </div>
                 <p className="text-sm text-muted-foreground">{userBalance?.user?.email}</p>
               </div>
             </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
-import { GroupRole, type RoomMember } from '@prisma/client';
+import { Role, type RoomMember } from '@prisma/client';
 import { z } from 'zod';
 
 // Type for the response data
@@ -17,7 +17,7 @@ type MemberWithUser = RoomMember & {
 
 // Schema for updating member role - includes all possible role values from Prisma schema
 const updateRoleSchema = z.object({
-  role: z.enum(Object.values(GroupRole) as [string, ...string[]]),
+  role: z.enum(Object.values(Role) as [string, ...string[]]),
 });
 
 type RouteParams = {
@@ -75,7 +75,7 @@ export async function PATCH(
         roomId: groupId,
         userId: currentUserId,
         role: {
-          in: [GroupRole.ADMIN, GroupRole.MANAGER]
+          in: [Role.ADMIN, Role.MANAGER]
         }
       }
     });
@@ -113,7 +113,7 @@ export async function PATCH(
     }
 
     // Prevent changing owner's role
-    if (targetMember.role === GroupRole.MANAGER) {
+    if (targetMember.role === Role.MANAGER) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Cannot change owner\'s role'
@@ -126,7 +126,7 @@ export async function PATCH(
         id: targetMember.id
       },
       data: {
-        role: newRole as GroupRole
+        role: newRole as Role
       },
       include: {
         user: {

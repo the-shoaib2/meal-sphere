@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminAccess, checkGroupAccess, getGroupData } from "@/lib/auth/group-auth";
-import { GroupRole, VoteType } from "@prisma/client";
+import { Role, VoteType } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth";
 
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
   // Fetch group members to filter candidates
   const group = await getGroupData(groupId, adminUserId!);
   if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
-  const nonAdminMembers = group.members.filter((m: any) => ![GroupRole.ADMIN, GroupRole.MANAGER].includes(m.role));
+  const nonAdminMembers = group.members.filter((m: any) => ![Role.ADMIN, Role.MANAGER].includes(m.role));
   // Only allow non-admins as candidates
   const validCandidates = (data.candidates || []).filter((c: any) => nonAdminMembers.some((m: any) => m.userId === c.id));
   // Map frontend type to enum

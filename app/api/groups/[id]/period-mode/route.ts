@@ -74,8 +74,6 @@ export async function PATCH(
             );
         }
 
-        // Check if user is global SUPER_ADMIN
-        const isSuperAdmin = session.user.role === 'SUPER_ADMIN';
 
         // Get group information
         const room = await prisma.room.findUnique({
@@ -96,7 +94,7 @@ export async function PATCH(
         });
 
         // Check permissions
-        let canChange = isSuperAdmin;
+        let canChange = false;
         if (member) {
             if (['ADMIN', 'MANAGER', 'MODERATOR'].includes(member.role)) {
                 canChange = true;

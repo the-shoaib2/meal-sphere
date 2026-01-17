@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { GroupRole } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 interface InviteTokenResponse {
@@ -9,7 +9,7 @@ interface InviteTokenResponse {
   token: string;
   roomId: string;
   createdBy: string;
-  role: GroupRole;
+  role: Role;
   expiresAt: Date | null;
   createdAt: Date;
   createdByUser?: {
@@ -25,7 +25,7 @@ interface CreateInviteTokenResponse {
     token: string;
     inviteUrl: string;
     expiresAt: Date | null;
-    role: GroupRole;
+    role: Role;
   };
 }
 
@@ -55,7 +55,7 @@ export async function POST(
           where: {
             userId: session.user.id,
             role: {
-              in: [GroupRole.ADMIN, GroupRole.MODERATOR]
+              in: [Role.ADMIN, Role.MODERATOR]
             }
           }
         }
@@ -100,7 +100,7 @@ export async function POST(
         token,
         roomId: groupId,
         createdBy: session.user.id,
-        role: role as GroupRole,
+        role: role as Role,
         expiresAt
       },
       include: {

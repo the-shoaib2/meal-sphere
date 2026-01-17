@@ -1,4 +1,4 @@
-import { GroupRole } from '@prisma/client'
+import { Role } from '@prisma/client'
 import {
   PRIVILEGED_ROLES,
   EXPORT_ALLOWED_ROLES,
@@ -11,28 +11,28 @@ import {
 /**
  * Check if a user has privileged access (Admin, Manager, Meal Manager)
  */
-export function isPrivileged(role?: GroupRole | null): boolean {
+export function isPrivileged(role?: Role | null): boolean {
   return !!role && PRIVILEGED_ROLES.includes(role)
 }
 
 /**
  * Check if a user can export data
  */
-export function canExport(role?: GroupRole | null): boolean {
+export function canExport(role?: Role | null): boolean {
   return !!role && EXPORT_ALLOWED_ROLES.includes(role)
 }
 
 /**
  * Check if a user can import data
  */
-export function canImport(role?: GroupRole | null): boolean {
+export function canImport(role?: Role | null): boolean {
   return !!role && IMPORT_ALLOWED_ROLES.includes(role)
 }
 
 /**
  * Get allowed export types based on user role
  */
-export function getAllowedExportTypes(role?: GroupRole | null): ExcelExportType[] {
+export function getAllowedExportTypes(role?: Role | null): ExcelExportType[] {
   if (!role) return []
 
   if (isPrivileged(role)) {
@@ -49,7 +49,7 @@ export function getAllowedExportTypes(role?: GroupRole | null): ExcelExportType[
 /**
  * Get allowed import types based on user role
  */
-export function getAllowedImportTypes(role?: GroupRole | null): ExcelImportType[] {
+export function getAllowedImportTypes(role?: Role | null): ExcelImportType[] {
   if (!role) return []
 
   if (canImport(role)) {
@@ -62,28 +62,28 @@ export function getAllowedImportTypes(role?: GroupRole | null): ExcelImportType[
 /**
  * Check if user can export all data (group-wide)
  */
-export function canExportAll(role?: GroupRole | null): boolean {
+export function canExportAll(role?: Role | null): boolean {
   return isPrivileged(role)
 }
 
 /**
  * Check if user can export individual user data
  */
-export function canExportIndividual(role?: GroupRole | null): boolean {
+export function canExportIndividual(role?: Role | null): boolean {
   return isPrivileged(role)
 }
 
 /**
  * Check if user can export their own data
  */
-export function canExportUser(role?: GroupRole | null): boolean {
+export function canExportUser(role?: Role | null): boolean {
   return canExport(role)
 }
 
 /**
  * Get comprehensive Excel permissions for a user
  */
-export function getExcelPermissions(role?: GroupRole | null): ExcelPermissionResult {
+export function getExcelPermissions(role?: Role | null): ExcelPermissionResult {
   const isPrivilegedUser = isPrivileged(role)
 
   return {

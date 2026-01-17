@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import prisma from '@/lib/prisma';
-import { GroupRole, NotificationType } from "@prisma/client";
+import { Role, NotificationType } from "@prisma/client";
 
 // Helper to log detailed debug info
 function logDebugInfo(label: string, data: any) {
@@ -82,7 +82,7 @@ export async function DELETE(
     const isRemovingSelf = targetMember.userId === currentUserId;
 
     // If not removing self, check admin privileges
-    if (!isRemovingSelf && currentUserMembership.role !== GroupRole.ADMIN) {
+    if (!isRemovingSelf && currentUserMembership.role !== Role.ADMIN) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Only group admins can remove other members',
@@ -90,7 +90,7 @@ export async function DELETE(
     }
 
     // Prevent removing other admins (only the admin themselves can leave)
-    if (!isRemovingSelf && targetMember.role === GroupRole.ADMIN) {
+    if (!isRemovingSelf && targetMember.role === Role.ADMIN) {
       return new NextResponse(JSON.stringify({
         success: false,
         message: 'Cannot remove another admin. Please demote them first.',
@@ -187,7 +187,7 @@ export async function PATCH(
       select: { role: true }
     });
 
-    if (!adminMembership || adminMembership.role !== GroupRole.ADMIN) {
+    if (!adminMembership || adminMembership.role !== Role.ADMIN) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -207,7 +207,7 @@ export async function PATCH(
     }
 
     // Prevent modifying owner
-    if (targetMember.role === GroupRole.ADMIN) {
+    if (targetMember.role === Role.ADMIN) {
       return new NextResponse("Cannot modify group admin", { status: 400 });
     }
 
@@ -220,7 +220,7 @@ export async function PATCH(
         }
       },
       data: {
-        role: role as GroupRole
+        role: role as Role
       }
     });
 

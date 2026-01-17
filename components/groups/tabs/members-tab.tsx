@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { GroupRole } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { MoreVertical, UserPlus, Shield, Crown, UserCog, UserX, User } from 'lucide-react';
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { RemoveMemberDialog } from '../remove-member-dialog';
 
 interface Member {
   id: string;
-  role: GroupRole;
+  role: Role;
   joinedAt: string;
   userId: string;
   roomId: string;
@@ -68,36 +68,36 @@ export function MembersTab({
   const { isLoading } = useGroups();
   const { toast } = useToast();
 
-  const getRoleBadge = (role: GroupRole) => {
+  const getRoleBadge = (role: Role) => {
     switch (role) {
-      case GroupRole.MANAGER:
+      case Role.MANAGER:
         return (
           <Badge variant="default" className="bg-purple-500">
             <Crown className="h-3 w-3 mr-1" />
             Owner
           </Badge>
         );
-      case GroupRole.ADMIN:
+      case Role.ADMIN:
         return (
           <Badge variant="default" className="bg-red-500">
             <Shield className="h-3 w-3 mr-1" />
             Admin
           </Badge>
         );
-      case GroupRole.MODERATOR:
+      case Role.MODERATOR:
         return (
           <Badge variant="default" className="bg-blue-500">
             <UserCog className="h-3 w-3 mr-1" />
             Moderator
           </Badge>
         );
-      case GroupRole.MEMBER:
+      case Role.MEMBER:
         return (
           <Badge variant="default" className="bg-gray-500">
             Member
           </Badge>
         );
-      case GroupRole.MEAL_MANAGER:
+      case Role.MEAL_MANAGER:
         return (
           <Badge variant="default" className="bg-green-500">
             <UserCog className="h-3 w-3 mr-1" />
@@ -206,7 +206,7 @@ export function MembersTab({
                           <User className="h-4 w-4 mr-2" />
                           View Profile
                         </DropdownMenuItem>
-                        {member.role !== GroupRole.MANAGER && (
+                        {member.role !== Role.MANAGER && (
                           <>
                             <DropdownMenuItem
                               onClick={() => {

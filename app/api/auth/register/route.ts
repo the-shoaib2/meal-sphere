@@ -119,7 +119,8 @@ export async function POST(request: Request) {
         name: validatedData.name,
         email: validatedData.email,
         password: hashedPassword,
-        role: "USER"
+        language: "en",
+        isActive: true,
       }
     });
 

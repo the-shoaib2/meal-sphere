@@ -40,7 +40,6 @@ export const credentialsProvider = CredentialsProvider({
         name: true,
         email: true,
         image: true,
-        role: true,
         password: true
       }
     }) as (User & { password: string | null }) | null;
@@ -62,8 +61,7 @@ export const credentialsProvider = CredentialsProvider({
       id: user.id,
       email: user.email,
       name: user.name,
-      image: user.image,
-      role: user.role
+      image: user.image
     };
   }
 });

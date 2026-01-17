@@ -19,11 +19,31 @@ import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
 
 // Using the same PRIVILEGED_ROLES from the main panel
-const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'];
+const PRIVILEGED_ROLES = ['ADMIN', 'ACCOUNTANT'];
 
 function isPrivileged(role?: string) {
-  return !!role && PRIVILEGED_ROLES.includes(role);
+  return !!role && PRIVILEGED_ROLES.includes(role || '');
 }
+
+const getRoleBadgeVariant = (role: string) => {
+  switch (role) {
+    case 'ADMIN': return 'default';
+    case 'ACCOUNTANT': return 'default';
+    case 'MANAGER':
+    case 'MEAL_MANAGER':
+    case 'MARKET_MANAGER':
+      return 'secondary';
+    default: return 'outline';
+  }
+};
+
+const getRoleBadgeStyle = (role: string) => {
+  switch (role) {
+    case 'ADMIN': return 'bg-blue-600 hover:bg-blue-700';
+    case 'ACCOUNTANT': return 'bg-green-600 hover:bg-green-700';
+    default: return '';
+  }
+};
 
 interface PrivilegedViewProps {
   groupData: GroupBalanceSummary;
@@ -40,24 +60,45 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
     router.push(`/account-balance/${userId}`);
   };
 
+  const handleAddTransaction = () => {
+    // Navigate to the first member or show a dialog (dialog is better but needs state)
+    // For now, let's just use the detail page navigation since that's where the logic lives
+    if (members.length > 0) {
+      router.push(`/account-balance/${members[0].userId}?add=true`);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Users} title="Total Members" value={members.length} />
-        <StatCard icon={TrendingUp} title="Active Balances" value={activeBalancesCount} />
-        <StatCard
-          icon={DollarSign}
-          title="Group Total"
-          value={`৳${groupTotalBalance.toFixed(2)}`}
-          isCurrency
-          isPositive={groupTotalBalance >= 0}
-        />
-        <StatCard
-          icon={Calculator}
-          title="Balance Status"
-          value={netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
-          isPositive={netGroupBalance === 0}
-        />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+          <h2 className="text-xl font-semibold">Group Overview</h2>
+          <p className="text-sm text-muted-foreground">Detailed summary of all group activity.</p>
+        </div>
+        <Button onClick={handleAddTransaction} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
+          <span>Add Transaction</span>
+        </Button>
+      </div>
+
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+          <StatCard icon={Users} title="Total Members" value={members.length} />
+          <StatCard icon={TrendingUp} title="Active Balances" value={activeBalancesCount} />
+          <StatCard
+            icon={DollarSign}
+            title="Group Total"
+            value={`৳${groupTotalBalance.toFixed(2)}`}
+            isCurrency
+            isPositive={groupTotalBalance >= 0}
+          />
+          <StatCard
+            icon={Calculator}
+            title="Balance Status"
+            value={netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
+            isPositive={netGroupBalance === 0}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -116,8 +157,11 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={isPrivileged(member.role) ? 'default' : 'secondary'}>
-                        {member.role}
+                      <Badge
+                        variant={getRoleBadgeVariant(member.role)}
+                        className={getRoleBadgeStyle(member.role)}
+                      >
+                        {member.role?.replace('_', ' ')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">

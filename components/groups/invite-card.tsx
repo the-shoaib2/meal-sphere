@@ -18,7 +18,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { GroupRole } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from "react-hot-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,7 +55,7 @@ interface GroupData {
 interface InviteTokenData {
   token: string;
   expiresAt: string | null;
-  role: GroupRole;
+  role: Role;
   inviteUrl: string;
 }
 
@@ -73,15 +73,15 @@ interface InviteStatus {
   };
 }
 
-const ROLE_OPTIONS: { value: GroupRole; label: string; description: string }[] = [
-  { value: GroupRole.MEMBER, label: 'Member', description: 'Can view and participate in group activities' },
-  { value: GroupRole.ADMIN, label: 'Admin', description: 'Full access to group settings and management' },
-  { value: GroupRole.MODERATOR, label: 'Moderator', description: 'Can manage members and content' },
-  { value: GroupRole.MANAGER, label: 'Manager', description: 'Can manage group operations' },
-  { value: GroupRole.LEADER, label: 'Leader', description: 'Can lead group activities' },
-  { value: GroupRole.MEAL_MANAGER, label: 'Meal Manager', description: 'Can manage group meals' },
-  { value: GroupRole.ACCOUNTANT, label: 'Accountant', description: 'Can manage group finances' },
-  { value: GroupRole.MARKET_MANAGER, label: 'Market Manager', description: 'Can manage group markets' }
+const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
+  { value: Role.MEMBER, label: 'Member', description: 'Can view and participate in group activities' },
+  { value: Role.ADMIN, label: 'Admin', description: 'Full access to group settings and management' },
+  { value: Role.MODERATOR, label: 'Moderator', description: 'Can manage members and content' },
+  { value: Role.MANAGER, label: 'Manager', description: 'Can manage group operations' },
+  { value: Role.LEADER, label: 'Leader', description: 'Can lead group activities' },
+  { value: Role.MEAL_MANAGER, label: 'Meal Manager', description: 'Can manage group meals' },
+  { value: Role.ACCOUNTANT, label: 'Accountant', description: 'Can manage group finances' },
+  { value: Role.MARKET_MANAGER, label: 'Market Manager', description: 'Can manage group markets' }
 ];
 
 const EXPIRATION_OPTIONS = [
@@ -99,7 +99,7 @@ const EXPIRATION_OPTIONS = [
 
 export function InviteCard({ groupId, className = '' }: InviteCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<GroupRole>('MEMBER');
+  const [selectedRole, setSelectedRole] = useState<Role>('MEMBER');
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [isGenerating, setIsGenerating] = useState(false);
   const [inviteToken, setInviteToken] = useState<InviteTokenData | null>(null);
@@ -504,7 +504,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor="custom-role">Default Role</Label>
-                  <Select value={selectedRole} onValueChange={(value: GroupRole) => setSelectedRole(value)}>
+                  <Select value={selectedRole} onValueChange={(value: Role) => setSelectedRole(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>

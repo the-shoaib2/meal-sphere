@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { GroupRole } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { isFeatureEnabled } from '@/lib/features';
 import { Badge } from '@/components/ui/badge';
 import { MembersTab } from '@/components/groups/tabs/members-tab';
@@ -287,7 +287,7 @@ export default function GroupPage() {
       isCurrent: member.userId === session?.user?.id,
       isActive: true,
       lastActive: new Date().toISOString(),
-      role: member.role as GroupRole,
+      role: member.role as Role,
       joinedAt: member.joinedAt,
       mutedUntil: null,
       permissions: null,

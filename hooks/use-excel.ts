@@ -11,7 +11,7 @@ import {
   ExcelPermissionResult
 } from "@/types/excel"
 import { getExcelPermissions } from "@/lib/excel-permissions"
-import { GroupRole } from "@prisma/client"
+import { Role } from "@prisma/client"
 
 export function useExcel() {
   const [isExporting, setIsExporting] = useState(false)
@@ -22,7 +22,7 @@ export function useExcel() {
   const { data: session } = useSession()
 
   // Get user permissions
-  const permissions = getExcelPermissions(activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role as GroupRole | null)
+  const permissions = getExcelPermissions(activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role as Role | null)
 
   const exportToExcel = async ({
     type,

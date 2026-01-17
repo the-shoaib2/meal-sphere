@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupBalances, useGetBalance, useGetTransactions } from '@/hooks/use-account-balance';
 import { useCurrentPeriod } from '@/hooks/use-periods';
@@ -14,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useGroups } from '@/hooks/use-groups';
 
-const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'];
+const PRIVILEGED_ROLES = ['ADMIN', 'ACCOUNTANT'];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
@@ -24,12 +25,16 @@ export default function AccountBalancePanel() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+  const router = useRouter(); // Added useRouter initialization
 
-  const member = activeGroup?.members?.find(m => m.userId === session?.user?.id);
-  const userRole = member?.role;
+  const userRole = (activeGroup as any)?.userRole || activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role;
   const hasPrivilege = isPrivileged(userRole);
 
   const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod();
+  const handleViewDetails = (userId: string) => {
+    window.dispatchEvent(new CustomEvent('routeChangeStart'));
+    router.push(`/account-balance/${userId}`);
+  };
   const { data: groupData, isLoading: isLoadingBalances } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);
   const { data: ownBalance, isLoading: isLoadingOwnBalance } = useGetBalance(activeGroup?.id!, session?.user?.id!, true);
   const { data: ownTransactions, isLoading: isLoadingTransactions } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id);
@@ -69,7 +74,12 @@ export default function AccountBalancePanel() {
         </div>
         <p className="text-muted-foreground text-sm mt-1">Manage all user balances and transactions.</p>
       </div>
-      <Badge variant="outline">{userRole}</Badge>
+      <Badge
+        variant={hasPrivilege ? "default" : "outline"}
+        className={hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : ""}
+      >
+        {userRole ? userRole.replace('_', ' ') : 'MEMBER'}
+      </Badge>
     </div>
   );
 

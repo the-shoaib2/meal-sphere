@@ -19,11 +19,6 @@ generator client {
 }
 
 enum Role {
-  SUPER_ADMIN
-  USER
-}
-
-enum GroupRole {
   ADMIN
   MODERATOR
   MANAGER
@@ -121,7 +116,6 @@ model User {
   image            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  role             Role      @default(USER)
   language         String    @default("en")
   isActive         Boolean   @default(true)
   resetToken       String?
@@ -155,7 +149,6 @@ model User {
   accountTransactionsCreated  AccountTransaction[]        @relation("TransactionCreator")
   createdPeriods              MealPeriod[]                @relation("CreatedPeriods")
 
-  @@index([role, isActive])
   @@index([resetToken])
   @@index([emailVerified, isActive])
   @@index([createdAt])
@@ -213,7 +206,7 @@ model Room {
 /// ROOM MEMBER MODEL
 model RoomMember {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  role        GroupRole @default(MEMBER)
+  role        Role      @default(MEMBER)
   joinedAt    DateTime  @default(now())
   userId      String    @db.ObjectId
   roomId      String    @db.ObjectId
@@ -591,7 +584,7 @@ model InviteToken {
   token         String    @unique
   roomId        String    @db.ObjectId
   createdBy     String    @db.ObjectId
-  role          GroupRole @default(MEMBER)
+  role          Role      @default(MEMBER)
   expiresAt     DateTime?
   usedAt        DateTime?
   createdAt     DateTime  @default(now())

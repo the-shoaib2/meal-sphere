@@ -1,5 +1,5 @@
 
-import { Role, GroupRole } from "@prisma/client";
+import { Role } from "@prisma/client";
 
 // Define all possible actions in the system
 export enum Permission {
@@ -16,7 +16,7 @@ export enum Permission {
 }
 
 // Default permissions for each GROUP role
-export const ROLE_PERMISSIONS: Record<GroupRole, Permission[]> = {
+export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ADMIN: Object.values(Permission), // Group Admin has full control of group
   MODERATOR: [
     Permission.VIEW_GROUP,
@@ -67,35 +67,28 @@ export const ROLE_PERMISSIONS: Record<GroupRole, Permission[]> = {
 /**
  * Checks if a user has permission to perform an action.
  * 
- * @param globalRole The user's global system role (e.g. SUPER_ADMIN, USER)
  * @param groupRole The user's role within the specific group
  * @param action The action to perform
  * @param customPermissions Optional JSON from RoomMember.permissions to override defaults
  */
 export function hasPermission(
-  globalRole: string | null | undefined,
-  groupRole: GroupRole | null,
+  groupRole: Role | null,
   action: Permission,
   customPermissions?: any
 ): boolean {
-  // 1. GLOBAL OVERRIDE: SUPER_ADMIN can do anything anywhere
-  if (globalRole === "SUPER_ADMIN") {
-    return true;
-  }
-
-  // 2. BANNED check
-  if (groupRole === "BANNED" || globalRole === "BANNED") {
+  // 1. BANNED check
+  if (groupRole === "BANNED") {
     return false;
   }
 
-  // 3. Custom Permission Override (if implemented)
+  // 2. Custom Permission Override (if implemented)
   // Logic: If customPermissions exists and explicitly allows/denies, use it.
   if (customPermissions && typeof customPermissions === 'object') {
     if (customPermissions[action] === true) return true;
     if (customPermissions[action] === false) return false;
   }
 
-  // 4. Group Role Default Permissions
+  // 3. Group Role Default Permissions
   if (!groupRole) return false;
 
   const permissions = ROLE_PERMISSIONS[groupRole];

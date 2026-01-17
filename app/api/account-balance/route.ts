@@ -8,9 +8,8 @@ import { getCurrentPeriod } from '@/lib/period-utils';
 export const dynamic = 'force-dynamic';
 
 const PRIVILEGED_ROLES = [
-  'SUPER_ADMIN',
   'ADMIN',
-  'MANAGER',
+  'ACCOUNTANT',
 ];
 
 function isPrivileged(role?: string) {
@@ -45,7 +44,7 @@ async function calculateBalance(userId: string, roomId: string, periodId: string
     },
   });
 
-  return transactions.reduce((balance, t) => {
+  return transactions.reduce((balance: number, t: { amount: number; targetUserId: string }) => {
     if (t.targetUserId === userId) {
       return balance + t.amount; // Money received (positive)
     }
@@ -72,7 +71,7 @@ async function calculateGroupTotalBalance(roomId: string, periodId: string | nul
       },
     });
 
-    return transactions.reduce((balance, t) => {
+    return transactions.reduce((balance: number, t: { userId: string; targetUserId: string; amount: number }) => {
       if (t.targetUserId === t.userId) {
         return balance + t.amount; // Self-transactions (deposits)
       }
@@ -227,11 +226,11 @@ export async function GET(request: NextRequest) {
       where: { userId: session.user.id, roomId },
     });
 
+    const hasPrivilege = isPrivileged(member?.role);
+
     if (!member) {
       return NextResponse.json({ error: 'You are not a member of this room' }, { status: 403 });
     }
-
-    const hasPrivilege = isPrivileged(member.role);
 
     // Fetch current period ONCE for the entire request
     const currentPeriod = await getCurrentPeriod(roomId);
@@ -260,7 +259,7 @@ export async function GET(request: NextRequest) {
       });
       // Convert to map for O(1) lookup
       const balanceMap = new Map<string, number>();
-      transactionsGrouped.forEach(t => {
+      transactionsGrouped.forEach((t: { targetUserId: string; _sum: { amount: number | null } }) => {
         if (t.targetUserId) balanceMap.set(t.targetUserId, t._sum.amount || 0);
       });
 
@@ -277,7 +276,7 @@ export async function GET(request: NextRequest) {
       });
       // Convert to map
       const mealCountMap = new Map<string, number>();
-      mealsGrouped.forEach(m => {
+      mealsGrouped.forEach((m: { userId: string; _count: { id: number } }) => {
         if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
       });
 
@@ -289,12 +288,12 @@ export async function GET(request: NextRequest) {
       const groupTotalBalance = await calculateGroupTotalBalance(roomId, periodId);
 
       // Construct the response in memory
-      const membersWithBalances = members.map((m) => {
+      const membersWithBalances = members.map((m: any) => {
         // Use pre-fetched data
         const basicBalance = balanceMap.get(m.userId) || 0;
+        const userMealCount = mealCountMap.get(m.userId) || 0;
 
         if (includeDetails) {
-          const userMealCount = mealCountMap.get(m.userId) || 0;
           const totalSpent = userMealCount * mealRate;
           const availableBalance = basicBalance - totalSpent;
 

@@ -8,7 +8,6 @@ export async function jwtCallback({ token, user, account, profile }: any) {
   // Initial sign in
   if (user) {
     token.id = user.id;
-    token.role = user.role;
     token.name = user.name;
     token.email = user.email;
     token.picture = user.image;
@@ -25,7 +24,6 @@ export async function sessionCallback({ session, token, user }: any) {
     session.user.name = token.name;
     session.user.email = token.email;
     session.user.image = token.picture;
-    session.user.role = token.role;
   }
   // When using Database strategy, user info comes from the user object
   else if (user) {
@@ -33,7 +31,6 @@ export async function sessionCallback({ session, token, user }: any) {
     session.user.name = user.name || undefined;
     session.user.email = user.email || undefined;
     session.user.image = user.image || undefined;
-    session.user.role = user.role;
   }
 
   return session;
@@ -64,7 +61,6 @@ export async function signInCallback(params: any) {
             email: user.email,
             name: user.name || user.email.split('@')[0],
             image: user.image,
-            role: 'USER',
             emailVerified: new Date(),
             language: 'en',
             isActive: true,
@@ -88,7 +84,6 @@ export async function signInCallback(params: any) {
         });
 
         user.id = newUser.id;
-        user.role = newUser.role;
       } else {
         // Check if user has a Google account linked
         const hasGoogleAccount = existingUser.accounts.some(
@@ -114,7 +109,6 @@ export async function signInCallback(params: any) {
 
         // Update the user object with existing user's data
         user.id = existingUser.id;
-        user.role = existingUser.role;
       }
     } else if (account?.provider === 'credentials') {
       // Ensure credentials account exists

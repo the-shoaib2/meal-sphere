@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/prisma";
-import { GroupRole, NotificationType } from '@prisma/client';
+import { Role, NotificationType } from '@prisma/client';
 
 export async function PATCH(
   request: NextRequest,
@@ -33,7 +33,7 @@ export async function PATCH(
         roomId: groupId,
         userId: session.user.id,
         role: {
-          in: [GroupRole.ADMIN, GroupRole.MANAGER]
+          in: [Role.ADMIN, Role.MANAGER]
         }
       }
     });
@@ -89,7 +89,7 @@ export async function PATCH(
         data: {
           roomId: groupId,
           userId: joinRequest.userId,
-          role: GroupRole.MEMBER
+          role: Role.MEMBER
         }
       });
 

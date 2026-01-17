@@ -134,7 +134,7 @@ export function PeriodManagement() {
               </p>
             </div>
 
-            {(isPrivileged || session?.user?.role === 'SUPER_ADMIN') && (
+            {isPrivileged && (
               <div className="flex items-center gap-3">
                 <CreatePeriodDialog
                   open={showCreateDialog}
