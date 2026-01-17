@@ -89,7 +89,7 @@ export function HeaderSearch() {
                     ref={inputRef}
                     type="search"
                     placeholder="Search meals, members, or rooms..."
-                    className="w-full appearance-none bg-background pl-9 pr-10 shadow-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-full"
+                    className="w-full appearance-none bg-background pl-9 pr-10 shadow-none transition-all duration-200 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary rounded-full"
                     value={query}
                     onChange={(e) => {
                         setQuery(e.target.value)
