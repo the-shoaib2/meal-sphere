@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
 import { PeriodStatus, Role } from '@prisma/client';
-import { createNotification, notifyAllRoomMembers } from './notification-utils';
+import { createNotification, notifyAllRoomMembers } from '../utils/notification-utils';
 
 export interface PeriodSummary {
   id: string;

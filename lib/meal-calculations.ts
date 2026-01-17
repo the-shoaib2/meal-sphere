@@ -1,4 +1,4 @@
-import prisma from "./prisma"
+import prisma from "./services/prisma"
 import { PaymentStatus } from "@prisma/client"
 
 export type MealSummary = {
@@ -66,7 +66,7 @@ export async function calculateUserMealSummary(
     where: expenseWhere,
     select: { amount: true },
   })
-  const totalCost = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const totalCost = expenses.reduce((sum: number, expense: { amount: number }) => sum + expense.amount, 0)
 
   // Calculate meal rate
   const mealRate = totalMeals > 0 ? totalCost / totalMeals : 0
@@ -124,7 +124,7 @@ export async function calculateRoomMealSummary(
   ]);
 
   const totalMeals = mealCount + (guestMealAgg._sum.count || 0);
-  const totalCost = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalCost = expenses.reduce((sum: number, expense: { amount: number }) => sum + expense.amount, 0);
   const mealRate = totalMeals > 0 ? totalCost / totalMeals : 0;
 
   // 2. Bulk Fetch User Stats (Group By User)
@@ -151,16 +151,16 @@ export async function calculateRoomMealSummary(
 
   // 3. Create Lookup Maps for O(1) access
   const mealMap = new Map<string, number>();
-  userMealCounts.forEach(item => mealMap.set(item.userId, item._count.id));
+  userMealCounts.forEach((item: { userId: string, _count: { id: number } }) => mealMap.set(item.userId, item._count.id));
 
   const guestMealMap = new Map<string, number>();
-  userGuestMealAggs.forEach(item => guestMealMap.set(item.userId, item._sum.count || 0));
+  userGuestMealAggs.forEach((item: { userId: string, _sum: { count: number | null } }) => guestMealMap.set(item.userId, item._sum.count || 0));
 
   const paymentMap = new Map<string, number>();
-  userPayments.forEach(item => paymentMap.set(item.userId, item._sum.amount || 0));
+  userPayments.forEach((item: { userId: string, _sum: { amount: number | null } }) => paymentMap.set(item.userId, item._sum.amount || 0));
 
   // 4. Assemble Results
-  const userSummaries: UserMealSummary[] = roomMembers.map(member => {
+  const userSummaries: UserMealSummary[] = roomMembers.map((member: { userId: string; user: { name: string; image: string | null } }) => {
     const userId = member.userId;
     const userMeals = (mealMap.get(userId) || 0) + (guestMealMap.get(userId) || 0);
     const cost = mealRate * userMeals;

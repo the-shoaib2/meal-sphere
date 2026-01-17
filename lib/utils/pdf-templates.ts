@@ -1,4 +1,4 @@
-import { formatDateForFilename } from "./excel-utils";
+import { formatDateForFilename } from "../excel/excel-utils";
 
 export interface BuildDataReportPDFDocDefinitionParams {
   roomName: string;

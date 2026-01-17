@@ -1,5 +1,5 @@
 import { Prisma, NotificationType } from '@prisma/client';
-import prisma from "./prisma";
+import prisma from "../services/prisma";
 
 type CreateNotificationInput = {
   userId: string;
@@ -166,7 +166,7 @@ export async function notifyAllRoomMembers(roomId: string, notificationType: Not
     }
 
     // Create notifications for each member
-    const notificationPromises = roomMembers.map(member =>
+    const notificationPromises = roomMembers.map((member: { userId: string }) =>
       createNotification({
         userId: member.userId,
         type: notificationType,

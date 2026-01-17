@@ -10,7 +10,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { format } from "date-fns"
 import { Calendar, CheckCircle, XCircle } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { ResponsiveTable } from "./ui/responsive-table"
+import { ResponsiveTable } from "../ui/responsive-table"
 
 interface MarketDateWithUser extends MarketDate {
   user: {

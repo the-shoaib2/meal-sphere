@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label"
 import { CreditCard, Download, Plus } from "lucide-react"
 import BkashPayment from "./bkash-payment"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { ResponsiveTable } from "./ui/responsive-table"
+import { ResponsiveTable } from "../ui/responsive-table"
 import { format } from "date-fns"
 
 export default function PaymentHistory() {

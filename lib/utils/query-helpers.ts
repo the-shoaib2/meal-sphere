@@ -1,10 +1,10 @@
-import prisma from './prisma';
-import { cacheGetOrSet } from './cache-service';
+import prisma from '../services/prisma';
+import { cacheGetOrSet } from '../cache/cache-service';
 import { 
   getCalculationsCacheKey, 
   getMealsCacheKey,
   CACHE_TTL 
-} from './cache-keys';
+} from '../cache/cache-keys';
 
 /**
  * Reusable optimized query functions to reduce code duplication

@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { sendEmail } from '../lib/email-utils'
+import { sendEmail } from '../lib/services/email-utils'
 import * as dotenv from 'dotenv'
 import path from 'path'
 
