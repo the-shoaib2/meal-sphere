@@ -118,18 +118,18 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
     return (
         <div className="flex flex-col h-full bg-background/95 backdrop-blur-sm">
-            <div className="space-y-0.5 lg:space-y-2">
+            <div className="space-y-2 py-2">
                 {/* Group Switcher Section */}
                 {/* <div className="px-2"> */}
                 <GroupSwitcher />
                 {/* </div> */}
 
                 {/* Navigation Items */}
-                <div className="space-y-0.5 lg:space-y-1">
+                <div className="space-y-1 px-2">
                     {data.navItems.map((item, index) => {
                         if ('category' in item) {
                             return (
-                                <div key={`category-${index}`} className="px-2 lg:px-3 py-0.5 lg:py-0.5 text-[10px] font-semibold text-muted-foreground tracking-wider mt-1.5 lg:mt-2.5 first:mt-0 uppercase opacity-70">
+                                <div key={`category-${index}`} className="px-3 py-0.5 text-[10px] font-semibold text-muted-foreground tracking-wider mt-2.5 first:mt-0 uppercase opacity-70">
                                     {item.category}
                                 </div>
                             )
@@ -138,13 +138,13 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                 <div key={item.title}>
                                     <button
                                         onClick={() => handleNavigation(item.url)}
-                                        className={`w-full flex items-center px-2 lg:px-3 py-1.5 lg:py-1.5 text-xs lg:text-sm font-medium rounded-md lg:rounded-lg hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
+                                        className={`w-full flex items-center px-3 py-1.5 text-sm font-medium rounded-lg hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
                                             }`}
                                     >
                                         {isActive(item.url) && (
-                                            <div className="absolute left-0 top-1 bottom-1 w-0.5 lg:w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                                            <div className="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
                                         )}
-                                        <item.icon className={`mr-2 lg:mr-3 h-3.5 w-3.5 lg:h-4 lg:w-4 transition-colors ${isActive(item.url) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
+                                        <item.icon className={`mr-3 h-4 w-4 transition-colors ${isActive(item.url) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
                                         <span>{item.title}</span>
                                     </button>
                                 </div>
@@ -154,8 +154,8 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                 </div>
 
                 {/* Account Section */}
-                <div className="pt-2 lg:pt-3 border-t border-border/40 mt-auto">
-                    <div className="space-y-1">
+                <div className="pt-3 border-t border-border/40 mt-auto">
+                    <div className="space-y-1 px-2">
                         {data.account.map((item) => {
                             const isDestructive = item.variant === "destructive"
                             const isSignout = item.href === "/signout"
@@ -164,15 +164,15 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                     key={item.name}
                                     onClick={() => handleNavigation(item.href)}
                                     disabled={isSignout && isSigningOut}
-                                    className={`w-full flex items-center px-2 lg:px-3 py-1 lg:py-2 text-xs lg:text-sm rounded-md lg:rounded-lg transition-colors group cursor-pointer ${isDestructive
+                                    className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors group cursor-pointer ${isDestructive
                                         ? "hover:bg-destructive/10 hover:text-destructive"
                                         : "hover:bg-accent/50"
                                         } ${(isSignout && isSigningOut) ? "opacity-50 cursor-not-allowed" : ""}`}
                                 >
                                     {isSignout && isSigningOut ? (
-                                        <Loader2 className="mr-2 lg:mr-3 h-3.5 w-3.5 lg:h-4 lg:w-4 animate-spin" />
+                                        <Loader2 className="mr-3 h-4 w-4 animate-spin" />
                                     ) : (
-                                        <item.icon className={`mr-2 lg:mr-3 h-3.5 w-3.5 lg:h-4 lg:w-4 transition-colors ${isDestructive ? "text-destructive" : "text-foreground"}`} />
+                                        <item.icon className={`mr-3 h-4 w-4 transition-colors ${isDestructive ? "text-destructive" : "text-foreground"}`} />
                                     )}
                                     <span className="font-medium">
                                         {isSignout && isSigningOut ? "Signing out..." : item.name}

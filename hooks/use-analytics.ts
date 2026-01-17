@@ -185,7 +185,7 @@ export function useAnalytics() {
   });
 }
 
-export function useSelectedRoomsAnalytics(selectedRoomIds: string[]) {
+export function useSelectedRoomsAnalytics(selectedRoomIds: string[], options?: { enabled?: boolean }) {
   const { data: session } = useSession();
 
   return useQuery<AnalyticsData>({
@@ -213,7 +213,7 @@ export function useSelectedRoomsAnalytics(selectedRoomIds: string[]) {
         throw new Error('Failed to fetch selected rooms analytics data');
       }
     },
-    enabled: !!session?.user?.id && selectedRoomIds.length > 0,
+    enabled: !!session?.user?.id && selectedRoomIds.length > 0 && (options?.enabled ?? true),
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false
   });

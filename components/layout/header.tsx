@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Menu, Search, Utensils, Maximize2, Minimize2 } from "lucide-react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
 import { NotificationBell } from "./notification-bell"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -52,12 +52,15 @@ export function Header() {
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72">
+              <SheetContent side="left" className="p-0 w-64">
                 <SheetHeader className="px-4 py-4 border-b">
                   <SheetTitle className="text-left flex items-center gap-2">
                     <Utensils className="h-5 w-5" />
                     MealSphere
                   </SheetTitle>
+                  {/* <SheetDescription className="sr-only">
+                    Mobile navigation menu
+                  </SheetDescription> */}
                 </SheetHeader>
                 <div className="h-full overflow-y-auto">
                   <SidebarContent onNavigate={() => setIsMobileMenuOpen(false)} />

@@ -64,7 +64,7 @@ export default function SummaryCards({
 
   // Check if user has privileged access to the active group
   const member = activeGroup?.members?.find(m => m.userId === session?.user?.id);
-  const userRole = member?.role;
+  const userRole = activeGroup?.userRole || member?.role;
   const hasPrivilege = isPrivileged(userRole);
 
   const { data: groupData, error: groupError } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);

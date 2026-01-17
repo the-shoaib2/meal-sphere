@@ -67,7 +67,7 @@ export default function DashboardPage() {
   // Analytics Hooks
   const { data: userRooms = [], isLoading: isLoadingRooms } = useUserRooms()
   const { data: currentGroupData, isLoading: isLoadingCurrent } = useAnalytics()
-  const { data: selectedRoomsData, isLoading: isLoadingSelected } = useSelectedRoomsAnalytics(selectedRoomIds)
+  const { data: selectedRoomsData, isLoading: isLoadingSelected } = useSelectedRoomsAnalytics(selectedRoomIds, { enabled: viewMode === 'selected' })
 
   const isAnalyticsLoading = viewMode === 'current' ? isLoadingCurrent : isLoadingSelected
   const analyticsData = viewMode === 'current' ? currentGroupData : selectedRoomsData
@@ -116,13 +116,13 @@ export default function DashboardPage() {
     setSelectedRoomIds([])
   }
 
-  // Only provide fallback values, all real data comes from the hook
-  const totalMeals = 0
-  const currentRate = 0
-  const myBalance = 0
-  const totalCost = 0
-  const activeRooms = 0
-  const totalMembers = 0
+  // Use fetched data with safe defaults
+  const totalMeals = dashboardData?.totalUserMeals ?? 0
+  const currentRate = dashboardData?.currentRate ?? 0
+  const myBalance = dashboardData?.currentBalance ?? 0
+  const totalCost = dashboardData?.totalCost ?? 0
+  const activeRooms = dashboardData?.activeRooms ?? 0
+  const totalMembers = dashboardData?.totalMembers ?? 0
 
   const AnalyticsSkeleton = () => (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
@@ -139,16 +139,6 @@ export default function DashboardPage() {
       <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of expenses by type.">
         <Skeleton className="h-[250px] w-full" />
       </AnalyticsCard>
-
-      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={true} description="Meal rate fluctuations over time.">
-        <Skeleton className="h-[250px] w-full" />
-      </AnalyticsCard>
-
-      <div className="xl:col-span-3">
-        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={true} description="Total expenses per month.">
-          <Skeleton className="h-[250px] w-full" />
-        </AnalyticsCard>
-      </div>
     </div>
   )
 
