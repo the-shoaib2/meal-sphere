@@ -1,25 +1,19 @@
-"use client";
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Users,
   Utensils,
   DollarSign,
-  TrendingUp,
   Receipt,
   Calculator,
   Wallet,
   CreditCard
 } from 'lucide-react';
-import { useGroupBalances } from '@/hooks/use-account-balance';
-import { useDashboardSummary } from '@/hooks/use-dashboard';
-import { useActiveGroup } from '@/contexts/group-context';
-import { useSession } from 'next-auth/react';
-import { useGroups } from '@/hooks/use-groups';
-import { Skeleton } from '@/components/ui/skeleton';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { GroupBalanceSummary } from '@/hooks/use-account-balance';
+import { useSession } from 'next-auth/react';
+import { useActiveGroup } from '@/contexts/group-context';
 
 interface SummaryCardsProps {
   totalMeals: number;
@@ -28,88 +22,39 @@ interface SummaryCardsProps {
   totalCost: number;
   activeRooms: number;
   totalMembers: number;
+  totalAllMeals?: number;
+  availableBalance?: number;
+  groupBalance?: GroupBalanceSummary | null;
 }
 
-const PRIVILEGED_ROLES = ['ADMIN', 'MANNAGER', 'MEAL_MANNAGER'];
+const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER', 'ACCOUNTANT'];
 
 function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
 }
 
 export default function SummaryCards({
-  totalMeals: initialTotalMeals,
-  currentRate: initialCurrentRate,
-  myBalance: initialMyBalance,
-  totalCost: initialTotalCost,
-  activeRooms: initialActiveRooms,
-  totalMembers: initialTotalMembers,
+  totalMeals,
+  currentRate,
+  myBalance,
+  totalCost,
+  activeRooms,
+  totalMembers,
+  totalAllMeals = 0,
+  availableBalance = 0,
+  groupBalance,
 }: SummaryCardsProps) {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  const { data: userGroups = [] } = useGroups();
 
-  // Fetch dashboard summary data using the custom hook
-  const { data: summaryData, isLoading: isLoadingSummary, error: summaryError } = useDashboardSummary();
+  const member = activeGroup?.members?.find((m: any) => m.userId === session?.user?.id);
+  const userRole = (activeGroup as any)?.userRole || member?.role;
 
-  // Use fetched data or fall back to props
-  const totalUserMeals = summaryData?.totalUserMeals ?? initialTotalMeals;
-  const totalAllMeals = summaryData?.totalAllMeals ?? initialTotalMeals;
-  const currentRate = summaryData?.currentRate ?? initialCurrentRate;
-  const currentBalance = summaryData?.currentBalance ?? initialMyBalance;
-  const availableBalance = summaryData?.availableBalance ?? initialMyBalance;
-  const totalCost = summaryData?.totalCost ?? initialTotalCost;
-  const userActiveRooms = summaryData?.activeRooms ?? initialActiveRooms;
-  const totalActiveGroups = summaryData?.totalActiveGroups ?? initialActiveRooms;
-  const totalMembers = summaryData?.totalMembers ?? initialTotalMembers;
-
-  // Check if user has privileged access to the active group
-  const member = activeGroup?.members?.find(m => m.userId === session?.user?.id);
-  const userRole = activeGroup?.userRole || member?.role;
-  const hasPrivilege = isPrivileged(userRole);
-
-  const { data: groupData, error: groupError } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);
-
-  // Show skeleton loading while data is being fetched
-  if (isLoadingSummary) {
-    return (
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(8)].map((_, i) => (
-          <Card key={`skeleton-${i}`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
-              <Skeleton className="h-4 w-4 sm:h-6 sm:w-6" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-6 sm:h-8 w-20 sm:w-24 mb-1 sm:mb-2" />
-              <Skeleton className="h-3 sm:h-4 w-28 sm:w-32" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-
-  // Show error message if there's an error
-  if (summaryError) {
-    return (
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="col-span-full">
-          <CardHeader>
-            <CardTitle className="text-center text-red-600 text-sm sm:text-base">Error Loading Dashboard</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              {summaryError.message === 'You are not a member of this group'
-                ? 'You are not a member of the selected group. Please select a different group.'
-                : 'Failed to load dashboard data. Please try again.'
-              }
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Determine if we should show group stats
+  // We use the passed groupBalance presence as the main indicator, 
+  // but we can also double check role if needed.
+  // The unified API only returns groupBalance if privileged, so presence check is enough.
+  const showGroupStats = !!groupBalance;
 
   return (
     <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -120,7 +65,7 @@ export default function SummaryCards({
         </CardHeader>
         <CardContent>
           <div className="text-lg sm:text-xl lg:text-2xl font-bold">
-            <NumberTicker value={totalUserMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={totalAllMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" />
+            <NumberTicker value={totalMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={totalAllMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             My meals / Total meals
@@ -150,7 +95,7 @@ export default function SummaryCards({
         </CardHeader>
         <CardContent>
           <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-            ৳<NumberTicker value={currentBalance} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
+            ৳<NumberTicker value={myBalance} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             Total money in account
@@ -195,16 +140,16 @@ export default function SummaryCards({
         </CardHeader>
         <CardContent>
           <div className="text-lg sm:text-xl lg:text-2xl font-bold">
-            <NumberTicker value={userActiveRooms} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={totalActiveGroups} className="text-lg sm:text-xl lg:text-2xl font-bold" />
+            <NumberTicker value={activeRooms} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={activeRooms} className="text-lg sm:text-xl lg:text-2xl font-bold" />
           </div>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            My groups / Total active groups
+            Active groups
           </p>
         </CardContent>
       </Card>
 
-      {/* Only show group balance cards if user has privileged access */}
-      {activeGroup && groupData && (
+      {/* Only show group balance cards if groupBalance data is present */}
+      {showGroupStats && groupBalance && (
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -212,11 +157,11 @@ export default function SummaryCards({
               <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ৳<NumberTicker value={groupData.groupTotalBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ৳<NumberTicker value={groupBalance.groupTotalBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                {activeGroup.name}
+                Group Balance
               </p>
             </CardContent>
           </Card>
@@ -228,10 +173,10 @@ export default function SummaryCards({
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-                ৳<NumberTicker value={groupData.totalExpenses} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600" />
+                ৳<NumberTicker value={groupBalance.totalExpenses} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600" />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Total expenses
+                Total group expenses
               </p>
             </CardContent>
           </Card>
@@ -243,10 +188,10 @@ export default function SummaryCards({
             </CardHeader>
             <CardContent>
               <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-                ৳<NumberTicker value={groupData.mealRate} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
+                ৳<NumberTicker value={groupBalance.mealRate} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                <NumberTicker value={groupData.totalMeals} className="text-[10px] sm:text-xs" /> total meals
+                <NumberTicker value={groupBalance.totalMeals} className="text-[10px] sm:text-xs" /> total meals
               </p>
             </CardContent>
           </Card>
@@ -257,11 +202,11 @@ export default function SummaryCards({
               <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                ৳<NumberTicker value={groupData.netGroupBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupData.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`} />
+              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                ৳<NumberTicker value={groupBalance.netGroupBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`} />
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                {groupData.netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
+                {groupBalance.netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
               </p>
             </CardContent>
           </Card>
@@ -269,4 +214,4 @@ export default function SummaryCards({
       )}
     </div>
   );
-} 
+}

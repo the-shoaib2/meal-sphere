@@ -1,4 +1,4 @@
-import { useDashboardUnified } from '@/hooks/use-dashboard';
+import { useDashboard } from '@/hooks/use-dashboard';
 import { DashboardActivity, DashboardChartData } from '@/hooks/use-dashboard';
 
 // Context to share unified dashboard data across components
@@ -14,7 +14,7 @@ type DashboardContextType = {
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-    const { data, isLoading, error } = useDashboardUnified();
+    const { data, isLoading, error } = useDashboard();
 
     return (
         <DashboardContext.Provider

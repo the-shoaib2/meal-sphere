@@ -18,7 +18,7 @@ import {
 import DashboardSummaryCards from "@/components/dashboard/summary-cards"
 import MealChart from "@/components/dashboard/meal-chart"
 import RecentActivities from "@/components/dashboard/recent-activities"
-import { useDashboardSummary, useDashboardRefresh } from "@/hooks/use-dashboard"
+import { useDashboardSummary, useDashboardRefresh, useDashboard } from "@/hooks/use-dashboard"
 import { redirect } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
@@ -47,168 +47,72 @@ import {
   LineChart,
   Line
 } from "recharts"
+import { SummaryCards } from "@/components/calculations"
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560"];
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { activeGroup, isLoading: isGroupLoading } = useActiveGroup();
-  const { data: dashboardData, isLoading: isDashboardLoading } = useDashboardSummary();
-  const { mutate: refreshDashboard, isPending: isRefreshing } = useDashboardRefresh();
 
-  // Get user's groups to check if they have any
-  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+  // Unified Data Fetch
+  const {
+    data: unifiedData,
+    isLoading: isUnifiedLoading,
+    refetch: refreshDashboard, // Alias to existing name
+    isRefetching: isUnifiedRefetching
+  } = useDashboard();
+
+  // Fetch groups independently to verify existence regardless of active group
+  const { data: allUserGroups = [], isLoading: isLoadingAllGroups } = useGroups();
+
+  const isDashboardLoading = isUnifiedLoading;
+  const isRefreshing = isUnifiedRefetching;
+  const dashboardData = unifiedData?.summary;
+  const userGroups = unifiedData?.groups || [];
+  const isLoadingGroups = isUnifiedLoading;
 
   // Analytics State
   const [viewMode, setViewMode] = useState<'current' | 'selected'>('current')
   const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([])
   const [showRoomSelector, setShowRoomSelector] = useState(false)
 
-  // Analytics Hooks
-  const { data: userRooms = [], isLoading: isLoadingRooms } = useUserRooms()
-  const { data: currentGroupData, isLoading: isLoadingCurrent } = useAnalytics()
+  // Analytics Data
+  const userRooms = unifiedData?.userRooms || [];
+  const isLoadingRooms = isUnifiedLoading;
+  const currentGroupData = unifiedData?.analytics;
+  const isLoadingCurrent = isUnifiedLoading;
+
+  // Specific hook for "selected rooms" view (interactive)
   const { data: selectedRoomsData, isLoading: isLoadingSelected } = useSelectedRoomsAnalytics(selectedRoomIds, { enabled: viewMode === 'selected' })
 
   const isAnalyticsLoading = viewMode === 'current' ? isLoadingCurrent : isLoadingSelected
   const analyticsData = viewMode === 'current' ? currentGroupData : selectedRoomsData
 
-  if (!session?.user?.email) {
-    redirect("/login")
-  }
-
-  // Effect for room selection
+  // Effect for room selection - MOVED UP to avoid hook order issues
   useEffect(() => {
     if (userRooms.length > 0 && selectedRoomIds.length === 0) {
-      setSelectedRoomIds(userRooms.slice(0, 3).map(room => room.id))
+      setSelectedRoomIds(userRooms.slice(0, 3).map((room: any) => room.id))
     }
   }, [userRooms, selectedRoomIds.length])
 
-  // Check if user has no groups - show empty state
-  if (!isLoadingGroups && userGroups.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground text-sm">
-              Welcome to MealSphere! Get started by creating or joining a group.
-            </p>
-          </div>
-        </div>
-        <NoGroupState />
-      </div>
-    );
+  // Handle redirects based on auth status
+  if (status === 'unauthenticated') {
+    redirect("/login");
   }
 
-  const handleRoomToggle = (roomId: string) => {
-    setSelectedRoomIds(prev =>
-      prev.includes(roomId)
-        ? prev.filter(id => id !== roomId)
-        : [...prev, roomId]
-    )
-  }
+  // --- LOGIC FLOW: Loading -> Empty -> Content ---
 
-  const handleSelectAll = () => {
-    setSelectedRoomIds(userRooms.map(room => room.id))
-  }
+  // 1. Loading State
+  // Show skeletons if:
+  // - Session is loading
+  // - Global group context is loading
+  // - Group list is being fetched
+  // - Dashboard data is loading (and we have an active group)
+  // - We are refreshing
+  const shouldShowLoading = status === 'loading' || isGroupLoading || isLoadingAllGroups || (!!activeGroup && isUnifiedLoading) || isRefreshing;
 
-  const handleDeselectAll = () => {
-    setSelectedRoomIds([])
-  }
-
-  // Use fetched data with safe defaults
-  const totalMeals = dashboardData?.totalUserMeals ?? 0
-  const currentRate = dashboardData?.currentRate ?? 0
-  const myBalance = dashboardData?.currentBalance ?? 0
-  const totalCost = dashboardData?.totalCost ?? 0
-  const activeRooms = dashboardData?.activeRooms ?? 0
-  const totalMembers = dashboardData?.totalMembers ?? 0
-
-  const AnalyticsSkeleton = () => (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-      <div className="xl:col-span-3">
-        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={true} description="Key metrics for each room.">
-          <Skeleton className="h-[200px] w-full" />
-        </AnalyticsCard>
-      </div>
-
-      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of meals by type.">
-        <Skeleton className="h-[250px] w-full" />
-      </AnalyticsCard>
-
-      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of expenses by type.">
-        <Skeleton className="h-[250px] w-full" />
-      </AnalyticsCard>
-    </div>
-  )
-
-  const renderAnalyticsContent = (data: AnalyticsData) => (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-      <div className="xl:col-span-3">
-        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={isAnalyticsLoading} description="Key metrics for each room.">
-          <RoomStatsTable data={data.roomStats} />
-        </AnalyticsCard>
-      </div>
-
-      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of meals by type.">
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie data={data.mealDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-              {data.mealDistribution.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </AnalyticsCard>
-
-      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of expenses by type.">
-        <ResponsiveContainer width="100%" height={250}>
-          <PieChart>
-            <Pie data={data.expenseDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-              {data.expenseDistribution.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </AnalyticsCard>
-
-      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={isAnalyticsLoading} description="Meal rate fluctuations over time.">
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data.mealRateTrend}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Line type="monotone" dataKey="value" stroke="#8884d8" name="Meal Rate" />
-          </LineChart>
-        </ResponsiveContainer>
-      </AnalyticsCard>
-
-      <div className="xl:col-span-3">
-        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={isAnalyticsLoading} description="Total expenses per month.">
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data.monthlyExpenses}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" fill="#82ca9d" name="Expenses" />
-            </BarChart>
-          </ResponsiveContainer>
-        </AnalyticsCard>
-      </div>
-    </div>
-  );
-
-  if (isGroupLoading || isDashboardLoading || isRefreshing) {
+  if (shouldShowLoading) {
     return (
       <div className="space-y-4 sm:space-y-6">
 
@@ -324,6 +228,141 @@ export default function DashboardPage() {
     );
   }
 
+  // Check if user has no groups - show empty state
+  if (!isUnifiedLoading && !activeGroup && userGroups.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground text-sm">
+              Welcome to MealSphere! Get started by creating or joining a group.
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
+
+  // Handle case where activeGroup is missing but user has groups (should select one)
+  if (!isUnifiedLoading && !activeGroup && userGroups.length > 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
+        <h2 className="text-xl font-semibold">No Group Selected</h2>
+        <p className="text-muted-foreground">Please select a group from the sidebar to view the dashboard.</p>
+      </div>
+    )
+  }
+
+  const handleRoomToggle = (roomId: string) => {
+    setSelectedRoomIds(prev =>
+      prev.includes(roomId)
+        ? prev.filter(id => id !== roomId)
+        : [...prev, roomId]
+    )
+  }
+
+  const handleSelectAll = () => {
+    setSelectedRoomIds(userRooms.map((room: any) => room.id))
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedRoomIds([])
+  }
+
+  // Use fetched data with safe defaults
+  const totalMeals = dashboardData?.totalUserMeals ?? 0
+  const currentRate = dashboardData?.currentRate ?? 0
+  const myBalance = dashboardData?.currentBalance ?? 0
+  const totalCost = dashboardData?.totalCost ?? 0
+  const activeRooms = dashboardData?.activeRooms ?? 0
+  const totalMembers = dashboardData?.totalMembers ?? 0
+
+  const AnalyticsSkeleton = () => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={true} description="Key metrics for each room.">
+          <Skeleton className="h-[200px] w-full" />
+        </AnalyticsCard>
+      </div>
+
+      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of meals by type.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={true} description="Breakdown of expenses by type.">
+        <Skeleton className="h-[250px] w-full" />
+      </AnalyticsCard>
+    </div>
+  )
+
+  const renderAnalyticsContent = (data: AnalyticsData) => (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Room Statistics" icon={Users} isLoading={isAnalyticsLoading} description="Key metrics for each room.">
+          <RoomStatsTable data={data.roomStats} />
+        </AnalyticsCard>
+      </div>
+
+      <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of meals by type.">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie data={data.mealDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {data.mealDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of expenses by type.">
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie data={data.expenseDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {data.expenseDistribution.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={isAnalyticsLoading} description="Meal rate fluctuations over time.">
+        <ResponsiveContainer width="100%" height={250}>
+          <LineChart data={data.mealRateTrend}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="value" stroke="#8884d8" name="Meal Rate" />
+          </LineChart>
+        </ResponsiveContainer>
+      </AnalyticsCard>
+
+      <div className="xl:col-span-3">
+        <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={isAnalyticsLoading} description="Total expenses per month.">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={data.monthlyExpenses}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#82ca9d" name="Expenses" />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsCard>
+      </div>
+    </div>
+  );
+
   return (
     <DashboardProvider>
       <div className="space-y-4 sm:space-y-6">
@@ -337,14 +376,17 @@ export default function DashboardPage() {
               {dashboardData ? 'Live Data' : 'Loading...'}
             </Badge>
           </div>
-          <DashboardSummaryCards
-            totalMeals={totalMeals}
-            currentRate={currentRate}
-            myBalance={myBalance}
-            totalCost={totalCost}
-            activeRooms={activeRooms}
-            totalMembers={totalMembers}
-          />
+          {unifiedData && <DashboardSummaryCards
+            totalMeals={unifiedData.summary.totalUserMeals}
+            currentRate={unifiedData.summary.currentRate}
+            myBalance={unifiedData.summary.currentBalance}
+            totalCost={unifiedData.summary.totalCost}
+            activeRooms={unifiedData.summary.activeRooms}
+            totalMembers={unifiedData.summary.totalMembers}
+            totalAllMeals={unifiedData.summary.totalAllMeals}
+            availableBalance={unifiedData.summary.availableBalance}
+            groupBalance={unifiedData.groupBalance}
+          />}
         </div>
 
         {/* Main Content Section */}
@@ -470,7 +512,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {userRooms.map((room) => (
+                  {userRooms.map((room: any) => (
                     <div key={room.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={room.id}

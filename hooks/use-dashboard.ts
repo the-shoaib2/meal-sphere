@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useActiveGroup } from '@/contexts/group-context';
+import { AnalyticsData } from '@/hooks/use-analytics';
+import { GroupBalanceSummary } from '@/hooks/use-account-balance';
 
 export type DashboardSummary = {
   totalUserMeals: number;
@@ -35,8 +37,8 @@ export type DashboardChartData = {
   balance: number;
 };
 
-// Unified hook that fetches all dashboard data in a single parallel request
-export function useDashboardUnified() {
+// Main hook that fetches all dashboard data in a single parallel request
+export function useDashboard() {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
 
@@ -44,14 +46,19 @@ export function useDashboardUnified() {
     summary: DashboardSummary;
     activities: DashboardActivity[];
     chartData: DashboardChartData[];
+    analytics: AnalyticsData;
+    userRooms: Array<{ id: string; name: string; memberCount: number }>;
+    groups: Array<any>; // Using any for group type to avoid circular deps, or import strict type if available
+    notifications: Array<any>; // Using any for notification type
+    groupBalance: GroupBalanceSummary | null;
   }>({
-    queryKey: ['dashboard-unified', activeGroup?.id],
+    queryKey: ['dashboard', activeGroup?.id],
     queryFn: async () => {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
 
-      const url = `/api/dashboard/unified?groupId=${activeGroup.id}`;
+      const url = `/api/dashboard?groupId=${activeGroup.id}`;
       const res = await fetch(url);
 
       if (!res.ok) {
@@ -147,8 +154,8 @@ export function useDashboardRefresh() {
       return Promise.resolve();
     },
     onSuccess: () => {
-      // Invalidate unified query
-      queryClient.invalidateQueries({ queryKey: ['dashboard-unified'] });
+      // Invalidate main dashboard query
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       // Keep legacy queries for backward compatibility
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-activities'] });
