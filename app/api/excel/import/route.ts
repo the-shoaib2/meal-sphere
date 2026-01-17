@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { importMealsFromExcel, importShoppingFromExcel, importPaymentsFromExcel } from "@/lib/excel-utils"
-import { getExcelPermissions, validateImportOptions } from "@/lib/excel-permissions"
+import { importMealsFromExcel, importShoppingFromExcel, importPaymentsFromExcel } from "@/lib/excel/excel-utils"
+import { getExcelPermissions, validateImportOptions } from "@/lib/excel/excel-permissions"
 import { ExcelImportType } from "@/types/excel"
-import prisma from "@/lib/prisma"
+import prisma from "@/lib/services/prisma"
 
 
 // Force dynamic rendering - don't pre-render during build

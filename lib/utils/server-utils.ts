@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/services/prisma"
 
 /**
  * Gets the current group ID for a user

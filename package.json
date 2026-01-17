@@ -11,7 +11,7 @@
     "postinstall": "prisma generate",
     "send-updates": "ts-node --project tsconfig.scripts.json ./scripts/send-update-email.ts",
     "analyze": "ANALYZE=true next build",
-    "cache:clear": "ts-node --project tsconfig.scripts.json -e \"import { cacheClearAll } from './lib/cache-service'; cacheClearAll().then(() => console.log('Cache cleared'))\""
+    "cache:clear": "ts-node --project tsconfig.scripts.json -e \"import { cacheClearAll } from './lib/cache/cache-service'; cacheClearAll().then(() => console.log('Cache cleared'))\""
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

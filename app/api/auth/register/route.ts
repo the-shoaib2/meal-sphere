@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from "@/lib/prisma"
-import { createVerificationToken } from "@/lib/email-utils"
-import { sendVerificationEmail } from "@/lib/email-utils"
+import { prisma } from "@/lib/services/prisma"
+import { createVerificationToken } from "@/lib/services/email-utils"
+import { sendVerificationEmail } from "@/lib/services/email-utils"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
 
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 
 
-import getRedisClient from '@/lib/redis';
+import getRedisClient from '@/lib/services/redis';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(50),

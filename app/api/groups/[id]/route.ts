@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/services/prisma';
 import { z } from 'zod';
 import { validateGroupAccess, validateAdminAccess, getGroupData } from '@/lib/auth/group-auth';
-import { cacheGetOrSet, cacheDelete } from '@/lib/cache-service';
-import { CACHE_TTL } from '@/lib/cache-keys';
+import { cacheGetOrSet, cacheDelete } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 import { getGroupWithMembers } from '@/lib/group-query-helpers';
 
 // Schema for updating a group

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { prisma } from "@/lib/prisma"
-import { createNotification } from "@/lib/notification-utils"
+import { prisma } from "@/lib/services/prisma"
+import { createNotification } from "@/lib/utils/notification-utils"
 import { MarketDate, MarketStatus, NotificationType } from "@prisma/client"
 
 type RouteParams = {

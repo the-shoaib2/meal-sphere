@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/prisma"
-import { createBkashPayment } from "@/lib/bkash-service"
+import prisma from "@/lib/services/prisma"
+import { createBkashPayment } from "@/lib/services/bkash-service"
 import { v4 as uuidv4 } from "uuid"
 
 

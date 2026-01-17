@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { SidebarContent } from "@/components/sidebar-content"
+import { SidebarContent } from "@/components/layout/sidebar-content"
 
 export function AppSidebar() {
   return (

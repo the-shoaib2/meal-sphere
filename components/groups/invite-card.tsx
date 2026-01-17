@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { sendGroupInviteEmail } from "@/lib/email-utils";
+import { sendGroupInviteEmail } from "@/lib/services/email-utils";
 
 import { useGroups } from '@/hooks/use-groups';
 

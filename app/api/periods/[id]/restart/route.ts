@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import { PeriodService } from '@/lib/period-service';
+import { PeriodService } from '@/lib/services/period-service';
 
 export async function POST(
   request: NextRequest,

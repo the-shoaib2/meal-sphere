@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ProfileForm } from "@/components/profile-form"
-import { AppearanceForm } from "@/components/appearance-form"
-import { LanguageForm } from "@/components/language-form"
-import { SecurityForm } from "@/components/security-form"
+import { ProfileForm } from "@/components/settings/profile-form"
+import { AppearanceForm } from "@/components/settings/appearance-form"
+import { LanguageForm } from "@/components/settings/language-form"
+import { SecurityForm } from "@/components/auth/security-form"
 import type { User } from "@prisma/client"
 
 interface SettingsTabsProps {
@@ -16,12 +16,12 @@ interface SettingsTabsProps {
 export function SettingsTabs({ user }: SettingsTabsProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  
+
   // Get the active tab from URL search params, default to 'profile'
   const [activeTab, setActiveTab] = useState(() => {
     const tabFromUrl = searchParams?.get('tab');
-    return tabFromUrl && ['profile', 'appearance', 'language', 'security'].includes(tabFromUrl) 
-      ? tabFromUrl 
+    return tabFromUrl && ['profile', 'appearance', 'language', 'security'].includes(tabFromUrl)
+      ? tabFromUrl
       : 'profile';
   });
 

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/prisma"
-import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod } from "@/lib/period-utils"
-import { cacheGetOrSet } from "@/lib/cache-service"
-import { getMealsCacheKey, CACHE_TTL } from "@/lib/cache-keys"
-import { invalidateMealCache } from "@/lib/cache-invalidation"
-import { getMealsOptimized } from "@/lib/query-helpers"
+import prisma from "@/lib/services/prisma"
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod } from "@/lib/utils/period-utils"
+import { cacheGetOrSet } from "@/lib/cache/cache-service"
+import { getMealsCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys"
+import { invalidateMealCache } from "@/lib/cache/cache-invalidation"
+import { getMealsOptimized } from "@/lib/utils/query-helpers"
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';

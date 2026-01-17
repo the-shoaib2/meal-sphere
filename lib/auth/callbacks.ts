@@ -1,7 +1,7 @@
 import { updateSessionWithDeviceInfo } from '@/lib/auth/session-manager';
-import { getLocationFromIP } from '@/lib/location-utils';
+import { getLocationFromIP } from '@/lib/utils/location-utils';
 
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/services/prisma"
 
 // JWT callback
 export async function jwtCallback({ token, user, account, profile }: any) {

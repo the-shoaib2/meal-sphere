@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { prisma } from "@/lib/prisma"
-import { createVerificationToken, sendVerificationEmail } from "@/lib/email-utils"
+import { prisma } from "@/lib/services/prisma"
+import { createVerificationToken, sendVerificationEmail } from "@/lib/services/email-utils"
 
 
 // Force dynamic rendering - don't pre-render during build

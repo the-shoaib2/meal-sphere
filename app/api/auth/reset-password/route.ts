@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/services/prisma"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
 import { createHash } from "crypto"

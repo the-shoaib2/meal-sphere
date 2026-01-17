@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/services/prisma'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth/auth'
 import { 
@@ -8,7 +8,7 @@ import {
   getAllActiveSessions,
   revokeMultipleSessions
 } from '@/lib/auth/session-manager'
-import { getLocationFromIP } from '@/lib/location-utils'
+import { getLocationFromIP } from '@/lib/utils/location-utils'
 
 
 // Force dynamic rendering - don't pre-render during build

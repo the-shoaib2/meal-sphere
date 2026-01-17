@@ -1,8 +1,8 @@
 "use client"
 
-import { PublicHeader } from "@/components/public-header"
-import { PublicFooter } from "@/components/public-footer"
-import { LoadingBar } from "@/components/loading-bar"
+import { PublicHeader } from "@/components/public/public-header"
+import { PublicFooter } from "@/components/public/public-footer"
+import { LoadingBar } from "@/components/shared/loading-bar"
 
 export default function PublicLayout({
   children,
@@ -15,7 +15,7 @@ export default function PublicLayout({
       <PublicHeader />
       <main className="flex-1 w-full overflow-y-auto">
         {children}
-      <PublicFooter />
+        <PublicFooter />
       </main>
     </div>
   )

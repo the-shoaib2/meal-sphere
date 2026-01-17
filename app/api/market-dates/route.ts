@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/services/prisma"
 import { z } from "zod"
-import { createNotification } from "@/lib/notification-utils"
+import { createNotification } from "@/lib/utils/notification-utils"
 import { NotificationType } from "@prisma/client"
 
 

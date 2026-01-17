@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { PeriodService } from '@/lib/period-service';
-import { prisma } from '@/lib/prisma';
+import { PeriodService } from '@/lib/services/period-service';
+import { prisma } from '@/lib/services/prisma';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';

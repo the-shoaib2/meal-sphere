@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from "@/lib/prisma"
-import { queryBkashPayment } from "@/lib/bkash-service"
-import { createCustomNotification } from "@/lib/notification-utils"
+import prisma from "@/lib/services/prisma"
+import { queryBkashPayment } from "@/lib/services/bkash-service"
+import { createCustomNotification } from "@/lib/utils/notification-utils"
 
 
 // Force dynamic rendering - don't pre-render during build

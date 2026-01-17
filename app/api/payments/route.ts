@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/prisma"
-import { cacheGetOrSet } from "@/lib/cache-service"
-import { getPaymentsCacheKey, CACHE_TTL } from "@/lib/cache-keys"
-import { invalidatePaymentCache } from "@/lib/cache-invalidation"
+import prisma from "@/lib/services/prisma"
+import { cacheGetOrSet } from "@/lib/cache/cache-service"
+import { getPaymentsCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys"
+import { invalidatePaymentCache } from "@/lib/cache/cache-invalidation"
 
 // Force dynamic rendering - don't pre-render during build
 export const dynamic = 'force-dynamic';

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from "@/lib/prisma"
-import { createMealReminder } from "@/lib/notification-utils"
+import prisma from "@/lib/services/prisma"
+import { createMealReminder } from "@/lib/utils/notification-utils"
 
 
 // Force dynamic rendering - don't pre-render during build

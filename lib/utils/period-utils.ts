@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/services/prisma';
 import { PeriodStatus } from '@prisma/client';
-import { cacheGetOrSet } from '@/lib/cache-service';
-import { CACHE_TTL } from '@/lib/cache-keys';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 export * from './period-utils-shared';
 

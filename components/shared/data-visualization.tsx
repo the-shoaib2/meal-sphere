@@ -9,7 +9,7 @@ import {
   generateExpenseData,
   generateMealRateTrendData,
   generateMonthlyExpenseData,
-} from "@/lib/chart-utils"
+} from "@/lib/utils/chart-utils"
 import { useLanguage } from "@/contexts/language-context"
 import {
   PieChart,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { exportPaymentsToExcel } from "@/lib/excel-utils"
+import { exportPaymentsToExcel } from "@/lib/excel/excel-utils"
 
 export const dynamic = 'force-dynamic';
 

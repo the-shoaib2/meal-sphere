@@ -9,8 +9,8 @@ import { getServerAuthSession } from "@/lib/auth/auth"
 import { LanguageProvider } from "@/contexts/language-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { ToastProvider } from "@/components/providers/toast-provider"
-import InternetStatusBanner from "@/components/internet-status-card"
-import { LoadingBar } from "@/components/loading-bar"
+import InternetStatusBanner from "@/components/shared/internet-status-card"
+import { LoadingBar } from "@/components/shared/loading-bar"
 
 // Force all routes to be dynamic - prevents build-time pre-rendering
 export const dynamic = 'force-dynamic'

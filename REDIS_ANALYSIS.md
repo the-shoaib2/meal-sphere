@@ -241,7 +241,7 @@ UPSTASH_REDIS_REST_TOKEN="AYgwAAInc..."
 Consider adding caching to the above APIs using the same pattern:
 ```typescript
 import { cacheGetOrSet } from '@/lib/cache-service';
-import { getAnalyticsCacheKey, CACHE_TTL } from '@/lib/cache-keys';
+import { getAnalyticsCacheKey, CACHE_TTL } from '@/lib/cache/cache-keys';
 
 const data = await cacheGetOrSet(
   getAnalyticsCacheKey(groupId),

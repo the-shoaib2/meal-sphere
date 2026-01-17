@@ -12,7 +12,7 @@ import { Search, Plus, Users, Lock, AlertCircle, ArrowRight, Loader2, LogOut } f
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EmptyState } from '@/components/empty-state';
+import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
 import type { Group } from '@/hooks/use-groups';
 import {

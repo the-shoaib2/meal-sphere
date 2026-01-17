@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import prisma from '@/lib/prisma';
+import prisma from '@/lib/services/prisma';
 
 type RouteParams = { id: string };
 type RouteContext = { params: Promise<RouteParams> };

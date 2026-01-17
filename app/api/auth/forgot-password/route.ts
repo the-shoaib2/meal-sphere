@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { prisma } from "@/lib/prisma"
-import { createVerificationToken, sendPasswordResetEmail } from "@/lib/email-utils"
+import { prisma } from "@/lib/services/prisma"
+import { createVerificationToken, sendPasswordResetEmail } from "@/lib/services/email-utils"
 import { z } from "zod"
 
 const forgotPasswordSchema = z.object({

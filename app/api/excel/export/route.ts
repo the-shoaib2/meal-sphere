@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { exportMealsToExcel, exportShoppingToExcel, exportPaymentsToExcel, generateMealPreviewTable, exportExpensesToExcel, exportBalancesToExcel, generateBalancePreview, generateCalculationPreview, exportDataToPDF, exportAllDataToExcel } from "@/lib/excel-utils"
-import { getExcelPermissions, validateExportOptions } from "@/lib/excel-permissions"
+import { exportMealsToExcel, exportShoppingToExcel, exportPaymentsToExcel, generateMealPreviewTable, exportExpensesToExcel, exportBalancesToExcel, generateBalancePreview, generateCalculationPreview, exportDataToPDF, exportAllDataToExcel } from "@/lib/excel/excel-utils"
+import { getExcelPermissions, validateExportOptions } from "@/lib/excel/excel-permissions"
 import { ExcelExportType, ExcelExportScope, ExcelDateRange } from "@/types/excel"
-import prisma from "@/lib/prisma"
+import prisma from "@/lib/services/prisma"
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
 
 

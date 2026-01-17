@@ -1,4 +1,4 @@
-import { PeriodManagement } from '@/components/period-management';
+import { PeriodManagement } from '@/components/periods/period-management';
 
 export default function PeriodsPage() {
   return (

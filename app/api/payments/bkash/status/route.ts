@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/prisma"
-import { queryBkashPayment } from "@/lib/bkash-service"
+import prisma from "@/lib/services/prisma"
+import { queryBkashPayment } from "@/lib/services/bkash-service"
 
 
 // Force dynamic rendering - don't pre-render during build

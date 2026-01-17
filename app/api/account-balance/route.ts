@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/prisma';
-import { getCurrentPeriod } from '@/lib/period-utils';
+import { prisma } from '@/lib/services/prisma';
+import { getCurrentPeriod } from '@/lib/utils/period-utils';
 import { hasBalancePrivilege, canViewUserBalance } from '@/lib/auth/balance-permissions';
 
 // Force dynamic rendering - don't pre-render during build

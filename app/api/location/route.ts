@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { detectLocation } from '@/lib/location-utils'
+import { detectLocation } from '@/lib/utils/location-utils'
 
 export const dynamic = 'force-dynamic';
 

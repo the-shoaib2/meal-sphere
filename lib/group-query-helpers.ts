@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma';
-import { cacheGetOrSet } from '@/lib/cache-service';
-import { CACHE_TTL } from '@/lib/cache-keys';
+import { prisma } from '@/lib/services/prisma';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
 import { Role } from '@prisma/client';
 

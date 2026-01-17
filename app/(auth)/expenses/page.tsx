@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ExpenseList } from "@/components/expense-list"
-import { ExtraExpenseDialog } from "@/components/extra-expense-dialog"
+import { ExpenseList } from "@/components/finance/expense-list"
+import { ExtraExpenseDialog } from "@/components/finance/extra-expense-dialog"
 import { useActiveGroup } from "@/contexts/group-context"
 import { Plus } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"

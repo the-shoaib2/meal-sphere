@@ -10,7 +10,7 @@ import { sessionCallback, signInCallback, eventsCallbacks, jwtCallback } from '@
 // Import types
 import '@/lib/auth/types';
 
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/services/prisma"
 
 // Validate environment variables
 validateEnvironmentVariables();

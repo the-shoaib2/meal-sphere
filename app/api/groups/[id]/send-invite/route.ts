@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
-import { prisma } from "@/lib/prisma";
-import { sendGroupInviteEmail } from "@/lib/email-utils";
+import { prisma } from "@/lib/services/prisma";
+import { sendGroupInviteEmail } from "@/lib/services/email-utils";
 import { z } from "zod";
 
 // Validation schema for the request body

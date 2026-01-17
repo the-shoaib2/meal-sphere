@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { parseDeviceInfo, capitalizeDeviceType } from './utils';
 import { LocationData } from './types';
 
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/services/prisma"
 
 // Helper function to get current session info
 export async function getCurrentSessionInfo(userId: string) {

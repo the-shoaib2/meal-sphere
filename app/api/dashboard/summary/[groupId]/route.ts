@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/prisma';
-import { cacheGetOrSet } from '@/lib/cache-service';
-import { getDashboardCacheKey, CACHE_TTL } from '@/lib/cache-keys';
+import { prisma } from '@/lib/services/prisma';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { getDashboardCacheKey, CACHE_TTL } from '@/lib/cache/cache-keys';
 
 async function calculateBalance(userId: string, roomId: string): Promise<number> {
   // Calculate money received (targetUserId = user)

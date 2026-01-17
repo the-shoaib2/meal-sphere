@@ -8,12 +8,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useSession } from "next-auth/react"
 import { NotificationBell } from "./notification-bell"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { UserAvatar } from "@/components/user-avatar"
-import { SidebarContent } from "@/components/sidebar-content"
+import { UserAvatar } from "@/components/auth/user-avatar"
+import { SidebarContent } from "@/components/layout/sidebar-content"
 import { useEffect, useState } from "react"
 import screenfull from "screenfull"
 
-import { HeaderSearch } from "@/components/header-search"
+import { HeaderSearch } from "@/components/layout/header-search"
 
 export function Header() {
   const { data: session } = useSession()

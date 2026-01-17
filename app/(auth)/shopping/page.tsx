@@ -1,4 +1,4 @@
-import ShoppingManagement from "@/components/shopping-management"
+import ShoppingManagement from "@/components/market/shopping-management"
 
 export default function ShoppingPage() {
   return <ShoppingManagement />

@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
-import { GroupSwitcher } from "@/components/group-switcher"
+import { GroupSwitcher } from "@/components/layout/group-switcher"
 
 type NavItem = {
     title: string

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/services/prisma';
 
 async function checkPeriodStatus() {
   console.log('🔍 Checking period status...');

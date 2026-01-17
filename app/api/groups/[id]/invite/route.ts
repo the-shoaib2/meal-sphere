@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { Role } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/services/prisma';
 
 interface InviteTokenResponse {
   id: string;

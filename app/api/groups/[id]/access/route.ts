@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkGroupAccess } from '@/lib/auth/group-auth';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/services/prisma';
 import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
 import { Role } from '@prisma/client';
 

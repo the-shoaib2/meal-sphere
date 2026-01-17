@@ -1,7 +1,7 @@
 "use client"
 
 import { useLegalData } from "@/hooks/use-legal-data"
-import { LegalContentRenderer } from "@/components/legal-content-renderer"
+import { LegalContentRenderer } from "@/components/shared/legal-content-renderer"
 
 export default function PrivacyPolicyPage() {
   const { data, isLoading } = useLegalData('privacy')

@@ -1,5 +1,5 @@
 import { MealType } from '@prisma/client';
-import prisma from '../lib/prisma';
+import prisma from '../lib/services/prisma';
 
 // npx tsx scripts/manage-meals.ts
 

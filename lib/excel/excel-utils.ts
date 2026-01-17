@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx"
-import prisma from "@/lib/prisma"
+import prisma from "@/lib/services/prisma"
 import { MealType, ExtraExpense, Payment, ShoppingItem, Meal, RoomMember, User } from "@prisma/client"
-import { buildDataReportPDFDocDefinition, BuildDataReportPDFDocDefinitionParams } from "./pdf-templates"
+import { buildDataReportPDFDocDefinition, BuildDataReportPDFDocDefinitionParams } from "@/lib/utils/pdf-templates"
 
 // Types for Excel data
 // (TypeScript: use 'any' for row types to avoid linter errors)
@@ -1342,7 +1342,7 @@ export async function exportDataToPDF(
     // @ts-ignore
     const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
     // Import fonts for PDFMake
-    const fonts = (await import("./pdfmake-fonts")).default;
+    const fonts = (await import("@/lib/utils/pdfmake-fonts")).default;
     const pdfMake = pdfMakeModule.default || pdfMakeModule;
     const pdfFonts = pdfFontsModule.default || pdfFontsModule;
     let vfs: any = undefined;

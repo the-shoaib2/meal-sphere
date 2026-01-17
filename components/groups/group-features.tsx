@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { X, Plus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
-import { GROUP_FEATURES, GROUP_CATEGORIES, GROUP_TAGS, type GroupCategory, type GroupTag } from '@/lib/features';
+import { GROUP_FEATURES, GROUP_CATEGORIES, GROUP_TAGS, type GroupCategory, type GroupTag } from '@/lib/utils/features';
 
 interface GroupFeaturesProps {
   groupId: string;

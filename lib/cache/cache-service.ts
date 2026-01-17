@@ -1,4 +1,4 @@
-import { getRedisClient } from './redis';
+import { getRedisClient } from '@/lib/services/redis';
 
 /**
  * Unified cache service with TTL management and invalidation strategies

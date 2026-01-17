@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { prisma } from "@/lib/prisma"
-import { createNotification } from "@/lib/notification-utils"
-import { uploadReceipt } from "@/lib/upload-utils"
+import { prisma } from "@/lib/services/prisma"
+import { createNotification } from "@/lib/utils/notification-utils"
+import { uploadReceipt } from "@/lib/utils/upload-utils"
 import { NotificationType } from "@prisma/client"
-import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/period-utils"
-import { cacheGetOrSet } from "@/lib/cache-service"
-import { getShoppingCacheKey, CACHE_TTL } from "@/lib/cache-keys"
-import { invalidateShoppingCache } from "@/lib/cache-invalidation"
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/utils/period-utils"
+import { cacheGetOrSet } from "@/lib/cache/cache-service"
+import { getShoppingCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys"
+import { invalidateShoppingCache } from "@/lib/cache/cache-invalidation"
 
 
 // Force dynamic rendering - don't pre-render during build

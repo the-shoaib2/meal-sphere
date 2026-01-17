@@ -20,7 +20,7 @@ import Image from "next/image"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
 import { useExtraExpense, type ExtraExpense } from "@/hooks/use-expense"
-import { ExpenseActions } from "@/components/expense-actions"
+import { ExpenseActions } from "@/components/finance/expense-actions"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export function ExpenseList() {
@@ -34,11 +34,11 @@ export function ExpenseList() {
   const deleteMutation = deleteExpense as { isPending: boolean, mutateAsync: (id: string) => Promise<any> }
   const [selectedExpense, setSelectedExpense] = useState<ExtraExpense | null>(null)
   const { t } = useLanguage()
-  
+
   const currentUserRole = activeGroup?.members?.find(
     member => member.userId === session?.user?.id
   )?.role || 'MEMBER'
-  
+
   const canManageExpenses = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(currentUserRole)
 
 
@@ -46,7 +46,7 @@ export function ExpenseList() {
     try {
       const expenseDate = expense.date ? new Date(expense.date) : null
       if (!expenseDate || isNaN(expenseDate.getTime())) return false
-      
+
       const matchesType = selectedType === 'ALL_TYPES' || !selectedType || expense.type === selectedType
       const matchesDate = expenseDate >= startDate && expenseDate <= endDate
       return matchesType && matchesDate
@@ -66,14 +66,14 @@ export function ExpenseList() {
 
   const handleEditSuccess = () => {
     // Invalidate the expenses query to trigger a refetch
-    queryClient.invalidateQueries({ 
-      queryKey: ['extraExpenses', activeGroup?.id] 
+    queryClient.invalidateQueries({
+      queryKey: ['extraExpenses', activeGroup?.id]
     })
   }
 
 
 
-  if (isLoading ||!activeGroup) {
+  if (isLoading || !activeGroup) {
     return (
       <div className="space-y-4 sm:space-y-6">
         {/* Filters Card Skeleton */}
@@ -124,12 +124,12 @@ export function ExpenseList() {
                     <Skeleton className="h-3 sm:h-4 w-12 sm:w-16" />
                     <Skeleton className="h-3 sm:h-4 w-12 sm:w-16" />
                   </div>
-                  
+
                   {/* Mobile Header Skeleton */}
                   <div className="sm:hidden pb-2 border-b">
                     <Skeleton className="h-4 w-24" />
                   </div>
-                  
+
                   {/* Table Rows Skeleton - Desktop */}
                   <div className="hidden sm:block">
                     {[...Array(5)].map((_, i) => (
@@ -147,7 +147,7 @@ export function ExpenseList() {
                       </div>
                     ))}
                   </div>
-                  
+
                   {/* Mobile Rows Skeleton */}
                   <div className="sm:hidden space-y-3">
                     {[...Array(3)].map((_, i) => (
@@ -304,7 +304,7 @@ export function ExpenseList() {
               <Badge className="text-sm font-medium">
                 Total: ৳{expenses
                   .reduce((sum, exp) => sum + exp.amount, 0)
-                  .toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Badge>
             </div>
           </div>
@@ -337,7 +337,7 @@ export function ExpenseList() {
                     <TableRow key={expense.id}>
                       <TableCell className="font-medium">{expense.description}</TableCell>
                       <TableCell>{getTypeBadge(expense.type)}</TableCell>
-                      <TableCell className="text-red-600" >৳ -{expense.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                      <TableCell className="text-red-600" >৳ -{expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                       <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="flex items-center space-x-2">
                         {expense.user?.image && (
@@ -376,7 +376,7 @@ export function ExpenseList() {
                       </TableCell>
                       {canManageExpenses && (
                         <TableCell>
-                          <ExpenseActions 
+                          <ExpenseActions
                             expenseId={expense.id}
                             expense={expense}
                             onDelete={handleDeleteExpense}

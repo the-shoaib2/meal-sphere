@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { generateMealImportTemplate } from "@/lib/excel-template"
+import { generateMealImportTemplate } from "@/lib/excel/excel-template"
 
 export const dynamic = 'force-dynamic';
 

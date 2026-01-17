@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/prisma';
-import { generateMealCountData, generateExpenseData, generateMealRateTrendData, generateMonthlyExpenseData } from '@/lib/chart-utils';
-import { getPeriodAwareWhereClause, validateActivePeriod } from '@/lib/period-utils';
+import { prisma } from '@/lib/services/prisma';
+import { generateMealCountData, generateExpenseData, generateMealRateTrendData, generateMonthlyExpenseData } from '@/lib/utils/chart-utils';
+import { getPeriodAwareWhereClause, validateActivePeriod } from '@/lib/utils/period-utils';
 
 
 // Force dynamic rendering - don't pre-render during build

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
+import { Switch } from "@/components/ui/switch"
 import {
   ChevronsUpDown,
   LogOut,
@@ -38,16 +39,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import { useProfileImage } from "@/hooks/use-profile-image"
 import { handleNavigation } from "@/lib/utils"
 
@@ -63,7 +55,6 @@ interface NavUserProps {
 }
 
 export function NavUser({ user, className = '' }: NavUserProps) {
-  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -81,8 +72,7 @@ export function NavUser({ user, className = '' }: NavUserProps) {
     try {
       await signOut({ callbackUrl: "/" });
     } finally {
-      setLoggingOut(false);
-      setShowLogoutDialog(false);
+      // No need to reset loggingOut since we redirect
     }
   };
 
@@ -137,7 +127,7 @@ export function NavUser({ user, className = '' }: NavUserProps) {
             <DropdownMenuContent
               className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
               side={isMobile ? "bottom" : "right"}
-              align={isMobile? "center" : "end"}
+              align={isMobile ? "center" : "end"}
               sideOffset={4}
             >
               <DropdownMenuLabel className="p-0 font-normal">
@@ -168,90 +158,45 @@ export function NavUser({ user, className = '' }: NavUserProps) {
                     <span>Settings</span>
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="cursor-pointer w-full transition-colors duration-200 hover:bg-accent/80 focus:bg-accent/80">
-                    {getThemeIcon()}
-                    <span>Appearance</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className={`z-[100] ${isMobile ? "w-32" : "w-48"}`}>
-                      <DropdownMenuItem
-                        className={`cursor-pointer ${isThemeActive('light') ? 'bg-accent' : ''}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setTheme('light');
-                        }}
-                      >
-                        <Sun className="mr-2 h-4 w-4" />
-                        <span>Light</span>
-                        {isThemeActive('light') && (
-                          <span className="ml-auto">✓</span>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className={`cursor-pointer ${isThemeActive('dark') ? 'bg-accent' : ''}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setTheme('dark');
-                        }}
-                      >
-                        <Moon className="mr-2 h-4 w-4" />
-                        <span>Dark</span>
-                        {isThemeActive('dark') && (
-                          <span className="ml-auto">✓</span>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className={`cursor-pointer ${isThemeActive('system') ? 'bg-accent' : ''}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setTheme('system');
-                        }}
-                      >
-                        <Laptop className="mr-2 h-4 w-4" />
-                        <span>System</span>
-                        {isThemeActive('system') && (
-                          <span className="ml-auto">✓</span>
-                        )}
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
+                <DropdownMenuItem className="focus:bg-transparent" onSelect={(e) => e.preventDefault()}>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Laptop className="mr-2 h-4 w-4" />
+                      <span>Appearance</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sun className={`h-4 w-4 ${resolvedTheme === 'light' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                      <Switch
+                        checked={theme === 'dark' || (theme === 'system' && resolvedTheme === 'dark')}
+                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                      />
+                      <Moon className={`h-4 w-4 ${resolvedTheme === 'dark' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                    </div>
+                  </div>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                onClick={() => setShowLogoutDialog(true)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleLogout();
+                }}
+                disabled={loggingOut}
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                {loggingOut ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="mr-2 h-4 w-4" />
+                )}
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>
-      </SidebarMenu>
+      </SidebarMenu >
 
-      <AlertDialog open={showLogoutDialog} onOpenChange={loggingOut ? undefined : setShowLogoutDialog}>
-        <AlertDialogContent className="rounded-lg w-[90vw] p-4 sm:max-w-sm sm:p-6">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm log out?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to log out?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={loggingOut}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleLogout}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center"
-              disabled={loggingOut}
-            >
-              {loggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Log out
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </>
   )
 }

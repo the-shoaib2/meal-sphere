@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { verifyEmail } from "@/lib/email-utils"
+import { verifyEmail } from "@/lib/services/email-utils"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Metadata } from 'next'

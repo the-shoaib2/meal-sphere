@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/services/prisma";
 import { validateAdminAccess, checkGroupAccess, getGroupData } from "@/lib/auth/group-auth";
 import { Role, VoteType } from "@prisma/client";
 import { getServerSession } from "next-auth/next";

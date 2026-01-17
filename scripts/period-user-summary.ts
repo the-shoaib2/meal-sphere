@@ -1,4 +1,4 @@
-import prisma from '../lib/prisma';
+import prisma from '../lib/services/prisma';
 
 const roomId = '6852961df8c5bebb5b4c898a';
 const periodId = '686af44daff408ee70d84c26';

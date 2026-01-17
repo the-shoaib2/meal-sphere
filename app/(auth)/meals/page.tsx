@@ -1,7 +1,7 @@
 "use client"
 
 import { useActiveGroup } from "@/contexts/group-context"
-import MealManagement from "@/components/meal-management"
+import MealManagement from "@/components/meal/meal-management"
 import { useSearchParams } from "next/navigation"
 import { MealManagementSkeleton } from "@/components/meal/meal-skeletons";
 import { NoGroupState } from "@/components/empty-states/no-group-state";

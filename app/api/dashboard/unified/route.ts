@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/prisma';
-import { cacheGetOrSet } from '@/lib/cache-service';
-import { getDashboardCacheKey, CACHE_TTL } from '@/lib/cache-keys';
-import { getUserBalance, getUserMealCount, calculateMealRate, getRecentActivitiesOptimized } from '@/lib/query-helpers';
+import { prisma } from '@/lib/services/prisma';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { getDashboardCacheKey, CACHE_TTL } from '@/lib/cache/cache-keys';
+import { getUserBalance, getUserMealCount, calculateMealRate, getRecentActivitiesOptimized } from '@/lib/utils/query-helpers';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';

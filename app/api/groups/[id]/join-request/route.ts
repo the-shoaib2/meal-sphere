@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/services/prisma";
 import { Role } from '@prisma/client';
 import { validateGroupAccess, validateAdminAccess } from '@/lib/auth/group-auth';
 

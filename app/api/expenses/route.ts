@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
-import { prisma } from "@/lib/prisma"
-import { createCustomNotification } from "@/lib/notification-utils"
-import { uploadReceipt } from "@/lib/upload-utils"
+import { prisma } from "@/lib/services/prisma"
+import { createCustomNotification } from "@/lib/utils/notification-utils"
+import { uploadReceipt } from "@/lib/utils/upload-utils"
 import { ExpenseType, NotificationType } from '@prisma/client'
-import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/period-utils"
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from "@/lib/utils/period-utils"
 
 
 // Force dynamic rendering - don't pre-render during build

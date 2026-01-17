@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Role } from '@prisma/client';
-import { isFeatureEnabled } from '@/lib/features';
+import { isFeatureEnabled } from '@/lib/utils/features';
 import { Badge } from '@/components/ui/badge';
 import { MembersTab } from '@/components/groups/tabs/members-tab';
 import { SettingsTab } from '@/components/groups/tabs/settings-tab';

@@ -10,7 +10,7 @@ import {
   ExcelDateRange,
   ExcelPermissionResult
 } from "@/types/excel"
-import { getExcelPermissions } from "@/lib/excel-permissions"
+import { getExcelPermissions } from "@/lib/excel/excel-permissions"
 import { Role } from "@prisma/client"
 
 export function useExcel() {

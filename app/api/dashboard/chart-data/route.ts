@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/prisma';
-import { cacheGetOrSet } from '@/lib/cache-service';
-import { CACHE_TTL } from '@/lib/cache-keys';
+import { prisma } from '@/lib/services/prisma';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 
 // Force dynamic rendering - don't pre-render during build
