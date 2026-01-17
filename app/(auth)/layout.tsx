@@ -2,7 +2,6 @@ import type React from "react"
 import { authOptions } from "@/lib/auth/auth"
 import { getServerSession } from "next-auth"
 import { LanguageProvider } from "@/contexts/language-context"
-import { ToastProvider } from "@/components/providers/toast-provider"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Header } from "@/components/layout/header"
 import { GroupProvider } from "@/contexts/group-context"
@@ -35,7 +34,6 @@ export default async function AuthLayout({
           </div>
         </div>
       </div>
-      <ToastProvider />
     </GroupProvider>
   )
 }

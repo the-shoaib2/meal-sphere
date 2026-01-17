@@ -69,8 +69,8 @@ export default function DashboardPage() {
   const isDashboardLoading = isUnifiedLoading;
   const isRefreshing = isUnifiedRefetching;
   const dashboardData = unifiedData?.summary;
-  const userGroups = unifiedData?.groups || [];
-  const isLoadingGroups = isUnifiedLoading;
+  const userGroups = allUserGroups;
+  const isLoadingGroups = isLoadingAllGroups;
 
   // Analytics State
   const [viewMode, setViewMode] = useState<'current' | 'selected'>('current')
@@ -229,7 +229,7 @@ export default function DashboardPage() {
   }
 
   // Check if user has no groups - show empty state
-  if (!isUnifiedLoading && !activeGroup && userGroups.length === 0) {
+  if (!isUnifiedLoading && !isLoadingAllGroups && !activeGroup && allUserGroups.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -246,7 +246,7 @@ export default function DashboardPage() {
   }
 
   // Handle case where activeGroup is missing but user has groups (should select one)
-  if (!isUnifiedLoading && !activeGroup && userGroups.length > 0) {
+  if (!isUnifiedLoading && !isLoadingAllGroups && !activeGroup && allUserGroups.length > 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] space-y-4">
         <h2 className="text-xl font-semibold">No Group Selected</h2>

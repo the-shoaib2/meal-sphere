@@ -17,7 +17,8 @@ import {
 export async function getUserMealCount(
   userId: string,
   roomId: string,
-  periodId?: string
+  periodId?: string,
+  ttlOverride?: number
 ): Promise<number> {
   const cacheKey = `meal_count:${userId}:${roomId}${periodId ? `:${periodId}` : ''}`;
   
@@ -29,7 +30,7 @@ export async function getUserMealCount(
       
       return await prisma.meal.count({ where });
     },
-    { ttl: periodId ? CACHE_TTL.CALCULATIONS_CLOSED : CACHE_TTL.ACTIVE_PERIOD }
+    { ttl: ttlOverride || (periodId ? CACHE_TTL.CALCULATIONS_CLOSED : CACHE_TTL.ACTIVE_PERIOD) }
   );
 }
 
@@ -85,7 +86,8 @@ export async function getRoomTotalExpenses(
  */
 export async function calculateMealRate(
   roomId: string,
-  periodId?: string
+  periodId?: string,
+  ttlOverride?: number
 ): Promise<{ mealRate: number; totalMeals: number; totalExpenses: number }> {
   const cacheKey = getCalculationsCacheKey(roomId, periodId);
   
@@ -101,7 +103,7 @@ export async function calculateMealRate(
       
       return { mealRate, totalMeals, totalExpenses };
     },
-    { ttl: periodId ? CACHE_TTL.CALCULATIONS_CLOSED : CACHE_TTL.CALCULATIONS_ACTIVE }
+    { ttl: ttlOverride || (periodId ? CACHE_TTL.CALCULATIONS_CLOSED : CACHE_TTL.CALCULATIONS_ACTIVE) }
   );
 }
 
@@ -111,7 +113,8 @@ export async function calculateMealRate(
 export async function getUserBalance(
   userId: string,
   roomId: string,
-  periodId?: string
+  periodId?: string,
+  ttlOverride?: number
 ): Promise<number> {
   const cacheKey = `user_balance:${userId}:${roomId}${periodId ? `:${periodId}` : ''}`;
   
@@ -128,7 +131,7 @@ export async function getUserBalance(
       
       return received._sum.amount || 0;
     },
-    { ttl: periodId ? CACHE_TTL.CALCULATIONS_CLOSED : CACHE_TTL.ACTIVE_PERIOD }
+    { ttl: ttlOverride || (periodId ? CACHE_TTL.CALCULATIONS_CLOSED : CACHE_TTL.ACTIVE_PERIOD) }
   );
 }
 

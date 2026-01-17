@@ -85,4 +85,4 @@ export const sessionConfig = {
 export const pagesConfig = {
   signIn: '/login',
   error: '/login/error',
-}; 
+};

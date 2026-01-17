@@ -45,11 +45,16 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      window.dispatchEvent(new CustomEvent('routeChangeStart'));
-      await signOut({ callbackUrl: "/" });
+      // Clear local storage
+      localStorage.clear();
+
+      // Direct sign out
+      await signOut({ callbackUrl: '/', redirect: true });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      window.location.href = '/';
     } finally {
-      // No need to reset loggingOut since we redirect, but safe to keep or remove if component unmounts.
-      // Keeping it simple.
+      setLoggingOut(false);
     }
   };
 
@@ -117,7 +122,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
                 className="w-full flex items-center cursor-pointer"
                 onClick={() => handleNavigation('/dashboard')}
               >
-                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <LayoutDashboard className="h-4 w-4" />
                 <span>Dashboard</span>
               </button>
             </DropdownMenuItem>
@@ -126,7 +131,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
                 className="w-full flex items-center cursor-pointer"
                 onClick={() => handleNavigation('/settings')}
               >
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </button>
             </DropdownMenuItem>
@@ -135,7 +140,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center">
                   <Laptop className="mr-2 h-4 w-4" />
-                  <span>Appearance</span>
+                  <span>Theme</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Sun className={`h-4 w-4 ${resolvedTheme === 'light' ? 'text-blue-500' : 'text-muted-foreground'}`} />
@@ -158,9 +163,9 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
             disabled={loggingOut}
           >
             {loggingOut ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="h-4 w-4" />
             )}
             <span>Sign out</span>
           </DropdownMenuItem>

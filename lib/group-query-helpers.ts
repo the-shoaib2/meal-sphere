@@ -34,9 +34,6 @@ export async function getUserGroups(userId: string, includeMembers = false) {
               description: true,
               isPrivate: true,
               createdAt: true,
-              updatedAt: true,
-              bannerUrl: true,
-              category: true,
               createdByUser: {
                 select: {
                   id: true,
@@ -44,11 +41,14 @@ export async function getUserGroups(userId: string, includeMembers = false) {
                   image: true,
                 },
               },
+              memberCount: true,
+              /*
               _count: {
                 select: {
                   members: true
                 }
               },
+              */
               ...(includeMembers && {
                 members: {
                   select: {
@@ -72,7 +72,7 @@ export async function getUserGroups(userId: string, includeMembers = false) {
           },
         },
         orderBy: {
-          room: { createdAt: 'desc' }
+          joinedAt: 'desc'
         }
       });
 
@@ -82,7 +82,7 @@ export async function getUserGroups(userId: string, includeMembers = false) {
         permissions: ROLE_PERMISSIONS[member.role as Role] || [],
         joinedAt: member.joinedAt,
         isCurrent: member.isCurrent,
-        memberCount: member.room._count.members,
+        memberCount: member.room.memberCount,
         isCurrentMember: true,
       }));
     },
@@ -144,11 +144,7 @@ export async function getGroupWithMembers(groupId: string, userId?: string) {
             where: userId ? undefined : { isBanned: false },
             orderBy: { joinedAt: 'asc' }
           },
-          _count: {
-            select: {
-              members: true
-            }
-          }
+          memberCount: true
         },
       });
 
@@ -170,7 +166,7 @@ export async function getGroupWithMembers(groupId: string, userId?: string) {
         userRole,
         permissions: userRole ? (ROLE_PERMISSIONS[userRole as Role] || []) : [],
         joinedAt: userJoinedAt,
-        memberCount: group._count.members,
+        memberCount: group.memberCount,
         isCurrentMember: !!userRole,
       };
     },
@@ -198,9 +194,7 @@ export async function getPublicGroups(limit = 50, userId?: string) {
           description: true,
           isPrivate: true,
           createdAt: true,
-          bannerUrl: true,
-          category: true,
-          tags: true,
+          // Optimized: removed bannerUrl, category, tags as they aren't used in main list
           createdByUser: {
             select: {
               id: true,
@@ -208,11 +202,15 @@ export async function getPublicGroups(limit = 50, userId?: string) {
               image: true,
             },
           },
+          memberCount: true,
+          /*
           _count: {
             select: {
               members: true
             }
           },
+          */
+          /*
           ...(userId && {
             members: {
               where: { userId },
@@ -223,20 +221,42 @@ export async function getPublicGroups(limit = 50, userId?: string) {
               take: 1
             }
           })
+          */
         },
         orderBy: { createdAt: 'desc' },
         take: limit
       });
 
-      return groups.map((group: any) => ({
-        ...group,
-        userRole: group.members?.[0]?.role || null,
-        permissions: group.members?.[0]?.role ? (ROLE_PERMISSIONS[group.members[0].role as Role] || []) : [],
-        joinedAt: group.members?.[0]?.joinedAt || null,
-        memberCount: group._count.members,
-        isCurrentMember: !!group.members?.length,
-        members: [] // Don't expose full member list
-      }));
+      // Optimized: Batch fetch memberships for the current user to avoid N+1 queries
+      const userMemberships = userId 
+        ? await prisma.roomMember.findMany({
+            where: {
+              userId,
+              roomId: { in: groups.map(g => g.id) }
+            },
+            select: {
+              roomId: true,
+              role: true,
+              joinedAt: true
+            }
+          })
+        : [];
+
+      const membershipMap = new Map(userMemberships.map(m => [m.roomId, m]));
+
+      return groups.map((group: any) => {
+        const membership = membershipMap.get(group.id);
+        
+        return {
+          ...group,
+          userRole: membership?.role || null,
+          permissions: membership?.role ? (ROLE_PERMISSIONS[membership.role as Role] || []) : [],
+          joinedAt: membership?.joinedAt || null,
+          memberCount: group.memberCount,
+          isCurrentMember: !!membership,
+          members: [] // Don't expose full member list
+        };
+      });
     },
     { ttl: CACHE_TTL.GROUPS_LIST || 120 }
   );
@@ -256,17 +276,13 @@ export async function getBatchGroupMemberCounts(groupIds: string[]): Promise<Map
     },
     select: {
       id: true,
-      _count: {
-        select: {
-          members: true
-        }
-      }
+      memberCount: true
     }
   });
   
   const countMap = new Map<string, number>();
   counts.forEach((group: any) => {
-    countMap.set(group.id, group._count.members);
+    countMap.set(group.id, group.memberCount);
   });
   
   // Fill in zeros for groups not found

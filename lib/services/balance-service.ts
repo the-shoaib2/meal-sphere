@@ -1,6 +1,8 @@
 
 import { prisma } from '@/lib/services/prisma';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 // Optimized: Accepts periodId to avoid DB lookup
 export async function calculateBalance(userId: string, roomId: string, periodId: string | null | undefined): Promise<number> {
@@ -195,122 +197,130 @@ export async function calculateAvailableBalance(
  * This is an expensive operation and should generally be cached by the caller.
  */
 export async function getGroupBalanceSummary(roomId: string, includeDetails: boolean) {
-  // Now do expensive operations inside cache
-  const currentPeriod = await getCurrentPeriod(roomId);
-  const periodId = currentPeriod?.id;
+  const cacheKey = `group_balance_summary:${roomId}:${includeDetails}`;
 
-  const members = await prisma.roomMember.findMany({
-    where: { roomId },
-    include: { user: { select: { id: true, name: true, image: true, email: true } } },
-  });
+  return cacheGetOrSet(
+    cacheKey,
+    async () => {
+      // Now do expensive operations inside cache
+      const currentPeriod = await getCurrentPeriod(roomId);
+      const periodId = currentPeriod?.id;
 
-  // 1. Fetch ALL transactions for the room/period at once, grouped by targetUserId
-  const transactionsGrouped = await prisma.accountTransaction.groupBy({
-    by: ['targetUserId'],
-    where: {
-      roomId,
-      periodId: periodId,
-    },
-    _sum: {
-      amount: true,
-    },
-  });
+      const members = await prisma.roomMember.findMany({
+        where: { roomId },
+        include: { user: { select: { id: true, name: true, image: true, email: true } } },
+      });
 
-  // Convert to map for O(1) lookup
-  const balanceMap = new Map<string, number>();
-  transactionsGrouped.forEach((t) => {
-    if (t.targetUserId) balanceMap.set(t.targetUserId, t._sum.amount || 0);
-  });
+      // 1. Fetch ALL transactions for the room/period at once, grouped by targetUserId
+      const transactionsGrouped = await prisma.accountTransaction.groupBy({
+        by: ['targetUserId'],
+        where: {
+          roomId,
+          periodId: periodId,
+        },
+        _sum: {
+          amount: true,
+        },
+      });
 
-  // 2. Fetch ALL meal counts for the room/period at once, grouped by userId
-  const mealsGrouped = await prisma.meal.groupBy({
-    by: ['userId'],
-    where: {
-      roomId,
-      periodId: periodId,
-    },
-    _count: {
-      id: true,
-    },
-  });
+      // Convert to map for O(1) lookup
+      const balanceMap = new Map<string, number>();
+      transactionsGrouped.forEach((t) => {
+        if (t.targetUserId) balanceMap.set(t.targetUserId, t._sum.amount || 0);
+      });
 
-  // Convert to map
-  const mealCountMap = new Map<string, number>();
-  mealsGrouped.forEach((m) => {
-    if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
-  });
+      // 2. Fetch ALL meal counts for the room/period at once, grouped by userId
+      const mealsGrouped = await prisma.meal.groupBy({
+        by: ['userId'],
+        where: {
+          roomId,
+          periodId: periodId,
+        },
+        _count: {
+          id: true,
+        },
+      });
 
-  // Calculate group totals efficiently
-  // We calculate total expenses first, then pass it to meal rate calculation
-  const totalExpenses = await calculateTotalExpenses(roomId, periodId);
-  const { mealRate, totalMeals } = await calculateMealRate(roomId, periodId, totalExpenses);
+      // Convert to map
+      const mealCountMap = new Map<string, number>();
+      mealsGrouped.forEach((m) => {
+        if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
+      });
 
-  const groupTotalBalance = await calculateGroupTotalBalance(roomId, periodId);
+      // Calculate group totals efficiently
+      // We calculate total expenses first, then pass it to meal rate calculation
+      const totalExpenses = await calculateTotalExpenses(roomId, periodId);
+      const { mealRate, totalMeals } = await calculateMealRate(roomId, periodId, totalExpenses);
 
-  // Construct the response in memory
-  const membersWithBalances = members.map((m: any) => {
-    // Use pre-fetched data
-    const basicBalance = balanceMap.get(m.userId) || 0;
-    const userMealCount = mealCountMap.get(m.userId) || 0;
+      const groupTotalBalance = await calculateGroupTotalBalance(roomId, periodId);
 
-    if (includeDetails) {
-      const totalSpent = userMealCount * mealRate;
-      const availableBalance = basicBalance - totalSpent;
+      // Construct the response in memory
+      const membersWithBalances = members.map((m: any) => {
+        // Use pre-fetched data
+        const basicBalance = balanceMap.get(m.userId) || 0;
+        const userMealCount = mealCountMap.get(m.userId) || 0;
+
+        if (includeDetails) {
+          const totalSpent = userMealCount * mealRate;
+          const availableBalance = basicBalance - totalSpent;
+
+          return {
+            id: m.id,
+            userId: m.userId,
+            roomId: m.roomId,
+            role: m.role,
+            isCurrent: m.isCurrent,
+            isBanned: m.isBanned,
+            joinedAt: m.joinedAt ? new Date(m.joinedAt).toISOString() : null,
+            user: {
+              id: m.user.id,
+              name: m.user.name,
+              email: m.user.email,
+              image: m.user.image,
+            },
+            balance: basicBalance,
+            availableBalance,
+            totalSpent,
+            mealCount: userMealCount,
+            mealRate,
+          };
+        }
+
+        return {
+          id: m.id,
+          userId: m.userId,
+          roomId: m.roomId,
+          role: m.role,
+          isCurrent: m.isCurrent,
+          isBanned: m.isBanned,
+          joinedAt: m.joinedAt ? new Date(m.joinedAt).toISOString() : null,
+          user: {
+            id: m.user.id,
+            name: m.user.name,
+            email: m.user.email,
+            image: m.user.image,
+          },
+          balance: basicBalance,
+        };
+      });
 
       return {
-        id: m.id,
-        userId: m.userId,
-        roomId: m.roomId,
-        role: m.role,
-        isCurrent: m.isCurrent,
-        isBanned: m.isBanned,
-        joinedAt: m.joinedAt ? new Date(m.joinedAt).toISOString() : null,
-        user: {
-          id: m.user.id,
-          name: m.user.name,
-          email: m.user.email,
-          image: m.user.image,
-        },
-        balance: basicBalance,
-        availableBalance,
-        totalSpent,
-        mealCount: userMealCount,
-        mealRate,
+        members: membersWithBalances,
+        groupTotalBalance: Number(groupTotalBalance) || 0,
+        totalExpenses: Number(totalExpenses) || 0,
+        mealRate: Number(mealRate) || 0,
+        totalMeals: Number(totalMeals) || 0,
+        netGroupBalance: Number(groupTotalBalance - totalExpenses) || 0,
+        currentPeriod: currentPeriod ? {
+          id: currentPeriod.id,
+          name: currentPeriod.name,
+          startDate: currentPeriod.startDate ? new Date(currentPeriod.startDate).toISOString() : null,
+          endDate: currentPeriod.endDate ? new Date(currentPeriod.endDate).toISOString() : null,
+          status: currentPeriod.status,
+          isLocked: currentPeriod.isLocked,
+        } : null,
       };
-    }
-
-    return {
-      id: m.id,
-      userId: m.userId,
-      roomId: m.roomId,
-      role: m.role,
-      isCurrent: m.isCurrent,
-      isBanned: m.isBanned,
-      joinedAt: m.joinedAt ? new Date(m.joinedAt).toISOString() : null,
-      user: {
-        id: m.user.id,
-        name: m.user.name,
-        email: m.user.email,
-        image: m.user.image,
-      },
-      balance: basicBalance,
-    };
-  });
-
-  return {
-    members: membersWithBalances,
-    groupTotalBalance: Number(groupTotalBalance) || 0,
-    totalExpenses: Number(totalExpenses) || 0,
-    mealRate: Number(mealRate) || 0,
-    totalMeals: Number(totalMeals) || 0,
-    netGroupBalance: Number(groupTotalBalance - totalExpenses) || 0,
-    currentPeriod: currentPeriod ? {
-      id: currentPeriod.id,
-      name: currentPeriod.name,
-      startDate: currentPeriod.startDate ? new Date(currentPeriod.startDate).toISOString() : null,
-      endDate: currentPeriod.endDate ? new Date(currentPeriod.endDate).toISOString() : null,
-      status: currentPeriod.status,
-      isLocked: currentPeriod.isLocked,
-    } : null,
-  };
+    },
+    { ttl: CACHE_TTL.ACTIVE_PERIOD }
+  );
 }

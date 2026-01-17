@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Switch } from "@/components/ui/switch"
 import {
   ChevronsUpDown,
@@ -55,13 +56,15 @@ interface NavUserProps {
 }
 
 export function NavUser({ user, className = '' }: NavUserProps) {
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false)
+  const router = useRouter()
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { isMobile } = useSidebar();
   const { image, getInitials, isLoaded } = useProfileImage({
     initialImage: user?.image
   });
+
 
   useEffect(() => {
     setMounted(true);
@@ -70,9 +73,16 @@ export function NavUser({ user, className = '' }: NavUserProps) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await signOut({ callbackUrl: "/" });
+      // Clear local storage
+      localStorage.clear();
+
+      // Direct sign out
+      await signOut({ callbackUrl: '/', redirect: true });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      window.location.href = '/';
     } finally {
-      // No need to reset loggingOut since we redirect
+      setLoggingOut(false);
     }
   };
 

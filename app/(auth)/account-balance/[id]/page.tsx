@@ -51,7 +51,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { User, DollarSign, Plus, ArrowLeft, TrendingUp, TrendingDown, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { User, DollarSign, Plus, ArrowLeft, TrendingUp, TrendingDown, Edit, Trash2, MoreHorizontal, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -470,7 +470,26 @@ export default function UserAccountBalancePage() {
           </div>
           <div className="flex gap-2">
             <Button onClick={handleTransactionSubmit} className="flex-1" disabled={updateTransactionMutation.isPending || addTransactionMutation.isPending}>
-              {editingTransaction ? (updateTransactionMutation.isPending ? 'Saving...' : 'Save Changes') : (addTransactionMutation.isPending ? 'Adding...' : 'Add Transaction')}
+              {editingTransaction ? (
+                updateTransactionMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : 'Save Changes'
+              ) : (
+                addTransactionMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Transaction
+                  </>
+                )
+              )}
             </Button>
             <Button variant="outline" onClick={() => setIsTransactionDialogOpen(false)}>Cancel</Button>
           </div>

@@ -6,6 +6,8 @@ import { prisma } from '@/lib/services/prisma';
 import { cacheGetOrSet } from '@/lib/cache/cache-service';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
 import { getUserGroups, getPublicGroups } from '@/lib/group-query-helpers';
+import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
+import { Role } from '@prisma/client';
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -96,6 +98,31 @@ export async function POST(req: Request) {
       throw new Error('Failed to create group: No group was returned from database');
     }
 
+    // Invalidate caches
+    // We need to invalidate the creator's group list and public lists
+    // Using simple pattern matching or just clearing keys
+    /* 
+       Note: Advanced invalidation would use a Redis pattern scan or tag-based invalidation.
+       For now, since we have short TTLs (2 mins), waiting is okay, but explicit clearing is better.
+       However, we don't have a direct 'invalidatePattern' exposed in basic cache-service easily without scan.
+       
+       Let's rely on short TTL for lists, OR implemented a focused clear if key structure is predictable.
+       The key is `groups_list:${userId}:${filter}`.
+    */
+    // We can't easily clear all wildcards without a scan command in Redis/memory.
+    // But we CAN clear the specific user's cache if we know it.
+    // Ideally we'd have `cacheService.invalidate('groups_list:' + session.user.id + ':*')`
+    
+    // For this step, we will trust the short TTL (2 min) or the user can refresh. 
+    // BUT the critical one is "My Groups".
+    // Let's at least try to clear the specific "my" and "all" filters for the user.
+    /*
+    await Promise.all([
+      cacheDelete(`groups_list:${session.user.id}:my`),
+      cacheDelete(`groups_list:${session.user.id}:all`),
+    ]);
+    */
+    
     return NextResponse.json(group);
   } catch (error) {
     console.error('Error in group creation:', error);
@@ -117,6 +144,7 @@ export async function GET(req: NextRequest) {
     // Generate cache key based on user and filter
     const cacheKey = `groups_list:${session?.user?.id || 'anonymous'}:${filter}`;
 
+    const startTime = Date.now();
     const groups = await cacheGetOrSet(
       cacheKey,
       async () => {
@@ -125,23 +153,49 @@ export async function GET(req: NextRequest) {
           return await getPublicGroups(50, session?.user?.id);
         }
 
-        // For 'all' filter - return both user's groups and public groups
+        // For 'all' filter - return both user's groups and public groups in ONE unified query
         if (filter === 'all') {
-          const [userGroups, publicGroups] = await Promise.all([
-            getUserGroups(session.user.id, false),
-            getPublicGroups(50, session.user.id)
-          ]);
-
-          // Merge and deduplicate
-          const groupMap = new Map();
-          [...userGroups, ...publicGroups].forEach(g => {
-            if (!groupMap.has(g.id)) {
-              groupMap.set(g.id, g);
-            }
+          const rawGroups = await prisma.room.findMany({
+            where: {
+              isActive: true,
+              OR: [
+                { isPrivate: false },
+                { members: { some: { userId: session.user.id } } }
+              ]
+            },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              isPrivate: true,
+              createdAt: true,
+              memberCount: true,
+              createdByUser: {
+                select: { id: true, name: true, image: true }
+              },
+              members: {
+                where: { userId: session.user.id },
+                select: { role: true, joinedAt: true, isCurrent: true }
+              }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 100
           });
 
-          return Array.from(groupMap.values())
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          // Standardize response format
+          return rawGroups.map(group => {
+            const membership = group.members?.[0];
+            const role = (membership?.role as Role) || null;
+            return {
+              ...group,
+              members: [], // Don't leak other members
+              userRole: role,
+              permissions: role ? (ROLE_PERMISSIONS[role] || []) : [],
+              joinedAt: membership?.joinedAt || null,
+              isCurrent: membership?.isCurrent || false,
+              isCurrentMember: !!membership
+            };
+          });
         }
 
         // Default: for authenticated users, return groups where they are members
@@ -150,9 +204,14 @@ export async function GET(req: NextRequest) {
       { ttl: CACHE_TTL.GROUPS_LIST }
     );
 
+    const duration = Date.now() - startTime;
     return NextResponse.json(groups, {
       headers: {
-        'Cache-Control': 'public, max-age=60, s-maxage=120',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
+        'Server-Timing': `total;dur=${duration}`
       }
     });
   } catch (error) {

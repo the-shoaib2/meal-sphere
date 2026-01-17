@@ -97,12 +97,18 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
     const handleNavigation = async (href: string) => {
         if (href === "/signout") {
-            setIsSigningOut(true)
+            setIsSigningOut(true);
             try {
-                await signOut({ callbackUrl: "/login" })
+                // Clear local storage
+                localStorage.clear();
+
+                // Direct sign out
+                await signOut({ callbackUrl: '/', redirect: true });
             } catch (error) {
-                console.error("Sign out error:", error)
-                setIsSigningOut(false)
+                console.error('Sign out error:', error);
+                window.location.href = '/';
+            } finally {
+                setIsSigningOut(false);
             }
         } else {
             if (pathname !== href) {

@@ -52,16 +52,7 @@ export async function GET(request: NextRequest) {
          return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
       }
 
-      // Cache key without periodId to avoid expensive lookup before cache check
-      const cacheKey = `balance:all:${roomId}:user=${session.user.id}:details=${includeDetails}`;
-
-      const balanceData = await cacheGetOrSet(
-        cacheKey,
-        async () => {
-          return await getGroupBalanceSummary(roomId, includeDetails);
-        },
-        { ttl: CACHE_TTL.CALCULATIONS_ACTIVE } // 3 minutes
-      );
+      const balanceData = await getGroupBalanceSummary(roomId, includeDetails);
 
       return NextResponse.json(balanceData, {
         headers: {

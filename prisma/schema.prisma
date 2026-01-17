@@ -231,6 +231,7 @@ model RoomMember {
   @@index([userId, roomId, isCurrent])
   @@index([roomId, role, isBanned])
   @@index([roomId, isBanned])
+  @@index([userId, joinedAt])
 }
 
 /// ACCOUNT MODEL
