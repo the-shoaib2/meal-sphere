@@ -37,8 +37,11 @@ export async function GET(request: NextRequest) {
 
     const history = await prisma.transactionHistory.findMany({
       where: { 
-        userId: userId,
-        roomId: roomId
+        roomId: roomId,
+        OR: [
+          { userId: userId },
+          { targetUserId: userId }
+        ]
       },
       include: {
         changedByUser: {

@@ -196,7 +196,15 @@ export async function calculateAvailableBalance(
  * Calculates summary for the entire group, including all members' balances.
  * This is an expensive operation and should generally be cached by the caller.
  */
-export async function getGroupBalanceSummary(roomId: string, includeDetails: boolean) {
+export async function getGroupBalanceSummary(
+  roomId: string, 
+  includeDetails: boolean,
+  prefetchedData?: {
+    totalExpenses?: number;
+    totalMeals?: number;
+    mealRate?: number;
+  }
+) {
   const cacheKey = `group_balance_summary:${roomId}:${includeDetails}`;
 
   return cacheGetOrSet(
@@ -248,9 +256,27 @@ export async function getGroupBalanceSummary(roomId: string, includeDetails: boo
       });
 
       // Calculate group totals efficiently
-      // We calculate total expenses first, then pass it to meal rate calculation
-      const totalExpenses = await calculateTotalExpenses(roomId, periodId);
-      const { mealRate, totalMeals } = await calculateMealRate(roomId, periodId, totalExpenses);
+      
+      // 1. Calculate Total Meals from grouped data (No extra DB call needed)
+      let totalMeals = prefetchedData?.totalMeals;
+      if (totalMeals === undefined) {
+         totalMeals = 0;
+         mealsGrouped.forEach(m => {
+            totalMeals! += (m._count.id || 0); // Non-null assertion safe due to init
+         });
+      }
+
+      // 2. Calculate Total Expenses (DB call if not prefetched)
+      let totalExpenses = prefetchedData?.totalExpenses;
+      if (totalExpenses === undefined) {
+        totalExpenses = await calculateTotalExpenses(roomId, periodId);
+      }
+
+      // 3. Calculate Meal Rate (Pure math now)
+      let mealRate = prefetchedData?.mealRate;
+      if (mealRate === undefined) {
+          mealRate = (totalMeals || 0) > 0 ? (totalExpenses || 0) / (totalMeals || 0) : 0;
+      }
 
       const groupTotalBalance = await calculateGroupTotalBalance(roomId, periodId);
 
@@ -261,7 +287,7 @@ export async function getGroupBalanceSummary(roomId: string, includeDetails: boo
         const userMealCount = mealCountMap.get(m.userId) || 0;
 
         if (includeDetails) {
-          const totalSpent = userMealCount * mealRate;
+          const totalSpent = userMealCount * (mealRate || 0);
           const availableBalance = basicBalance - totalSpent;
 
           return {
@@ -310,7 +336,7 @@ export async function getGroupBalanceSummary(roomId: string, includeDetails: boo
         totalExpenses: Number(totalExpenses) || 0,
         mealRate: Number(mealRate) || 0,
         totalMeals: Number(totalMeals) || 0,
-        netGroupBalance: Number(groupTotalBalance - totalExpenses) || 0,
+        netGroupBalance: Number(groupTotalBalance - (totalExpenses || 0)) || 0,
         currentPeriod: currentPeriod ? {
           id: currentPeriod.id,
           name: currentPeriod.name,
@@ -323,4 +349,140 @@ export async function getGroupBalanceSummary(roomId: string, includeDetails: boo
     },
     { ttl: CACHE_TTL.ACTIVE_PERIOD }
   );
+}
+
+// Transaction Management with Audit Logs
+
+export async function createTransaction(
+  data: {
+    roomId: string;
+    userId: string;       // The creator of the transaction
+    targetUserId: string; // The person whose balance is affected
+    amount: number;
+    type: string;
+    description?: string;
+    periodId?: string;
+  }
+) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Create the transaction
+    const transaction = await tx.accountTransaction.create({
+      data: {
+        roomId: data.roomId,
+        userId: data.userId, 
+        targetUserId: data.targetUserId,
+        amount: data.amount,
+        type: data.type,
+        description: data.description,
+        createdBy: data.userId,
+        periodId: data.periodId,
+      },
+    });
+
+    // 2. Create history record (Action: CREATE)
+    await tx.transactionHistory.create({
+      data: {
+        transactionId: transaction.id,
+        action: 'CREATE',
+        amount: transaction.amount,
+        type: transaction.type,
+        description: transaction.description,
+        userId: transaction.userId, // Creator
+        targetUserId: transaction.targetUserId,
+        roomId: transaction.roomId,
+        periodId: transaction.periodId,
+        changedBy: data.userId,
+      },
+    });
+
+    return transaction;
+  });
+}
+
+export async function updateTransaction(
+  transactionId: string,
+  data: {
+    amount: number;
+    description?: string;
+    type: string;
+    changedBy: string; // User ID performing the update
+  }
+) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Fetch current transaction state
+    const currentTransaction = await tx.accountTransaction.findUnique({
+      where: { id: transactionId },
+    });
+
+    if (!currentTransaction) {
+      throw new Error('Transaction not found');
+    }
+
+    // 2. Create history snapshot of OLD state (Action: UPDATE)
+    await tx.transactionHistory.create({
+      data: {
+        transactionId: currentTransaction.id,
+        action: 'UPDATE', // This record preserves the state BEFORE interpretation of 'update'
+        amount: currentTransaction.amount,
+        type: currentTransaction.type,
+        description: currentTransaction.description,
+        userId: currentTransaction.userId,
+        targetUserId: currentTransaction.targetUserId,
+        roomId: currentTransaction.roomId,
+        periodId: currentTransaction.periodId,
+        changedBy: data.changedBy,
+      },
+    });
+
+    // 3. Update the transaction
+    const updatedTransaction = await tx.accountTransaction.update({
+      where: { id: transactionId },
+      data: {
+        amount: data.amount,
+        description: data.description,
+        type: data.type,
+      },
+    });
+
+    return updatedTransaction;
+  });
+}
+
+export async function deleteTransaction(
+  transactionId: string,
+  changedBy: string
+) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Fetch current transaction state
+    const currentTransaction = await tx.accountTransaction.findUnique({
+      where: { id: transactionId },
+    });
+
+    if (!currentTransaction) {
+      throw new Error('Transaction not found');
+    }
+
+    // 2. Create history snapshot (Action: DELETE)
+    await tx.transactionHistory.create({
+      data: {
+        transactionId: currentTransaction.id,
+        action: 'DELETE',
+        amount: currentTransaction.amount,
+        type: currentTransaction.type,
+        description: currentTransaction.description,
+        userId: currentTransaction.userId,
+        targetUserId: currentTransaction.targetUserId,
+        roomId: currentTransaction.roomId,
+        periodId: currentTransaction.periodId,
+        changedBy: changedBy,
+      },
+    });
+
+    // 3. Delete the transaction
+    await tx.accountTransaction.delete({
+      where: { id: transactionId },
+    });
+
+    return true;
+  });
 }

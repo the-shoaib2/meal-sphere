@@ -58,7 +58,17 @@ export function useDashboard() {
         throw new Error('No active group selected');
       }
 
-      const url = `/api/dashboard?groupId=${activeGroup.id}`;
+      // Simplified API call - backend resolves current group from DB
+      const url = `/api/dashboard`; 
+      // Note: We still rely on activeGroup?.id for cache invalidation (queryKey), 
+      // but we let the backend resolve the exact group to ensure DB sync.
+      if (activeGroup?.id) {
+         // Optional: we could pass it if we wanted to enforce a specific group,
+         // but user requested "respose only current group data" from DB.
+         // Let's stick to the user's request:
+         // "change to http://localhost:3000/api/dashboard"
+      }
+      
       const res = await fetch(url);
 
       if (!res.ok) {

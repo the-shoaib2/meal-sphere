@@ -122,6 +122,7 @@ export default function AccountBalancePanel() {
         transactions={ownTransactions || []}
         userRole={userRole!}
         session={session}
+        groupId={activeGroup?.id}
       />
     </>
   );

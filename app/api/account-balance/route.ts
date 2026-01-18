@@ -12,7 +12,8 @@ import {
   calculateMealRate,
   calculateUserMealCount,
   calculateGroupTotalBalance,
-  getGroupBalanceSummary
+  getGroupBalanceSummary,
+  createTransaction
 } from '@/lib/services/balance-service';
 
 // Force dynamic rendering - don't pre-render during build
@@ -188,17 +189,14 @@ export async function POST(request: NextRequest) {
     // Get current period for the room
     const currentPeriod = await getCurrentPeriod(roomId);
 
-    const newTransaction = await prisma.accountTransaction.create({
-      data: {
-        roomId,
-        userId: session.user.id, // Who is creating the transaction
-        targetUserId,           // Who is the target of the funds
-        amount: parseFloat(amount),
-        type,
-        description,
-        createdBy: session.user.id, // Audit field
-        periodId: currentPeriod?.id, // Associate with current period
-      },
+    const newTransaction = await createTransaction({
+      roomId,
+      userId: session.user.id, // Who is creating the transaction
+      targetUserId,           // Who is the target of the funds
+      amount: parseFloat(amount),
+      type,
+      description,
+      periodId: currentPeriod?.id,
     });
 
     return NextResponse.json(newTransaction, { status: 201 });

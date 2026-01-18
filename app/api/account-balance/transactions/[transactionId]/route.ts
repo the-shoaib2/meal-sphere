@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { hasBalancePrivilege, canModifyTransactions, canDeleteTransactions } from '@/lib/auth/balance-permissions';
+import { updateTransaction, deleteTransaction } from '@/lib/services/balance-service';
 
 async function checkEditPrivileges(userId: string, roomId: string) {
   const userInRoom = await prisma.roomMember.findFirst({
@@ -59,29 +60,11 @@ export async function PUT(
 
     await checkEditPrivileges(session.user.id, transaction.roomId);
 
-    // Create history snapshot BEFORE update
-    await prisma.transactionHistory.create({
-      data: {
-        transactionId: transaction.id,
-        action: 'UPDATE',
-        amount: transaction.amount,
-        type: transaction.type,
-        description: transaction.description,
-        userId: transaction.userId,
-        targetUserId: transaction.targetUserId,
-        roomId: transaction.roomId,
-        periodId: transaction.periodId,
-        changedBy: session.user.id
-      }
-    });
-
-    const updatedTransaction = await prisma.accountTransaction.update({
-      where: { id: transactionId },
-      data: {
-        amount: parseFloat(amount),
-        description,
-        type,
-      },
+    const updatedTransaction = await updateTransaction(transaction.id, {
+      amount: parseFloat(amount),
+      description,
+      type,
+      changedBy: session.user.id
     });
 
     return NextResponse.json(updatedTransaction);
@@ -114,25 +97,7 @@ export async function DELETE(
 
     await checkDeletePrivileges(session.user.id, transaction.roomId);
 
-    // Create history snapshot BEFORE delete
-    await prisma.transactionHistory.create({
-      data: {
-        transactionId: transaction.id,
-        action: 'DELETE',
-        amount: transaction.amount,
-        type: transaction.type,
-        description: transaction.description,
-        userId: transaction.userId,
-        targetUserId: transaction.targetUserId,
-        roomId: transaction.roomId,
-        periodId: transaction.periodId,
-        changedBy: session.user.id
-      }
-    });
-
-    await prisma.accountTransaction.delete({
-      where: { id: transactionId },
-    });
+    await deleteTransaction(transaction.id, session.user.id);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

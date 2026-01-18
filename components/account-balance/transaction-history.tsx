@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -9,9 +8,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Loader2, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TransactionHistoryProps {
     transactionId: string | null;
@@ -58,18 +56,21 @@ export function TransactionHistory({ transactionId, userId, roomId, onBack }: Tr
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                <Button variant="ghost" size="sm" onClick={onBack} className="h-8 w-8 p-0">
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-lg sm:text-xl">
                     {transactionId === "ALL" ? "Global Audit Log" : "Transaction History"}
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <div className="flex justify-center p-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <div className="space-y-3">
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[600px]">
+                                <Skeleton className="h-12 w-full mb-2" />
+                                <Skeleton className="h-12 w-full mb-2" />
+                                <Skeleton className="h-12 w-full mb-2" />
+                            </div>
+                        </div>
                     </div>
                 ) : history && history.length > 0 ? (
                     <div className="rounded-md border overflow-hidden">
@@ -91,9 +92,9 @@ export function TransactionHistory({ transactionId, userId, roomId, onBack }: Tr
                                             </TableCell>
                                             <TableCell>
                                                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${record.action === 'CREATE' || record.action === 'ADD' ? 'bg-green-100 text-green-700' :
-                                                        record.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
-                                                            record.action === 'DELETE' ? 'bg-red-100 text-red-700' :
-                                                                'bg-gray-100 text-gray-700'
+                                                    record.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
+                                                        record.action === 'DELETE' ? 'bg-red-100 text-red-700' :
+                                                            'bg-gray-100 text-gray-700'
                                                     }`}>
                                                     {record.action}
                                                 </span>

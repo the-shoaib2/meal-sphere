@@ -19,8 +19,12 @@ import {
   Utensils,
   Calculator,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Eye,
+  ArrowLeft
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TransactionHistory } from '@/components/account-balance/transaction-history';
 import type { UserBalance, AccountTransaction } from '@/hooks/use-account-balance';
 import { NumberTicker } from "@/components/ui/number-ticker";
 
@@ -31,9 +35,12 @@ interface MemberViewProps {
   transactions: AccountTransaction[];
   userRole: string;
   session: Session | null;
+  groupId?: string;
 }
 
-export default function MemberView({ balance, transactions, userRole, session }: MemberViewProps) {
+export default function MemberView({ balance, transactions, userRole, session, groupId }: MemberViewProps) {
+  const [historyView, setHistoryView] = React.useState<string | null>(null);
+
   const totalReceived = transactions
     .filter(t => t.targetUserId === session?.user?.id)
     .reduce((sum, t) => sum + t.amount, 0);
@@ -142,41 +149,59 @@ export default function MemberView({ balance, transactions, userRole, session }:
       </div>
 
       {/* Transaction History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Transaction History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transactions.length > 0 ? (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((transaction) => (
-                    <TransactionRow
-                      key={transaction.id}
-                      transaction={transaction}
-                      currentUserId={session?.user?.id}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="h-8 w-8 mx-auto mb-2" />
-              <p className="text-sm">No transactions yet.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {historyView ? (
+        <TransactionHistory
+          transactionId={historyView}
+          userId={session?.user?.id}
+          roomId={groupId}
+          onBack={() => setHistoryView(null)}
+        />
+      ) : (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Transaction History</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setHistoryView("ALL")}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View History
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {transactions.length > 0 ? (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((transaction) => (
+                      <TransactionRow
+                        key={transaction.id}
+                        transaction={transaction}
+                        currentUserId={session?.user?.id}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Receipt className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">No transactions yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -20,39 +20,52 @@ export async function GET(request: NextRequest) {
         // Get the groupId from query params
         const { searchParams } = new URL(request.url);
         let groupId = searchParams.get('groupId');
-        let isDefaultGroup = false;
+        let membership;
 
-        if (!groupId) {
-             // If no groupId provided, try to find the user's current active group
-             const currentGroup = await prisma.roomMember.findFirst({
+        if (groupId) {
+             // Optimization: Fetch required fields immediately if ID is known
+             membership = await prisma.roomMember.findFirst({
+                  where: { userId: session.user.id, roomId: groupId },
+                  select: { 
+                      role: true,
+                      roomId: true,
+                      room: { select: { id: true, name: true, memberCount: true } } 
+                  },
+             });
+        } else {
+             // Optimization: Fetch "current" group AND its details in one query
+             membership = await prisma.roomMember.findFirst({
                  where: { 
                      userId: session.user.id,
                      isCurrent: true 
                  },
-                 select: { roomId: true }
+                 select: { 
+                     role: true,
+                     roomId: true, // Needed to set groupId
+                     room: { select: { id: true, name: true, memberCount: true } } 
+                 }
              });
 
-             if (currentGroup) {
-                 groupId = currentGroup.roomId;
-                 isDefaultGroup = true;
-             } else {
+             if (!membership) {
                  // Fallback to most recently joined group
-                 const latestGroup = await prisma.roomMember.findFirst({
+                 membership = await prisma.roomMember.findFirst({
                      where: { userId: session.user.id },
                      orderBy: { joinedAt: 'desc' },
-                     select: { roomId: true }
+                     select: { 
+                         role: true,
+                         roomId: true,
+                         room: { select: { id: true, name: true, memberCount: true } } 
+                     }
                  });
-
-                 if (latestGroup) {
-                     groupId = latestGroup.roomId;
-                     isDefaultGroup = true;
-                 }
              }
         }
 
-        if (!groupId) {
+        if (!membership) {
             return NextResponse.json({ error: 'No groups found for user' }, { status: 404 });
         }
+        
+        // Set the resolved groupId
+        groupId = membership.roomId;
 
         // Generate cache key
         const cacheKey = `dashboard:main:${session.user.id}:${groupId}:v1`;
@@ -60,23 +73,16 @@ export async function GET(request: NextRequest) {
         const data = await cacheGetOrSet(
             cacheKey,
             async () => {
-                // 1. Initial configuration fetch (Mandatory for next steps)
-                const [membership, activePeriod] = await Promise.all([
-                    prisma.roomMember.findFirst({
-                        where: { userId: session.user.id, roomId: groupId! },
-                        select: { 
-                            role: true,
-                            room: { select: { id: true, name: true, memberCount: true } } 
-                        },
-                    }),
-                    prisma.mealPeriod.findFirst({
-                        where: { roomId: groupId!, status: 'ACTIVE' },
-                        select: { id: true, roomId: true, startDate: true, endDate: true }
-                    })
-                ]);
+                // 1. Initial configuration fetch
+                // Optimization: We already have membership!
+                const activePeriod = await prisma.mealPeriod.findFirst({
+                    where: { roomId: groupId!, status: 'ACTIVE' },
+                    select: { id: true, roomId: true, startDate: true, endDate: true }
+                });
 
                 if (!membership) {
-                    throw new Error('You are not a member of this group');
+                   // This should technically never happen due to check above, but keeps TS happy if closure issues existed
+                    throw new Error('Membership not found'); 
                 }
 
                 const roomId = groupId!;
@@ -86,35 +92,31 @@ export async function GET(request: NextRequest) {
                 const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
                 const activePeriodIds = activePeriod ? [activePeriod.id] : [];
 
-                // --- ONE BIG PARALLEL FETCH ---
-                const [
-                    userMealCount,
-                    totalMealsResults,
-                    totalExpensesResults,
-                    currentBalanceResult,
-                    recentActivitiesData,
-                    mealsByDate,
-                    expensesByDate,
-                    userRoomMemberships,
-                    mealDistributionData,
-                    expenseDistributionData,
-                    periodStats,
-                    shoppingQuantity,
-                    groupBalance
-                ] = await Promise.all([
-                    // Summary counts (Raw DB calls bypass Upstash overhead)
-                    prisma.meal.count({ where: { userId: session.user.id, roomId, periodId } }),
-                    prisma.meal.count({ where: { roomId, periodId } }),
-                    prisma.extraExpense.aggregate({ 
-                        where: { roomId, periodId }, 
-                        _sum: { amount: true } 
-                    }),
+                // 1. Fetch Group Balance Summary (The Heavy Lifter)
+                // This single call (cached) calculates all totals, rates, and member balances.
+                // We do NOT need to pre-fetch totals anymore as we optimized the service to derive them efficiently.
+                const groupBalance = hasBalancePrivilege(membership.role) 
+                    ? await getGroupBalanceSummary(roomId, true) 
+                    : null;
+
+                // Extract or default values from summary
+                const totalExpensesValue = groupBalance?.totalExpenses || 0;
+                const totalMealsCount = groupBalance?.totalMeals || 0;
+
+                // --- ONE BIG PARALLEL FETCH (Remaining items) ---
+                const results = await Promise.all([
+                    // 0. User Meal Count (Fallback if no balance privilege)
+                    groupBalance 
+                        ? Promise.resolve(0) // Place-holder, we will get it from groupBalance
+                        : prisma.meal.count({ where: { userId: session.user.id, roomId, periodId } }),
+                        
+                    // 1. Current Balance (Transactions)
                     prisma.accountTransaction.aggregate({ 
                         where: { roomId, targetUserId: session.user.id, periodId }, 
                         _sum: { amount: true } 
                     }),
                     
-                    // Activities (Raw DB calls)
+                    // 2. Activities
                     Promise.all([
                         prisma.meal.findMany({
                             where: { roomId, date: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
@@ -143,54 +145,80 @@ export async function GET(request: NextRequest) {
                         })
                     ]),
 
+                    // 3. Meals By Date (Chart)
                     prisma.meal.groupBy({
                         by: ['date'],
                         where: { roomId, date: { gte: startOfMonth, lte: endOfMonth } },
                         _count: { id: true }
                     }),
+                    // 4. Expenses By Date (Chart)
                     prisma.extraExpense.groupBy({
                         by: ['date'],
                         where: { roomId, date: { gte: startOfMonth, lte: endOfMonth } },
                         _sum: { amount: true }
                     }),
+                    // 5. User Room Memberships
                     prisma.roomMember.findMany({ 
                         where: { userId: session.user.id }, 
                         select: { roomId: true, room: { select: { id: true, name: true, memberCount: true } } } 
                     }),
                     
+                    // 6. Period Stats (Meal Types)
                     periodId ? prisma.meal.groupBy({ by: ['type'], where: { periodId }, _count: { id: true } }) : Promise.resolve([]),
+                    // 7. Expense Distribution
                     periodId ? prisma.extraExpense.groupBy({ by: ['type'], where: { periodId }, _sum: { amount: true } }) : Promise.resolve([]),
+                    // 8. Period Stats (Unused? Keep for now)
                     periodId ? prisma.meal.groupBy({ by: ['periodId'], where: { periodId }, _count: { id: true } }) : Promise.resolve([]),
+                    // 9. Shopping Quantity
                     periodId ? prisma.shoppingItem.aggregate({ where: { periodId }, _sum: { quantity: true } }) : Promise.resolve({ _sum: { quantity: 0 } }),
-                    
-                    hasBalancePrivilege(membership.role) 
-                        ? getGroupBalanceSummary(roomId, true) 
-                        : Promise.resolve(null)
                 ]);
+
+                const [
+                     userMealCountFallback,
+                     currentBalanceResult,
+                     recentActivitiesData,
+                     mealsByDate,
+                     expensesByDate,
+                     userRoomMemberships,
+                     mealDistributionData,
+                     expenseDistributionData,
+                     // periodStats, // Renaming to avoid confusion
+                     periodStatsRaw,
+                     shoppingQuantity
+                ] = results;
+
+                // Determine userMealCount
+                let userMealCount = 0;
+                if (groupBalance && groupBalance.members) {
+                    const memberRecord = groupBalance.members.find((m: any) => m.userId === session.user.id);
+                    userMealCount = memberRecord?.mealCount || 0;
+                } else {
+                    userMealCount = userMealCountFallback as number || 0;
+                }
 
                 // --- DATA PROCESSING (Synchronous only) ---
 
                 // 1. Process User Rooms (Using denormalized counts)
-                const userRooms = userRoomMemberships.map(m => ({
+                const userRooms = userRoomMemberships.map((m: any) => ({
                     id: m.roomId, name: m.room.name, memberCount: m.room.memberCount || 0
                 }));
 
                 // 2. Process Detailed Analytics
-                const totalExpenses = totalExpensesResults._sum.amount || 0;
-                const totalAllMeals = totalMealsResults || 0;
+                const totalExpenses = totalExpensesValue;
+                const totalAllMeals = totalMealsCount;
                 const mealRate = totalAllMeals > 0 ? totalExpenses / totalAllMeals : 0;
-                const currentBalance = currentBalanceResult._sum.amount || 0;
+                const currentBalance = currentBalanceResult._sum?.amount || 0;
                 const [m1, p1, e1, s1, a1] = recentActivitiesData;
                 
                 const analytics = {
                     roomStats: [{
                         roomId, roomName: membership.room.name,
-                        totalMeals: periodStats.reduce((acc, curr) => acc + (curr._count.id || 0), 0),
+                        totalMeals: periodStatsRaw.reduce((acc: any, curr: any) => acc + (curr?._count?.id || 0), 0),
                         totalExpenses, averageMealRate: mealRate, memberCount: membership.room.memberCount || 0,
                         activeDays: activePeriod ? Math.ceil(Math.abs(new Date(activePeriod.endDate || now).getTime() - new Date(activePeriod.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1 : 1
                     }],
-                    mealDistribution: mealDistributionData.map(item => ({ name: item.type.charAt(0) + item.type.slice(1).toLowerCase(), value: item._count.id })),
-                    expenseDistribution: expenseDistributionData.map(item => ({ name: item.type.charAt(0) + item.type.slice(1).toLowerCase(), value: item._sum.amount || 0 })),
+                    mealDistribution: mealDistributionData.map((item: any) => ({ name: item.type.charAt(0) + item.type.slice(1).toLowerCase(), value: item._count.id })),
+                    expenseDistribution: expenseDistributionData.map((item: any) => ({ name: item.type.charAt(0) + item.type.slice(1).toLowerCase(), value: item._sum.amount || 0 })),
                     mealRateTrend: [], monthlyExpenses: [] as { name: string; value: number }[],
                 };
                 

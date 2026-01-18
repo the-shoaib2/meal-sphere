@@ -22,7 +22,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Edit, Trash2, MoreHorizontal, Eye } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Eye, X } from 'lucide-react';
 import { type AccountTransaction } from '@/hooks/use-account-balance';
 
 interface TransactionListProps {
@@ -31,7 +31,8 @@ interface TransactionListProps {
     isAdmin: boolean;
     onEdit: (transaction: AccountTransaction) => void;
     onDelete: (transactionId: string) => void;
-    onViewHistory: (transactionId: string) => void;
+    onViewHistory: (transactionId: string | null) => void;
+    isHistoryOpen?: boolean;
 }
 
 export function TransactionList({
@@ -40,15 +41,21 @@ export function TransactionList({
     isAdmin,
     onEdit,
     onDelete,
-    onViewHistory
+    onViewHistory,
+    isHistoryOpen = false
 }: TransactionListProps) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg sm:text-xl">Transaction Details</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => onViewHistory("")} className="text-muted-foreground hover:text-foreground">
-                    <Eye className="mr-2 h-4 w-4" />
-                    View History
+                <Button
+                    variant={isHistoryOpen ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onViewHistory(isHistoryOpen ? null : "ALL")}
+                    className={isHistoryOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-muted-foreground hover:text-foreground"}
+                >
+                    {isHistoryOpen ? <X className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                    {isHistoryOpen ? "Close History" : "View History"}
                 </Button>
             </CardHeader>
             <CardContent>
@@ -115,6 +122,11 @@ export function TransactionList({
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
+                                                                {/* View History option for everyone */}
+                                                                <DropdownMenuItem onClick={() => onViewHistory(t.id)}>
+                                                                    <Eye className="mr-2 h-4 w-4" />
+                                                                    <span>View History</span>
+                                                                </DropdownMenuItem>
                                                                 {/* ADMIN and ACCOUNTANT can edit transactions */}
                                                                 <DropdownMenuItem onClick={() => onEdit(t)}>
                                                                     <Edit className="mr-2 h-4 w-4" />

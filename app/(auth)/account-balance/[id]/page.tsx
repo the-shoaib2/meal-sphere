@@ -255,22 +255,35 @@ export default function UserAccountBalancePage() {
         totalTransactions={totalTransactions}
       />
 
-      {historyTransactionId ? (
-        <TransactionHistory
-          transactionId={historyTransactionId}
-          userId={userId}
-          roomId={activeGroup?.id}
-          onBack={() => setHistoryTransactionId(null)}
-        />
-      ) : (
-        <TransactionList
-          transactions={filteredTransactions}
-          hasPrivilege={hasPrivilege}
-          isAdmin={isAdmin}
-          onEdit={openEditTransactionDialog}
-          onDelete={openDeleteDialog}
-          onViewHistory={(id) => setHistoryTransactionId(id || "ALL")}
-        />
+      <TransactionList
+        transactions={filteredTransactions}
+        hasPrivilege={hasPrivilege}
+        isAdmin={isAdmin}
+        onEdit={openEditTransactionDialog}
+        onDelete={openDeleteDialog}
+        onViewHistory={(id) => {
+          if (!id) {
+            setHistoryTransactionId(null);
+            return;
+          }
+          setHistoryTransactionId(id);
+          // meaningful delay to ensure render happens before scroll (if needed), or use useEffect
+          setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+          }, 100);
+        }}
+        isHistoryOpen={!!historyTransactionId}
+      />
+
+      {historyTransactionId && (
+        <div className="mt-8 border-t pt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <TransactionHistory
+            transactionId={historyTransactionId}
+            userId={userId}
+            roomId={activeGroup?.id}
+            onBack={() => setHistoryTransactionId(null)}
+          />
+        </div>
       )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
