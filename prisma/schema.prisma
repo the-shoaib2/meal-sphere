@@ -10,8 +10,9 @@
  */
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -108,7 +109,7 @@ enum PeriodStatus {
 
 /// USER MODEL
 model User {
-  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  id               String    @id @default(uuid())
   name             String
   email            String    @unique
   emailVerified    DateTime?
@@ -151,9 +152,9 @@ model User {
   transactionHistories        TransactionHistory[]
 
   // Privacy Settings
-  isSearchable         Boolean              @default(true)
-  showEmail            Boolean              @default(false)
-  profileVisibility    String               @default("PUBLIC") // PUBLIC, AUTHENTICATED, PRIVATE
+  isSearchable      Boolean @default(true)
+  showEmail         Boolean @default(false)
+  profileVisibility String  @default("PUBLIC") // PUBLIC, AUTHENTICATED, PRIVATE
 
   @@index([resetToken])
   @@index([emailVerified, isActive])
@@ -166,14 +167,14 @@ model User {
 
 /// ROOM MODEL
 model Room {
-  id                        String                      @id @default(auto()) @map("_id") @db.ObjectId
+  id                        String                      @id @default(uuid())
   name                      String
   description               String?
   isPrivate                 Boolean                     @default(false)
   memberCount               Int                         @default(0)
   createdAt                 DateTime                    @default(now())
   updatedAt                 DateTime                    @updatedAt
-  createdBy                 String                      @db.ObjectId
+  createdBy                 String
   isActive                  Boolean                     @default(true)
   fineAmount                Float?
   fineEnabled               Boolean                     @default(false)
@@ -217,11 +218,11 @@ model Room {
 
 /// ROOM MEMBER MODEL
 model RoomMember {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @id @default(uuid())
   role        Role      @default(MEMBER)
   joinedAt    DateTime  @default(now())
-  userId      String    @db.ObjectId
-  roomId      String    @db.ObjectId
+  userId      String
+  roomId      String
   isCurrent   Boolean   @default(false)
   isBanned    Boolean   @default(false)
   lastActive  DateTime? @updatedAt
@@ -246,17 +247,17 @@ model RoomMember {
 
 /// ACCOUNT MODEL
 model Account {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  @db.ObjectId
+  id                String  @id @default(uuid())
+  userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.String
-  access_token      String? @db.String
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.String
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -270,9 +271,9 @@ model Account {
 
 /// SESSION MODEL
 model Session {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           String   @id @default(uuid())
   sessionToken String   @unique
-  userId       String   @db.ObjectId
+  userId       String
   expires      DateTime
   ipAddress    String?
   userAgent    String?
@@ -293,7 +294,7 @@ model Session {
 
 /// VERIFICATION TOKEN MODEL
 model VerificationToken {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  id         String   @id @default(uuid())
   identifier String
   token      String   @unique
   expires    DateTime
@@ -304,14 +305,14 @@ model VerificationToken {
 
 /// MEAL MODEL
 model Meal {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   date      DateTime
   type      MealType
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String   @db.ObjectId
-  roomId    String   @db.ObjectId
-  periodId  String?  @db.ObjectId
+  userId    String
+  roomId    String
+  periodId  String?
 
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -331,15 +332,15 @@ model Meal {
 
 /// GUEST MEAL MODEL
 model GuestMeal {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   date      DateTime
   type      MealType
   count     Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String   @db.ObjectId
-  roomId    String   @db.ObjectId
-  periodId  String?  @db.ObjectId
+  userId    String
+  roomId    String
+  periodId  String?
 
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -353,7 +354,7 @@ model GuestMeal {
 
 /// SHOPPING ITEM MODEL
 model ShoppingItem {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(uuid())
   name        String
   description String?
   quantity    Int      @default(1)
@@ -363,9 +364,9 @@ model ShoppingItem {
   receiptUrl  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  userId      String   @db.ObjectId
-  roomId      String   @db.ObjectId
-  periodId    String?  @db.ObjectId
+  userId      String
+  roomId      String
+  periodId    String?
 
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -386,7 +387,7 @@ model ShoppingItem {
 
 /// PAYMENT MODEL
 model Payment {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  id           String        @id @default(uuid())
   amount       Float
   date         DateTime
   method       PaymentMethod
@@ -394,9 +395,9 @@ model Payment {
   description  String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  userId       String        @db.ObjectId
-  roomId       String        @db.ObjectId
-  periodId     String?       @db.ObjectId
+  userId       String
+  roomId       String
+  periodId     String?
   bkashPayment BkashPayment?
 
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -415,7 +416,7 @@ model Payment {
 
 /// BKASH PAYMENT MODEL
 model BkashPayment {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  id              String   @id @default(uuid())
   paymentId       String   @unique
   invoiceId       String
   amount          Float
@@ -424,9 +425,9 @@ model BkashPayment {
   customerMsisdn  String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  userId          String   @db.ObjectId
-  roomId          String   @db.ObjectId
-  paymentRecordId String   @unique @db.ObjectId
+  userId          String
+  roomId          String
+  paymentRecordId String   @unique
 
   paymentRecord Payment @relation(fields: [paymentRecordId], references: [id], onDelete: Cascade)
   room          Room    @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -437,14 +438,14 @@ model BkashPayment {
 
 /// MARKET DATE MODEL
 model MarketDate {
-  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  id        String       @id @default(uuid())
   date      DateTime
   status    MarketStatus @default(UPCOMING)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
-  userId    String       @db.ObjectId
-  roomId    String       @db.ObjectId
-  periodId  String?      @db.ObjectId
+  userId    String
+  roomId    String
+  periodId  String?
 
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -456,7 +457,7 @@ model MarketDate {
 
 /// EXTRA EXPENSE MODEL
 model ExtraExpense {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  id          String      @id @default(uuid())
   description String
   amount      Float
   date        DateTime
@@ -464,9 +465,9 @@ model ExtraExpense {
   receiptUrl  String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  userId      String      @db.ObjectId
-  roomId      String      @db.ObjectId
-  periodId    String?     @db.ObjectId
+  userId      String
+  roomId      String
+  periodId    String?
 
   room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -482,15 +483,15 @@ model ExtraExpense {
 }
 
 model Invitation {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(uuid())
   code      String    @unique
   email     String
   role      Role
   expiresAt DateTime
   usedAt    DateTime?
-  usedBy    String?   @db.ObjectId
-  groupId   String    @db.ObjectId
-  createdBy String    @db.ObjectId
+  usedBy    String?
+  groupId   String
+  createdBy String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -510,7 +511,7 @@ model Invitation {
 
 /// VOTE MODEL
 model Vote {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(uuid())
   type        VoteType
   // Vote configuration
   title       String?
@@ -518,9 +519,9 @@ model Vote {
   startDate   DateTime @default(now())
   endDate     DateTime
   isActive    Boolean  @default(true)
-  userId      String   @db.ObjectId
-  roomId      String   @db.ObjectId
-  candidateId String?  @db.ObjectId
+  userId      String
+  roomId      String
+  candidateId String?
   options     String? // Store as JSON string
   results     String? // Store as JSON string
   isAnonymous Boolean  @default(false)
@@ -539,12 +540,12 @@ model Vote {
 
 /// NOTIFICATION MODEL
 model Notification {
-  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  id        String           @id @default(uuid())
   type      NotificationType
   message   String
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
-  userId    String           @db.ObjectId
+  userId    String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -557,9 +558,9 @@ model Notification {
 
 /// GROUP JOIN REQUEST MODEL
 model JoinRequest {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
-  roomId    String   @db.ObjectId
+  id        String   @id @default(uuid())
+  userId    String
+  roomId    String
   status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
   message   String?
   createdAt DateTime @default(now())
@@ -578,11 +579,11 @@ model JoinRequest {
 
 /// GROUP MESSAGE MODEL
 model GroupMessage {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   content   String
   pinned    Boolean  @default(false)
-  roomId    String   @db.ObjectId
-  userId    String   @db.ObjectId
+  roomId    String
+  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -596,11 +597,11 @@ model GroupMessage {
 
 /// GROUP ACTIVITY LOG MODEL
 model GroupActivityLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   type      String // e.g., MEMBER_JOINED, SETTINGS_CHANGED, etc.
   details   Json?
-  roomId    String   @db.ObjectId
-  userId    String   @db.ObjectId
+  roomId    String
+  userId    String
   createdAt DateTime @default(now())
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -613,10 +614,10 @@ model GroupActivityLog {
 }
 
 model InviteToken {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  id            String    @id @default(uuid())
   token         String    @unique
-  roomId        String    @db.ObjectId
-  createdBy     String    @db.ObjectId
+  roomId        String
+  createdBy     String
   role          Role      @default(MEMBER)
   expiresAt     DateTime?
   usedAt        DateTime?
@@ -630,11 +631,11 @@ model InviteToken {
 }
 
 model Announcement {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   title     String
   content   String
-  roomId    String   @db.ObjectId
-  createdBy String   @db.ObjectId
+  roomId    String
+  createdBy String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   room      Room     @relation(fields: [roomId], references: [id])
@@ -642,9 +643,9 @@ model Announcement {
 }
 
 model GroupNotificationSettings {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String   @db.ObjectId
-  groupId        String   @db.ObjectId
+  id             String   @id @default(uuid())
+  userId         String
+  groupId        String
   groupMessages  Boolean  @default(true)
   announcements  Boolean  @default(true)
   mealUpdates    Boolean  @default(true)
@@ -663,8 +664,8 @@ model GroupNotificationSettings {
 
 /// MEAL SETTINGS MODEL (Admin controls)
 model MealSettings {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  roomId          String   @unique @db.ObjectId
+  id              String   @id @default(uuid())
+  roomId          String   @unique
   breakfastTime   String   @default("08:00")
   lunchTime       String   @default("13:00")
   dinnerTime      String   @default("20:00")
@@ -681,9 +682,9 @@ model MealSettings {
 
 /// AUTO MEAL SETTINGS MODEL (User preferences)
 model AutoMealSettings {
-  id                String     @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String     @db.ObjectId
-  roomId            String     @db.ObjectId
+  id                String     @id @default(uuid())
+  userId            String
+  roomId            String
   isEnabled         Boolean    @default(false)
   breakfastEnabled  Boolean    @default(true)
   lunchEnabled      Boolean    @default(true)
@@ -704,17 +705,17 @@ model AutoMealSettings {
 
 /// ACCOUNT TRANSACTION MODEL
 model AccountTransaction {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId       String   @db.ObjectId
-  targetUserId String   @db.ObjectId
-  roomId       String   @db.ObjectId
+  id           String   @id @default(uuid())
+  userId       String
+  targetUserId String
+  roomId       String
   amount       Float
   type         String   @default("PAYMENT") // PAYMENT, ADJUSTMENT, REFUND
   description  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  createdBy    String   @db.ObjectId
-  periodId     String?  @db.ObjectId
+  createdBy    String
+  periodId     String?
 
   // Relations
   user       User        @relation("TransactionUser", fields: [userId], references: [id], onDelete: Cascade)
@@ -739,7 +740,7 @@ model AccountTransaction {
 
 /// MEAL PERIOD MODEL
 model MealPeriod {
-  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  id             String       @id @default(uuid())
   name           String // e.g., "January 2024", "Q1 2024"
   startDate      DateTime
   endDate        DateTime?
@@ -751,8 +752,8 @@ model MealPeriod {
   notes          String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  roomId         String       @db.ObjectId
-  createdBy      String       @db.ObjectId
+  roomId         String
+  createdBy      String
 
   // Relations
   room                Room                 @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -775,17 +776,17 @@ model MealPeriod {
 
 /// TRANSACTION HISTORY MODEL
 model TransactionHistory {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  transactionId String   @db.ObjectId // Reference to the original transaction ID (might be deleted)
+  id            String   @id @default(uuid())
+  transactionId String // Reference to the original transaction ID (might be deleted)
   action        String // UPDATE, DELETE
   amount        Float
   type          String
   description   String?
-  userId        String   @db.ObjectId // The user whose balance was affected
-  targetUserId  String   @db.ObjectId // The target user (if applicable)
-  roomId        String   @db.ObjectId
-  periodId      String?  @db.ObjectId
-  changedBy     String   @db.ObjectId // Who made the change
+  userId        String // The user whose balance was affected
+  targetUserId  String // The target user (if applicable)
+  roomId        String
+  periodId      String?
+  changedBy     String // Who made the change
   changedAt     DateTime @default(now())
 
   // Snapshot of relations at time of history creation

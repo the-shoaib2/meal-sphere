@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useMemo } from 'react';
 import { Role } from '@prisma/client';
 import { toast } from 'react-hot-toast';
-import { isValidObjectId } from '@/lib/utils';
+import { isValidId } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 
 interface UseGroupAccessProps {
@@ -36,8 +36,8 @@ interface GroupAccessData {
 // Helper function to check if a string looks like an invite token
 function checkIsInviteToken(token: string): boolean {
   // Invite tokens are 10 characters long and contain a mix of letters, numbers, and special characters
-  // They are not MongoDB ObjectIds (which are 24 hex characters)
-  return token.length === 10 && !isValidObjectId(token);
+  // They are not UUIDs
+  return token.length === 10 && !isValidId(token);
 }
 
 export function useGroupAccess({
@@ -83,8 +83,8 @@ export function useGroupAccess({
         };
       }
 
-      // For regular group IDs, validate as ObjectId
-      if (!isValidObjectId(groupId)) {
+      // For regular group IDs, validate as UUID
+      if (!isValidId(groupId)) {
         throw new Error('Invalid group ID format. Please check the URL and try again.');
       }
 

@@ -153,7 +153,7 @@ export async function DELETE(request: Request) {
     }
 
     // Validate that all IDs are valid ObjectId format
-    const validIds = ids.filter(id => /^[0-9a-fA-F]{24}$/.test(id))
+    const validIds = ids.filter(id => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id))
     
     if (validIds.length !== ids.length) {
       return new NextResponse(JSON.stringify({ error: 'Some session IDs are invalid' }), {

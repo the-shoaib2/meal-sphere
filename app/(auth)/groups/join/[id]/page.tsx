@@ -18,7 +18,7 @@ import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangl
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
-import { isValidObjectId } from '@/lib/utils';
+import { isValidId } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -31,7 +31,7 @@ type JoinRoomFormValues = z.infer<typeof joinRoomSchema>;
 
 // Define the base Group interface
 interface Group {
-      id: string;
+  id: string;
   name: string;
   description?: string;
   isPrivate: boolean;
@@ -143,13 +143,13 @@ export default function JoinGroupPage() {
     try {
       setIsCheckingStatus(true);
       const response = await fetch(`/api/groups/${targetGroupId}/join-request/my-request`);
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.joinRequest) {
           const status = data.joinRequest.status.toLowerCase();
           setRequestStatus(status as 'pending' | 'approved' | 'rejected');
-          
+
           // If approved, redirect to group
           if (status === 'approved') {
             toast.success('Your join request has been approved!', {
@@ -178,7 +178,7 @@ export default function JoinGroupPage() {
     setRole(data.role);
     setIsInviteToken(true);
     setActualGroupId(data.groupId);
-    
+
     // Handle already a member case
     if (data.isMember) {
       toast.success('You are already a member of this group', {
@@ -254,7 +254,7 @@ export default function JoinGroupPage() {
         // Check if this is a private group that requires admin approval
         if (data.data?.joinRequest && data.data?.isPrivate) {
           setRequestStatus('pending');
-          
+
 
           toast('Join request sent , Waiting for admin approval...', {
             icon: <AlertCircle className="h-4 w-4" />,
@@ -303,7 +303,7 @@ export default function JoinGroupPage() {
       }
 
       setRequestStatus('pending');
-    
+
 
       toast('Join request sent ,Waiting for admin approval...', {
         icon: <AlertCircle className="h-4 w-4" />,
@@ -361,7 +361,7 @@ export default function JoinGroupPage() {
         // Check if this is a private group that requires admin approval
         if (data.data?.joinRequest && data.data?.isPrivate) {
           setRequestStatus('pending');
-          
+
           toast.success('Join request sent successfully!', {
             icon: <CheckCircle2 className="h-4 w-4" />,
           });
@@ -413,7 +413,7 @@ export default function JoinGroupPage() {
       }
 
       setRequestStatus('pending');
-      
+
 
 
       toast('Join request sent ,Waiting for admin approval...', {
@@ -450,7 +450,7 @@ export default function JoinGroupPage() {
       setShowMessageField(true);
       return;
     }
-    
+
     handleJoinRequest(formValues);
   }, [group?.isPrivate, showMessageField, formValues, handleJoinRequest]);
 
@@ -518,8 +518,8 @@ export default function JoinGroupPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => router.push(`/groups/${accessActualGroupId || actualGroupId || groupId}`)} 
+              <Button
+                onClick={() => router.push(`/groups/${accessActualGroupId || actualGroupId || groupId}`)}
                 className="mt-4 w-full sm:w-auto"
               >
                 Go to Group
@@ -556,11 +556,11 @@ export default function JoinGroupPage() {
                   {accessError === 'This invitation has expired or is invalid'
                     ? 'This invitation link has expired or is no longer valid.'
                     : accessError === 'Invalid group ID format'
-                    ? 'The group ID format is invalid. Please check the URL and try again.'
-                    : 'You may not have access to this group or the invitation has expired.'}
+                      ? 'The group ID format is invalid. Please check the URL and try again.'
+                      : 'You may not have access to this group or the invitation has expired.'}
                 </p>
-                <Button 
-                  onClick={() => router.push('/groups')} 
+                <Button
+                  onClick={() => router.push('/groups')}
                   className="mt-2 w-full sm:w-auto"
                   variant="outline"
                 >
@@ -594,8 +594,8 @@ export default function JoinGroupPage() {
               <CardDescription>Group not found</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => router.push('/groups')} 
+              <Button
+                onClick={() => router.push('/groups')}
                 className="mt-4 w-full sm:w-auto"
                 variant="outline"
               >
@@ -634,27 +634,27 @@ export default function JoinGroupPage() {
                 </div>
               </div>
             </CardHeader>
-            
+
             <CardContent>
               <div className="space-y-4">
                 {/* Group Type and Inviter Info */}
                 <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
+                  <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
                     {group?.isPrivate ? (
-                    <Lock className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Users className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm sm:text-base">
+                      <Lock className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Users className="h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-sm sm:text-base">
                       {group?.isPrivate ? 'Private Group' : 'Public Group'}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                       {group?.isPrivate
-                      ? 'This is a private group. Your join request will need to be approved by an admin.'
-                      : 'This is a public group. Anyone can join.'}
-                  </p>
+                        ? 'This is a private group. Your join request will need to be approved by an admin.'
+                        : 'This is a public group. Anyone can join.'}
+                    </p>
                   </div>
                 </div>
 
@@ -663,7 +663,7 @@ export default function JoinGroupPage() {
                   <div className="space-y-1">
                     <p className="text-xs sm:text-sm text-muted-foreground">Members</p>
                     <p className="font-medium text-sm sm:text-base">{group?.memberCount} / {group?.maxMembers}</p>
-                      </div>
+                  </div>
                   <div className="space-y-1">
                     <p className="text-xs sm:text-sm text-muted-foreground">Created At</p>
                     <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'N/A'}</p>
@@ -674,7 +674,7 @@ export default function JoinGroupPage() {
                       <p className="font-medium text-sm sm:text-base">₹{group?.fineAmount}</p>
                     </div>
                   )}
-              </div>
+                </div>
 
                 {/* Inviter Information */}
                 {group?.inviter && (
@@ -693,65 +693,65 @@ export default function JoinGroupPage() {
                 {/* Join Form */}
                 <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                   {group?.isPrivate && showMessageField && (
-                  <div className="space-y-2">
-                    <Label htmlFor="message" className="text-sm">Message to Admins (Optional)</Label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      placeholder="Tell the admins why you want to join this group"
-                      disabled={isJoining}
-                      value={formValues.message}
-                      onChange={handleInputChange}
+                    <div className="space-y-2">
+                      <Label htmlFor="message" className="text-sm">Message to Admins (Optional)</Label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        placeholder="Tell the admins why you want to join this group"
+                        disabled={isJoining}
+                        value={formValues.message}
+                        onChange={handleInputChange}
                         className="w-full min-h-[80px] p-3 border rounded-md text-sm resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      This message will be sent to the group admins along with your join request.
-                    </p>
-                  </div>
-                )}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This message will be sent to the group admins along with your join request.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    asChild
-                    disabled={isJoining}
-                    className="w-full sm:w-auto"
-                  >
-                    <Link href="/groups">
-                      Cancel
-                    </Link>
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      asChild
+                      disabled={isJoining}
+                      className="w-full sm:w-auto"
+                    >
+                      <Link href="/groups">
+                        Cancel
+                      </Link>
+                    </Button>
 
-                  <Button
-                    type={showMessageField ? 'submit' : 'button'}
-                    onClick={!showMessageField ? handleJoinClick : undefined}
-                    disabled={isJoining}
-                    className="w-full sm:w-auto"
-                  >
-                    {isJoining ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Button
+                      type={showMessageField ? 'submit' : 'button'}
+                      onClick={!showMessageField ? handleJoinClick : undefined}
+                      disabled={isJoining}
+                      className="w-full sm:w-auto"
+                    >
+                      {isJoining ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           {group?.isPrivate ? 'Sending Request...' : 'Joining...'}
-                      </>
-                    ) : (
-                      <>
+                        </>
+                      ) : (
+                        <>
                           {group?.isPrivate ? (
-                          <>
-                            <Lock className="h-4 w-4 mr-2" />
-                            {showMessageField ? 'Send Join Request' : 'Request to Join'}
-                          </>
-                        ) : (
-                          <>
-                            <Users className="h-4 w-4 mr-2" />
-                            Join Group
-                          </>
-                        )}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              {showMessageField ? 'Send Join Request' : 'Request to Join'}
+                            </>
+                          ) : (
+                            <>
+                              <Users className="h-4 w-4 mr-2" />
+                              Join Group
+                            </>
+                          )}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </div>
             </CardContent>
           </Card>
@@ -796,7 +796,7 @@ export default function JoinGroupPage() {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent>
             <div className="space-y-4">
               {/* Status Message */}
@@ -818,22 +818,22 @@ export default function JoinGroupPage() {
 
               {/* Group Type and Inviter Info */}
               <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-              <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
+                <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
                   {group?.isPrivate ? (
-                  <Lock className="h-5 w-5 text-primary" />
-                ) : (
-                  <Users className="h-5 w-5 text-primary" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-sm sm:text-base">
+                    <Lock className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Users className="h-5 w-5 text-primary" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-sm sm:text-base">
                     {group?.isPrivate ? 'Private Group' : 'Public Group'}
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                     {group?.isPrivate
-                    ? 'This is a private group. Your join request will need to be approved by an admin.'
-                    : 'This is a public group. Anyone can join.'}
-                </p>
+                      ? 'This is a private group. Your join request will need to be approved by an admin.'
+                      : 'This is a public group. Anyone can join.'}
+                  </p>
                 </div>
               </div>
 
@@ -842,7 +842,7 @@ export default function JoinGroupPage() {
                 <div className="space-y-1">
                   <p className="text-xs sm:text-sm text-muted-foreground">Members</p>
                   <p className="font-medium text-sm sm:text-base">{group?.memberCount} / {group?.maxMembers}</p>
-                    </div>
+                </div>
                 <div className="space-y-1">
                   <p className="text-xs sm:text-sm text-muted-foreground">Created At</p>
                   <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'N/A'}</p>
@@ -853,7 +853,7 @@ export default function JoinGroupPage() {
                     <p className="font-medium text-sm sm:text-base">₹{group?.fineAmount}</p>
                   </div>
                 )}
-            </div>
+              </div>
 
               {/* Inviter Information */}
               {group?.inviter && (
@@ -871,16 +871,16 @@ export default function JoinGroupPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                <Button 
-                  onClick={() => router.push('/groups')} 
+                <Button
+                  onClick={() => router.push('/groups')}
                   variant="outline"
                   className="w-full sm:w-auto"
                 >
                   Back to Groups
                 </Button>
-                
+
                 {requestStatus === 'pending' && (
-                  <Button 
+                  <Button
                     onClick={() => {
                       const targetGroupId = accessActualGroupId || actualGroupId || groupId;
                       if (targetGroupId) {
@@ -907,7 +907,7 @@ export default function JoinGroupPage() {
 
                 {requestStatus === 'rejected' && (
                   <>
-                    <Button 
+                    <Button
                       onClick={() => handleNewRequest(formValues)}
                       disabled={isJoining}
                       variant="default"
@@ -925,7 +925,7 @@ export default function JoinGroupPage() {
                         </>
                       )}
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => {
                         const targetGroupId = accessActualGroupId || actualGroupId || groupId;
                         if (targetGroupId) {

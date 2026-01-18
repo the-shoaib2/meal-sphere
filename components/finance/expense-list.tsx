@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format, startOfMonth } from "date-fns"
+import { format, startOfMonth, endOfDay } from "date-fns"
 import { CalendarIcon, FileText, Eye, Loader2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "react-hot-toast"
@@ -29,7 +29,7 @@ export function ExpenseList() {
   const { activeGroup } = useActiveGroup()
   const [selectedType, setSelectedType] = useState<string>("")
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()))
-  const [endDate, setEndDate] = useState<Date>(new Date())
+  const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()))
   const { expenses = [], isLoading, error, deleteExpense } = useExtraExpense()
   const deleteMutation = deleteExpense as { isPending: boolean, mutateAsync: (id: string) => Promise<any> }
   const [selectedExpense, setSelectedExpense] = useState<ExtraExpense | null>(null)
@@ -283,7 +283,7 @@ export function ExpenseList() {
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={(date) => date && setEndDate(date)}
+                    onSelect={(date) => date && setEndDate(endOfDay(date))}
                     initialFocus
                   />
                 </PopoverContent>

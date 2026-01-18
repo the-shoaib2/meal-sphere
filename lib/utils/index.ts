@@ -6,12 +6,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Validates if a string is a valid MongoDB ObjectId
+ * Validates if a string is a valid UUID
  * @param id The string to validate
- * @returns boolean indicating if the string is a valid ObjectId
+ * @returns boolean indicating if the string is a valid UUID
  */
-export function isValidObjectId(id: string): boolean {
-  return /^[0-9a-fA-F]{24}$/.test(id);
+export function isValidId(id: string): boolean {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
 }
 
 export function assertOnline() {
