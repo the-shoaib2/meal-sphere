@@ -20,7 +20,7 @@ const ratelimit = redis
       auth: new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(
-          process.env.NODE_ENV === "development" ? 100 : 5, 
+          process.env.NODE_ENV === "development" ? 200 : 500, 
           "60 s"
         ),
         analytics: true,

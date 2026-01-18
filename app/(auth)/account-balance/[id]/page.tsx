@@ -114,9 +114,14 @@ export default function UserAccountBalancePage() {
   // Debug logging for role detection
 
   // Filter transactions to only those involving this user (as receiver or self-transactions)
-  const allFilteredTransactions = transactions?.filter(
-    t => t.targetUserId === userId || (t.userId === userId && t.targetUserId === userId)
-  ) || [];
+  // Also deduplicate by ID to prevent key collisions
+  const allFilteredTransactions = Array.from(
+    new Map(
+      (transactions || [])
+        .filter(t => t.targetUserId === userId || (t.userId === userId && t.targetUserId === userId))
+        .map(t => [t.id, t])
+    ).values()
+  );
 
   // Filter out negative amounts for display in the list (but keep them for calculations)
   const filteredTransactions = allFilteredTransactions.filter(t => t.amount > 0);
@@ -253,6 +258,8 @@ export default function UserAccountBalancePage() {
       {historyTransactionId ? (
         <TransactionHistory
           transactionId={historyTransactionId}
+          userId={userId}
+          roomId={activeGroup?.id}
           onBack={() => setHistoryTransactionId(null)}
         />
       ) : (
@@ -262,7 +269,7 @@ export default function UserAccountBalancePage() {
           isAdmin={isAdmin}
           onEdit={openEditTransactionDialog}
           onDelete={openDeleteDialog}
-          onViewHistory={openHistoryDialog}
+          onViewHistory={(id) => setHistoryTransactionId(id || "ALL")}
         />
       )}
 

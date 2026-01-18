@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 
 interface TransactionHistoryProps {
     transactionId: string | null;
+    userId?: string;
+    roomId?: string;
     onBack: () => void;
 }
 
@@ -33,16 +35,25 @@ interface HistoryRecord {
     };
 }
 
-export function TransactionHistory({ transactionId, onBack }: TransactionHistoryProps) {
+export function TransactionHistory({ transactionId, userId, roomId, onBack }: TransactionHistoryProps) {
+    const isGlobal = transactionId === "ALL";
+
     const { data: history, isLoading } = useQuery<HistoryRecord[]>({
-        queryKey: ['transaction-history', transactionId],
+        queryKey: isGlobal ? ['account-history', userId, roomId] : ['transaction-history', transactionId],
         queryFn: async () => {
-            if (!transactionId) return [];
-            const res = await fetch(`/api/account-balance/transactions/${transactionId}/history`);
-            if (!res.ok) throw new Error('Failed to fetch history');
-            return res.json();
+            if (isGlobal) {
+                if (!userId || !roomId) return [];
+                const res = await fetch(`/api/account-balance/history?userId=${userId}&roomId=${roomId}`);
+                if (!res.ok) throw new Error('Failed to fetch account history');
+                return res.json();
+            } else {
+                if (!transactionId) return [];
+                const res = await fetch(`/api/account-balance/transactions/${transactionId}/history`);
+                if (!res.ok) throw new Error('Failed to fetch history');
+                return res.json();
+            }
         },
-        enabled: !!transactionId,
+        enabled: isGlobal ? (!!userId && !!roomId) : !!transactionId,
     });
 
     return (
@@ -51,7 +62,9 @@ export function TransactionHistory({ transactionId, onBack }: TransactionHistory
                 <Button variant="ghost" size="sm" onClick={onBack} className="h-8 w-8 p-0">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <CardTitle className="text-lg sm:text-xl">Transaction History</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">
+                    {transactionId === "ALL" ? "Global Audit Log" : "Transaction History"}
+                </CardTitle>
             </CardHeader>
             <CardContent>
                 {isLoading ? (
