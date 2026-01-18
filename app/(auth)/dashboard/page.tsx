@@ -18,7 +18,7 @@ import {
 import DashboardSummaryCards from "@/components/dashboard/summary-cards"
 import MealChart from "@/components/dashboard/meal-chart"
 import RecentActivities from "@/components/dashboard/recent-activities"
-import { useDashboardSummary, useDashboardRefresh, useDashboard } from "@/hooks/use-dashboard"
+import { useDashboardRefresh, useDashboard } from "@/hooks/use-dashboard"
 import { redirect } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSession } from "next-auth/react"
@@ -78,10 +78,13 @@ export default function DashboardPage() {
   const [showRoomSelector, setShowRoomSelector] = useState(false)
 
   // Analytics Data
-  const userRooms = unifiedData?.userRooms || [];
-  const isLoadingRooms = isUnifiedLoading;
-  const currentGroupData = unifiedData?.analytics;
-  const isLoadingCurrent = isUnifiedLoading;
+  const { data: userRoomsData = [], isLoading: isLoadingUserRooms } = useUserRooms();
+  const userRooms = userRoomsData; // Use dedicated hook data
+  const isLoadingRooms = isLoadingUserRooms;
+
+  const { data: currentAnalyticsData, isLoading: isLoadingAnalyticsCurrent } = useAnalytics();
+  const currentGroupData = currentAnalyticsData;
+  const isLoadingCurrent = isLoadingAnalyticsCurrent;
 
   // Specific hook for "selected rooms" view (interactive)
   const { data: selectedRoomsData, isLoading: isLoadingSelected } = useSelectedRoomsAnalytics(selectedRoomIds, { enabled: viewMode === 'selected' })
@@ -376,7 +379,7 @@ export default function DashboardPage() {
               {dashboardData ? 'Live Data' : 'Loading...'}
             </Badge>
           </div>
-          {unifiedData && <DashboardSummaryCards
+          {unifiedData?.summary && <DashboardSummaryCards
             totalMeals={unifiedData.summary.totalUserMeals}
             currentRate={unifiedData.summary.currentRate}
             myBalance={unifiedData.summary.currentBalance}

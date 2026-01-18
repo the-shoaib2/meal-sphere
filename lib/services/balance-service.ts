@@ -219,23 +219,34 @@ export async function getGroupBalanceSummary(
         include: { user: { select: { id: true, name: true, image: true, email: true } } },
       });
 
-      // 1. Fetch ALL transactions for the room/period at once, grouped by targetUserId
-      const transactionsGrouped = await prisma.accountTransaction.groupBy({
-        by: ['targetUserId'],
+      // 1. Fetch ALL transactions for the room/period at once
+      // Optimization: Fetch raw data once and aggregate in memory to avoid multiple DB calls
+      const allTransactions = await prisma.accountTransaction.findMany({
         where: {
           roomId,
           periodId: periodId,
         },
-        _sum: {
+        select: {
+          userId: true,
+          targetUserId: true,
           amount: true,
-        },
+        }
       });
 
-      // Convert to map for O(1) lookup
+      // Calculate aggregated values in memory
       const balanceMap = new Map<string, number>();
-      transactionsGrouped.forEach((t) => {
-        if (t.targetUserId) balanceMap.set(t.targetUserId, t._sum.amount || 0);
-      });
+      let groupTotalBalance = 0;
+
+      for (const t of allTransactions) {
+        // Build balance map (Total Received)
+        const currentBalance = balanceMap.get(t.targetUserId) || 0;
+        balanceMap.set(t.targetUserId, currentBalance + t.amount);
+
+        // Calculate Group Total Balance (Self-transactions only)
+        if (t.userId === t.targetUserId) {
+          groupTotalBalance += t.amount;
+        }
+      }
 
       // 2. Fetch ALL meal counts for the room/period at once, grouped by userId
       const mealsGrouped = await prisma.meal.groupBy({
@@ -278,7 +289,7 @@ export async function getGroupBalanceSummary(
           mealRate = (totalMeals || 0) > 0 ? (totalExpenses || 0) / (totalMeals || 0) : 0;
       }
 
-      const groupTotalBalance = await calculateGroupTotalBalance(roomId, periodId);
+      // groupTotalBalance is calculated above
 
       // Construct the response in memory
       const membersWithBalances = members.map((m: any) => {
