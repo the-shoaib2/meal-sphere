@@ -209,7 +209,6 @@ model Room {
 
   @@index([name])
   @@index([description])
-  @@index([isActive])
   @@index([createdAt])
   @@index([category])
   @@index([createdBy, isActive])
@@ -233,16 +232,8 @@ model RoomMember {
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roomId])
-  @@index([roomId, role])
-  @@index([joinedAt])
-  @@index([isCurrent])
-  @@index([isBanned])
-  @@index([userId, isCurrent])
-  @@index([roomId, joinedAt])
-  @@index([userId, roomId, isCurrent])
   @@index([roomId, role, isBanned])
-  @@index([roomId, isBanned])
-  @@index([userId, joinedAt])
+  @@index([userId, roomId, isCurrent])
 }
 
 /// ACCOUNT MODEL
@@ -319,15 +310,9 @@ model Meal {
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
   @@unique([userId, roomId, date, type])
-  @@index([roomId, periodId])
   @@index([roomId, date])
-  @@index([userId, date])
-  @@index([type, date])
   @@index([roomId, periodId, date])
-  @@index([periodId])
-  @@index([roomId, userId, date])
-  @@index([roomId, type, date])
-  @@index([roomId, periodId, userId])
+  @@index([userId, date])
 }
 
 /// GUEST MEAL MODEL
@@ -375,7 +360,6 @@ model ShoppingItem {
   @@index([roomId, periodId])
   @@index([roomId, date])
   @@index([roomId])
-  @@index([purchased])
   @@index([createdAt])
   @@index([userId])
   @@index([roomId, periodId, purchased])
@@ -410,8 +394,9 @@ model Payment {
   @@index([method, status])
   @@index([roomId, periodId, status])
   @@index([periodId])
-  @@index([roomId, userId, date]) // Dashboard: user payment history
-  @@index([userId, roomId, status]) // Dashboard: payment status queries
+  @@index([roomId, userId, date])
+  @@index([userId, roomId, status])
+  @@index([roomId, periodId, date])
 }
 
 /// BKASH PAYMENT MODEL
@@ -549,7 +534,7 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, read])
+  @@index([userId, read, createdAt(sort: Desc)])
   @@index([createdAt])
   @@index([userId, createdAt])
   @@index([userId, type, read])
@@ -592,7 +577,7 @@ model GroupMessage {
 
   @@index([roomId, pinned])
   @@index([createdAt])
-  @@index([roomId, createdAt])
+  @@index([roomId, createdAt(sort: Desc)])
 }
 
 /// GROUP ACTIVITY LOG MODEL
@@ -724,8 +709,7 @@ model AccountTransaction {
   creator    User        @relation("TransactionCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   period     MealPeriod? @relation(fields: [periodId], references: [id])
 
-  @@index([roomId, periodId])
-  @@index([roomId])
+  @@index([roomId, periodId, createdAt])
   @@index([userId])
   @@index([targetUserId])
   @@index([createdAt])
@@ -735,7 +719,6 @@ model AccountTransaction {
   @@index([roomId, userId, periodId])
   @@index([targetUserId, roomId, periodId])
   @@index([roomId, periodId, targetUserId])
-  @@index([roomId, periodId, createdAt]) // Optimized: Sorting transactions
 }
 
 /// MEAL PERIOD MODEL
@@ -769,7 +752,6 @@ model MealPeriod {
   @@unique([roomId, name])
   @@index([startDate, endDate])
   @@index([createdAt])
-  @@index([isLocked])
   @@index([roomId, status])
   @@index([roomId, startDate]) // Optimized: Sorting periods
 }

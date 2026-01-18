@@ -153,37 +153,76 @@ export async function GET(req: NextRequest) {
           return await getPublicGroups(50, session?.user?.id);
         }
 
-        // For 'all' filter - return both user's groups and public groups in ONE unified query
+        // For 'all' filter - Optimized Split Query
+        // OR queries across relations are slow in Prisma/SQL. We split into two parallel fast queries.
         if (filter === 'all') {
-          const rawGroups = await prisma.room.findMany({
-            where: {
-              isActive: true,
-              OR: [
-                { isPrivate: false },
-                { members: { some: { userId: session.user.id } } }
-              ]
-            },
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              isPrivate: true,
-              createdAt: true,
-              memberCount: true,
-              createdByUser: {
-                select: { id: true, name: true, image: true }
-              },
-              members: {
-                where: { userId: session.user.id },
-                select: { role: true, joinedAt: true, isCurrent: true }
+          const [publicGroups, myGroups] = await Promise.all([
+             // 1. Fetch all public groups
+             prisma.room.findMany({
+                where: { isPrivate: false, isActive: true },
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isPrivate: true,
+                  createdAt: true,
+                  memberCount: true,
+                  createdByUser: {
+                    select: { id: true, name: true, image: true }
+                  },
+                  // We still need to check if *I* am a member of these public groups to show "Joined" status
+                  members: {
+                    where: { userId: session.user.id },
+                    select: { role: true, joinedAt: true, isCurrent: true }
+                  }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+             }),
+             // 2. Fetch my groups (private or public)
+             prisma.room.findMany({
+                where: { 
+                    isActive: true,
+                    members: { some: { userId: session.user.id } }
+                },
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isPrivate: true,
+                  createdAt: true,
+                  memberCount: true,
+                  createdByUser: {
+                    select: { id: true, name: true, image: true }
+                  },
+                  members: {
+                    where: { userId: session.user.id },
+                    select: { role: true, joinedAt: true, isCurrent: true }
+                  }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+             })
+          ]);
+
+          // Merge and Deduplicate (by ID)
+          const allGroupsMap = new Map();
+          
+          // Add my groups first (priority)
+          myGroups.forEach(g => allGroupsMap.set(g.id, g));
+          
+          // Add public groups if not present
+          publicGroups.forEach(g => {
+              if (!allGroupsMap.has(g.id)) {
+                  allGroupsMap.set(g.id, g);
               }
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 100
           });
+          
+          const combinedGroups = Array.from(allGroupsMap.values())
+             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Maintain sort
 
           // Standardize response format
-          return rawGroups.map(group => {
+          return combinedGroups.map((group: any) => {
             const membership = group.members?.[0];
             const role = (membership?.role as Role) || null;
             return {

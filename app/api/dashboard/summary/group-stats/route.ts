@@ -20,25 +20,30 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         let groupId = searchParams.get('groupId');
         
-        let membership;
-        if (groupId) {
-             membership = await prisma.roomMember.findFirst({
-                  where: { userId: session.user.id, roomId: groupId },
-                  select: { roomId: true, role: true, room: { select: { memberCount: true, name: true } } }
-             });
-        } else {
-             membership = await prisma.roomMember.findFirst({
-                 where: { userId: session.user.id, isCurrent: true },
-                 select: { roomId: true, role: true, room: { select: { memberCount: true, name: true } } }
-             });
-             if (!membership) {
-                 membership = await prisma.roomMember.findFirst({
-                     where: { userId: session.user.id },
-                     orderBy: { joinedAt: 'desc' },
+        // Cache membership resolution (finding the relevant group)
+        // This was previously uncached and slow
+        const membershipCacheKey = `group_membership:${session.user.id}:${groupId || 'default'}`;
+        const membership = await cacheGetOrSet(membershipCacheKey, async () => {
+             if (groupId) {
+                 return await prisma.roomMember.findFirst({
+                      where: { userId: session.user.id, roomId: groupId },
+                      select: { roomId: true, role: true, room: { select: { memberCount: true, name: true } } }
+                 });
+             } else {
+                 let m = await prisma.roomMember.findFirst({
+                     where: { userId: session.user.id, isCurrent: true },
                      select: { roomId: true, role: true, room: { select: { memberCount: true, name: true } } }
                  });
+                 if (!m) {
+                     m = await prisma.roomMember.findFirst({
+                         where: { userId: session.user.id },
+                         orderBy: { joinedAt: 'desc' },
+                         select: { roomId: true, role: true, room: { select: { memberCount: true, name: true } } }
+                     });
+                 }
+                 return m;
              }
-        }
+        }, { ttl: CACHE_TTL.GROUPS_LIST });
 
         if (!membership) {
             // Return default empty stats for group
