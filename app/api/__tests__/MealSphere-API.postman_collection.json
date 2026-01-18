@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "MealSphere API",
-    "description": "Complete API collection for MealSphere with all 101 endpoints",
+    "description": "Complete API collection for MealSphere with all 142 endpoints. Auto-updated.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "2.0.0"
   },
@@ -116,21 +116,372 @@
   ],
   "item": [
     {
-      "name": "🔐 Authentication",
+      "name": "Account-balance",
       "item": [
         {
-          "name": "Get CAPTCHA",
+          "name": "Add Transaction",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/api/captcha",
+              "raw": "{{baseUrl}}/api/account-balance",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "captcha"
+                "account-balance"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"targetUserId\": \"{{userId}}\",\n  \"amount\": 500,\n  \"type\": \"DEPOSIT\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE By Transactionid",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account-balance/transactions/:transactionId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account-balance",
+                "transactions",
+                ":transactionId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account-balance/transactions/:transactionId/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account-balance",
+                "transactions",
+                ":transactionId",
+                "history"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account-balance/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account-balance",
+                "history"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account-balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account-balance"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                },
+                {
+                  "key": "all",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account-balance/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account-balance",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT By Transactionid",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account-balance/transactions/:transactionId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account-balance",
+                "transactions",
+                ":transactionId"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "All Rooms Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/all-rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "analytics",
+                "all-rooms"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "analytics"
+              ],
+              "query": [
+                {
+                  "key": "groupId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Selected Rooms Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/selected-rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "analytics",
+                "selected-rooms"
+              ],
+              "query": [
+                {
+                  "key": "roomIds",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/user-rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "analytics",
+                "user-rooms"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "DELETE Sessions",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "sessions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET Debug Oauth",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/debug-oauth",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "debug-oauth"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Debug Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/debug-session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "debug-session"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "sessions"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
               ],
               "query": []
             }
@@ -165,114 +516,6 @@
           }
         },
         {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "pm.sendRequest({",
-                  "    url: pm.variables.get('baseUrl') + '/api/auth/csrf',",
-                  "    method: 'GET'",
-                  "}, function (err, res) {",
-                  "    if (!err) {",
-                  "        pm.collectionVariables.set('csrfToken', res.json().csrfToken);",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var cookie = pm.cookies.get('next-auth.session-token') || pm.cookies.get('__Secure-next-auth.session-token');",
-                  "var jsonData = {};",
-                  "try { jsonData = pm.response.json(); } catch (e) {}",
-                  "var token = cookie || jsonData.token || jsonData.sessionToken;",
-                  "if (token) pm.collectionVariables.set('authToken', token);"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/x-www-form-urlencoded"
-              }
-            ],
-            "body": {
-              "mode": "urlencoded",
-              "urlencoded": [
-                {
-                  "key": "csrfToken",
-                  "value": "{{csrfToken}}",
-                  "type": "text"
-                },
-                {
-                  "key": "email",
-                  "value": "john@example.com",
-                  "type": "text"
-                },
-                {
-                  "key": "password",
-                  "value": "password123",
-                  "type": "text"
-                },
-                {
-                  "key": "json",
-                  "value": "true",
-                  "type": "text"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/callback/credentials",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "callback",
-                "credentials"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Forgot Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/forgot-password",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "forgot-password"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"john@example.com\"\n}"
-            }
-          }
-        },
-        {
           "name": "Reset Password",
           "request": {
             "method": "POST",
@@ -297,25 +540,6 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"token\": \"reset-token\",\n  \"password\": \"password123\",\n  \"confirmPassword\": \"password123\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Sessions",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/sessions",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "sessions"
-              ],
-              "query": []
             }
           }
         },
@@ -366,1386 +590,30 @@
               "raw": "{\n  \"activeGroupId\": \"{{groupId}}\"\n}"
             }
           }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/logout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "logout"
-              ],
-              "query": []
-            }
-          }
         }
       ]
     },
     {
-      "name": "👥 Groups",
+      "name": "Calculations",
       "item": [
         {
-          "name": "List Groups",
+          "name": "Calculations",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/groups",
+              "raw": "{{baseUrl}}/api/calculations",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "groups"
-              ],
-              "query": []
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200 || pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.id) pm.collectionVariables.set('groupId', jsonData.id);",
-                  "    if (jsonData[0] && jsonData[0].id) pm.collectionVariables.set('groupId', jsonData[0].id);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Create Group",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Group\",\n  \"description\": \"Test Description\",\n  \"isPrivate\": false,\n  \"maxMembers\": 20\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200 || pm.response.code === 201) {",
-                  "    var jsonData = pm.response.json();",
-                  "    if (jsonData.id) pm.collectionVariables.set('groupId', jsonData.id);",
-                  "    if (jsonData[0] && jsonData[0].id) pm.collectionVariables.set('groupId', jsonData[0].id);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get Group",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Group",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Group Name\",\n  \"description\": \"Updated description\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Group",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Leave Group",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/leave",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "leave"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Send Invite",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/send-invite",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "send-invite"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"friend@example.com\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Invite",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/invite",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "invite"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Join via Token",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/join/{{inviteToken}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "join",
-                "{{inviteToken}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "List Join Requests",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/join-request",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "join-request"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Create Join Request",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/join-request",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "join-request"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"message\": \"Please let me join\"\n}"
-            }
-          }
-        },
-        {
-          "name": "My Join Request",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/join-request/my-request",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "join-request",
-                "my-request"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Handle Join Request",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/join-request/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "join-request",
-                "{{requestId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"action\": \"approve\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Check Access",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/access",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "access"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Group Activity",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/activity",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "activity"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Group Notifications",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/notifications",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "notifications"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Get Period Mode",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/period-mode",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "period-mode"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Period Mode",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/period-mode",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "period-mode"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"mode\": \"MONTHLY\"\n}"
-            }
-          }
-        },
-        {
-          "name": "My Membership",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "members",
-                "me"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Get Member",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{memberId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "members",
-                "{{memberId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Member",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{memberId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "members",
-                "{{memberId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isBanned\": false\n}"
-            }
-          }
-        },
-        {
-          "name": "Remove Member",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{memberId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "members",
-                "{{memberId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Member Role",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{memberId}}/role",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "members",
-                "{{memberId}}",
-                "role"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"MEMBER\"\n}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🍽️ Meals",
-      "item": [
-        {
-          "name": "List Meals",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals"
+                "calculations"
               ],
               "query": [
                 {
                   "key": "roomId",
                   "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create/Toggle Meal",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"date\": \"2026-01-18\",\n  \"type\": \"LUNCH\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Meal",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/{{mealId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "{{mealId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Delete Meal",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/{{mealId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "{{mealId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Unified Meal Data",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/unified",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "unified"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "User Meal Stats",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/user-stats",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "user-stats"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Meal Settings",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/settings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "settings"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Meal Settings",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/settings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "settings"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"mealRate\": 50\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Auto Settings",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/auto-settings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "auto-settings"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Auto Settings",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/auto-settings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "auto-settings"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"enabled\": true,\n  \"mealTypes\": [\n    \"LUNCH\",\n    \"DINNER\"\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "Process Auto Meals",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/auto-process",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "auto-process"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "List Guest Meals",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/guest",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "guest"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Guest Meal",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/guest",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "guest"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"guestName\": \"John Doe\",\n  \"date\": \"2026-01-18\",\n  \"type\": \"LUNCH\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Guest Meal",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/guest/{{mealId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "guest",
-                "{{mealId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Guest Meal",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/guest/{{mealId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "guest",
-                "{{mealId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"guestName\": \"Jane Doe\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Guest Meal",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/meals/guest/{{mealId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "meals",
-                "guest",
-                "{{mealId}}"
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "💰 Expenses",
-      "item": [
-        {
-          "name": "List Expenses",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/expenses",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "expenses"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Expense",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/expenses",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "expenses"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"description\": \"Groceries\",\n  \"amount\": 500,\n  \"date\": \"2026-01-18\",\n  \"type\": \"FOOD\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Expense",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/expenses/{{expenseId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "expenses",
-                "{{expenseId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Expense",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/expenses/{{expenseId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "expenses",
-                "{{expenseId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 550\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Expense",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/expenses/{{expenseId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "expenses",
-                "{{expenseId}}"
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🛒 Shopping",
-      "item": [
-        {
-          "name": "List Shopping Items",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/shopping",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shopping"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Shopping Item",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/shopping",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shopping"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"name\": \"Rice\",\n  \"quantity\": 5,\n  \"unit\": \"kg\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Update Shopping Item",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/shopping",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shopping"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": \"{{shoppingId}}\",\n  \"purchased\": true\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Shopping Item",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/shopping",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shopping"
-              ],
-              "query": [
-                {
-                  "key": "id",
-                  "value": "{{shoppingId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Clear Purchased Items",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/shopping/clear-purchased",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "shopping",
-                "clear-purchased"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\"\n}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "💳 Payments",
-      "item": [
-        {
-          "name": "List Payments",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/payments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"amount\": 1000,\n  \"method\": \"CASH\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Create bKash Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/payments/bkash/create",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "bkash",
-                "create"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 1000,\n  \"roomId\": \"{{groupId}}\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Execute bKash Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/payments/bkash/execute",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "bkash",
-                "execute"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentID\": \"payment-id\"\n}"
-            }
-          }
-        },
-        {
-          "name": "bKash Callback",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payments/bkash/callback",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "bkash",
-                "callback"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "bKash Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payments/bkash/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "bkash",
-                "status"
-              ],
-              "query": [
-                {
-                  "key": "paymentID",
-                  "value": "payment-id"
                 }
               ]
             }
@@ -1754,37 +622,50 @@
       ]
     },
     {
-      "name": "💵 Account Balance",
+      "name": "Captcha",
       "item": [
         {
-          "name": "Get Balance",
+          "name": "Get CAPTCHA",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/account-balance",
+              "raw": "{{baseUrl}}/api/captcha",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "account-balance"
+                "captcha"
               ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                },
-                {
-                  "key": "all",
-                  "value": "true"
-                }
-              ]
+              "query": []
             }
           }
         },
         {
-          "name": "Add Transaction",
+          "name": "POST Captcha",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/captcha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "captcha"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contact",
+      "item": [
+        {
+          "name": "Contact Form",
           "request": {
             "method": "POST",
             "header": [
@@ -1794,110 +675,77 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/account-balance",
+              "raw": "{{baseUrl}}/api/contact",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "account-balance"
+                "contact"
               ],
               "query": []
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"targetUserId\": \"{{userId}}\",\n  \"amount\": 500,\n  \"type\": \"DEPOSIT\"\n}"
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"message\": \"Test message\"\n}"
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Cron",
+      "item": [
         {
-          "name": "List Transactions",
+          "name": "GET Auto Meals",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/account-balance/transactions",
+              "raw": "{{baseUrl}}/api/cron/auto-meals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "account-balance",
-                "transactions"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
+                "cron",
+                "auto-meals"
               ]
             }
           }
         },
         {
-          "name": "Get Transaction",
+          "name": "GET Meal Reminders",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/account-balance/transactions/{{transactionId}}",
+              "raw": "{{baseUrl}}/api/cron/meal-reminders",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "account-balance",
-                "transactions",
-                "{{transactionId}}"
-              ],
-              "query": []
+                "cron",
+                "meal-reminders"
+              ]
             }
           }
         },
         {
-          "name": "Update Transaction",
+          "name": "Process Auto Meals (Cron)",
           "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/account-balance/transactions/{{transactionId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "account-balance",
-                "transactions",
-                "{{transactionId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 600\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Transaction",
-          "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/account-balance/transactions/{{transactionId}}",
+              "raw": "{{baseUrl}}/api/cron/auto-meals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "account-balance",
-                "transactions",
-                "{{transactionId}}"
+                "cron",
+                "auto-meals"
               ],
               "query": []
             }
@@ -1906,129 +754,33 @@
       ]
     },
     {
-      "name": "📊 Analytics",
+      "name": "Dashboard",
       "item": [
         {
-          "name": "Get Analytics",
+          "name": "GET Charts",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/analytics",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "analytics"
-              ],
-              "query": [
-                {
-                  "key": "groupId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "User Rooms",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/analytics/user-rooms",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "analytics",
-                "user-rooms"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Selected Rooms Analytics",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/analytics/selected-rooms",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "analytics",
-                "selected-rooms"
-              ],
-              "query": [
-                {
-                  "key": "roomIds",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "All Rooms Analytics",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/analytics/all-rooms",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "analytics",
-                "all-rooms"
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "📈 Dashboard",
-      "item": [
-        {
-          "name": "Unified Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/dashboard/unified",
+              "raw": "{{baseUrl}}/api/dashboard/charts",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "dashboard",
-                "unified"
-              ],
-              "query": [
-                {
-                  "key": "groupId",
-                  "value": "{{groupId}}"
-                }
+                "charts"
               ]
             }
           }
         },
         {
-          "name": "Dashboard Summary",
+          "name": "GET Group Stats",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/dashboard/summary/{{groupId}}",
+              "raw": "{{baseUrl}}/api/dashboard/summary/group-stats",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -2036,9 +788,27 @@
                 "api",
                 "dashboard",
                 "summary",
-                "{{groupId}}"
+                "group-stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET User Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/summary/user-stats",
+              "host": [
+                "{{baseUrl}}"
               ],
-              "query": []
+              "path": [
+                "api",
+                "dashboard",
+                "summary",
+                "user-stats"
+              ]
             }
           }
         },
@@ -2060,573 +830,11 @@
               "query": []
             }
           }
-        },
-        {
-          "name": "Chart Data",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/dashboard/chart-data",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "dashboard",
-                "chart-data"
-              ],
-              "query": []
-            }
-          }
         }
       ]
     },
     {
-      "name": "📅 Periods",
-      "item": [
-        {
-          "name": "List Periods",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Period",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"name\": \"January 2026\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-31\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Current Period",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/current",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "current"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Period by Month",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/by-month",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "by-month"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                },
-                {
-                  "key": "month",
-                  "value": "2026-01"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Unified Period Data",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/unified",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "unified"
-              ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Period",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/{{periodId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "{{periodId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Period",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/{{periodId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "{{periodId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Period\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Period",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/{{periodId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "{{periodId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Restart Period",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/{{periodId}}/restart",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "{{periodId}}",
-                "restart"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Period Summary",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/periods/{{periodId}}/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "periods",
-                "{{periodId}}",
-                "summary"
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🔔 Notifications",
-      "item": [
-        {
-          "name": "List Notifications",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/notifications",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "notifications"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Create Notification",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/notifications",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "notifications"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"type\": \"INFO\",\n  \"message\": \"Test notification\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Notification",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "notifications",
-                "{{notificationId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Mark as Read",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "notifications",
-                "{{notificationId}}",
-                "read"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Mark All Read",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/notifications/read-all",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "notifications",
-                "read-all"
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "👤 Users",
-      "item": [
-        {
-          "name": "Get Profile",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/profile",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "profile"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Profile",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/profile",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "profile"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"newemail@example.com\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Change Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/password",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "password"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\",\n  \"confirmPassword\": \"newpassword123\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Check User Exists",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/check-exists",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "check-exists"
-              ],
-              "query": [
-                {
-                  "key": "email",
-                  "value": "john@example.com"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Verify Email",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/verify-email",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "verify-email"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"token\": \"verification-token\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Language",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/language",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "language"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Language",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/language",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "language"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"language\": \"en\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get User by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "users",
-                "{{userId}}"
-              ],
-              "query": []
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "📑 Excel",
+      "name": "Excel",
       "item": [
         {
           "name": "Download Template",
@@ -2648,45 +856,6 @@
           }
         },
         {
-          "name": "Import Data",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/excel/import",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "excel",
-                "import"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Import Meals",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/excel/import/meals",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "excel",
-                "import",
-                "meals"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
           "name": "Export All",
           "request": {
             "method": "GET",
@@ -2700,6 +869,31 @@
                 "api",
                 "excel",
                 "export"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export Calendar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/excel/export/calendar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "excel",
+                "export",
+                "calendar"
               ],
               "query": [
                 {
@@ -2786,48 +980,107 @@
           }
         },
         {
-          "name": "Export Calendar",
+          "name": "Import Data",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/excel/export/calendar",
+              "raw": "{{baseUrl}}/api/excel/import",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "excel",
-                "export",
-                "calendar"
+                "import"
               ],
-              "query": [
-                {
-                  "key": "roomId",
-                  "value": "{{groupId}}"
-                }
-              ]
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Import Meals",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/excel/import/meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "excel",
+                "import",
+                "meals"
+              ],
+              "query": []
             }
           }
         }
       ]
     },
     {
-      "name": "🏪 Market Dates",
+      "name": "Expenses",
       "item": [
         {
-          "name": "List Market Dates",
+          "name": "Create Expense",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/api/market-dates",
+              "raw": "{{baseUrl}}/api/expenses",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "market-dates"
+                "expenses"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"description\": \"Groceries\",\n  \"amount\": 500,\n  \"date\": \"2026-01-18\",\n  \"type\": \"FOOD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE By Id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Expenses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses"
               ],
               "query": [
                 {
@@ -2838,6 +1091,705 @@
             }
           }
         },
+        {
+          "name": "PATCH By Id",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "Create Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Group\",\n  \"description\": \"Test Description\",\n  \"isPrivate\": false,\n  \"maxMembers\": 20\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) pm.collectionVariables.set('groupId', jsonData.id);",
+                  "    if (jsonData[0] && jsonData[0].id) pm.collectionVariables.set('groupId', jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE By Id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE By Memberid",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/members/:memberId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "members",
+                ":memberId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE Invite",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "invite"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE Me",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/members/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "members",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE Votes",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "votes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Access",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "access"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Activity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/activity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "activity"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET By Token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/join/:token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                "join",
+                ":token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Invite",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "invite"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Join Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/join-request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "join-request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET My Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/join-request/my-request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "join-request",
+                "my-request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Period Mode",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/period-mode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "period-mode"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Votes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "votes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) pm.collectionVariables.set('groupId', jsonData.id);",
+                  "    if (jsonData[0] && jsonData[0].id) pm.collectionVariables.set('groupId', jsonData[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH By Id",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH By Memberid",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/members/:memberId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "members",
+                ":memberId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH By Requestid",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/join-request/:requestId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "join-request",
+                ":requestId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Notifications",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Period Mode",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/period-mode",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "period-mode"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Role",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/members/:memberId/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "members",
+                ":memberId",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Votes",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "votes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST By Id",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST By Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/join/:token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                "join",
+                ":token"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Invite",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "invite"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Join Request",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/join-request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "join-request"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Leave",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "leave"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Send Invite",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/send-invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "send-invite"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Votes",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "votes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT Votes",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/:id/votes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "groups",
+                ":id",
+                "votes"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location",
+      "item": [
+        {
+          "name": "Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/location",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "location"
+              ],
+              "query": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Market-dates",
+      "item": [
         {
           "name": "Create Market Date",
           "request": {
@@ -2866,226 +1818,18 @@
           }
         },
         {
-          "name": "Get Market Date",
+          "name": "List Market Dates",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/market-dates/{{marketDateId}}",
+              "raw": "{{baseUrl}}/api/market-dates",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "market-dates",
-                "{{marketDateId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Update Market Date",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/market-dates/{{marketDateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "market-dates",
-                "{{marketDateId}}"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"completed\": true\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Market Date",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/market-dates/{{marketDateId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "market-dates",
-                "{{marketDateId}}"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Add Fine",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/market-dates/{{marketDateId}}/fine",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "market-dates",
-                "{{marketDateId}}",
-                "fine"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 50,\n  \"reason\": \"Late\"\n}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🗳️ Voting",
-      "item": [
-        {
-          "name": "List Votes",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/votes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "votes"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
-          "name": "Create Vote",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/votes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "votes"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Test Vote\",\n  \"description\": \"Vote description\",\n  \"options\": [\n    \"Option 1\",\n    \"Option 2\"\n  ],\n  \"endDate\": \"2026-01-25\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Update Vote",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/votes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "votes"
-              ],
-              "query": []
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"voteId\": \"{{voteId}}\",\n  \"candidateId\": \"option-1\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Vote",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/votes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "groups",
-                "{{groupId}}",
-                "votes"
-              ],
-              "query": [
-                {
-                  "key": "voteId",
-                  "value": "{{voteId}}"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🌐 Other & Public",
-      "item": [
-        {
-          "name": "Calculations",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/calculations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "calculations"
+                "market-dates"
               ],
               "query": [
                 {
@@ -3097,25 +1841,49 @@
           }
         },
         {
-          "name": "Location",
+          "name": "PATCH By Id",
           "request": {
-            "method": "GET",
+            "method": "PATCH",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/location",
+              "raw": "{{baseUrl}}/api/market-dates/:id",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "location"
-              ],
-              "query": []
+                "market-dates",
+                ":id"
+              ]
             }
           }
         },
         {
-          "name": "Contact Form",
+          "name": "POST Fine",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/market-dates/:id/fine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "market-dates",
+                ":id",
+                "fine"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Meals",
+      "item": [
+        {
+          "name": "Create Guest Meal",
           "request": {
             "method": "POST",
             "header": [
@@ -3125,83 +1893,850 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/contact",
+              "raw": "{{baseUrl}}/api/meals/guest",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "contact"
+                "meals",
+                "guest"
               ],
               "query": []
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"message\": \"Test message\"\n}"
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"guestName\": \"John Doe\",\n  \"date\": \"2026-01-18\",\n  \"type\": \"LUNCH\"\n}"
             }
           }
         },
         {
-          "name": "Search",
+          "name": "Create/Toggle Meal",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/api/search",
+              "raw": "{{baseUrl}}/api/meals",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "search"
+                "meals"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"date\": \"2026-01-18\",\n  \"type\": \"LUNCH\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE By Id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/guest/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "guest",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE By Id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Auto Process",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/auto-process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "auto-process"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Auto Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/auto-settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "auto-settings"
               ],
               "query": [
                 {
-                  "key": "q",
-                  "value": "test"
+                  "key": "roomId",
+                  "value": "{{groupId}}"
                 }
               ]
             }
           }
         },
         {
-          "name": "Hero Section",
+          "name": "Get Meal Settings",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/public/hero",
+              "raw": "{{baseUrl}}/api/meals/settings",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "public",
-                "hero"
+                "meals",
+                "settings"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Guest Meals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/guest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "guest"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Meals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Auto Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/auto-settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "auto-settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH By Id",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/guest/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "guest",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT By Id",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Process Auto Meals",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/auto-process",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "auto-process"
               ],
               "query": []
             }
           }
         },
         {
-          "name": "Features",
+          "name": "Unified Meal Data",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/public/features",
+              "raw": "{{baseUrl}}/api/meals/unified",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "public",
-                "features"
+                "meals",
+                "unified"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "User Meal Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/meals/user-stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "meals",
+                "user-stats"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Create Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"type\": \"INFO\",\n  \"message\": \"Test notification\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE By Id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
               ],
               "query": []
             }
           }
         },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "PUT Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                ":id",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT Read All",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"amount\": 1000,\n  \"method\": \"CASH\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create bKash Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/bkash/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "bkash",
+                "create"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"roomId\": \"{{groupId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Execute bKash Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/bkash/execute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "bkash",
+                "execute"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentID\": \"payment-id\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "bKash Callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/bkash/callback",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "bkash",
+                "callback"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "bKash Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/bkash/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "bkash",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "paymentID",
+                  "value": "payment-id"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Periods",
+      "item": [
+        {
+          "name": "Create Period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"name\": \"January 2026\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-31\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Current Period",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "current"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/:id/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ":id",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Periods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH By Id",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Restart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/:id/restart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                ":id",
+                "restart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Period by Month",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/by-month",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "by-month"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                },
+                {
+                  "key": "month",
+                  "value": "2026-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unified Period Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/periods/unified",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "periods",
+                "unified"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
         {
           "name": "About",
           "request": {
@@ -3241,6 +2776,64 @@
           }
         },
         {
+          "name": "Cookie Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/legal/cookies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "legal",
+                "cookies"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Features",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/features",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "features"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Hero Section",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/hero",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "hero"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
           "name": "Meal Plans",
           "request": {
             "method": "GET",
@@ -3254,6 +2847,26 @@
                 "api",
                 "public",
                 "meal-plans"
+              ],
+              "query": []
+            }
+          }
+        },
+        {
+          "name": "Privacy Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/public/legal/privacy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "public",
+                "legal",
+                "privacy"
               ],
               "query": []
             }
@@ -3298,26 +2911,6 @@
           }
         },
         {
-          "name": "Privacy Policy",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/public/legal/privacy",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "public",
-                "legal",
-                "privacy"
-              ],
-              "query": []
-            }
-          }
-        },
-        {
           "name": "Terms of Service",
           "request": {
             "method": "GET",
@@ -3336,62 +2929,316 @@
               "query": []
             }
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
         {
-          "name": "Cookie Policy",
+          "name": "Search",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/public/legal/cookies",
+              "raw": "{{baseUrl}}/api/search",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "public",
-                "legal",
-                "cookies"
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "test"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {
+          "name": "PATCH Privacy",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings/privacy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings",
+                "privacy"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shopping",
+      "item": [
+        {
+          "name": "Create Shopping Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shopping"
               ],
               "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": \"{{groupId}}\",\n  \"name\": \"Rice\",\n  \"quantity\": 5,\n  \"unit\": \"kg\"\n}"
             }
           }
         },
         {
-          "name": "Send Meal Reminders (Cron)",
+          "name": "DELETE Clear Purchased",
           "request": {
-            "method": "POST",
+            "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/cron/meal-reminders",
+              "raw": "{{baseUrl}}/api/shopping/clear-purchased",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "cron",
-                "meal-reminders"
-              ],
-              "query": []
+                "shopping",
+                "clear-purchased"
+              ]
             }
           }
         },
         {
-          "name": "Process Auto Meals (Cron)",
+          "name": "Delete Shopping Item",
           "request": {
-            "method": "POST",
+            "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/cron/auto-meals",
+              "raw": "{{baseUrl}}/api/shopping",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "cron",
-                "auto-meals"
+                "shopping"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{shoppingId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Shopping Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shopping"
+              ],
+              "query": [
+                {
+                  "key": "roomId",
+                  "value": "{{groupId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Shopping Item",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "shopping"
               ],
               "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{shoppingId}}\",\n  \"purchased\": true\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "PATCH Language",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/language",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "language"
+              ]
+            }
+          }
+        },
+        {
+          "name": "PATCH Password",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST Check Exists",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/check-exists",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "check-exists"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"newemail@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "verify-email"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"verification-token\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                ":id"
+              ]
             }
           }
         }

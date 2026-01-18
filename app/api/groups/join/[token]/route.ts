@@ -301,13 +301,7 @@ export async function POST(
       }
     });
 
-    // Update member count in the room
-    await prisma.room.update({
-      where: { id: inviteToken.roomId },
-      data: {
-        memberCount: currentMemberCount + 1
-      }
-    });
+
 
     // Note: We don't delete the invite token anymore to allow multiple joins
     // The token will only be invalidated when it expires

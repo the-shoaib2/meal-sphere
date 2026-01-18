@@ -104,15 +104,7 @@ export async function DELETE(
       },
     });
 
-    // Update the member count in the room
-    await prisma.room.update({
-      where: { id: groupId },
-      data: {
-        memberCount: {
-          decrement: 1,
-        },
-      },
-    });
+
 
     // Log the activity
     await prisma.groupActivityLog.create({
