@@ -153,7 +153,7 @@ export function ActiveSessionsCard({ user }: ActiveSessionsCardProps) {
         }
 
         const confirmed = window.confirm(
-            `Are you sure you want to revoke all ${sessions.length} active sessions? This will log you out from all devices.`
+            `Are you sure you want to revoke all ${sessions.length} sessions? This will log you out from all devices.`
         )
         if (!confirmed) return
 
@@ -241,7 +241,7 @@ export function ActiveSessionsCard({ user }: ActiveSessionsCardProps) {
                             </Button>
                         </div>
                         <Badge variant="secondary" className="w-fit">
-                            {sessions.length} active sessions
+                            {sessions.length} sessions
                         </Badge>
                     </div>
 

@@ -4,7 +4,12 @@ import { LocationData } from './types';
 
 import { prisma } from "@/lib/services/prisma"
 
-// Helper function to get current session info
+/**
+ * Retrieves the most recent active session for a specific user.
+ * 
+ * @param userId - The ID of the user to fetch the session for.
+ * @returns The session object if found, otherwise null.
+ */
 export async function getCurrentSessionInfo(userId: string) {
   try {
     // Get the most recent active session for the user
@@ -23,7 +28,12 @@ export async function getCurrentSessionInfo(userId: string) {
   }
 }
 
-// Helper function to get all active sessions for a user
+/**
+ * Retrieves all active sessions for a specific user.
+ * 
+ * @param userId - The ID of the user to fetch sessions for.
+ * @returns An array of active session objects.
+ */
 export async function getAllActiveSessions(userId: string) {
   try {
     const sessions = await prisma.session.findMany({
@@ -41,7 +51,16 @@ export async function getAllActiveSessions(userId: string) {
   }
 }
 
-// Utility function to update session info
+/**
+ * Updates an existing session's information (IP, Device, Location).
+ * 
+ * @param sessionToken - The token of the session to update.
+ * @param userAgent - The raw User-Agent string from the request.
+ * @param ipAddress - The client's IP address.
+ * @param userId - (Optional) The user ID to help locate session if token is missing.
+ * @param locationData - (Optional) GeoIP data for the session.
+ * @returns boolean indicating success or failure.
+ */
 export async function updateSessionInfo(
   sessionToken: string,
   userAgent: string,
@@ -107,7 +126,13 @@ export async function updateSessionInfo(
   }
 }
 
-// Function to revoke a specific session
+/**
+ * Revokes (deletes) a specific session for a user.
+ * 
+ * @param sessionId - The unique ID of the session to revoke.
+ * @param userId - The ID of the user who owns the session (for security).
+ * @returns boolean indicating success.
+ */
 export async function revokeSession(sessionId: string, userId: string) {
   try {
     const result = await prisma.session.deleteMany({
@@ -124,7 +149,13 @@ export async function revokeSession(sessionId: string, userId: string) {
   }
 }
 
-// Function to revoke multiple sessions
+/**
+ * Revokes (deletes) multiple sessions for a user.
+ * 
+ * @param sessionIds - Array of session IDs to revoke.
+ * @param userId - The ID of the user who owns the sessions.
+ * @returns The number of sessions deleted.
+ */
 export async function revokeMultipleSessions(sessionIds: string[], userId: string) {
   try {
     const result = await prisma.session.deleteMany({
@@ -143,7 +174,12 @@ export async function revokeMultipleSessions(sessionIds: string[], userId: strin
   }
 }
 
-// Function to revoke all sessions for a user
+/**
+ * Revokes (deletes) ALL active sessions for a user (Global Sign Out).
+ * 
+ * @param userId - The ID of the user.
+ * @returns The number of sessions deleted.
+ */
 export async function revokeAllSessions(userId: string) {
   try {
     const result = await prisma.session.deleteMany({

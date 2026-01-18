@@ -3,15 +3,57 @@ import { getLocationFromIP } from '@/lib/utils/location-utils';
 
 import { prisma } from "@/lib/services/prisma"
 
-// JWT callback
-export async function jwtCallback({ token, user, account, profile }: any) {
+/**
+ * JWT Callback
+ * Handles token generation and updates.
+ * Implements asynchronous session tracking for performance.
+ */
+export async function jwtCallback({ token, user, account, profile, trigger, session }: any) {
   // Initial sign in
   if (user) {
     token.id = user.id;
     token.name = user.name;
     token.email = user.email;
     token.picture = user.image;
+
+    // Asynchronous session tracking
+    // Generates session ID immediately and persists to DB in background
+    try {
+        const sessionToken = crypto.randomUUID();
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 30);
+        
+        token.sessionId = sessionToken; 
+        
+        // Fire-and-forget session creation
+        prisma.session.create({
+            data: {
+                userId: user.id,
+                sessionToken: sessionToken,
+                expires: expires,
+                userAgent: 'Unknown (New Login)', // Will be updated by client
+                ipAddress: '',
+            }
+        }).catch(err => {
+             // Silently fail to avoid blocking auth flow
+             // console.error("Background session creation failed:", err);
+        });
+        
+    } catch (e) {
+        // console.error("Failed to setup tracking session", e);
+    }
   }
+  
+  // If we are updating the session (e.g. from client side)
+  if (trigger === "update" && session) {
+      if (session.user) {
+        token.name = session.user.name;
+        token.email = session.user.email;
+        token.picture = session.user.image;
+      }
+      return { ...token, ...session };
+  }
+  
   return token;
 }
 
@@ -24,6 +66,7 @@ export async function sessionCallback({ session, token, user }: any) {
     session.user.name = token.name;
     session.user.email = token.email;
     session.user.image = token.picture;
+    session.sessionToken = token.sessionId; 
   }
   // When using Database strategy, user info comes from the user object
   else if (user) {
@@ -36,26 +79,42 @@ export async function sessionCallback({ session, token, user }: any) {
   return session;
 }
 
-// Sign in callback
+/**
+ * Sign In Callback
+ * Handles post-login validation and account linking.
+ */
 export async function signInCallback(params: any) {
   const { user, account, profile } = params;
 
   try {
     if (account?.provider === 'google') {
       if (!user.email) {
-        console.error('❌ No email found in user object from Google OAuth');
-
         return false;
       }
 
-      // Check if user exists with this email
+      // 1. Fast path: Check for existing account link directly
+      const existingAccount = await prisma.account.findUnique({
+        where: {
+          provider_providerAccountId: {
+            provider: 'google',
+            providerAccountId: account.providerAccountId
+          }
+        },
+        select: { userId: true }
+      });
+
+      if (existingAccount) {
+        user.id = existingAccount.userId;
+        return true;
+      }
+
+      // 2. Slow path: Check user by email and create/link account
       const existingUser = await prisma.user.findUnique({
-        where: { email: user.email },
-        include: { accounts: true }
+        where: { email: user.email }
       });
 
       if (!existingUser) {
-        // Create a new user with default values
+        // Create new user
         const newUser = await prisma.user.create({
           data: {
             email: user.email,
@@ -64,7 +123,7 @@ export async function signInCallback(params: any) {
             emailVerified: new Date(),
             language: 'en',
             isActive: true,
-            password: null, // Since it's a Google sign-in
+            password: null, 
             resetToken: null,
             resetTokenExpiry: null,
             accounts: {
@@ -79,62 +138,34 @@ export async function signInCallback(params: any) {
                 id_token: account.id_token
               }
             }
-          },
-          include: { accounts: true }
+          }
         });
 
         user.id = newUser.id;
       } else {
-        // Check if user has a Google account linked
-        const hasGoogleAccount = existingUser.accounts.some(
-          (acc: any) => acc.provider === 'google' && acc.providerAccountId === account.providerAccountId
-        );
-
-        if (!hasGoogleAccount) {
-          // Link the Google account to the existing user
-          await prisma.account.create({
-            data: {
-              userId: existingUser.id,
-              type: 'oauth',
-              provider: 'google',
-              providerAccountId: account.providerAccountId,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token
-            }
-          });
-        }
-
-        // Update the user object with existing user's data
-        user.id = existingUser.id;
-      }
-    } else if (account?.provider === 'credentials') {
-      // Ensure credentials account exists
-      const existingAccount = await prisma.account.findFirst({
-        where: {
-          userId: user.id,
-          provider: 'credentials'
-        }
-      });
-
-      if (!existingAccount) {
+        // Link existing user to Google account
         await prisma.account.create({
           data: {
-            userId: user.id,
-            type: 'credentials',
-            provider: 'credentials',
-            providerAccountId: user.id,
+            userId: existingUser.id,
+            type: 'oauth',
+            provider: 'google',
+            providerAccountId: account.providerAccountId,
+            access_token: account.access_token,
+            expires_at: account.expires_at,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token
           }
         });
-      }
-    }
 
+        user.id = existingUser.id;
+      }
+    } 
+    
     return true;
   } catch (error) {
-    console.error('❌ Error in signIn callback:', error);
-
+    console.error('Error in signIn callback:', error);
+    
     // Log the full error for debugging
     if (error instanceof Error) {
       console.error('Full error stack:', error.stack);
@@ -150,63 +181,63 @@ export const eventsCallbacks = {
   async signIn(message: any) {
 
 
-    try {
-      // Update the most recent session with device info and location if available
-      if (message.user?.id) {
-        // Get the most recent session for this user
-        const session = await prisma.session.findFirst({
-          where: {
-            userId: message.user.id,
-            expires: { gt: new Date() }
-          },
-          orderBy: { createdAt: 'desc' }
-        });
+    // try {
+    //   // Update the most recent session with device info and location if available
+    //   if (message.user?.id) {
+    //     // Get the most recent session for this user
+    //     const session = await prisma.session.findFirst({
+    //       where: {
+    //         userId: message.user.id,
+    //         expires: { gt: new Date() }
+    //       },
+    //       orderBy: { createdAt: 'desc' }
+    //     });
 
-        if (session) {
-
-
-          // Parse user agent for device info
-          const userAgent = session.userAgent || '';
-          const deviceInfo = parseDeviceInfo(userAgent);
-
-          // Get IP address from session
-          const ipAddress = session.ipAddress;
-
-          // Get location data if we have an IP address
-          let locationData: { city?: string; country?: string; latitude?: number; longitude?: number } = {};
-          if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
-            locationData = await getLocationFromIP(ipAddress);
-          } else if (ipAddress) {
-            locationData = {
-              city: 'Localhost',
-              country: 'Development',
-              latitude: undefined,
-              longitude: undefined
-            }
-          }
-
-          // Update the session with device info and location
-          await prisma.session.update({
-            where: { id: session.id },
-            data: {
-              deviceType: capitalizeDeviceType(deviceInfo.deviceType),
-              deviceModel: deviceInfo.deviceModel || '',
-              city: locationData.city || null,
-              country: locationData.country || null,
-              latitude: locationData.latitude || null,
-              longitude: locationData.longitude || null,
-              updatedAt: new Date()
-            }
-          });
+    //     if (session) {
 
 
-        } else {
+    //       // Parse user agent for device info
+    //       const userAgent = session.userAgent || '';
+    //       const deviceInfo = parseDeviceInfo(userAgent);
 
-        }
-      }
-    } catch (error) {
-      // Error updating session in signIn event
-    }
+    //       // Get IP address from session
+    //       const ipAddress = session.ipAddress;
+
+    //       // Get location data if we have an IP address
+    //       let locationData: { city?: string; country?: string; latitude?: number; longitude?: number } = {};
+    //       if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
+    //         locationData = await getLocationFromIP(ipAddress);
+    //       } else if (ipAddress) {
+    //         locationData = {
+    //           city: 'Localhost',
+    //           country: 'Development',
+    //           latitude: undefined,
+    //           longitude: undefined
+    //         }
+    //       }
+
+    //       // Update the session with device info and location
+    //       await prisma.session.update({
+    //         where: { id: session.id },
+    //         data: {
+    //           deviceType: capitalizeDeviceType(deviceInfo.deviceType),
+    //           deviceModel: deviceInfo.deviceModel || '',
+    //           city: locationData.city || null,
+    //           country: locationData.country || null,
+    //           latitude: locationData.latitude || null,
+    //           longitude: locationData.longitude || null,
+    //           updatedAt: new Date()
+    //         }
+    //       });
+
+
+    //     } else {
+
+    //     }
+    //   }
+    // } catch (error) {
+    //   // Error updating session in signIn event
+    // }
   },
 
   async signOut(message: any) {

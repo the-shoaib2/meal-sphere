@@ -86,19 +86,21 @@ export async function detectLocation(): Promise<LocationData> {
 }
 
 export async function getLocationFromIP(ipAddress: string): Promise<LocationData> {
+// Try to get from Redis cache
   try {
-    
-    // Check if it's a private IP
-    if (isPrivateIP(ipAddress)) {
-      return {
-        ipAddress,
-        city: 'Localhost',
-        country: 'Development',
-        latitude: undefined,
-        longitude: undefined,
+    const redis = await import('@/lib/services/redis').then(m => m.getRedisClient())
+    if (redis) {
+      const cachedData = await redis.get(`geoip:${ipAddress}`)
+      if (cachedData) {
+        return JSON.parse(cachedData)
       }
     }
+  } catch (error) {
+    // Ignore cache errors
+    console.warn('GeoIP cache read error:', error)
+  }
 
+  try {
     // Try multiple location services for better reliability
     const services = [
       `https://ipapi.co/${ipAddress}/json/`,
@@ -112,7 +114,7 @@ export async function getLocationFromIP(ipAddress: string): Promise<LocationData
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; LocationDetector/1.0)'
           },
-          signal: AbortSignal.timeout(5000) // 5 second timeout per service
+          signal: AbortSignal.timeout(3000) // Reduced timeout to 3s per service for faster failover
         })
         
         if (!response.ok) {
@@ -149,6 +151,16 @@ export async function getLocationFromIP(ipAddress: string): Promise<LocationData
           longitude: longitude || undefined,
         }
         
+        // Cache the result for 24 hours
+        try {
+          const redis = await import('@/lib/services/redis').then(m => m.getRedisClient())
+          if (redis) {
+            await redis.set(`geoip:${ipAddress}`, JSON.stringify(result), 'EX', 86400)
+          }
+        } catch (cacheError) {
+          console.warn('GeoIP cache write error:', cacheError)
+        }
+
         return result
         
       } catch (serviceError) {
@@ -156,8 +168,17 @@ export async function getLocationFromIP(ipAddress: string): Promise<LocationData
       }
     }
     
-    // If all services fail, return IP only
-    return { ipAddress }
+    // If all services fail, return IP only (cache this too to avoid retrying immediately)
+    const fallbackResult = { ipAddress }
+    try {
+        const redis = await import('@/lib/services/redis').then(m => m.getRedisClient())
+        if (redis) {
+            // Cache failed lookup for shorter time (e.g., 1 hour) to avoid hammering APIs
+            await redis.set(`geoip:${ipAddress}`, JSON.stringify(fallbackResult), 'EX', 3600)
+        }
+    } catch (e) {}
+
+    return fallbackResult
     
   } catch (error) {
     return { ipAddress }

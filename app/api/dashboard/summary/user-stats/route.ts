@@ -19,25 +19,30 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         let groupId = searchParams.get('groupId');
         
-        // Resolve Group
-        let membership;
+        // Resolve Group (Cached)
+        let membership = null;
         if (groupId) {
              membership = await prisma.roomMember.findFirst({
                   where: { userId: session.user.id, roomId: groupId },
                   select: { roomId: true, role: true }
              });
         } else {
-             membership = await prisma.roomMember.findFirst({
-                 where: { userId: session.user.id, isCurrent: true },
-                 select: { roomId: true, role: true }
-             });
-             if (!membership) {
-                 membership = await prisma.roomMember.findFirst({
-                     where: { userId: session.user.id },
-                     orderBy: { joinedAt: 'desc' },
+             // Try to get default group from cache first
+             const defaultGroupKey = `user:default-group:${session.user.id}`;
+             membership = await cacheGetOrSet(defaultGroupKey, async () => {
+                 let m = await prisma.roomMember.findFirst({
+                     where: { userId: session.user.id, isCurrent: true },
                      select: { roomId: true, role: true }
                  });
-             }
+                 if (!m) {
+                     m = await prisma.roomMember.findFirst({
+                         where: { userId: session.user.id },
+                         orderBy: { joinedAt: 'desc' },
+                         select: { roomId: true, role: true }
+                     });
+                 }
+                 return m;
+             }, { ttl: 3600 }); // Cache default group binding for 1 hour
         }
 
         if (!membership) {

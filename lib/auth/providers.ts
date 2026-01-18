@@ -57,6 +57,20 @@ export const credentialsProvider = CredentialsProvider({
       throw new Error("Invalid credentials");
     }
 
+    // Progressive Password Migration
+    // If we encounter an old cost-12 hash, re-hash it to cost-10 and update in background.
+    // This ensures active users automatically get faster future logins.
+    if (user.password.includes('$12$')) {
+        bcrypt.hash(credentials.password as string, 10).then(newHash => {
+            prisma.user.update({
+                where: { id: user.id },
+                data: { password: newHash }
+            }).catch(() => {
+                // Ignore update errors
+            });
+        });
+    }
+
     return {
       id: user.id,
       email: user.email,

@@ -40,6 +40,14 @@ function extractClientInfo(request: NextRequest) {
   return { userAgent, ipAddress };
 }
 
+/**
+ * Registration Handler
+ * Creates a new user account, performs CAPTCHA validation, 
+ * hashes password, and sends verification email.
+ * 
+ * @param request - The incoming HTTP request containing registration data.
+ * @returns JSON response indicating success or failure.
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -87,7 +95,8 @@ export async function POST(request: Request) {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
     // Extract client info for session tracking
     const { userAgent, ipAddress } = extractClientInfo(request as NextRequest);

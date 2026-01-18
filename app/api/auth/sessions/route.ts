@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get user agent and IP from request headers with better detection
+    // Get user agent and IP from request headers
     const userAgent = request.headers.get('user-agent') || ''
     
-    // Enhanced IP address detection
+    // IP detection
     let ipAddress = ''
     const forwardedFor = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
@@ -51,73 +51,66 @@ export async function GET(request: NextRequest) {
       ipAddress = ipAddress.substring(7)
     }
 
-
-
     // Get current session token from cookies
     const currentSessionToken = request.cookies.get('next-auth.session-token')?.value ||
                                request.cookies.get('__Secure-next-auth.session-token')?.value
 
-    // Get all active sessions for the user
-    const allSessions = await getAllActiveSessions(session.user.id)
-
-    // Update the current session with the latest device info and location
+    // 1. Fetch all active sessions (needed for return value)
+    const allSessions = await getAllActiveSessions(session.user.id);
+    
+    // 2. Identify the current session from the list (if possible)
+    let currentSession = allSessions.find((s: any) => s.sessionToken === currentSessionToken);
+    
+    // 3. Fallback: If not found in list (e.g. might be a brand new session not fully consistent yet or different token strategy), try to find by token directly
+    // This handles the edge case where the session exists but wasn't returned in the "Active" list for some reason, or we need to be sure.
+    // However, for optimization, we rely on the list first.
+    
+    let needsUpdate = false;
+    
     if (currentSessionToken && (userAgent || ipAddress)) {
-      try {
-        // Get location data if we have an IP address
-        let locationData = {}
-        if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
-          locationData = await getLocationFromIP(ipAddress)
-        } else if (ipAddress) {
-          locationData = {
-            city: 'Localhost',
-            country: 'Development',
-            latitude: null,
-            longitude: null
-          }
+        if (!currentSession) {
+             // Session exists in cookie but not found in DB list. 
+             // Could be expired or new. We should try to update it to "revive" it or ensure it's tracked.
+             needsUpdate = true;
+        } else {
+             // Session found. Check if info changed.
+             if (currentSession.ipAddress !== ipAddress || currentSession.userAgent !== userAgent) {
+                 needsUpdate = true;
+             }
         }
-
-        const updateResult = await updateSessionInfo(
-          currentSessionToken, 
-          userAgent, 
-          ipAddress, 
-          session.user.id,
-          locationData
-        )
-        
-
-      } catch (error) {
-        // Continue with fetching sessions even if update fails
-      }
     }
 
-    // Re-fetch sessions to get updated info
-    const updatedSessions = await prisma.session.findMany({
-      where: {
-        userId: session.user.id,
-        expires: { gt: new Date() }
-      },
-      select: {
-        id: true,
-        sessionToken: true,
-        userId: true,
-        expires: true,
-        ipAddress: true,
-        userAgent: true,
-        deviceType: true,
-        deviceModel: true,
-        city: true,
-        country: true,
-        latitude: true,
-        longitude: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { updatedAt: 'desc' }
-    })
+    // 4. Update session info if needed (Background)
+    if (needsUpdate && currentSessionToken) {
+        // Perform update asynchronously to return response immediately
+        (async () => {
+             try {
+                let locationData = {}
+                if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== 'localhost' && ipAddress !== '::1') {
+                  locationData = await getLocationFromIP(ipAddress)
+                } else if (ipAddress) {
+                  locationData = {
+                    city: 'Localhost',
+                    country: 'Development',
+                    latitude: null,
+                    longitude: null
+                  }
+                }
 
+                await updateSessionInfo(
+                  currentSessionToken,
+                  userAgent,
+                  ipAddress,
+                  session.user.id,
+                  locationData
+                )
+             } catch (e) {
+                 // Silently ignore background update errors
+             }
+        })();
+    }
 
-
-    return NextResponse.json(updatedSessions)
+    return NextResponse.json(allSessions)
   } catch (error) {
     return new NextResponse(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
@@ -196,5 +189,3 @@ export async function DELETE(request: Request) {
     })
   }
 }
-
-// Frontend usage: Call fetch('/api/auth/sessions') after login or on first page load after authentication to ensure device info is updated.

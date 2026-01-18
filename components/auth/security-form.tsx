@@ -215,7 +215,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
 
     // Add confirmation dialog
     const confirmed = window.confirm(
-      `Are you sure you want to revoke all ${sessions.length} active sessions? This will log you out from all devices.`
+      `Are you sure you want to revoke all ${sessions.length} sessions? This will log you out from all devices.`
     )
 
     if (!confirmed) {
