@@ -46,10 +46,10 @@ export function TransactionList({
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg sm:text-xl">Transaction Details</CardTitle>
-                <div onClick={() => onViewHistory("")} className="flex items-center cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                <Button variant="outline" size="sm" onClick={() => onViewHistory("")} className="text-muted-foreground hover:text-foreground">
                     <Eye className="mr-2 h-4 w-4" />
-                    <span>View History</span>
-                </div>
+                    View History
+                </Button>
             </CardHeader>
             <CardContent>
                 {transactions && transactions.length > 0 ? (
