@@ -148,11 +148,12 @@ model User {
   accountTransactionsReceived AccountTransaction[]        @relation("TransactionTarget")
   accountTransactionsCreated  AccountTransaction[]        @relation("TransactionCreator")
   createdPeriods              MealPeriod[]                @relation("CreatedPeriods")
+  transactionHistories        TransactionHistory[]
 
   // Privacy Settings
-  isSearchable      Boolean @default(true)
-  showEmail         Boolean @default(false)
-  profileVisibility String  @default("PUBLIC") // PUBLIC, AUTHENTICATED, PRIVATE
+  isSearchable         Boolean              @default(true)
+  showEmail            Boolean              @default(false)
+  profileVisibility    String               @default("PUBLIC") // PUBLIC, AUTHENTICATED, PRIVATE
 
   @@index([resetToken])
   @@index([emailVerified, isActive])
@@ -203,6 +204,7 @@ model Room {
   autoMealSettings          AutoMealSettings[]
   accountTransactions       AccountTransaction[]
   mealPeriods               MealPeriod[]
+  transactionHistories      TransactionHistory[]
 
   @@index([name])
   @@index([description])
@@ -769,4 +771,28 @@ model MealPeriod {
   @@index([isLocked])
   @@index([roomId, status])
   @@index([roomId, startDate]) // Optimized: Sorting periods
+}
+
+/// TRANSACTION HISTORY MODEL
+model TransactionHistory {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  transactionId String   @db.ObjectId // Reference to the original transaction ID (might be deleted)
+  action        String // UPDATE, DELETE
+  amount        Float
+  type          String
+  description   String?
+  userId        String   @db.ObjectId // The user whose balance was affected
+  targetUserId  String   @db.ObjectId // The target user (if applicable)
+  roomId        String   @db.ObjectId
+  periodId      String?  @db.ObjectId
+  changedBy     String   @db.ObjectId // Who made the change
+  changedAt     DateTime @default(now())
+
+  // Snapshot of relations at time of history creation
+  room          Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  changedByUser User @relation(fields: [changedBy], references: [id], onDelete: Cascade)
+
+  @@index([roomId, transactionId])
+  @@index([roomId, changedAt])
+  @@index([transactionId])
 }

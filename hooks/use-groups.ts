@@ -257,8 +257,8 @@ export function useGroups(): UseGroupsReturn {
         return getGroupDetails(groupId, password);
       },
       enabled: !!groupId,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
+      staleTime: 0, // Always fetch fresh data
+      refetchOnWindowFocus: true,
       retry: (failureCount, error: any) => {
         // Don't retry if it's a password required error
         if (error?.requiresPassword) return false;

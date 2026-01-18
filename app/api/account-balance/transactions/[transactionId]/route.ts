@@ -59,6 +59,22 @@ export async function PUT(
 
     await checkEditPrivileges(session.user.id, transaction.roomId);
 
+    // Create history snapshot BEFORE update
+    await prisma.transactionHistory.create({
+      data: {
+        transactionId: transaction.id,
+        action: 'UPDATE',
+        amount: transaction.amount,
+        type: transaction.type,
+        description: transaction.description,
+        userId: transaction.userId,
+        targetUserId: transaction.targetUserId,
+        roomId: transaction.roomId,
+        periodId: transaction.periodId,
+        changedBy: session.user.id
+      }
+    });
+
     const updatedTransaction = await prisma.accountTransaction.update({
       where: { id: transactionId },
       data: {
@@ -97,6 +113,22 @@ export async function DELETE(
     }
 
     await checkDeletePrivileges(session.user.id, transaction.roomId);
+
+    // Create history snapshot BEFORE delete
+    await prisma.transactionHistory.create({
+      data: {
+        transactionId: transaction.id,
+        action: 'DELETE',
+        amount: transaction.amount,
+        type: transaction.type,
+        description: transaction.description,
+        userId: transaction.userId,
+        targetUserId: transaction.targetUserId,
+        roomId: transaction.roomId,
+        periodId: transaction.periodId,
+        changedBy: session.user.id
+      }
+    });
 
     await prisma.accountTransaction.delete({
       where: { id: transactionId },

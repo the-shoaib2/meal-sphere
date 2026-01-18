@@ -7,8 +7,6 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -43,30 +41,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
-import { User, DollarSign, Plus, ArrowLeft, TrendingUp, TrendingDown, Edit, Trash2, MoreHorizontal, Loader2 } from 'lucide-react';
+
+import { Plus, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+
+import { TransactionHistory } from '@/components/account-balance/transaction-history';
+import { TransactionList } from '@/components/account-balance/transaction-list';
+import { AccountInfoCard } from '@/components/account-balance/account-info-card';
 
 const PRIVILEGED_ROLES = [
   'ADMIN',
@@ -77,21 +60,7 @@ function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
 }
 
-const getRoleBadgeVariant = (role: string) => {
-  switch (role) {
-    case 'ADMIN': return 'default';
-    case 'ACCOUNTANT': return 'default';
-    default: return 'outline';
-  }
-};
 
-const getRoleBadgeStyle = (role: string) => {
-  switch (role) {
-    case 'ADMIN': return 'bg-blue-600 hover:bg-blue-700';
-    case 'ACCOUNTANT': return 'bg-green-600 hover:bg-green-700';
-    default: return '';
-  }
-};
 
 export default function UserAccountBalancePage() {
   const params = useParams();
@@ -107,6 +76,8 @@ export default function UserAccountBalancePage() {
   const [transactionType, setTransactionType] = useState('ADJUSTMENT');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [historyTransactionId, setHistoryTransactionId] = useState<string | null>(null);
+
 
 
   const userId = params?.id as string;
@@ -181,6 +152,10 @@ export default function UserAccountBalancePage() {
   const openDeleteDialog = (transactionId: string) => {
     setTransactionToDelete(transactionId);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openHistoryDialog = (transactionId: string) => {
+    setHistoryTransactionId(transactionId);
   };
 
   const handleTransactionSubmit = async () => {
@@ -266,157 +241,30 @@ export default function UserAccountBalancePage() {
         </div>
       </div>
 
-      {/* Combined User Info and Stats Card */}
-      <Card>
-        <CardContent className="p-4">
-          {/* User Info */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12 border">
-                <AvatarImage src={userBalance?.user?.image} />
-                <AvatarFallback className="text-lg font-semibold">
-                  {userBalance?.user?.name?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold">{userBalance?.user?.name}</h3>
-                  <Badge
-                    variant={getRoleBadgeVariant(targetUserRole)}
-                    className={getRoleBadgeStyle(targetUserRole)}
-                  >
-                    {targetUserRole.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{userBalance?.user?.email}</p>
-              </div>
-            </div>
-          </div>
+      <AccountInfoCard
+        userBalance={userBalance}
+        targetUserRole={targetUserRole}
+        availableBalance={availableBalance}
+        totalSpent={totalSpent}
+        totalReceived={totalReceived}
+        totalTransactions={totalTransactions}
+      />
 
-          <Separator className="my-4" />
-
-          {/* Stats Grid - Responsive */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground mb-1">Available Balance</p>
-              <p className={`text-lg sm:text-xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ৳{availableBalance.toFixed(2)}
-              </p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground mb-1">Total Spent</p>
-              <p className="text-lg sm:text-xl font-bold text-red-600">৳{totalSpent.toFixed(2)}</p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground mb-1">Total Received</p>
-              <p className="text-lg sm:text-xl font-bold text-green-600">৳{totalReceived.toFixed(2)}</p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground mb-1">Total Transactions</p>
-              <p className="text-lg sm:text-xl font-bold">{totalTransactions}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Transaction History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredTransactions && filteredTransactions.length > 0 ? (
-            <div className="rounded-md border overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[100px]">Amount</TableHead>
-                      <TableHead className="min-w-[100px]">Type</TableHead>
-                      <TableHead className="min-w-[150px] hidden sm:table-cell">Description</TableHead>
-                      <TableHead className="min-w-[120px] hidden md:table-cell">Added By</TableHead>
-                      <TableHead className="min-w-[140px]">Date</TableHead>
-                      {hasPrivilege && <TableHead className="text-right min-w-[80px]">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransactions.map((t) => {
-                      const isEdited = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000;
-                      return (
-                        <TableRow key={t.id}>
-                          <TableCell>
-                            <span className={`font-medium ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {t.amount > 0 ? '+' : ''}৳{t.amount.toFixed(2)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">{t.type}</Badge>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <div className="max-w-[200px] truncate text-sm text-muted-foreground" title={t.description}>
-                              {t.description}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <div className="text-sm text-muted-foreground truncate max-w-[120px]" title={t.creator?.name || 'System'}>
-                              {t.creator?.name || 'System'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-muted-foreground">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <span className="block sm:hidden">{new Date(t.createdAt).toLocaleDateString()}</span>
-                                    <span className="hidden sm:block">{new Date(t.createdAt).toLocaleString()}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Created: {new Date(t.createdAt).toLocaleString()}</p>
-                                    {isEdited && <p>Updated: {new Date(t.updatedAt).toLocaleString()}</p>}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </TableCell>
-                          {hasPrivilege && (
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {/* ADMIN and ACCOUNTANT can edit transactions */}
-                                  <DropdownMenuItem onClick={() => openEditTransactionDialog(t)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>Edit</span>
-                                  </DropdownMenuItem>
-                                  {/* Only ADMIN can delete transactions */}
-                                  {isAdmin && (
-                                    <DropdownMenuItem onClick={() => openDeleteDialog(t.id)} className="text-red-500 focus:text-red-500">
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      <span>Delete</span>
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-muted-foreground">No transactions found.</div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {historyTransactionId ? (
+        <TransactionHistory
+          transactionId={historyTransactionId}
+          onBack={() => setHistoryTransactionId(null)}
+        />
+      ) : (
+        <TransactionList
+          transactions={filteredTransactions}
+          hasPrivilege={hasPrivilege}
+          isAdmin={isAdmin}
+          onEdit={openEditTransactionDialog}
+          onDelete={openDeleteDialog}
+          onViewHistory={openHistoryDialog}
+        />
+      )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -495,6 +343,8 @@ export default function UserAccountBalancePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+
     </div>
   );
 }
