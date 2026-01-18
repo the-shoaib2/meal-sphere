@@ -304,15 +304,15 @@ export default function DashboardPage() {
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
       <div className="xl:col-span-3">
         <AnalyticsCard title="Room Statistics" icon={Users} isLoading={isAnalyticsLoading} description="Key metrics for each room.">
-          <RoomStatsTable data={data.roomStats} />
+          <RoomStatsTable data={data?.roomStats || []} />
         </AnalyticsCard>
       </div>
 
       <AnalyticsCard title="Meal Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of meals by type.">
         <ResponsiveContainer width="100%" height={250}>
           <PieChart>
-            <Pie data={data.mealDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-              {data.mealDistribution.map((entry, index) => (
+            <Pie data={(data?.mealDistribution || []) as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {(data?.mealDistribution || []).map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
@@ -325,8 +325,8 @@ export default function DashboardPage() {
       <AnalyticsCard title="Expense Distribution" icon={PieChartIcon} isLoading={isAnalyticsLoading} description="Breakdown of expenses by type.">
         <ResponsiveContainer width="100%" height={250}>
           <PieChart>
-            <Pie data={data.expenseDistribution as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
-              {data.expenseDistribution.map((entry, index) => (
+            <Pie data={(data?.expenseDistribution || []) as any} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8" label>
+              {(data?.expenseDistribution || []).map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
 
       <AnalyticsCard title="Meal Rate Trend" icon={TrendingUp} isLoading={isAnalyticsLoading} description="Meal rate fluctuations over time.">
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data.mealRateTrend}>
+          <LineChart data={data?.mealRateTrend || []}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />
@@ -352,7 +352,7 @@ export default function DashboardPage() {
       <div className="xl:col-span-3">
         <AnalyticsCard title="Monthly Expenses" icon={AreaChart} isLoading={isAnalyticsLoading} description="Total expenses per month.">
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={data.monthlyExpenses}>
+            <BarChart data={data?.monthlyExpenses || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />

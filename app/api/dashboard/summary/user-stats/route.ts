@@ -41,7 +41,14 @@ export async function GET(request: NextRequest) {
         }
 
         if (!membership) {
-            return NextResponse.json({ error: 'No groups found' }, { status: 404 });
+            // Return default empty stats for user
+            return NextResponse.json({
+                totalUserMeals: 0,
+                currentBalance: 0,
+                availableBalance: 0,
+                totalSpent: 0,
+                activeGroups: 0
+            });
         }
         groupId = membership.roomId;
 

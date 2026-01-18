@@ -55,7 +55,7 @@ async function fetchAnalyticsData(userId: string, groupId: string | null) {
     });
 
     if (!memberships) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      throw new Error('User not found');
     }
 
     // Get all room IDs the user is part of
@@ -73,13 +73,13 @@ async function fetchAnalyticsData(userId: string, groupId: string | null) {
     // Filter to requested group if needed
     if (groupId && groupId !== 'all') {
       if (!roomIds.includes(groupId)) {
-        return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
+        throw new Error('Not a member of this group');
       }
       roomIds = [groupId];
     }
 
     if (roomIds.length === 0) {
-      return NextResponse.json({
+      return {
         meals: [],
         expenses: [],
         shoppingItems: [],
@@ -89,7 +89,7 @@ async function fetchAnalyticsData(userId: string, groupId: string | null) {
         monthlyExpenses: [],
         mealRateTrend: [],
         roomStats: []
-      });
+      };
     }
 
     // --- OPTIMIZATION START ---
