@@ -20,7 +20,7 @@ export function DashboardSkeleton({ hideHeader = false }: DashboardSkeletonProps
 
             {/* Header Skeleton */}
             {!hideHeader && (
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-2">
                     <Skeleton className="h-8 w-32 sm:w-48" />
                     <Skeleton className="h-8 w-24 sm:w-32 rounded-md" />
                 </div>

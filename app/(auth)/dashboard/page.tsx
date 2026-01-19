@@ -57,7 +57,7 @@ export default async function DashboardPage() {
         <DashboardShell
             header={
                 <div className="flex items-center justify-between gap-4">
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+                    <h1 className="text-2xl sm:text-3xl pb-2 font-bold tracking-tight">Dashboard</h1>
                     <DashboardRefreshButton />
                 </div>
             }

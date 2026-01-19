@@ -171,7 +171,7 @@ export function useMeal(roomId?: string): UseMealReturn {
   const { data: currentPeriod } = useCurrentPeriod();
 
   // Unified Query Hook
-  const { data: unifiedData, isLoading: isLoadingUnified, error: unifiedError } = useQuery({
+  const { data: data, isLoading: isLoadingUnified, error: unifiedError } = useQuery({
     queryKey: ['unified-meal-data', roomId],
     queryFn: async () => {
       if (!roomId) return null;
@@ -189,11 +189,11 @@ export function useMeal(roomId?: string): UseMealReturn {
   });
 
   // Derived state from unified data
-  const meals: Meal[] = unifiedData?.meals || [];
-  const guestMeals: GuestMeal[] = unifiedData?.guestMeals || [];
-  const mealSettings: MealSettings | null = unifiedData?.settings || null;
-  const autoMealSettings: AutoMealSettings | null = unifiedData?.autoSettings || null;
-  const userMealStats: UserMealStats | null = unifiedData?.userStats || null;
+  const meals: Meal[] = data?.meals || [];
+  const guestMeals: GuestMeal[] = data?.guestMeals || [];
+  const mealSettings: MealSettings | null = data?.settings || null;
+  const autoMealSettings: AutoMealSettings | null = data?.autoSettings || null;
+  const userMealStats: UserMealStats | null = data?.userStats || null;
 
   // Loading states are now consolidated
   const isLoading = isLoadingUnified;

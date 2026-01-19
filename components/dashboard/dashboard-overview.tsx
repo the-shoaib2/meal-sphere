@@ -1,19 +1,10 @@
 import { BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import DashboardSummaryCards from "@/components/dashboard/summary-cards";
+import { DashboardSummary } from "@/types/dashboard";
 
 interface DashboardOverviewProps {
-    summaryData: {
-        totalUserMeals: number;
-        currentRate: number;
-        currentBalance: number;
-        totalCost: number;
-        activeRooms: number;
-        totalMembers: number;
-        totalAllMeals: number;
-        availableBalance: number;
-        groupBalance: any;
-    }
+    summaryData: DashboardSummary;
 }
 
 export function DashboardOverview({ summaryData }: DashboardOverviewProps) {

@@ -23,8 +23,7 @@ export function GroupSwitcher() {
   const isMobile = useIsMobile()
   const router = useRouter()
   const { data: session } = useSession()
-  const { data: groups = [], isLoading } = useGroups()
-  const { activeGroup, setActiveGroup, isLoading: isActiveGroupLoading } = useActiveGroup()
+  const { activeGroup, setActiveGroup, isLoading, groups = [] } = useActiveGroup()
   const { startLoading } = useLoading()
   const hasGroups = groups.length > 0
 
@@ -42,7 +41,7 @@ export function GroupSwitcher() {
     router.push('/groups/create')
   }
 
-  if (isLoading || isActiveGroupLoading) {
+  if (isLoading) {
     return (
       <div className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm">
         <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">

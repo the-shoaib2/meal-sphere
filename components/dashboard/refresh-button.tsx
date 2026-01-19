@@ -17,7 +17,7 @@ export default function DashboardRefreshButton() {
             disabled={isRefreshing}
         >
             <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
     );
 }

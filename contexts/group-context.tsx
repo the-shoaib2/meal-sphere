@@ -2,109 +2,191 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Group, useGroups } from '@/hooks/use-groups';
+import { Group } from '@/hooks/use-groups';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
+import { toast } from 'sonner';
 
 const ENC_KEY = 'ms_active_group_ctx';
-
 type GroupContextType = {
   activeGroup: Group | null;
   setActiveGroup: (group: Group | null) => void;
   isLoading: boolean;
+  groups: Group[];
 };
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
 
-// In-memory cache for groups data
-const groupsCache = new Map<string, Group[]>();
-
-export function GroupProvider({ children }: { children: React.ReactNode }) {
+export function GroupProvider({
+  children,
+  initialGroups = [],
+  initialActiveGroup = null
+}: {
+  children: React.ReactNode;
+  initialGroups?: Group[];
+  initialActiveGroup?: Group | null;
+}) {
   const { data: session, status } = useSession();
-  const [activeGroup, setActiveGroup] = useState<Group | null>(null);
+  const router = useRouter();
+  const [activeGroup, setActiveGroup] = useState<Group | null>(initialActiveGroup);
   const [isLoading, setIsLoading] = useState(true);
-  const { data: groups = [], isLoading: groupsLoading } = useGroups();
+  const [groups, setGroups] = useState<Group[]>(initialGroups);
   const queryClient = useQueryClient();
+
+  // Update groups when initialGroups changes
+  useEffect(() => {
+    if (initialGroups.length > 0) {
+      setGroups(initialGroups);
+    }
+  }, [initialGroups]);
+
+  // Set initial active group from server-side data
+  useEffect(() => {
+    if (initialActiveGroup && !activeGroup) {
+      setActiveGroup(initialActiveGroup);
+
+      // Save to localStorage
+      try {
+        const encrypted = encryptData(JSON.stringify(initialActiveGroup));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(ENC_KEY, encrypted);
+        }
+      } catch (error) {
+        console.error('Failed to save initial active group:', error);
+      }
+    }
+  }, [initialActiveGroup]);
 
   // Clear active group when user logs out
   useEffect(() => {
     if (status === 'unauthenticated') {
       setActiveGroup(null);
-      // Clear all group-related queries from cache
-      queryClient.removeQueries({ queryKey: ['user-groups'] });
-      queryClient.removeQueries({ queryKey: ['group'] });
-      // Clear in-memory cache
-      groupsCache.clear();
-      // Clear persisted state
-      localStorage.removeItem(ENC_KEY);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(ENC_KEY);
+      }
     }
-  }, [status, queryClient]);
+  }, [status]);
 
-  // Load persisted group or set default
+  // Load active group from localStorage only if not set from server
   useEffect(() => {
-    if (status === 'authenticated' && groups.length > 0) {
-      if (!activeGroup) {
-        // Try to recover from local storage
-        const storedEncryptedId = localStorage.getItem(ENC_KEY);
-        let targetGroup = null;
-
-        if (storedEncryptedId) {
-          const decryptedId = decryptData(storedEncryptedId);
-          if (decryptedId) {
-            targetGroup = groups.find(g => g.id === decryptedId);
+    if (status === 'authenticated' && session?.user?.id && !activeGroup && !initialActiveGroup) {
+      try {
+        const encrypted = typeof window !== 'undefined' ? localStorage.getItem(ENC_KEY) : null;
+        if (encrypted) {
+          const decryptedStr = decryptData(encrypted);
+          if (decryptedStr) {
+            const decrypted = JSON.parse(decryptedStr);
+            if (decrypted && typeof decrypted === 'object' && 'id' in decrypted) {
+              // Verify the group still exists in user's groups
+              const groupExists = groups.find(g => g.id === decrypted.id);
+              if (groupExists) {
+                setActiveGroup(decrypted as Group);
+              } else {
+                // Group no longer exists, clear it
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem(ENC_KEY);
+                }
+              }
+            }
           }
         }
-
-        // Fallback to first group if no stored valid ID
-        if (!targetGroup) {
-          targetGroup = groups[0];
-        }
-
-        if (targetGroup) {
-          console.log("Restoring active group:", targetGroup.name);
-          setActiveGroup(targetGroup);
+      } catch (error) {
+        console.error('Failed to load active group:', error);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(ENC_KEY);
         }
       }
     }
-  }, [status, groups]); // Removed activeGroup from deps to avoid loop if logic was flawed, but here it's fine. Logic: ONLY if !activeGroup.
+  }, [status, session?.user?.id, groups]);
 
-  // Persist active group changes
-  const handleSetActiveGroup = (group: Group | null) => {
+  // Handle setting active group
+  const handleSetActiveGroup = async (group: Group | null) => {
+    // Optimistically update UI
     setActiveGroup(group);
-    if (group?.id) {
-      const encryptedId = encryptData(group.id);
-      localStorage.setItem(ENC_KEY, encryptedId);
-    } else {
-      localStorage.removeItem(ENC_KEY);
-    }
 
-    // Also invalidate dashboard immediately if needed
-    if (group?.id) {
+    if (group) {
+      try {
+        // Save to localStorage
+        const encrypted = encryptData(JSON.stringify(group));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(ENC_KEY, encrypted);
+        }
+
+        // Update database to set isCurrent flag
+        const response = await fetch('/api/groups/set-current', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ groupId: group.id }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to set current group');
+        }
+
+        // Invalidate relevant queries when active group changes
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['meals'] });
+        queryClient.invalidateQueries({ queryKey: ['expenses'] });
+        queryClient.invalidateQueries({ queryKey: ['periods'] });
+
+        // Trigger router refresh to update Server Components
+        router.refresh();
+      } catch (error) {
+        console.error('Failed to switch group:', error);
+
+        // Show error toast
+        toast.error('Failed to switch group', {
+          description: 'Please try again or refresh the page.'
+        });
+
+        // Revert to previous state on error
+        const encrypted = typeof window !== 'undefined' ? localStorage.getItem(ENC_KEY) : null;
+        if (encrypted) {
+          try {
+            const decryptedStr = decryptData(encrypted);
+            if (decryptedStr) {
+              const previousGroup = JSON.parse(decryptedStr);
+              setActiveGroup(previousGroup as Group);
+            }
+          } catch {
+            setActiveGroup(null);
+          }
+        } else {
+          setActiveGroup(null);
+        }
+      }
+    } else {
+      // Clear active group
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(ENC_KEY);
+      }
+
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      // Invalidate legacy specific query keys if needed
+      queryClient.invalidateQueries({ queryKey: ['meals'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+
+      // Refresh to show empty state
+      router.refresh();
     }
   };
 
-  // Invalidate dashboard queries when active group changes (This is redundant with handleSetActiveGroup but good for safety)
-  useEffect(() => {
-    if (activeGroup?.id) {
-      // We already do this in handleSetActiveGroup, but if activeGroup is set via effect (restore), this ensures invalidation.
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-    }
-  }, [activeGroup?.id, queryClient]);
-
   // Set loading state based on session status and initial group load
   useEffect(() => {
-    if (status !== 'loading' && (!groupsLoading || groups.length === 0)) {
+    if (status !== 'loading') {
       setIsLoading(false);
     }
-  }, [status, groupsLoading, groups]);
+  }, [status]);
 
-  const contextIsLoading = status === 'loading' || isLoading || (status === 'authenticated' && groupsLoading && !activeGroup);
+  // Only show loading if session is loading, not if user simply has no groups
+  const contextIsLoading = status === 'loading' || isLoading;
 
   return (
-    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, isLoading: contextIsLoading }}>
+    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, isLoading: contextIsLoading, groups }}>
       {children}
     </GroupContext.Provider>
   );

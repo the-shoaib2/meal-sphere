@@ -6,6 +6,8 @@ import { AppSidebar } from "@/components/layout/app-sidebar"
 import { Header } from "@/components/layout/header"
 import { GroupProvider } from "@/contexts/group-context"
 import { redirect } from "next/navigation"
+import { fetchGroupsData } from "@/lib/services/groups-service"
+import { Group } from "@/hooks/use-groups"
 
 export default async function AuthLayout({
   children,
@@ -19,8 +21,25 @@ export default async function AuthLayout({
     redirect('/login?error=session_expired')
   }
 
+  // Fetch groups server-side for GroupProvider
+  let initialGroups: Group[] = [];
+  let initialActiveGroup: Group | null = null;
+
+  try {
+    const groupsData = await fetchGroupsData(session.user.id);
+    initialGroups = groupsData.myGroups || [];
+    initialActiveGroup = groupsData.activeGroup || null;
+
+    // If no active group but user has groups, auto-select the first one
+    if (!initialActiveGroup && initialGroups.length > 0) {
+      initialActiveGroup = initialGroups[0];
+    }
+  } catch (error) {
+    console.error('Error fetching groups in layout:', error);
+  }
+
   return (
-    <GroupProvider>
+    <GroupProvider initialGroups={initialGroups} initialActiveGroup={initialActiveGroup}>
       <div className="flex flex-col min-h-screen w-full">
         <Header />
         <div className="flex flex-1 max-w-7xl mx-auto w-full">

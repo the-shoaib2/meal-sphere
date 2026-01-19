@@ -15,6 +15,8 @@
 export const BALANCE_PRIVILEGED_ROLES = [
   'ADMIN',
   'ACCOUNTANT',
+  'MANAGER',
+  'MEAL_MANAGER',
 ] as const;
 
 /**

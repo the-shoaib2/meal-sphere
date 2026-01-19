@@ -776,6 +776,6 @@ model TransactionHistory {
   changedByUser User @relation(fields: [changedBy], references: [id], onDelete: Cascade)
 
   @@index([roomId, transactionId])
-  @@index([roomId, changedAt])
+  @@index([roomId, changedAt(sort: Desc)]) // Optimized for dashboard activity feed
   @@index([transactionId])
 }
