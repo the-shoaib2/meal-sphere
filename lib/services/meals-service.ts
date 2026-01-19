@@ -98,10 +98,13 @@ export async function fetchMealsData(userId: string, groupId: string) {
           }
         }),
         
-        // Auto meal settings for the group
+        // Auto meal settings for the user in this group
         prisma.autoMealSettings.findUnique({
           where: {
-            roomId: groupId
+            userId_roomId: {
+              userId: userId,
+              roomId: groupId
+            }
           }
         }),
         

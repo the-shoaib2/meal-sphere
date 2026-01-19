@@ -60,7 +60,7 @@ export function GroupSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors outline-none cursor-pointer"
         >
           <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             {hasGroups ? (
@@ -106,7 +106,7 @@ export function GroupSwitcher() {
             <DropdownMenuItem
               key={group.id}
               onClick={() => handleGroupSelect(group)}
-              className="flex items-center justify-between gap-2 p-2"
+              className="flex items-center justify-between gap-2 p-2 cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <div className="flex size-6 items-center justify-center rounded-sm border">

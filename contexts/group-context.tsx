@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ type GroupContextType = {
   activeGroup: Group | null;
   setActiveGroup: (group: Group | null) => void;
   isLoading: boolean;
+  isSwitchingGroup: boolean;
   groups: Group[];
 };
 
@@ -33,6 +34,7 @@ export function GroupProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [groups, setGroups] = useState<Group[]>(initialGroups);
   const queryClient = useQueryClient();
+  const [isSwitchingGroup, startTransition] = useTransition();
 
   // Update groups when initialGroups changes
   useEffect(() => {
@@ -132,8 +134,10 @@ export function GroupProvider({
         queryClient.invalidateQueries({ queryKey: ['expenses'] });
         queryClient.invalidateQueries({ queryKey: ['periods'] });
 
-        // Trigger router refresh to update Server Components
-        router.refresh();
+        // Trigger router refresh to update Server Components with transition state
+        startTransition(() => {
+          router.refresh();
+        });
       } catch (error) {
         console.error('Failed to switch group:', error);
 
@@ -170,8 +174,10 @@ export function GroupProvider({
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['periods'] });
 
-      // Refresh to show empty state
-      router.refresh();
+      // Refresh to show empty state with transition state
+      startTransition(() => {
+        router.refresh();
+      });
     }
   };
 
@@ -186,7 +192,7 @@ export function GroupProvider({
   const contextIsLoading = status === 'loading' || isLoading;
 
   return (
-    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, isLoading: contextIsLoading, groups }}>
+    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, isLoading: contextIsLoading, isSwitchingGroup, groups }}>
       {children}
     </GroupContext.Provider>
   );
