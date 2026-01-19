@@ -32,3 +32,28 @@ export function handleNavigation(href: string) {
     window.open(href, '_blank');
   }
 }
+
+/**
+ * Clears local storage but preserves specific keys like theme
+ */
+export function clearLocalStorage() {
+  if (typeof window === 'undefined') return;
+  
+  const keysToPreserve = ['meal-sphere-theme'];
+  const preservedValues: Record<string, string | null> = {};
+  
+  // Save preserved values
+  keysToPreserve.forEach(key => {
+    preservedValues[key] = localStorage.getItem(key);
+  });
+  
+  // Clear all storage
+  localStorage.clear();
+  
+  // Restore preserved values
+  keysToPreserve.forEach(key => {
+    if (preservedValues[key]) {
+      localStorage.setItem(key, preservedValues[key]!);
+    }
+  });
+}

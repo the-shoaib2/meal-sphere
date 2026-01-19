@@ -23,7 +23,7 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { handleNavigation } from "@/lib/utils"
+import { handleNavigation, clearLocalStorage } from "@/lib/utils"
 interface UserAvatarProps {
   user: {
     id: string;
@@ -45,8 +45,8 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      // Clear local storage
-      localStorage.clear();
+      // Clear local storage safely
+      clearLocalStorage();
 
       // Direct sign out
       await signOut({ callbackUrl: '/', redirect: true });

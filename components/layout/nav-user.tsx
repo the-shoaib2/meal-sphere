@@ -42,22 +42,22 @@ import {
 } from "@/components/ui/sidebar"
 
 import { useProfileImage } from "@/hooks/use-profile-image"
-import { handleNavigation } from "@/lib/utils"
+import { handleNavigation, clearLocalStorage } from "@/lib/utils"
 
 interface NavUserProps {
   user: {
-    id: string
-    name?: string | null
-    email?: string | null
-    image?: string | null
-    role?: string
-  } | null | undefined
-  className?: string
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string;
+  } | null | undefined;
+  className?: string;
 }
 
 export function NavUser({ user, className = '' }: NavUserProps) {
-  const [loggingOut, setLoggingOut] = useState(false)
-  const router = useRouter()
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { isMobile } = useSidebar();
@@ -73,8 +73,8 @@ export function NavUser({ user, className = '' }: NavUserProps) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      // Clear local storage
-      localStorage.clear();
+      // Clear local storage safely
+      clearLocalStorage();
 
       // Direct sign out
       await signOut({ callbackUrl: '/', redirect: true });

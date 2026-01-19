@@ -23,6 +23,7 @@ import {
 import { useRouter, usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import { GroupSwitcher } from "@/components/layout/group-switcher"
+import { clearLocalStorage } from "@/lib/utils"
 
 type NavItem = {
     title: string
@@ -99,8 +100,8 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         if (href === "/signout") {
             setIsSigningOut(true);
             try {
-                // Clear local storage
-                localStorage.clear();
+                // Clear local storage safely
+                clearLocalStorage();
 
                 // Direct sign out
                 await signOut({ callbackUrl: '/', redirect: true });
