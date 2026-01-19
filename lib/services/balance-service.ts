@@ -213,113 +213,83 @@ export async function getGroupBalanceSummary(
       const currentPeriod = await getCurrentPeriod(roomId);
       const periodId = currentPeriod?.id;
 
-      const members = await prisma.roomMember.findMany({
-        where: { roomId },
-        include: { user: { select: { id: true, name: true, image: true, email: true } } },
-      });
+      // Parallelize all independent DB operations
+      const [
+        members,
+        balancesGrouped,
+        groupTotalResult,
+        mealsGrouped,
+        fetchedTotalExpenses
+      ] = await Promise.all([
+        // 1. Fetch Members
+        prisma.roomMember.findMany({
+          where: { roomId },
+          include: { user: { select: { id: true, name: true, image: true, email: true } } },
+        }),
+        
+        // 2. Calculate Balances
+        prisma.accountTransaction.groupBy({
+          by: ['targetUserId'],
+          where: {
+            roomId,
+            periodId: periodId,
+          },
+          _sum: {
+            amount: true
+          }
+        }),
 
-      // 1. Calculate Balances using groupBy (DB Aggregation)
-      const balancesGrouped = await prisma.accountTransaction.groupBy({
-        by: ['targetUserId'],
-        where: {
-          roomId,
-          periodId: periodId,
-        },
-        _sum: {
-          amount: true
-        }
-      });
+        // 3. Calculate Group Total (Self Transactions)
+        (prisma as any).$queryRaw`
+          SELECT SUM(amount) as total 
+          FROM "AccountTransaction" 
+          WHERE "roomId" = ${roomId} 
+          AND "periodId" = ${periodId} 
+          AND "userId" = "targetUserId"
+        `,
+
+        // 4. Fetch Meal Counts
+        prisma.meal.groupBy({
+          by: ['userId'],
+          where: {
+            roomId,
+            periodId: periodId,
+          },
+          _count: {
+            id: true,
+          },
+        }),
+
+        // 5. Fetch Total Expenses (if needed)
+        prefetchedData?.totalExpenses === undefined 
+          ? calculateTotalExpenses(roomId, periodId)
+          : Promise.resolve(prefetchedData.totalExpenses)
+      ]);
       
       const balanceMap = new Map<string, number>();
       balancesGrouped.forEach(b => {
           balanceMap.set(b.targetUserId, b._sum.amount || 0);
       });
 
-      // 2. Calculate Group Total Balance (Self-transactions only) separately
-      const selfTransactions = await prisma.accountTransaction.aggregate({
-        where: {
-            roomId,
-            periodId: periodId,
-            userId: { equals: prisma.accountTransaction.fields.targetUserId } // Only supported in newer Prisma?
-            // Fallback: If prisma doesn't support field reference in where, we use rawQuery or findMany filters.
-            // Safe approach: Fetch self-transactions specifically.
-            // Logic: userId == targetUserId is hard to express in simple where clause without raw query or advanced filtering.
-            // Let's use a simpler known approach:
-            // Since we need to know WHICH transactions are self-transactions for the 'groupTotal', 
-            // and we optimized 'balanceMap' to include EVERYTHING.
-            // We can fetch just self-transactions to sum them?
-        },
-        _sum: { amount: true }
-      });
-      // Actually, 'userId: { equals: ... }' is not standard Prisma syntax for comparing columns.
-      // Revert to findMany for this specific metric if needed, OR just sum it up from a specific separate query.
-      // Wait, Group Total = Sum of all deposits?
-      // "Target == User" means deposit.
-      // If A sends to B, B's balance increases. Does Group Total?
-      // Usually "Group Total" = Total Cash in Hand.
-      // If A pays B, cash stays in group.
-      // If A pays "Manager" (Self Deposit), cash enters group.
-      // Let's stick to the original logic: "t.userId === t.targetUserId".
-      
-      // Correct Optimized Query for Self Transactions:
-      // Since column comparison is hard, we can use findMany with select only.
-      // But we can filter in JS if the volume of SELF transactions is lower?
-      // Actually, let's use the raw aggregation map.
-      // Wait, the original code summed EVERYTHING where target==userId into `balanceMap`.
-      // And summed ONLY self-trans into `groupTotal`.
-      // We need a separate query for Group Total properly.
-      // Or we can assume Group Total is simply "Sum of all positive balances"? No.
-      
-      // Easy Fix: Use findMany for self-transactions only.
-      // But we can't filter self-transactions easily in Prisma 'where'.
-      // Optimized Strategy: 
-      // Fetch ALL transactions is too slow.
-      // Let's assume we can skip the perfect "Group Total" for now or approximate it? 
-      // No the user needs exact.
-      
-      // Alternative: Raw Query is best here.
-      const groupTotalResult = await (prisma as any).$queryRaw`
-        SELECT SUM(amount) as total 
-        FROM "AccountTransaction" 
-        WHERE "roomId" = ${roomId} 
-        AND "periodId" = ${periodId} 
-        AND "userId" = "targetUserId"
-      `;
       const groupTotalBalance = Number((groupTotalResult as any)?.[0]?.total || 0);
-
-
-      // 3. Fetch Meal Counts (Grouped)
-      const mealsGrouped = await prisma.meal.groupBy({
-        by: ['userId'],
-        where: {
-          roomId,
-          periodId: periodId,
-        },
-        _count: {
-          id: true,
-        },
-      });
 
       const mealCountMap = new Map<string, number>();
       let totalMeals = prefetchedData?.totalMeals || 0;
       
       if (prefetchedData?.totalMeals === undefined) {
-         mealsGrouped.forEach((m) => {
+         mealsGrouped.forEach((m: any) => {
             const count = m._count.id || 0;
             if (m.userId) mealCountMap.set(m.userId, count);
             totalMeals += count;
          });
       } else {
-         mealsGrouped.forEach((m) => {
+         mealsGrouped.forEach((m: any) => {
             if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
          });
       }
 
       // 4. Calculate Totals
-      let totalExpenses = prefetchedData?.totalExpenses;
-      if (totalExpenses === undefined) {
-        totalExpenses = await calculateTotalExpenses(roomId, periodId);
-      }
+      let totalExpenses = fetchedTotalExpenses;
 
       let mealRate = prefetchedData?.mealRate;
       if (mealRate === undefined) {

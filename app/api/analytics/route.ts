@@ -114,7 +114,12 @@ async function fetchAnalyticsData(userId: string, groupId: string | null) {
       // Fetch meals
       activePeriodIds.length > 0 ? prisma.meal.findMany({
         where: { periodId: { in: activePeriodIds } },
-        include: {
+        select: {
+          id: true,
+          date: true,
+          type: true,
+          roomId: true,
+          userId: true,
           room: { select: { id: true, name: true } },
           user: { select: { id: true, name: true } }
         },
@@ -124,7 +129,13 @@ async function fetchAnalyticsData(userId: string, groupId: string | null) {
       // Fetch expenses
       activePeriodIds.length > 0 ? prisma.extraExpense.findMany({
         where: { periodId: { in: activePeriodIds } },
-        include: {
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          type: true,
+          roomId: true,
+          description: true,
           room: { select: { id: true, name: true } },
           user: { select: { id: true, name: true } }
         },
@@ -134,7 +145,13 @@ async function fetchAnalyticsData(userId: string, groupId: string | null) {
       // Fetch shopping items
       activePeriodIds.length > 0 ? prisma.shoppingItem.findMany({
         where: { periodId: { in: activePeriodIds } },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          quantity: true,
+          date: true,
+          roomId: true,
+          purchased: true,
           room: { select: { id: true, name: true } },
           user: { select: { id: true, name: true } }
         },

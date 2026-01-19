@@ -1,3 +1,5 @@
+"use client";
+
 import { useDashboard } from '@/hooks/use-dashboard';
 import { DashboardActivity, DashboardChartData } from '@/hooks/use-dashboard';
 
@@ -11,7 +13,7 @@ type DashboardContextType = {
     error: Error | null;
 };
 
-const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
+export const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
     const { data, isLoading, error } = useDashboard();
@@ -23,6 +25,29 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 chartData: data?.chartData,
                 isLoading,
                 error,
+            }}
+        >
+            {children}
+        </DashboardContext.Provider>
+    );
+}
+
+export function StaticDashboardProvider({
+    children,
+    activities,
+    chartData
+}: {
+    children: ReactNode,
+    activities: DashboardActivity[],
+    chartData: DashboardChartData[]
+}) {
+    return (
+        <DashboardContext.Provider
+            value={{
+                activities,
+                chartData,
+                isLoading: false,
+                error: null,
             }}
         >
             {children}

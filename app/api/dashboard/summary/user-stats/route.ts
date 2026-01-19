@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { cacheGetOrSet } from '@/lib/cache/cache-service';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
-import { calculateBalance, calculateUserMealCount, calculateAvailableBalance, calculateMealRate } from '@/lib/services/balance-service';
+import { calculateBalance, calculateUserMealCount, getGroupBalanceSummary } from '@/lib/services/balance-service';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
 
 export const dynamic = 'force-dynamic';
@@ -19,17 +19,16 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         let groupId = searchParams.get('groupId');
         
-        // Resolve Group (Cached)
-        let membership = null;
-        if (groupId) {
-             membership = await prisma.roomMember.findFirst({
-                  where: { userId: session.user.id, roomId: groupId },
-                  select: { roomId: true, role: true }
-             });
-        } else {
-             // Try to get default group from cache first
-             const defaultGroupKey = `user:default-group:${session.user.id}`;
-             membership = await cacheGetOrSet(defaultGroupKey, async () => {
+        // Cache membership resolution (finding the relevant group)
+        // ALIGNMENT: Use same cache key logic as group-stats for consistency
+        const membershipCacheKey = `group_membership:${session.user.id}:${groupId || 'default'}`;
+        const membership = await cacheGetOrSet(membershipCacheKey, async () => {
+             if (groupId) {
+                 return await prisma.roomMember.findFirst({
+                      where: { userId: session.user.id, roomId: groupId },
+                      select: { roomId: true, role: true }
+                 });
+             } else {
                  let m = await prisma.roomMember.findFirst({
                      where: { userId: session.user.id, isCurrent: true },
                      select: { roomId: true, role: true }
@@ -42,11 +41,10 @@ export async function GET(request: NextRequest) {
                      });
                  }
                  return m;
-             }, { ttl: 3600 }); // Cache default group binding for 1 hour
-        }
+             }
+        }, { ttl: CACHE_TTL.GROUPS_LIST });
 
         if (!membership) {
-            // Return default empty stats for user
             return NextResponse.json({
                 totalUserMeals: 0,
                 currentBalance: 0,
@@ -63,20 +61,24 @@ export async function GET(request: NextRequest) {
             const currentPeriod = await getCurrentPeriod(groupId!);
             const periodId = currentPeriod?.id;
 
-            // Parallel fetch for user metrics
+            // Parallel fetch:
+            // 1. User specific metrics (Balance, Meal Count, Active Groups)
+            // 2. Group shared metrics (Meal Rate - via getGroupBalanceSummary) 
+            //    Using getGroupBalanceSummary allows us to leverage its rigorous caching and parallelized logic.
+            
             const [
                 userMealCount,
                 currentBalance,
                 activeGroupsCount,
-                mealRateData
+                groupSummary // Fetch simple summary for rate
             ] = await Promise.all([
                 calculateUserMealCount(session.user.id, groupId!, periodId),
                 calculateBalance(session.user.id, groupId!, periodId),
                 prisma.roomMember.count({ where: { userId: session.user.id, isBanned: false } }),
-                calculateMealRate(groupId!, periodId)
+                getGroupBalanceSummary(groupId!, false) 
             ]);
 
-            const mealRate = mealRateData.mealRate;
+            const mealRate = groupSummary.mealRate; // Reuse the robust rate calculation
             const totalSpent = userMealCount * mealRate;
             const availableBalance = currentBalance - totalSpent;
 
