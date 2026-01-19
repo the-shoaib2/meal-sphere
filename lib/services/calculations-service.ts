@@ -250,7 +250,7 @@ export async function fetchMemberBreakdown(userId: string, groupId: string) {
           where: {
             roomId: groupId,
             periodId: periodId,
-            status: 'APPROVED'
+            status: 'COMPLETED'
           },
           _sum: {
             amount: true

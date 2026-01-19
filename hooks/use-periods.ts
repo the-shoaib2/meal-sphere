@@ -96,14 +96,14 @@ export function useCurrentPeriod() {
 export function usePeriod(periodId: string) {
   const { activeGroup } = useActiveGroup();
   // Get currently loaded active periods without triggering a new fetch if possible
-  const { data: data } = useUnifiedPeriods(false);
+  const { data: unifiedData } = useUnifiedPeriods(false);
 
   return useQuery({
     queryKey: ['period', periodId, activeGroup?.id],
     queryFn: async () => {
       // First try to find in the already loaded list of active periods
-      if (data?.periods) {
-        const found = data.periods.find((p: any) => p.id === periodId);
+      if (unifiedData?.periods) {
+        const found = unifiedData.periods.find((p: any) => p.id === periodId);
         if (found) return found;
       }
 
@@ -115,11 +115,11 @@ export function usePeriod(periodId: string) {
       if (!response.ok) {
         throw new Error('Failed to fetch period');
       }
-      const data = await response.json();
-      return data.period;
+      const responseData = await response.json();
+      return responseData.period;
     },
     enabled: !!activeGroup?.id && !!periodId,
-    initialData: data?.periods?.find((p: any) => p.id === periodId),
+    initialData: unifiedData?.periods?.find((p: any) => p.id === periodId),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
