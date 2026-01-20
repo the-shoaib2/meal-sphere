@@ -72,13 +72,9 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
 
       // Parallel queries matching the 4 API routes exactly
       const [
-        // User Stats data
-        userMealCount,
-        currentBalance,
         activeGroupsCount,
         
         // Group Stats data
-        membership,
         roomData,
         groupBalanceSummary,
         
@@ -98,20 +94,14 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
         expenseDistributionRaw
       ] = await Promise.all([
         // === USER STATS ===
-        calculateUserMealCount(userId, resolvedGroupId!, periodId),
-        calculateBalance(userId, resolvedGroupId!, periodId),
         prisma.roomMember.count({ where: { userId, isBanned: false } }),
         
         // === GROUP STATS ===
-        prisma.roomMember.findFirst({
-          where: { userId, roomId: resolvedGroupId },
-          select: { roomId: true, role: true, room: { select: { memberCount: true, name: true } } }
-        }),
         prisma.room.findUnique({
           where: { id: resolvedGroupId },
-          select: { memberCount: true, name: true }
+          select: { name: true }
         }),
-        getGroupBalanceSummary(resolvedGroupId!, false),
+        getGroupBalanceSummary(resolvedGroupId!, true),
         
         // === ACTIVITIES ===
         prisma.meal.findMany({
@@ -172,10 +162,18 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
         })
       ]);
 
-      // Calculate user stats
-      const mealRate = groupBalanceSummary.mealRate;
-      const totalSpent = userMealCount * mealRate;
-      const availableBalance = currentBalance - totalSpent;
+      // Calculate user stats from group summary
+      // Find current user in the members list
+      const currentUserStats = groupBalanceSummary.members?.find((m: any) => m.userId === userId);
+      
+      const userMealCount = currentUserStats?.mealCount || 0;
+      const currentBalance = currentUserStats?.balance || 0;
+      const totalSpent = currentUserStats?.totalSpent || 0;
+      const availableBalance = currentUserStats?.availableBalance || 0;
+      const mealRate = groupBalanceSummary.mealRate || 0;
+      
+      const userRole = currentUserStats?.role || null;
+      const isBanned = currentUserStats?.isBanned || false;
 
       // Build activities array (matching activities route)
       const allActivities = [
@@ -269,7 +267,7 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
           availableBalance: availableBalance,
           totalCost: totalSpent,
           activeRooms: activeGroupsCount,
-          totalMembers: roomData?.memberCount || 0,
+          totalMembers: groupBalanceSummary.members?.length || 0,
           totalAllMeals: groupBalanceSummary.totalMeals,
           totalActiveGroups: activeGroupsCount,
           groupId: resolvedGroupId,

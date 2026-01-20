@@ -54,7 +54,7 @@ const data: {
         { title: "Groups", url: "/groups", icon: Users },
         { title: "Periods", url: "/periods", icon: Calendar },
 
-        { category: "Meal Management" },
+        { category: "Management" },
         { title: "Meals", url: "/meals", icon: Utensils },
         { title: "Shopping", url: "/shopping", icon: ShoppingCart },
         { title: "Expenses", url: "/expenses", icon: Receipt },
@@ -64,10 +64,7 @@ const data: {
         { title: "Calculations", url: "/calculations", icon: Calculator },
 
         { category: "Tools" },
-        { title: "Voting", url: "/voting", icon: Vote },
-        // Analytics moved to dashboard
         { title: "Excel", url: "/excel", icon: FileSpreadsheet },
-        { title: "Notifications", url: "/notifications", icon: Bell },
 
         { category: "Account" },
         { title: "Settings", url: "/settings", icon: Settings2 },

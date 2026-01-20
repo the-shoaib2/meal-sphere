@@ -4,28 +4,17 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
-import { toast } from 'sonner';
-import { Loader2, ArrowLeft, LogOut, Users, Settings, Activity, UserPlus, AlertCircle } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { toast } from 'react-hot-toast';
+import { ArrowLeft, Users, Settings, Activity, UserPlus, CheckSquare } from 'lucide-react';
 import { Role } from '@prisma/client';
 import { isFeatureEnabled } from '@/lib/utils/features';
 import { Badge } from '@/components/ui/badge';
 import { MembersTab } from '@/components/groups/tabs/members-tab';
 import { SettingsTab } from '@/components/groups/tabs/settings-tab';
-import { ActivityTab } from '@/components/groups/tabs/activity-tab';
 import { JoinRequestsTab } from '@/components/groups/tabs/join-requests-tab';
+import { ActivityDialog } from '@/components/groups/activity-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type ApiMember = {
@@ -63,12 +52,9 @@ export default function GroupPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const { data: group, isLoading, error, refetch } = useGroups().useGroupDetails(groupId);
-  const { leaveGroup } = useGroups();
 
-  const [isLeaving, setIsLeaving] = useState(false);
-  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showActivityDialog, setShowActivityDialog] = useState(false);
 
-  // Get the active tab from URL search params, default to 'members'
   // Get the active tab from URL search params, default to 'members'
   // Use 'members' as initial state for both server and client to match hydration
   const [activeTab, setActiveTab] = useState('members');
@@ -77,7 +63,7 @@ export default function GroupPage() {
   useEffect(() => {
     setIsMounted(true);
     const tabFromUrl = searchParams?.get('tab');
-    if (tabFromUrl && ['members', 'join-requests', 'activity', 'settings'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['members', 'join-requests', 'voting', 'settings'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
@@ -100,12 +86,12 @@ export default function GroupPage() {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      if (currentScrollY > lastScrollY) {
-        // Scrolling down
-        setIsHeaderVisible(true);
-      } else {
-        // Scrolling up
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down -> Hide header
         setIsHeaderVisible(false);
+      } else {
+        // Scrolling up -> Show header
+        setIsHeaderVisible(true);
       }
 
       setLastScrollY(currentScrollY);
@@ -130,27 +116,7 @@ export default function GroupPage() {
     }
   }, [error]);
 
-  const handleLeaveGroup = async () => {
-    if (!groupId) return;
-
-    try {
-      setIsLeaving(true);
-
-      // Use the leaveGroup mutation from useGroups hook
-      await leaveGroup.mutateAsync(groupId);
-
-      // The mutation will handle the toast and navigation automatically
-      // No need to manually show toast or navigate here
-    } catch (error) {
-      console.error('Error leaving group:', error);
-      // The mutation will handle error toasts automatically
-    } finally {
-      setIsLeaving(false);
-      setShowLeaveDialog(false);
-    }
-  };
-
-  if (isLoading || isLeaving || !group) {
+  if (isLoading || !group) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:gap-6">
@@ -178,9 +144,9 @@ export default function GroupPage() {
                 <UserPlus className="h-4 w-4 hidden sm:block" />
                 Requests
               </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Activity className="h-4 w-4 hidden sm:block" />
-                Activity
+              <TabsTrigger value="voting" className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 hidden sm:block" />
+                Voting
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4 hidden sm:block" />
@@ -299,7 +265,7 @@ export default function GroupPage() {
   return (
     <div className="flex flex-col gap-4">
       <div
-        className={`sticky top-0 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
+        className={`sticky top-0 z-50 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'
           }`}
       >
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
@@ -323,6 +289,13 @@ export default function GroupPage() {
             ))}
           </div>
         </div>
+        <div className="ml-auto">
+          {showActivityLog && (
+            <Button className="h-8 w-8 rounded-full" variant="outline" size="icon" onClick={() => setShowActivityDialog(true)}>
+              <Activity className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs
@@ -342,12 +315,10 @@ export default function GroupPage() {
               Requests
             </TabsTrigger>
           )}
-          {showActivityLog && (
-            <TabsTrigger value="activity" className="flex items-center gap-2">
-              <Activity className="h-4 w-4 hidden sm:block" />
-              Activity
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="voting" className="flex items-center gap-2">
+            <CheckSquare className="h-4 w-4 hidden sm:block" />
+            Voting
+          </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4 hidden sm:block" />
@@ -384,15 +355,6 @@ export default function GroupPage() {
             </TabsContent>
           )}
 
-          {showActivityLog && (
-            <TabsContent value="activity" className="m-0">
-              <ActivityTab
-                groupId={groupId}
-                isAdmin={isAdmin}
-              />
-            </TabsContent>
-          )}
-
           {isAdmin && (
             <TabsContent value="join-requests" className="m-0">
               <JoinRequestsTab
@@ -404,76 +366,14 @@ export default function GroupPage() {
         </div>
       </Tabs>
 
-      {!isAdmin && (
-        <div className="mt-4 pt-4 border-t">
-          <Button
-            variant="destructive"
-            onClick={() => setShowLeaveDialog(true)}
-            disabled={isLeaving || leaveGroup.isPending}
-            className="w-full sm:w-auto"
-          >
-            {isLeaving || leaveGroup.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Leaving...
-              </>
-            ) : (
-              <>
-                <LogOut className="h-4 w-4 mr-2" />
-                Leave Group
-              </>
-            )}
-          </Button>
-        </div>
-      )}
-
-      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
-        <AlertDialogContent className="sm:max-w-[425px]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              <LogOut className="h-5 w-5 text-destructive" />
-              Leave Group
-            </AlertDialogTitle>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <span>Are you sure you want to leave this group?</span>
-              <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                <span className="text-sm font-medium">This action will:</span>
-                <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Remove you from all group activities</li>
-                  <li>Revoke your access to group content</li>
-                  <li>Cancel any pending meal registrations</li>
-                  <li>Remove you from group notifications</li>
-                </ul>
-              </div>
-              <span className="text-sm text-muted-foreground mt-2">
-                You won't be able to access this group again unless you're re-invited.
-              </span>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel
-              disabled={isLeaving || leaveGroup.isPending}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleLeaveGroup}
-              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isLeaving || leaveGroup.isPending}
-            >
-              {isLeaving || leaveGroup.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Leaving...
-                </>
-              ) : (
-                'Leave Group'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Activity Dialog */}
+      <ActivityDialog
+        groupId={groupId}
+        groupName={group.name}
+        isOpen={showActivityDialog}
+        onOpenChange={setShowActivityDialog}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

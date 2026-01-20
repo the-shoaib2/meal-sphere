@@ -8,22 +8,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
-import { Search, Plus, Users, ArrowRight, Loader2, LogOut } from 'lucide-react';
+import { Search, Plus, Users, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
 import type { Group } from '@/hooks/use-groups';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+
 
 interface GroupsViewProps {
     initialData: {
@@ -176,7 +167,6 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                                     key={group.id}
                                     group={group}
                                     isOwner={group.createdByUser?.id === session?.user?.id}
-                                    showLeaveButton={true}
                                 />
                             ))}
                         </div>
@@ -190,44 +180,18 @@ export function GroupsView({ initialData }: GroupsViewProps) {
 interface GroupCardProps {
     group: Group;
     isOwner: boolean;
-    showLeaveButton?: boolean;
 }
 
-function GroupCard({ group, isOwner, showLeaveButton = false }: GroupCardProps) {
-    const { data: session } = useSession();
-    const { leaveGroup } = useGroups();
-    const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-    const [isLeaving, setIsLeaving] = useState(false);
+function GroupCard({ group, isOwner }: GroupCardProps) {
 
     const displayedMembers = group.members?.slice(0, 3) || [];
     const hasMoreMembers = (group.memberCount || 0) > 3;
     const admin = group.members?.find(member => member.role === 'ADMIN') || group.members?.[0];
-    const currentUserMembership = group.members?.find(
-        member => member.userId === session?.user?.id
-    );
-    const userRole = currentUserMembership?.role;
-    const privilegedRoles = ['ADMIN', 'MODERATOR', 'MANAGER', 'LEADER', 'MEAL_MANAGER', 'ACCOUNTANT', 'MARKET_MANAGER'];
-    const isPrivilegedMember = userRole && privilegedRoles.includes(userRole);
-    const isMember = !!currentUserMembership;
-    const shouldShowLeaveButton = showLeaveButton && isMember && !isPrivilegedMember && !group.isPrivate;
 
     const router = useRouter();
     const handleViewGroup = () => {
         window.dispatchEvent(new CustomEvent('routeChangeStart'));
         router.push(`/groups/${group.id}`);
-    };
-
-    const handleLeaveGroup = async () => {
-        if (!group.id) return;
-        try {
-            setIsLeaving(true);
-            await leaveGroup.mutateAsync(group.id);
-            setShowLeaveDialog(false);
-        } catch (error) {
-            console.error('Error leaving group:', error);
-        } finally {
-            setIsLeaving(false);
-        }
     };
 
     return (
@@ -306,26 +270,7 @@ function GroupCard({ group, isOwner, showLeaveButton = false }: GroupCardProps) 
                         Created {format(new Date(group.createdAt), 'MMM d, yyyy')}
                     </div>
                     <div className="flex gap-2">
-                        {shouldShowLeaveButton && (
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setShowLeaveDialog(true)}
-                                disabled={isLeaving || leaveGroup.isPending}
-                            >
-                                {isLeaving || leaveGroup.isPending ? (
-                                    <>
-                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                        Leaving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <LogOut className="h-3 w-3 mr-1" />
-                                        Leave
-                                    </>
-                                )}
-                            </Button>
-                        )}
+
                         <Button
                             size="sm"
                             className="group/button flex items-center gap-1"
@@ -338,38 +283,6 @@ function GroupCard({ group, isOwner, showLeaveButton = false }: GroupCardProps) 
                 </CardFooter>
             </Card>
 
-            <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
-                <AlertDialogContent className="sm:max-w-[425px]">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <LogOut className="h-5 w-5 text-destructive" />
-                            Leave {group.name}?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to leave this group? This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isLeaving || leaveGroup.isPending}>
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleLeaveGroup}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={isLeaving || leaveGroup.isPending}
-                        >
-                            {isLeaving || leaveGroup.isPending ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Leaving...
-                                </>
-                            ) : (
-                                'Leave Group'
-                            )}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </>
     );
 }

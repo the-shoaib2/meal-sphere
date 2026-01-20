@@ -10,17 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Trash2, Save, Lock, ShieldAlert, Loader2, Check, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings } from 'lucide-react';
+import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useGroups } from '@/hooks/use-groups';
-import { InviteCard } from '../invite-card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DropdownMenuContent } from '@/components/ui/dropdown-menu';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -100,6 +98,14 @@ const GROUP_FEATURES: Record<string, GroupFeature> = {
   }
 };
 
+type GroupNotificationSettings = {
+  groupMessages: boolean;
+  announcements: boolean;
+  mealUpdates: boolean;
+  memberActivity: boolean;
+  joinRequests: boolean;
+};
+
 const groupSettingsSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   description: z.string().optional(),
@@ -173,6 +179,9 @@ export function SettingsTab({
   const [tagError, setTagError] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
   const [isDeleteNameValid, setIsDeleteNameValid] = useState(false);
+  // Notification settings state
+  const [notificationSettings, setNotificationSettings] = useState<GroupNotificationSettings | null>(null);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   // Store previous group values for comparison
   const prevGroupRef = useState<PreviousGroupSettings | null>(null);
 
@@ -208,6 +217,52 @@ export function SettingsTab({
   useEffect(() => {
     setIsDeleteNameValid(deleteGroupName === group?.name);
   }, [deleteGroupName, group?.name]);
+
+  // Fetch notification settings
+  useEffect(() => {
+    const fetchNotificationSettings = async () => {
+      if (!groupId) return;
+      try {
+        setIsLoadingNotifications(true);
+        const response = await fetch(`/api/groups/${groupId}/notifications`);
+        if (response.ok) {
+          const data = await response.json();
+          setNotificationSettings(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch notification settings', error);
+      } finally {
+        setIsLoadingNotifications(false);
+      }
+    };
+
+    fetchNotificationSettings();
+  }, [groupId]);
+
+  const handleNotificationToggle = async (key: keyof GroupNotificationSettings) => {
+    if (!notificationSettings || !groupId) return;
+
+    const currentValue = notificationSettings[key];
+    const newValue = !currentValue;
+
+    // Optimistic update
+    setNotificationSettings(prev => prev ? ({ ...prev, [key]: newValue }) : null);
+
+    try {
+      const response = await fetch(`/api/groups/${groupId}/notifications`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: newValue })
+      });
+
+      if (!response.ok) throw new Error('Failed to update');
+      toast.success('Notification settings updated');
+    } catch (error) {
+      // Revert
+      setNotificationSettings(prev => prev ? ({ ...prev, [key]: currentValue }) : null);
+      toast.error('Failed to update notification settings');
+    }
+  };
 
   // Store previous group values for comparison
   useEffect(() => {
@@ -689,6 +744,104 @@ export function SettingsTab({
 
             <div className="space-y-4 border-t pt-6">
               <div className="space-y-1">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Bell className="h-4 w-4" />
+                  Notifications
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage what notifications you receive from this group
+                </p>
+              </div>
+
+              {isLoadingNotifications ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : notificationSettings ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div className="space-y-1">
+                      <Label htmlFor="groupMessages">Group Messages</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Get notified when members send messages
+                      </p>
+                    </div>
+                    <Switch
+                      id="groupMessages"
+                      checked={notificationSettings.groupMessages}
+                      onCheckedChange={() => handleNotificationToggle('groupMessages')}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div className="space-y-1">
+                      <Label htmlFor="announcements">Announcements</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Get notified about admin announcements
+                      </p>
+                    </div>
+                    <Switch
+                      id="announcements"
+                      checked={notificationSettings.announcements}
+                      onCheckedChange={() => handleNotificationToggle('announcements')}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div className="space-y-1">
+                      <Label htmlFor="mealUpdates">Meal Updates</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Updates about meal planning
+                      </p>
+                    </div>
+                    <Switch
+                      id="mealUpdates"
+                      checked={notificationSettings.mealUpdates}
+                      onCheckedChange={() => handleNotificationToggle('mealUpdates')}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div className="space-y-1">
+                      <Label htmlFor="memberActivity">Member Activity</Label>
+                      <p className="text-xs text-muted-foreground">
+                        When members join or leave
+                      </p>
+                    </div>
+                    <Switch
+                      id="memberActivity"
+                      checked={notificationSettings.memberActivity}
+                      onCheckedChange={() => handleNotificationToggle('memberActivity')}
+                    />
+                  </div>
+
+                  {(isAdmin || isCreator) && (
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                      <div className="space-y-1">
+                        <Label htmlFor="joinRequests">Join Requests</Label>
+                        <p className="text-xs text-muted-foreground">
+                          When users request to join
+                        </p>
+                      </div>
+                      <Switch
+                        id="joinRequests"
+                        checked={notificationSettings.joinRequests}
+                        onCheckedChange={() => handleNotificationToggle('joinRequests')}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Alert>
+                  <AlertDescription>Failed to load notification settings</AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            <div className="space-y-4 border-t pt-6">
+              <div className="space-y-1">
                 <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
                 <p className="text-sm text-muted-foreground">
                   These actions are irreversible and will permanently affect your group. Please proceed with caution.
@@ -696,25 +849,29 @@ export function SettingsTab({
               </div>
 
               <div className="space-y-4">
-                {!isCreator && (
-                  <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
-                    <div className="space-y-1">
-                      <h4 className="font-medium text-destructive">Leave Group</h4>
-                      <p className="text-sm text-muted-foreground">
-                        You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => setIsLeaveDialogOpen(true)}
-                      disabled={leaveGroup.isPending}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Leave
-                    </Button>
+                <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-destructive">Leave Group</h4>
+                    <p className="text-sm text-muted-foreground">
+                      You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
+                    </p>
                   </div>
-                )}
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      if (isCreator) {
+                        toast.error('You must transfer ownership to another member before leaving the group.');
+                        return;
+                      }
+                      setIsLeaveDialogOpen(true);
+                    }}
+                    disabled={leaveGroup.isPending}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Leave
+                  </Button>
+                </div>
 
                 {isCreator && (
                   <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
@@ -807,22 +964,22 @@ export function SettingsTab({
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Leave Group</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to leave this group?
-                    <br />
-                    <span className="bg-muted/50 p-3 rounded-md block my-2">
-                      <span className="text-sm font-medium block">This action will:</span>
-                      <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                        <li>Remove you from all group activities</li>
-                        <li>Revoke your access to group content</li>
-                        <li>Cancel any pending meal registrations</li>
-                        <li>Remove you from group notifications</li>
-                      </ul>
-                    </span>
-                    <br />
-                    <span className="text-sm text-muted-foreground block">
-                      You won't be able to access this group again unless you're re-invited.
-                    </span>
+                  <AlertDialogDescription asChild>
+                    <div className="text-sm text-muted-foreground">
+                      <p>Are you sure you want to leave this group?</p>
+                      <div className="bg-muted/50 p-3 rounded-md my-3">
+                        <span className="text-sm font-medium block mb-2">This action will:</span>
+                        <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                          <li>Remove you from all group activities</li>
+                          <li>Revoke your access to group content</li>
+                          <li>Cancel any pending meal registrations</li>
+                          <li>Remove you from group notifications</li>
+                        </ul>
+                      </div>
+                      <p>
+                        You won't be able to access this group again unless you're re-invited.
+                      </p>
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

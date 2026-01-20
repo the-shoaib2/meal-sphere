@@ -8,6 +8,7 @@ import { EmailVerificationCard } from "@/components/settings/email-verification-
 import { ActiveSessionsCard } from "@/components/settings/active-sessions-card"
 import { ChangePasswordCard } from "@/components/settings/change-password-card"
 import { PrivacyForm } from "@/components/settings/privacy-form"
+import { NotificationsSettingsCard } from "@/components/settings/notifications-settings-card"
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -41,6 +42,7 @@ export default async function SettingsPage() {
         <AppearanceForm user={user} />
         <EmailVerificationCard user={user} />
         <ActiveSessionsCard user={user} />
+        <NotificationsSettingsCard />
         <ChangePasswordCard user={user} />
       </div>
     </div>
