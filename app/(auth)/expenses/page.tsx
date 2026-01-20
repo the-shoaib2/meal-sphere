@@ -7,6 +7,7 @@ import { fetchGroupAccessData } from '@/lib/services/groups-service';
 import { ExpensesPageContent } from '@/components/finance/expenses-page-content';
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
+import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = 'force-dynamic';
 
@@ -28,14 +29,10 @@ export default async function ExpensesPage() {
   if (!activeGroup) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Extra Expenses</h1>
-            <p className="text-muted-foreground text-sm">
-              Track additional expenses
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Extra Expenses"
+          text="Track additional expenses"
+        />
         <NoGroupState />
       </div>
     );
@@ -52,14 +49,10 @@ export default async function ExpensesPage() {
     const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
     return (
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Extra Expenses</h1>
-            <p className="text-muted-foreground text-sm">
-              Track additional expenses for {activeGroup.name}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Extra Expenses"
+          text={`Track additional expenses for ${activeGroup.name}`}
+        />
         <NoPeriodState
           isPrivileged={isPrivileged}
           periodMode={expensesData.roomData?.periodMode || 'MONTHLY'}

@@ -10,6 +10,7 @@ import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
 import { useSession } from "next-auth/react"
 import { type ExpensesPageData } from "@/hooks/use-expense"
 import { useGroupAccess } from "@/hooks/use-group-access"
+import { PageHeader } from "@/components/shared/page-header"
 
 interface ExpensesPageContentProps {
     activeGroup: any;
@@ -36,13 +37,10 @@ export function ExpensesPageContent({ activeGroup, userRole: propUserRole, initi
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                    <h1 className="text-2xl font-bold">Extra Expenses</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Track additional expenses like utilities, rent, internet, and more for {activeGroup?.name}.
-                    </p>
-                </div>
+            <PageHeader
+                heading="Extra Expenses"
+                text={`Track additional expenses like utilities, rent, internet, and more for ${activeGroup?.name}.`}
+            >
                 <div className="flex items-center gap-2">
                     <Button
                         onClick={() => setOpen(true)}
@@ -52,7 +50,7 @@ export function ExpensesPageContent({ activeGroup, userRole: propUserRole, initi
                         Add Expense
                     </Button>
                 </div>
-            </div>
+            </PageHeader>
             <ExtraExpenseDialog open={open} onOpenChange={setOpen} onSuccess={handleSuccess} />
 
             <ExpenseList initialData={initialData} />

@@ -5,6 +5,7 @@ import { fetchPeriodsData } from '@/lib/services/period-service';
 import { fetchGroupAccessData, fetchGroupsData } from '@/lib/services/groups-service';
 import { PeriodManagement } from '@/components/periods/period-management';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
+import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,14 +27,10 @@ export default async function PeriodsPage() {
     if (!activeGroup) {
       return (
         <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Period Management</h1>
-              <p className="text-muted-foreground text-sm">
-                Manage your group's meal periods
-              </p>
-            </div>
-          </div>
+          <PageHeader
+            heading="Period Management"
+            text="Manage your group's meal periods"
+          />
           <NoGroupState />
         </div>
       );

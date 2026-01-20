@@ -12,12 +12,15 @@ export default function DashboardRefreshButton() {
         <Button
             variant="outline"
             size="sm"
-            className="text-xs sm:text-sm h-7 sm:h-8 lg:h-9 px-2 sm:px-3 w-full sm:w-auto"
+            className="h-8 w-8 p-0 sm:w-auto sm:h-8 lg:h-9 sm:px-3"
             onClick={refresh}
             disabled={isRefreshing}
+            title={isRefreshing ? 'Refreshing...' : 'Refresh Data'}
         >
-            <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} sm:mr-1.5`} />
+            <span className="hidden sm:inline">
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </span>
         </Button>
     );
 }

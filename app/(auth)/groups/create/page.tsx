@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { Loader2, Lock, ArrowLeft, Users, LockKeyhole, Hash, Info, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 
+import { GroupImageSelection } from '@/components/groups/group-image-selection';
+
 const createGroupSchema = z.object({
   name: z.string()
     .min(3, 'Name must be at least 3 characters')
@@ -22,6 +24,7 @@ const createGroupSchema = z.object({
   description: z.string()
     .max(500, 'Description must be less than 500 characters')
     .optional(),
+  bannerUrl: z.string().optional(),
   isPrivate: z.boolean().default(false),
   maxMembers: z.union([
     z.string()
@@ -55,6 +58,7 @@ export default function CreateGroupPage() {
     defaultValues: {
       isPrivate: false,
       maxMembers: null,
+      bannerUrl: "/group-images/abstract.png", // Default image
     },
     mode: 'onChange',
   });
@@ -71,6 +75,7 @@ export default function CreateGroupPage() {
   const isPrivate = watch('isPrivate');
   const description = watch('description');
   const maxMembers = watch('maxMembers');
+  const bannerUrl = watch('bannerUrl') || "/group-images/abstract.png";
 
   const onSubmit = async (data: CreateGroupInput) => {
     try {
@@ -78,6 +83,7 @@ export default function CreateGroupPage() {
         ...data,
         // Convert empty string to null for maxMembers
         maxMembers: data.maxMembers || undefined,
+        bannerUrl: data.bannerUrl,
       }, {
         onSuccess: () => {
           toast.success('Group created successfully!');
@@ -167,6 +173,13 @@ export default function CreateGroupPage() {
                     {errors.description.message as string}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <GroupImageSelection
+                  selectedImage={bannerUrl}
+                  onSelect={(url) => setValue('bannerUrl', url, { shouldDirty: true })}
+                />
               </div>
 
               <div className="space-y-2">

@@ -55,6 +55,7 @@ interface CreateGroupInput {
   isPrivate?: boolean;
   password?: string;
   maxMembers?: number;
+  bannerUrl?: string; 
 }
 
 interface UpdateGroupInput {

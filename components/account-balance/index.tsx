@@ -14,6 +14,7 @@ import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
 import { Badge } from '@/components/ui/badge';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useGroups } from '@/hooks/use-groups';
+import { PageHeader } from '@/components/shared/page-header';
 
 const PRIVILEGED_ROLES = ['ADMIN', 'ACCOUNTANT'];
 
@@ -45,14 +46,10 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
   if (!isLoadingGroups && userGroups.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Account Balance</h1>
-            <p className="text-muted-foreground text-sm">
-              Track your meal expenses and payments
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Account Balance"
+          text="Track your meal expenses and payments"
+        />
         <NoGroupState />
       </div>
     );
@@ -64,25 +61,26 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
 
   // Header (always visible)
   const header = (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-      <div>
+    <PageHeader
+      heading="Account Balances"
+      text={
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <h1 className="text-2xl font-bold">Account Balances</h1>
+          <span>Manage all user balances and transactions.</span>
           {currentPeriod && (
             <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit">
               {currentPeriod.name} {currentPeriod.isLocked ? "(Locked)" : ""}
             </Badge>
           )}
         </div>
-        <p className="text-muted-foreground text-sm mt-1">Manage all user balances and transactions.</p>
-      </div>
+      }
+    >
       <Badge
         variant={hasPrivilege ? "default" : "outline"}
         className={hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : ""}
       >
         {userRole ? userRole.replace('_', ' ') : 'MEMBER'}
       </Badge>
-    </div>
+    </PageHeader>
   );
 
   // Show PeriodNotFoundCard if no period

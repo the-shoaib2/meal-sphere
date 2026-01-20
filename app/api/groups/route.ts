@@ -19,6 +19,7 @@ const createGroupSchema = z.object({
   description: z.string().optional(),
   isPrivate: z.boolean().default(false),
   maxMembers: z.number().int().positive().max(100).optional(),
+  bannerUrl: z.string().optional(),
 });
 
 // POST /api/groups - Create a new group
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid input data', details: validation.error.format() }, { status: 400 });
     }
 
-    const { name, description, isPrivate, maxMembers } = validation.data;
+    const { name, description, isPrivate, maxMembers, bannerUrl } = validation.data;
 
     // Create the group with required fields
     const group = await prisma.room.create({
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
         createdBy: session.user.id,
         periodMode: 'MONTHLY',
         memberCount: 1,
-        bannerUrl: '', // Provide default empty string for required field
+        bannerUrl: bannerUrl || '', 
         features: {
           join_requests: isPrivate, // Enable join requests for private groups
           messages: true,

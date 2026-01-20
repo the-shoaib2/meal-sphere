@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupAccess } from '@/hooks/use-group-access';
+import { PageHeader } from '@/components/shared/page-header';
 
 // Define minimal type for initial data to avoid circular dependencies or strict type issues if not shared perfectly
 interface PeriodManagementProps {
@@ -87,14 +88,10 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
   if (!isLoadingGroups && userGroups.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Period Management</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your periods and their statuses
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Period Management"
+          text="Manage your periods and their statuses"
+        />
         <NoGroupState />
       </div>
     );

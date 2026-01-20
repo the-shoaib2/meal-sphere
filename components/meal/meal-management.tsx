@@ -25,6 +25,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
 import AutoMealSettingsDialog from "@/components/meal/auto-meal-settings-dialog";
 import MealList from "@/components/meal/meal-list";
+import { PageHeader } from "@/components/shared/page-header";
 
 
 interface MealWithUser {
@@ -166,49 +167,48 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
   // Header (always visible)
   const header = (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Meal Management</h1>
-        <div className="text-muted-foreground">
+    <PageHeader
+      heading="Meal Management"
+      text={
+        <span className="flex items-center flex-wrap">
           Manage meals for {groupName || "your group"}
           {userRole && (
             <span className="ml-2">
-              • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs bg-blue-600">{userRole}</Badge>
+              • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs bg-blue-600 ml-1">{userRole}</Badge>
             </span>
           )}
           {currentPeriod && (
             <span className="ml-2">
-              • <Badge variant={isPeriodLocked(currentPeriod) ? "destructive" : "default"} className="text-xs">
+              • <Badge variant={isPeriodLocked(currentPeriod) ? "destructive" : "default"} className="text-xs ml-1">
                 {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "(Locked)" : ""}
               </Badge>
             </span>
           )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
-        {canManageMealSettings && (
-          <>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setSettingsOpen(true)}
-              title="Meal Settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          </>
-        )}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setAutoSettingsOpen(true)}
-          title="Auto Meal Settings"
-        >
-          <Clock className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+        </span>
+      }
+    >
+      <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
+      {canManageMealSettings && (
+        <>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSettingsOpen(true)}
+            title="Meal Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setAutoSettingsOpen(true)}
+        title="Auto Meal Settings"
+      >
+        <Clock className="h-4 w-4" />
+      </Button>
+    </PageHeader>
   );
 
   // Show loading state if access, period, or user stats is still loading

@@ -7,6 +7,7 @@ import { fetchGroupAccessData } from '@/lib/services/groups-service';
 import ShoppingManagement from "@/components/market/shopping-management";
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
+import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = 'force-dynamic';
 
@@ -28,14 +29,10 @@ export default async function ShoppingPage() {
   if (!activeGroup) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Shopping List</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your shopping items
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Shopping List"
+          text="Manage your shopping items"
+        />
         <NoGroupState />
       </div>
     );
@@ -52,14 +49,10 @@ export default async function ShoppingPage() {
     const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Shopping List</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your shopping items for {activeGroup.name}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Shopping List"
+          text={`Manage your shopping items for ${activeGroup.name}`}
+        />
         <NoPeriodState
           isPrivileged={isPrivileged}
           periodMode={shoppingData.roomData?.periodMode || 'MONTHLY'}

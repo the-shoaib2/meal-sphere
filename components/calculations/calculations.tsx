@@ -16,6 +16,7 @@ import CalculationsSkeleton from "@/components/calculations/calculations-skeleto
 import UserTableRow from "@/components/calculations/user-table-row"
 import CalculationsHeader from "@/components/calculations/calculations-header"
 import SummaryCards from "@/components/calculations/summary-cards"
+import { PageHeader } from "@/components/shared/page-header"
 
 interface CalculationsProps {
   roomId?: string;
@@ -35,14 +36,10 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
   if (!isLoadingGroups && userGroups.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Calculations</h1>
-            <p className="text-muted-foreground text-sm">
-              View meal calculations and balances
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Calculations"
+          text="View meal calculations and balances"
+        />
         <NoGroupState />
       </div>
     );

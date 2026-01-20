@@ -7,6 +7,7 @@ import MealCalculations from "@/components/calculations/calculations";
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { fetchGroupAccessData } from '@/lib/services/groups-service';
+import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = 'force-dynamic';
 
@@ -28,14 +29,10 @@ export default async function CalculationsPage() {
   if (!activeGroup) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Financial Calculations</h1>
-            <p className="text-muted-foreground text-sm">
-              View detailed meal rates and balanced breakdowns
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Calculations"
+          text="View meal calculations and balances"
+        />
         <NoGroupState />
       </div>
     );
@@ -52,14 +49,10 @@ export default async function CalculationsPage() {
     const isPrivileged = ['ADMIN', 'MANAGER'].includes(accessData.userRole || '');
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Financial Calculations</h1>
-            <p className="text-muted-foreground text-sm">
-              View detailed meal rates for {activeGroup.name}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Calculations"
+          text={`View detailed meal rates for ${activeGroup.name}`}
+        />
         <NoPeriodState
           isPrivileged={isPrivileged}
           periodMode={calculationsData.roomData?.periodMode || 'MONTHLY'}

@@ -17,6 +17,7 @@ import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 import { DashboardQuickActions } from '@/components/dashboard/dashboard-quick-actions';
 import { StaticDashboardProvider } from '@/contexts/dashboard-context';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,14 +39,10 @@ export default async function DashboardPage() {
     if (!activeGroupId) {
         return (
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                        <p className="text-muted-foreground text-sm">
-                            Welcome to MealSphere! Get started by creating or joining a group.
-                        </p>
-                    </div>
-                </div>
+                <PageHeader
+                    heading="Dashboard"
+                    text="Welcome to MealSphere! Get started by creating or joining a group."
+                />
                 <NoGroupState />
             </div>
         );
@@ -64,55 +61,52 @@ export default async function DashboardPage() {
         return (
             <DashboardShell
                 header={
-                    <div className="flex items-center justify-between gap-4">
-                        <h1 className="text-2xl sm:text-3xl pb-2 font-bold tracking-tight">Dashboard Overview</h1>
-                    </div>
+                    <PageHeader heading="Dashboard Overview" />
                 }
             >
-                <NoPeriodState
-                    isPrivileged={isPrivileged}
-                    // For dashboard, we might want a slightly different description
-                    title="No Active Period"
-                    description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
-                />
-            </DashboardShell>
+        <NoPeriodState
+            isPrivileged={isPrivileged}
+            // For dashboard, we might want a slightly different description
+            title="No Active Period"
+            description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
+        />
+            </DashboardShell >
         );
-    }
+}
 
-    // 4. Render UI
-    return (
-        <DashboardShell
-            header={
-                <div className="flex items-center justify-between gap-4">
-                    <h1 className="text-2xl sm:text-3xl pb-2 font-bold tracking-tight">Dashboard</h1>
-                    <DashboardRefreshButton />
-                </div>
-            }
-        >
-            <div className="space-y-4 sm:space-y-6">
-                <StaticDashboardProvider
-                    activities={data.activities}
-                    chartData={data.chartData}
-                >
-                    {/* Overview Section */}
-                    <DashboardOverview summaryData={data.summary} />
+// 4. Render UI
+return (
+    <DashboardShell
+        header={
+            <PageHeader heading="Dashboard">
+                <DashboardRefreshButton />
+            </PageHeader>
+        }
+    >
+        <div className="space-y-4 sm:space-y-6">
+            <StaticDashboardProvider
+                activities={data.activities}
+                chartData={data.chartData}
+            >
+                {/* Overview Section */}
+                <DashboardOverview summaryData={data.summary} />
 
-                    {/* Activity Section */}
-                    <DashboardActivity />
+                {/* Activity Section */}
+                <DashboardActivity />
 
-                    {/* Quick Actions Section */}
-                    <DashboardQuickActions />
+                {/* Quick Actions Section */}
+                <DashboardQuickActions />
 
-                    {/* Detailed Analytics Section */}
-                    <DetailedAnalytics
-                        mealDistribution={data.analytics.mealDistribution}
-                        expenseDistribution={data.analytics.expenseDistribution}
-                        monthlyExpenses={data.analytics.monthlyExpenses}
-                        mealRateTrend={data.analytics.mealRateTrend}
-                        roomStats={data.analytics.roomStats}
-                    />
-                </StaticDashboardProvider>
-            </div>
-        </DashboardShell>
-    );
+                {/* Detailed Analytics Section */}
+                <DetailedAnalytics
+                    mealDistribution={data.analytics.mealDistribution}
+                    expenseDistribution={data.analytics.expenseDistribution}
+                    monthlyExpenses={data.analytics.monthlyExpenses}
+                    mealRateTrend={data.analytics.mealRateTrend}
+                    roomStats={data.analytics.roomStats}
+                />
+            </StaticDashboardProvider>
+        </div>
+    </DashboardShell>
+);
 }

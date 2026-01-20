@@ -7,6 +7,7 @@ import { fetchGroupAccessData, fetchGroupsData } from '@/lib/services/groups-ser
 import MealManagement from "@/components/meal/meal-management";
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
+import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,14 +30,10 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
   if (!activeGroup) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Meal Management</h1>
-            <p className="text-muted-foreground text-sm">
-              Track and manage your meals
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Meal Management"
+          text="Track and manage your meals"
+        />
         <NoGroupState />
       </div>
     );
