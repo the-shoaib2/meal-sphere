@@ -22,9 +22,14 @@ import { usePeriodMode } from '@/hooks/use-periods';
 import { Calendar, Settings2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
-import { useGroups } from '@/hooks/use-groups';
+import { useActiveGroup } from '@/contexts/group-context';
 
-export function PeriodManagement() {
+// Define minimal type for initial data to avoid circular dependencies or strict type issues if not shared perfectly
+interface PeriodManagementProps {
+  initialData?: any;
+}
+
+export function PeriodManagement({ initialData }: PeriodManagementProps) {
   const {
     activeGroup,
     periods,
@@ -51,10 +56,10 @@ export function PeriodManagement() {
     handleArchivePeriod,
     handleRestartPeriod,
     restartPeriodMutation,
-  } = usePeriodManagement();
+  } = usePeriodManagement(initialData);
 
   const { data: session } = useSession();
-  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+  const { groups: userGroups = [], isLoading: isLoadingGroups } = useActiveGroup();
   const currentUserId = session?.user?.id;
   const userRole = activeGroup?.userRole || (currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId)?.role : undefined);
   const isPrivileged = ["ADMIN", "MANAGER", "MODERATOR"].includes(userRole ?? "");

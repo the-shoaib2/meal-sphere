@@ -119,11 +119,9 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
     return (
         <div className="flex flex-col h-full bg-background/95 backdrop-blur-sm">
-            <div className="space-y-2 py-2">
+            <div className="space-y-2">
                 {/* Group Switcher Section */}
-                {/* <div className="px-2"> */}
                 <GroupSwitcher />
-                {/* </div> */}
 
                 {/* Navigation Items */}
                 <div className="space-y-1 px-2">
@@ -139,7 +137,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                 <div key={item.title}>
                                     <button
                                         onClick={() => handleNavigation(item.url)}
-                                        className={`w-full flex items-center px-3 py-1.5 text-sm font-medium rounded-lg hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
+                                        className={`w-full flex items-center px-3 py-1.5 text-sm font-medium rounded-sm hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
                                             }`}
                                     >
                                         {isActive(item.url) && (
@@ -165,7 +163,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                     key={item.name}
                                     onClick={() => handleNavigation(item.href)}
                                     disabled={isSignout && isSigningOut}
-                                    className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors group cursor-pointer ${isDestructive
+                                    className={`w-full flex items-center px-3 py-2 text-sm rounded-sm transition-colors group cursor-pointer ${isDestructive
                                         ? "hover:bg-destructive/10 hover:text-destructive"
                                         : "hover:bg-accent/50"
                                         } ${(isSignout && isSigningOut) ? "opacity-50 cursor-not-allowed" : ""}`}

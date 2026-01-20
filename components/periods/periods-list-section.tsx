@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Calendar, Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, Plus, Loader2 } from 'lucide-react';
+import { PeriodHistoryCard } from '@/components/periods/period-history-card';
+import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, Loader2, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
 
 
@@ -36,6 +38,8 @@ export function PeriodsListSection({
   setShowArchiveDialog: (open: boolean) => void;
   isPrivileged: boolean;
 }) {
+  const [showHistory, setShowHistory] = useState(false);
+
   if (!activeGroup || !periods) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -74,7 +78,7 @@ export function PeriodsListSection({
                     <TableRow key={period.id}>
                       <TableCell className="font-medium">{period.name}</TableCell>
                       <TableCell>
-                        {new Date(period.startDate).toLocaleDateString()} {period.endDate ? `- ${new Date(period.endDate).toLocaleDateString()}` : ''}
+                        {format(new Date(period.startDate), 'MMM d, yyyy')} {period.endDate ? `- ${format(new Date(period.endDate), 'MMM d, yyyy')}` : ''}
                       </TableCell>
                       <TableCell>
                         {period.isLocked ? (
@@ -116,7 +120,7 @@ export function PeriodsListSection({
                                     Unlock Period
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => {
                                     setPeriodToRestart(period);
                                     setShowRestartDialog(true);
@@ -125,7 +129,7 @@ export function PeriodsListSection({
                                   <RefreshCw className="h-4 w-4 mr-2" />
                                   Restart Period
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => {
                                     setSelectedPeriodId(period.id);
                                     setShowArchiveDialog(true);
@@ -149,8 +153,31 @@ export function PeriodsListSection({
               </div>
             )}
           </div>
+          <div className="mt-4 flex flex-col items-center justify-center border-t pt-4">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto mb-4"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              {showHistory ? (
+                <>
+                  <ChevronUp className="mr-2 h-4 w-4" />
+                  Hide Period History
+                </>
+              ) : (
+                <>
+                  <List className="mr-2 h-4 w-4" />
+                  All Periods History
+                </>
+              )}
+            </Button>
+
+            {showHistory && (
+              <PeriodHistoryCard periods={periods} activeGroup={activeGroup} />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
   );
-} 
+}

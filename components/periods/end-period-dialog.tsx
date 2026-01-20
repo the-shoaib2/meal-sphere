@@ -35,7 +35,7 @@ export function EndPeriodDialog({ open, onOpenChange, onConfirm, period }: EndPe
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size="sm">
+        <Button variant="destructive" size="sm" suppressHydrationWarning>
           End Period
         </Button>
       </DialogTrigger>
@@ -99,9 +99,9 @@ export function EndPeriodDialog({ open, onOpenChange, onConfirm, period }: EndPe
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            type="button" 
-            variant="destructive" 
+          <Button
+            type="button"
+            variant="destructive"
             onClick={handleConfirm}
             disabled={isSubmitting}
           >

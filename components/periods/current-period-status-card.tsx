@@ -1,4 +1,5 @@
 import React from 'react';
+import { format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EndPeriodDialog } from './end-period-dialog';
@@ -38,7 +39,7 @@ export function CurrentPeriodStatusCard({
           <span>Current Active Period</span>
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm">
-          {currentPeriod.name} • {new Date(currentPeriod.startDate).toLocaleDateString()}{currentPeriod.endDate ? ` - ${new Date(currentPeriod.endDate).toLocaleDateString()}` : ''}
+          {currentPeriod.name} • {format(new Date(currentPeriod.startDate), 'MMM d, yyyy')}{currentPeriod.endDate ? ` - ${format(new Date(currentPeriod.endDate), 'MMM d, yyyy')}` : ''}
         </CardDescription>
       </CardHeader>
       <CardContent>

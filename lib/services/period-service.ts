@@ -1,6 +1,9 @@
 import { prisma } from './prisma';
 import { PeriodStatus, Role } from '@prisma/client';
-import { createNotification, notifyAllRoomMembers } from '../utils/notification-utils';
+import { createNotification, notifyRoomMembersBatch } from '../utils/notification-utils';
+import { NotificationType } from '@prisma/client';
+import { unstable_cache } from 'next/cache';
+import { encryptData, decryptData } from '@/lib/encryption';
 
 export interface PeriodSummary {
   id: string;
@@ -226,24 +229,11 @@ export class PeriodService {
       },
     });
 
-    // Get all current members for notifications
-    const currentMembers = await prisma.roomMember.findMany({
-      where: {
-        roomId,
-        isCurrent: true,
-        isBanned: false,
-      },
-    });
-
-    // Send notifications to all members
-    await Promise.all(
-      currentMembers.map((member: any) =>
-        createNotification({
-          userId: member.userId,
-          type: 'PERIOD_STARTED',
-          message: `A new meal period "${data.name}" has started. Period: ${data.startDate.toLocaleDateString()}${data.endDate ? ` - ${data.endDate.toLocaleDateString()}` : ''}`,
-        })
-      )
+    // Send notifications to all members efficiently
+    await notifyRoomMembersBatch(
+      roomId,
+      NotificationType.PERIOD_STARTED,
+      `A new meal period "${data.name}" has started. Period: ${data.startDate.toLocaleDateString()}${data.endDate ? ` - ${data.endDate.toLocaleDateString()}` : ''}`
     );
 
     return {
@@ -254,7 +244,7 @@ export class PeriodService {
   /**
    * End the current active period
    */
-  static async endPeriod(roomId: string, userId: string, endDate?: Date) {
+  static async endPeriod(roomId: string, userId: string, endDate?: Date, periodId?: string) {
     // Check if user has admin permissions
     const member = await prisma.roomMember.findUnique({
       where: {
@@ -269,10 +259,32 @@ export class PeriodService {
       throw new Error('Insufficient permissions to end a period');
     }
 
-    // Get the current active period
-    const currentPeriod = await this.getCurrentPeriod(roomId);
-    if (!currentPeriod) {
-      throw new Error('No active period found');
+    let currentPeriod;
+
+    if (periodId) {
+      // If periodId is provided, fetch that specific period
+      currentPeriod = await prisma.mealPeriod.findFirst({
+        where: {
+          id: periodId,
+          roomId,
+        },
+      });
+
+      if (!currentPeriod) {
+        throw new Error('Period not found');
+      }
+
+      // Allow ending if it's ACTIVE or even if it's arguably active but strict check fails
+      // But strictly, we only end ACTIVE periods.
+      if (currentPeriod.status !== PeriodStatus.ACTIVE) {
+        throw new Error(`Cannot end period '${currentPeriod.name}' because it is not active (Status: ${currentPeriod.status})`);
+      }
+    } else {
+      // Fallback to finding the current active period
+      currentPeriod = await this.getCurrentPeriod(roomId);
+      if (!currentPeriod) {
+        throw new Error('No active period found');
+      }
     }
 
     const actualEndDate = endDate || new Date();
@@ -302,23 +314,11 @@ export class PeriodService {
 
 
 
-    // Send notifications to all members
-    const currentMembers = await prisma.roomMember.findMany({
-      where: {
-        roomId,
-        isCurrent: true,
-        isBanned: false,
-      },
-    });
-
-    await Promise.all(
-      currentMembers.map((member: any) =>
-        createNotification({
-          userId: member.userId,
-          type: 'PERIOD_ENDED',
-          message: `The meal period "${currentPeriod.name}" has ended. Period: ${currentPeriod.startDate.toLocaleDateString()} - ${actualEndDate.toLocaleDateString()}`,
-        })
-      )
+    // Send notifications to all members efficiently
+    await notifyRoomMembersBatch(
+      roomId,
+      NotificationType.PERIOD_ENDED,
+      `The meal period "${currentPeriod.name}" has ended. Period: ${currentPeriod.startDate.toLocaleDateString()} - ${actualEndDate.toLocaleDateString()}`
     );
 
     return updatedPeriod;
@@ -367,23 +367,11 @@ export class PeriodService {
       },
     });
 
-    // Send notifications to all members
-    const currentMembers = await prisma.roomMember.findMany({
-      where: {
-        roomId,
-        isCurrent: true,
-        isBanned: false,
-      },
-    });
-
-    await Promise.all(
-      currentMembers.map((member: any) =>
-        createNotification({
-          userId: member.userId,
-          type: 'PERIOD_LOCKED',
-          message: `The meal period "${period.name}" has been locked. No further edits are allowed.`,
-        })
-      )
+    // Send notifications to all members efficiently
+    await notifyRoomMembersBatch(
+      roomId,
+      NotificationType.PERIOD_LOCKED,
+      `The meal period "${period.name}" has been locked. No further edits are allowed.`
     );
 
     return updatedPeriod;
@@ -911,4 +899,229 @@ export class PeriodService {
       },
     });
   }
+}
+
+/**
+ * Fetches all period-related data for a user in a specific group
+ * Uses unstable_cache for caching and encrypts cached data for security
+ * All queries run in parallel using Promise.all()
+ */
+export async function fetchPeriodsData(userId: string, groupId: string, includeArchived: boolean = false) {
+  const cacheKey = `periods-data-${userId}-${groupId}-${includeArchived}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      // Parallel queries for all period-related data
+      const [
+        periods,
+        activePeriod,
+        periodStats,
+        roomData,
+        membership
+      ] = await Promise.all([
+        // All periods for the group
+        PeriodService.getPeriods(groupId, includeArchived),
+        
+        // Current active period
+        PeriodService.getCurrentPeriod(groupId),
+        
+        // Period statistics
+        prisma.mealPeriod.aggregate({
+          where: {
+            roomId: groupId,
+            ...(includeArchived ? {} : { status: 'ACTIVE' })
+          },
+          _count: {
+            id: true
+          },
+          _sum: {
+            openingBalance: true
+          }
+        }),
+        
+        // Room data
+        prisma.room.findUnique({
+          where: {
+            id: groupId
+          },
+          select: {
+            id: true,
+            name: true,
+            memberCount: true,
+            isPrivate: true,
+            periodMode: true
+          }
+        }),
+        
+        // User membership and role
+        prisma.roomMember.findUnique({
+          where: {
+            userId_roomId: {
+              userId: userId,
+              roomId: groupId
+            }
+          },
+          select: {
+            role: true,
+            isBanned: true
+          }
+        })
+      ]);
+
+      // Calculate summary for active period if it exists
+      
+      let initialPeriodSummary = null;
+      if (activePeriod) {
+         try {
+           initialPeriodSummary = await PeriodService.calculatePeriodSummary(activePeriod.id, groupId);
+         } catch (e) {
+           console.error("Failed to pre-fetch active period summary", e);
+         }
+      }
+
+      const end = performance.now();
+      const executionTime = end - start;
+
+      const result = {
+        periods,
+        activePeriod,
+        initialPeriodSummary, // Pass this to client
+        periodStats: {
+          totalPeriods: periodStats._count.id,
+          totalOpeningBalance: periodStats._sum.openingBalance || 0
+        },
+        roomData,
+        userRole: membership?.role || null,
+        isBanned: membership?.isBanned || false,
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey, 'periods-data'],
+    { 
+      revalidate: 60, 
+      tags: [`user-${userId}`, `group-${groupId}`, 'periods'] 
+    }
+  );
+
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}
+
+/**
+ * Fetches detailed data for a specific period
+ */
+export async function fetchPeriodDetails(userId: string, groupId: string, periodId: string) {
+  const cacheKey = `period-details-${userId}-${groupId}-${periodId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      // Parallel queries for period details
+      const [
+        period,
+        mealCount,
+        expenseCount,
+        paymentCount,
+        shoppingCount,
+        memberActivity
+      ] = await Promise.all([
+        // Period details
+        prisma.mealPeriod.findUnique({
+          where: {
+            id: periodId
+          },
+          include: {
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true
+              }
+            }
+          }
+        }),
+        
+        // Meal count for this period
+        prisma.meal.count({
+          where: {
+            periodId: periodId,
+            roomId: groupId
+          }
+        }),
+        
+        // Expense count for this period
+        prisma.extraExpense.count({
+          where: {
+            periodId: periodId,
+            roomId: groupId
+          }
+        }),
+        
+        // Payment count for this period
+        prisma.payment.count({
+          where: {
+            periodId: periodId,
+            roomId: groupId
+          }
+        }),
+        
+        // Shopping items count for this period
+        prisma.shoppingItem.count({
+          where: {
+            periodId: periodId,
+            roomId: groupId
+          }
+        }),
+        
+        // Member activity in this period
+        prisma.meal.groupBy({
+          by: ['userId'],
+          where: {
+            periodId: periodId,
+            roomId: groupId
+          },
+          _count: {
+            userId: true
+          }
+        })
+      ]);
+
+      const end = performance.now();
+      const executionTime = end - start;
+
+      const result = {
+        period,
+        statistics: {
+          totalMeals: mealCount,
+          totalExpenses: expenseCount,
+          totalPayments: paymentCount,
+          totalShoppingItems: shoppingCount,
+          activeMemberCount: memberActivity.length
+        },
+        memberActivity: memberActivity.map(m => ({
+          userId: m.userId,
+          mealCount: m._count.userId
+        })),
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey, 'period-details'],
+    { 
+      revalidate: 30, 
+      tags: [`user-${userId}`, `group-${groupId}`, `period-${periodId}`, 'periods'] 
+    }
+  );
+
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
 } 

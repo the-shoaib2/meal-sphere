@@ -45,47 +45,47 @@ export interface MemberPeriodBreakdown {
   isActive: boolean;
 }
 
-export interface UnifiedPeriodsData {
+export interface PeriodsPageData {
   periods: any[];
   currentPeriod: any;
   periodMode: 'MONTHLY' | 'CUSTOM';
+  initialPeriodSummary?: PeriodSummary;
+  groupId?: string;
 }
 
-function useUnifiedPeriods(includeArchived = false) {
+export function usePeriodsPageData(includeArchived = false, initialData?: PeriodsPageData) {
   const { activeGroup } = useActiveGroup();
 
   return useQuery({
-    queryKey: ['unified-periods', activeGroup?.id, includeArchived],
+    queryKey: ['periods-overview', activeGroup?.id, includeArchived],
     queryFn: async () => {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch(`/api/periods/unified?groupId=${activeGroup.id}&includeArchived=${includeArchived}`, { cache: 'no-store' });
+      const response = await fetch(`/api/periods/overview?groupId=${activeGroup.id}&includeArchived=${includeArchived}`, { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch periods data');
       }
-      return response.json() as Promise<UnifiedPeriodsData>;
+      return response.json() as Promise<PeriodsPageData>;
     },
     enabled: !!activeGroup?.id,
+    initialData: (initialData && activeGroup?.id && initialData.groupId === activeGroup.id) ? initialData : undefined,
     staleTime: 60 * 1000, // 1 minute stale time
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
 
-export function usePeriods(includeArchived = false) {
-  const unified = useUnifiedPeriods(includeArchived);
+export function usePeriods(includeArchived = false, initialData?: PeriodsPageData) {
+  const unified = usePeriodsPageData(includeArchived, initialData);
   return {
     ...unified,
     data: unified.data?.periods || [],
   };
 }
 
-export function useCurrentPeriod() {
-  const unified = useUnifiedPeriods(false);
-
-
-
+export function useCurrentPeriod(initialData?: PeriodsPageData) {
+  const unified = usePeriodsPageData(false, initialData);
 
   return {
     ...unified,
@@ -96,7 +96,7 @@ export function useCurrentPeriod() {
 export function usePeriod(periodId: string) {
   const { activeGroup } = useActiveGroup();
   // Get currently loaded active periods without triggering a new fetch if possible
-  const { data: unifiedData } = useUnifiedPeriods(false);
+  const { data: unifiedData } = usePeriodsPageData(false);
 
   return useQuery({
     queryKey: ['period', periodId, activeGroup?.id],
@@ -111,12 +111,20 @@ export function usePeriod(periodId: string) {
         return null;
       }
       // Only fetch the specific period if not found in cache
-      const response = await fetch(`/api/periods/${periodId}?groupId=${activeGroup.id}`, { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch period');
+      try {
+        const response = await fetch(`/api/periods/${periodId}?groupId=${activeGroup.id}`, { cache: 'no-store' });
+        if (!response.ok) {
+          if (response.status === 404 || response.status === 403) {
+            return null;
+          }
+          throw new Error('Failed to fetch period');
+        }
+        const responseData = await response.json();
+        return responseData.period;
+      } catch (error) {
+        console.warn('Error fetching period:', error);
+        return null;
       }
-      const responseData = await response.json();
-      return responseData.period;
     },
     enabled: !!activeGroup?.id && !!periodId,
     initialData: unifiedData?.periods?.find((p: any) => p.id === periodId),
@@ -125,7 +133,7 @@ export function usePeriod(periodId: string) {
   });
 }
 
-export function usePeriodSummary(periodId: string) {
+export function usePeriodSummary(periodId: string, initialData?: any) {
   const { activeGroup } = useActiveGroup();
 
   return useQuery({
@@ -142,6 +150,7 @@ export function usePeriodSummary(periodId: string) {
       return data.summary as PeriodSummary;
     },
     enabled: !!activeGroup?.id && !!periodId,
+    initialData: initialData && initialData.id === periodId ? initialData : undefined,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });
@@ -197,9 +206,7 @@ export function useStartPeriod() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-periods'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
-      queryClient.invalidateQueries({ queryKey: ['currentPeriod'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       toast.success('Period started successfully! 🎉', {
         description: 'All members have been notified about the new period.',
       });
@@ -273,9 +280,7 @@ export function useEndPeriod() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-periods'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
-      queryClient.invalidateQueries({ queryKey: ['currentPeriod'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       toast.success('Period ended successfully! 📊', {
         description: 'The period has been closed and calculations are ready for review.',
       });
@@ -283,9 +288,14 @@ export function useEndPeriod() {
     onError: (error: Error) => {
       const errorMessage = error.message;
 
-      if (errorMessage.includes('No active period found')) {
-        toast.error('No active period', {
-          description: 'There is no active period to end.',
+      if (errorMessage.includes('No active period found') || errorMessage.includes('not active')) {
+        // If it's already ended or not active, we can consider this a "success" state for the UI 
+        // in terms of "we wanted it ended, and it is ended".
+        // But let's verify by invalidating.
+        queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
+        
+        toast.info('Period already ended', {
+          description: 'This period appears to be already ended. The view has been updated.',
         });
       } else if (errorMessage.includes('Insufficient permissions')) {
         toast.error('Permission denied', {
@@ -328,9 +338,7 @@ export function useLockPeriod() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-periods'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
-      queryClient.invalidateQueries({ queryKey: ['currentPeriod'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       toast.success('Period locked successfully! 🔒', {
         description: 'No further changes can be made to this period.',
       });
@@ -388,9 +396,7 @@ export function useUnlockPeriod() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-periods'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
-      queryClient.invalidateQueries({ queryKey: ['currentPeriod'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       toast.success('Period unlocked successfully! 🔓', {
         description: 'Changes can now be made to this period.',
       });
@@ -447,8 +453,7 @@ export function useArchivePeriod() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-periods'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       toast.success('Period archived successfully! 📦', {
         description: 'The period has been moved to archives for long-term storage.',
       });
@@ -510,9 +515,7 @@ export function useRestartPeriod() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-periods'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
-      queryClient.invalidateQueries({ queryKey: ['currentPeriod'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       toast.success('Period restarted successfully! 🔄', {
         description: 'A new period has been created with the same settings.',
       });
@@ -541,9 +544,11 @@ export function useRestartPeriod() {
   });
 }
 
-export function usePeriodManagement() {
+export function usePeriodManagement(initialData?: PeriodsPageData) {
   const { activeGroup } = useActiveGroup();
-  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(
+    initialData?.currentPeriod?.id || null
+  );
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
@@ -552,19 +557,28 @@ export function usePeriodManagement() {
     data: periods,
     isLoading: periodsLoading,
     error: periodsError,
-  } = usePeriods();
+  } = usePeriods(false, initialData);
 
   const {
     data: currentPeriod,
     isLoading: currentPeriodLoading,
-  } = useCurrentPeriod();
+  } = useCurrentPeriod(initialData);
 
-  // Auto-select current period if no period is selected
+  // Auto-select current period if no period is selected, OR if active group changes
   useEffect(() => {
-    if (currentPeriod && !selectedPeriodId) {
-      setSelectedPeriodId(currentPeriod.id);
+    if (activeGroup?.id) {
+       // When group changes, default to current period or null
+       setSelectedPeriodId(currentPeriod?.id || null);
     }
-  }, [currentPeriod, selectedPeriodId]);
+  }, [activeGroup?.id, currentPeriod]);
+  
+  // Ensure selectedPeriodId is valid (should belong to current group)
+  useEffect(() => {
+     if (selectedPeriodId && periods && !periods.find((p: any) => p.id === selectedPeriodId)) {
+       // If selected period is not in the list of periods for this group, reset it
+       setSelectedPeriodId(currentPeriod?.id || null);
+     }
+  }, [periods, selectedPeriodId, currentPeriod]);
 
   const {
     data: selectedPeriod,
@@ -574,7 +588,7 @@ export function usePeriodManagement() {
   const {
     data: periodSummary,
     isLoading: summaryLoading,
-  } = usePeriodSummary(selectedPeriodId || '');
+  } = usePeriodSummary(selectedPeriodId || '', initialData?.initialPeriodSummary);
 
   const startPeriodMutation = useStartPeriod();
   const endPeriodMutation = useEndPeriod();
@@ -665,7 +679,7 @@ export function usePeriodMode(groupId?: string) {
   const { activeGroup } = useActiveGroup();
 
   // Use simplified hook if no specific groupId passed (uses activeGroup context)
-  const unified = useUnifiedPeriods(false);
+  const unified = usePeriodsPageData(false);
 
   // If we're just checking the current group, use the unified data
   if (!groupId || groupId === activeGroup?.id) {
@@ -684,7 +698,7 @@ export function usePeriodMode(groupId?: string) {
         return res.json();
       },
       onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: ['unified-periods', activeGroup?.id] });
+        queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
 
         toast.success(`Period mode updated to ${data.periodMode}`, {
           description: data.periodMode === 'MONTHLY'
@@ -738,8 +752,7 @@ export function usePeriodMode(groupId?: string) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['periods', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['currentPeriod', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview', groupId] });
 
       toast.success(`Period mode updated to ${data.periodMode}`, {
         description: data.periodMode === 'MONTHLY'

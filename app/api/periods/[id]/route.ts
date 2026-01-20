@@ -39,7 +39,7 @@ export async function GET(
     try {
       const period = await PeriodService.getPeriod(resolvedParams.id, groupId);
       if (!period) {
-        return NextResponse.json({ error: 'Period not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Period not found' }, { status: 200 });
       }
 
       return NextResponse.json({ period });
@@ -48,13 +48,13 @@ export async function GET(
       if (dbError.message?.includes('Unknown table') ||
         dbError.message?.includes('doesn\'t exist') ||
         dbError.message?.includes('MealPeriod')) {
-        return NextResponse.json({ error: 'Period not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Period not found' }, { status: 200 });
       }
       throw dbError;
     }
   } catch (error: any) {
     if (error.message === 'Period not found') {
-      return NextResponse.json({ error: 'Period not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Period not found' }, { status: 200 });
     }
     if (error.message === 'Period does not belong to the specified group') {
       return NextResponse.json({ error: 'Period does not belong to this group' }, { status: 403 });
@@ -104,7 +104,12 @@ export async function PATCH(
       let result;
       switch (action) {
         case 'end':
-          result = await PeriodService.endPeriod(groupId, session.user.id, endDate ? new Date(endDate) : undefined);
+          result = await PeriodService.endPeriod(
+            groupId, 
+            session.user.id, 
+            endDate ? new Date(endDate) : undefined,
+            resolvedParams.id 
+          );
           break;
         case 'lock':
           result = await PeriodService.lockPeriod(groupId, session.user.id, resolvedParams.id);
@@ -152,6 +157,20 @@ export async function PATCH(
     }
   } catch (error: any) {
     console.error('Error updating period:', error);
+    
+    // Handle business logic errors with 400 Bad Request
+    if (
+      error.message?.includes('Cannot end period') ||
+      error.message?.includes('not active') ||
+      error.message?.includes('already') ||
+      error.message?.includes('Insufficient permissions')
+    ) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to update period' },
       { status: 500 }

@@ -100,7 +100,7 @@ export function CreatePeriodDialog({
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button disabled={disabled}>
+              <Button disabled={disabled} suppressHydrationWarning>
                 <Plus className="h-4 w-4 mr-2" />
                 Start New Period
               </Button>

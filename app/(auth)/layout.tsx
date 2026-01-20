@@ -8,6 +8,9 @@ import { GroupProvider } from "@/contexts/group-context"
 import { redirect } from "next/navigation"
 import { fetchGroupsData } from "@/lib/services/groups-service"
 import { Group } from "@/hooks/use-groups"
+import { PeriodProvider } from "@/contexts/period-context"
+import { fetchPeriodsData } from "@/lib/services/period-service"
+import { PeriodsPageData } from "@/hooks/use-periods"
 
 export default async function AuthLayout({
   children,
@@ -38,21 +41,43 @@ export default async function AuthLayout({
     console.error('Error fetching groups in layout:', error);
   }
 
+  // Fetch initial period data for the active group
+  let initialPeriodData: PeriodsPageData | undefined = undefined;
+
+  if (initialActiveGroup && session.user.id) {
+    try {
+      const periodsData = await fetchPeriodsData(session.user.id, initialActiveGroup.id);
+      if (periodsData) {
+        initialPeriodData = {
+          periods: periodsData.periods,
+          currentPeriod: periodsData.activePeriod,
+          periodMode: periodsData.roomData?.periodMode || 'MONTHLY',
+          initialPeriodSummary: periodsData.initialPeriodSummary,
+          groupId: initialActiveGroup.id,
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching periods data in layout:', error);
+    }
+  }
+
   return (
     <GroupProvider initialGroups={initialGroups} initialActiveGroup={initialActiveGroup}>
-      <div className="flex flex-col min-h-screen w-full">
-        <Header />
-        <div className="flex flex-1 max-w-7xl mx-auto w-full">
-          <div className="flex flex-1 w-full">
-            <AppSidebar />
-            <main className="flex-1 bg-background overflow-auto">
-              <div className="w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 min-w-0">
-                {children}
-              </div>
-            </main>
+      <PeriodProvider initialData={initialPeriodData}>
+        <div className="flex flex-col min-h-screen w-full">
+          <Header />
+          <div className="flex flex-1 max-w-7xl mx-auto w-full">
+            <div className="flex flex-1 w-full">
+              <AppSidebar />
+              <main className="flex-1 bg-background overflow-auto">
+                <div className="w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 min-w-0">
+                  {children}
+                </div>
+              </main>
+            </div>
           </div>
         </div>
-      </div>
+      </PeriodProvider>
     </GroupProvider>
   )
 }

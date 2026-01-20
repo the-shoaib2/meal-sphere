@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Group } from '@/hooks/use-groups';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 const ENC_KEY = 'ms_active_group_ctx';
 type GroupContextType = {
@@ -42,6 +42,16 @@ export function GroupProvider({
       setGroups(initialGroups);
     }
   }, [initialGroups]);
+
+  // Hydrate React Query cache with initial groups
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id && initialGroups.length > 0) {
+      // Set the query data for useGroups hook
+      queryClient.setQueryData(['user-groups', session.user.id], initialGroups);
+      // Also populate the specific 'my' groups filter if needed
+      queryClient.setQueryData(['groups', 'my'], initialGroups);
+    }
+  }, [initialGroups, session?.user?.id, status, queryClient]);
 
   // Set initial active group from server-side data
   useEffect(() => {
@@ -141,10 +151,7 @@ export function GroupProvider({
       } catch (error) {
         console.error('Failed to switch group:', error);
 
-        // Show error toast
-        toast.error('Failed to switch group', {
-          description: 'Please try again or refresh the page.'
-        });
+        toast.error('Failed to switch group. Please refresh the page.');
 
         // Revert to previous state on error
         const encrypted = typeof window !== 'undefined' ? localStorage.getItem(ENC_KEY) : null;

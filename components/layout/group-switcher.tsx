@@ -109,7 +109,7 @@ export function GroupSwitcher() {
               className="flex items-center justify-between gap-2 p-2 cursor-pointer"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex size-6 items-center justify-center rounded-sm border">
+                <div className="flex size-6 items-center justify-center rounded-lg border">
                   <Users className="size-3 shrink-0" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
