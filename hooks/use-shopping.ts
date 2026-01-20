@@ -28,10 +28,22 @@ interface UpdateShoppingItemInput extends Partial<Omit<ShoppingItem, 'id' | 'cre
   id: string;
 }
 
-export function useShopping(periodId?: string) {
+export interface ShoppingPageData {
+  items: any[];
+  statistics?: any;
+  currentPeriod?: any;
+  roomData?: any;
+  userRole?: string | null;
+  groupId?: string;
+}
+
+export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
   const { activeGroup } = useActiveGroup();
   const queryClient = useQueryClient();
   const groupId = activeGroup?.id;
+
+  // Priority: 1. Passed initialData, 2. Server-side data
+  const effectiveInitialData = initialData && initialData.groupId === groupId ? initialData.items : null;
 
   // Fetch shopping list for the active group
   interface ApiShoppingItem {
@@ -95,8 +107,9 @@ export function useShopping(periodId?: string) {
         createdAt: item.createdAt,
         updatedAt: item.updatedAt
       })),
-    enabled: !!groupId, // Only run the query when groupId is available
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!groupId && !effectiveInitialData, // Only run if no initial data
+    initialData: effectiveInitialData as ApiShoppingItem[],
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });

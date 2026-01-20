@@ -1,5 +1,7 @@
 
 import { prisma } from '@/lib/services/prisma';
+import { unstable_cache } from 'next/cache';
+import { encryptData, decryptData } from '@/lib/encryption';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
 import { cacheGetOrSet } from '@/lib/cache/cache-service';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
@@ -500,4 +502,81 @@ export async function deleteTransaction(
 
     return true;
   });
+}
+
+/**
+ * Unified fetcher for Account Balance page SSR
+ */
+export async function fetchAccountBalanceData(userId: string, groupId: string) {
+  const cacheKey = `account-balance-data-${userId}-${groupId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      const currentPeriod = await getCurrentPeriod(groupId);
+      const periodId = currentPeriod?.id;
+
+      const [summary, roomData, membership, ownTransactions] = await Promise.all([
+        getGroupBalanceSummary(groupId, true),
+        prisma.room.findUnique({
+          where: { id: groupId },
+          select: { id: true, name: true }
+        }),
+        prisma.roomMember.findUnique({
+          where: { userId_roomId: { userId, roomId: groupId } },
+          select: { role: true }
+        }),
+        prisma.accountTransaction.findMany({
+          where: {
+            roomId: groupId,
+            targetUserId: userId,
+            periodId: periodId
+          },
+          include: {
+            creator: { select: { id: true, name: true, image: true, email: true } },
+            targetUser: { select: { id: true, name: true, image: true, email: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 50
+        })
+      ]);
+
+      // Calculate own balance from summary or separately
+      const ownMemberData = summary?.members?.find((m: any) => m.userId === userId);
+      const ownBalance = ownMemberData ? {
+        user: ownMemberData.user,
+        balance: ownMemberData.balance,
+        role: ownMemberData.role,
+        availableBalance: ownMemberData.availableBalance,
+        totalSpent: ownMemberData.totalSpent,
+        mealCount: ownMemberData.mealCount,
+        mealRate: ownMemberData.mealRate,
+        currentPeriod: summary.currentPeriod
+      } : null;
+
+      const executionTime = performance.now() - start;
+
+      const result = {
+        summary,
+        ownBalance,
+        ownTransactions,
+        currentPeriod: summary?.currentPeriod || currentPeriod,
+        roomData,
+        userRole: membership?.role || null,
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey, 'account-balance-data'],
+    { 
+      revalidate: 30, 
+      tags: [`user-${userId}`, `group-${groupId}`, 'balance'] 
+    }
+  );
+
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
 }

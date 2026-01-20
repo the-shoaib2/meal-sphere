@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast"
 import { Plus, Settings, Clock, Users, Utensils, Minus, Zap } from "lucide-react"
 import { format, startOfMonth, endOfMonth, isToday, isSameDay, eachDayOfInterval } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useMeal, type MealType } from "@/hooks/use-meal"
+import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
 import { useCurrentPeriod } from "@/hooks/use-periods"
 import { canEditMealsForDate, isPeriodLocked } from "@/lib/utils/period-utils-shared"
@@ -25,7 +25,7 @@ import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
 import AutoMealSettingsDialog from "@/components/meal/auto-meal-settings-dialog";
 import MealList from "@/components/meal/meal-list";
-import PeriodNotFoundCard from "@/components/periods/period-not-found-card";
+
 
 interface MealWithUser {
   id: string
@@ -46,9 +46,11 @@ interface MealManagementProps {
   roomId: string
   groupName?: string
   searchParams?: ReadonlyURLSearchParams | null
+  initialData?: MealsPageData
+  initialAccessData?: any
 }
 
-export default function MealManagement({ roomId, groupName, searchParams: propSearchParams }: MealManagementProps) {
+export default function MealManagement({ roomId, groupName, searchParams: propSearchParams, initialData, initialAccessData }: MealManagementProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const isMobile = useIsMobile()
@@ -59,7 +61,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
   // Get the active tab from URL search params, default to 'calendar'
   const [activeTab, setActiveTab] = useState(() => {
-    const tabFromUrl = searchParams?.get('tab');
+    const tabFromUrl = typeof searchParams?.get === 'function'
+      ? searchParams.get('tab')
+      : (searchParams as any)?.tab;
     return tabFromUrl && ['calendar', 'list'].includes(tabFromUrl)
       ? tabFromUrl
       : 'calendar';
@@ -71,21 +75,31 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Update URL when tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    const params = new URLSearchParams(searchParams?.toString() || '');
+    // Correctly handle both URLSearchParams (client-side) and plain object (server-side)
+    const currentParams = typeof searchParams?.get === 'function'
+      ? searchParams.toString()
+      : (searchParams || {});
+
+    const params = new URLSearchParams(currentParams as any);
     params.set('tab', value);
     router.push(`/meals?${params.toString()}`, { scroll: false });
   };
 
   // Sync with URL changes (e.g., browser back/forward)
   useEffect(() => {
-    const tabFromUrl = searchParams?.get('tab');
+    const tabFromUrl = typeof searchParams?.get === 'function'
+      ? searchParams.get('tab')
+      : (searchParams as any)?.tab;
     if (tabFromUrl && ['calendar', 'list'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
   }, [searchParams]);
 
   // Check user permissions
-  const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({ groupId: roomId })
+  const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({
+    groupId: roomId,
+    initialData: initialAccessData
+  })
 
   // Get current period
   const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
@@ -112,7 +126,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     triggerAutoMeals,
     shouldAutoAddMeal,
     isAutoMealTime
-  } = useMeal(roomId)
+  } = useMeal(roomId, initialData)
 
   // Memoized and callback hooks (must be before any early return)
   const mealsForDate = useMemo(() => useMealsByDate(selectedDate) as MealWithUser[], [useMealsByDate, selectedDate])
@@ -172,7 +186,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <GuestMealForm roomId={roomId} onSuccess={() => { }} />
+        <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
         {canManageMealSettings && (
           <>
             <Button
@@ -197,38 +211,11 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     </div>
   );
 
-  // If there is no period, show only the PeriodStatusCard below the header
-  if (!currentPeriod && !isPeriodLoading) {
-    return (
-      <div className="space-y-6">
-        {header}
-        <PeriodNotFoundCard userRole={userRole} isLoading={isPeriodLoading} />
-      </div>
-    );
-  }
-
   // Show loading state if access, period, or user stats is still loading
   if (isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats) {
     return <MealManagementSkeleton />;
   }
 
-  // Show error state if user doesn't have access to the group
-  if (!isMember) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-        <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-          <Users className="h-8 w-8 text-muted-foreground" />
-        </div>
-        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-        <p className="text-muted-foreground mb-4">
-          You don't have access to manage meals for this group.
-        </p>
-        <Button onClick={() => router.push('/groups')}>
-          Go to Groups
-        </Button>
-      </div>
-    )
-  }
 
 
 
@@ -464,6 +451,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             <GuestMealManager
               roomId={roomId}
               date={selectedDate}
+              initialData={initialData}
               onUpdate={() => {
                 queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
                 queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });

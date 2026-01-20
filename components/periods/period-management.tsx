@@ -23,6 +23,7 @@ import { Calendar, Settings2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useActiveGroup } from '@/contexts/group-context';
+import { useGroupAccess } from '@/hooks/use-group-access';
 
 // Define minimal type for initial data to avoid circular dependencies or strict type issues if not shared perfectly
 interface PeriodManagementProps {
@@ -60,8 +61,12 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
 
   const { data: session } = useSession();
   const { groups: userGroups = [], isLoading: isLoadingGroups } = useActiveGroup();
-  const currentUserId = session?.user?.id;
-  const userRole = activeGroup?.userRole || (currentUserId ? activeGroup?.members?.find((m: any) => m.userId === currentUserId)?.role : undefined);
+
+  const { userRole, isLoading: isAccessLoading } = useGroupAccess({
+    groupId: activeGroup?.id || "",
+    initialData: initialData?.initialAccessData
+  });
+
   const isPrivileged = ["ADMIN", "MANAGER", "MODERATOR"].includes(userRole ?? "");
 
   // Period mode management
@@ -122,8 +127,6 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
     setUnlockTargetPeriod(null);
     setUnlockLoading(false);
   };
-
-
 
   return (
     <>
@@ -251,4 +254,4 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
       )}
     </>
   );
-} 
+}

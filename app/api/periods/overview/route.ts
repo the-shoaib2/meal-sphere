@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { PeriodService } from '@/lib/services/period-service';
+import { PeriodService, fetchPeriodsData } from '@/lib/services/period-service';
 import { prisma } from '@/lib/services/prisma';
 
 // Force dynamic rendering
@@ -22,63 +22,22 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
         }
 
-        // OPTIMIZATION: Fetch member and periods in parallel
-        const [member, periods] = await Promise.all([
-            // Verify user has access to this group
-            prisma.roomMember.findUnique({
-                where: {
-                    userId_roomId: {
-                        userId: session.user.id,
-                        roomId: groupId,
-                    },
-                },
-                select: {
-                    room: {
-                        select: {
-                            periodMode: true,
-                        }
-                    }
-                }
-            }),
+        // OPTIMIZATION: Use the centralized cached data fetching function
+        // This utilizes unstable_cache and ensures consistency with server components
+        const periodsData = await fetchPeriodsData(session.user.id, groupId, includeArchived);
 
-            // Fetch all periods in one query
-            prisma.mealPeriod.findMany({
-                where: {
-                    roomId: groupId,
-                    ...(includeArchived ? {} : {
-                        status: {
-                            in: ['ACTIVE', 'ENDED', 'LOCKED'],
-                        }
-                    })
-                },
-                orderBy: {
-                    startDate: 'desc',
-                },
-                select: {
-                    id: true,
-                    name: true,
-                    startDate: true,
-                    endDate: true,
-                    status: true,
-                    isLocked: true,
-                    openingBalance: true,
-                    closingBalance: true,
-                    roomId: true,
-                }
-            })
-        ]);
-
-        if (!member) {
-            return NextResponse.json({ error: 'Access denied to this group' }, { status: 403 });
+        if (!periodsData) {
+             return NextResponse.json({ error: 'Failed to load periods data' }, { status: 500 });
         }
 
-        // Extract current period from the results (already fetched)
-        const currentPeriod = periods.find((p: any) => p.status === 'ACTIVE') || null;
+        if (!periodsData.userRole) {
+             return NextResponse.json({ error: 'Access denied to this group' }, { status: 403 });
+        }
 
         return NextResponse.json({
-            periods,
-            currentPeriod,
-            periodMode: member.room.periodMode || 'MONTHLY',
+            periods: periodsData.periods,
+            currentPeriod: periodsData.activePeriod, 
+            periodMode: periodsData.roomData?.periodMode || 'MONTHLY',
         }, {
             headers: {
                 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

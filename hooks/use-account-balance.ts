@@ -66,7 +66,20 @@ export type AccountTransaction = {
   targetUser: { id: string; name: string; image?: string; email?: string };
 };
 
-export function useGroupBalances(roomId: string, enabled: boolean = true, includeDetails: boolean = false) {
+export interface BalancePageData {
+  summary: GroupBalanceSummary | null;
+  ownBalance: UserBalance | null;
+  ownTransactions: AccountTransaction[];
+  currentPeriod: any;
+  roomData: any;
+  userRole: string | null;
+  groupId?: string;
+}
+
+export function useGroupBalances(roomId: string, enabled: boolean = true, includeDetails: boolean = false, initialData?: BalancePageData) {
+  // Priority: 1. Passed initialData, 2. Server-side data
+  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData.summary : undefined;
+
   return useQuery<GroupBalanceSummary | null>({
     queryKey: ['group-balances', roomId, includeDetails],
     queryFn: async () => {
@@ -78,7 +91,8 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
       if (!res.ok) throw new Error('Failed to fetch group balances');
       return res.json();
     },
-    enabled: !!roomId && enabled,
+    enabled: !!roomId && enabled && !effectiveInitialData,
+    initialData: effectiveInitialData,
     retry: (failureCount, error) => {
       // Don't retry on 403 errors (insufficient permissions)
       if (error.message.includes('403') || error.message.includes('Forbidden')) {
@@ -86,13 +100,15 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
       }
       return failureCount < 3;
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
 }
 
-export function useGetBalance(roomId: string, userId: string, includeDetails: boolean = false) {
+export function useGetBalance(roomId: string, userId: string, includeDetails: boolean = false, initialData?: BalancePageData) {
+  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData.ownBalance : undefined;
+
   return useQuery<UserBalance>({
     queryKey: ['user-balance', roomId, userId, includeDetails],
     queryFn: async () => {
@@ -100,14 +116,17 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
       if (!res.ok) throw new Error('Failed to fetch user balance');
       return res.json();
     },
-    enabled: !!roomId && !!userId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!roomId && !!userId && !effectiveInitialData,
+    initialData: effectiveInitialData as UserBalance,
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
 }
 
-export function useGetTransactions(roomId: string, userId: string, periodId?: string) {
+export function useGetTransactions(roomId: string, userId: string, periodId?: string, initialData?: BalancePageData) {
+  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData.ownTransactions : undefined;
+
   return useQuery<AccountTransaction[]>({
     queryKey: ['user-transactions', roomId, userId, periodId],
     queryFn: async () => {
@@ -120,8 +139,9 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
       if (!res.ok) throw new Error('Failed to fetch transactions');
       return res.json();
     },
-    enabled: !!roomId && !!userId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!roomId && !!userId && !effectiveInitialData,
+    initialData: effectiveInitialData,
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });

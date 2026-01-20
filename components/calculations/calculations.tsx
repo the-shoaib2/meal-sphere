@@ -4,7 +4,7 @@ import { useMemo, useCallback, memo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useCurrentPeriod, usePeriods, usePeriod } from "@/hooks/use-periods"
-import { useRoomCalculations } from "@/hooks/use-calculations"
+import { useRoomCalculations, type CalculationsPageData } from "@/hooks/use-calculations"
 import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
 import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
@@ -18,14 +18,16 @@ import CalculationsHeader from "@/components/calculations/calculations-header"
 import SummaryCards from "@/components/calculations/summary-cards"
 
 interface CalculationsProps {
-  roomId?: string
+  roomId?: string;
+  initialData?: CalculationsPageData;
 }
 
-const MealCalculations = memo(({ roomId }: CalculationsProps) => {
+const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
   const { data: session } = useSession()
   const { activeGroup } = useActiveGroup()
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
-  const { data: currentPeriod, isLoading: periodLoading } = useCurrentPeriod()
+  const { data: currentPeriodFromHook, isLoading: periodLoading } = useCurrentPeriod()
+  const currentPeriod = (initialData && initialData.groupId === roomId) ? initialData.currentPeriod : currentPeriodFromHook;
   const { data: allPeriods = [] } = usePeriods(true) // Include archived periods for admin navigation
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null)
 
@@ -47,8 +49,8 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
   }
 
   // Always call all hooks
-  const member = activeGroup?.members?.find(m => m.userId === session?.user?.id)
-  const userRole = member?.role
+  const userRoleFromHook = activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role
+  const userRole = (initialData && initialData.groupId === roomId) ? initialData.userRole : userRoleFromHook;
   const isAdmin = userRole === 'ADMIN'
   const { data: selectedPeriod } = usePeriod(selectedPeriodId || '')
   const periodToUse = selectedPeriodId ? selectedPeriod : currentPeriod
@@ -88,7 +90,7 @@ const MealCalculations = memo(({ roomId }: CalculationsProps) => {
     }
   }, [periodToUse, roomId])
 
-  const { data: summary, isLoading } = useRoomCalculations(calcParams || { enabled: false })
+  const { data: summary, isLoading } = useRoomCalculations(calcParams ? { ...calcParams, initialData } : { enabled: false, initialData })
 
   // Memoized period date strings
   const periodDateRange = useMemo(() => {

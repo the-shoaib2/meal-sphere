@@ -221,3 +221,98 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
   const encrypted = await cachedFn();
   return decryptData(encrypted);
 }
+export async function fetchGroupAccessData(groupId: string, userId: string) {
+  const cacheKey = `group-access-${groupId}-${userId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      // Execute both queries in parallel
+      const [group, membership] = await Promise.all([
+        prisma.room.findUnique({
+          where: { id: groupId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isPrivate: true,
+            memberCount: true,
+            bannerUrl: true,
+            category: true,
+            createdBy: true
+          }
+        }),
+        prisma.roomMember.findUnique({
+          where: {
+            userId_roomId: {
+              userId: userId,
+              roomId: groupId
+            }
+          },
+          select: {
+            role: true,
+            isBanned: true,
+            permissions: true
+          }
+        })
+      ]);
+
+      if (!group) {
+        return encryptData({
+          isMember: false,
+          userRole: null,
+          permissions: [],
+          canAccess: false,
+          isAdmin: false,
+          isCreator: false,
+          groupId,
+          group: null,
+          error: "Group not found",
+          timestamp: new Date().toISOString(),
+          executionTime: performance.now() - start
+        });
+      }
+
+      const isMember = !!membership && !membership.isBanned;
+      const userRole = membership?.role || null;
+      const isCreator = group.createdBy === userId;
+      const isAdmin = userRole === 'ADMIN';
+
+      // Determine access legacy logic
+      let canAccess = !group.isPrivate || isMember;
+
+      // Import Role and ROLE_PERMISSIONS internally to avoid top-level dependency issues if any
+      // but they are already imported or available via prisma
+      const { ROLE_PERMISSIONS } = await import('@/lib/auth/permissions');
+      const permissions = userRole ? (ROLE_PERMISSIONS[userRole] || []) : [];
+
+      const end = performance.now();
+      const executionTime = end - start;
+
+      const result = {
+        isMember,
+        userRole,
+        permissions,
+        canAccess,
+        isAdmin,
+        isCreator,
+        groupId,
+        group,
+        error: canAccess ? null : "Not a member of this private group",
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey, 'group-access'],
+    { 
+      revalidate: 60, 
+      tags: [`group-${groupId}`, `user-${userId}`, 'access'] 
+    }
+  );
+
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}

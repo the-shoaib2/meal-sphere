@@ -11,6 +11,7 @@ interface UseGroupAccessProps {
   onLoading?: (loading: boolean) => void;
   onError?: (error: string | null) => void;
   onGroupData?: (data: any) => void;
+  initialData?: any;
 }
 
 interface UseGroupAccessReturn {
@@ -44,7 +45,8 @@ export function useGroupAccess({
   groupId,
   onLoading,
   onError,
-  onGroupData
+  onGroupData,
+  initialData
 }: UseGroupAccessProps): UseGroupAccessReturn {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -105,7 +107,8 @@ export function useGroupAccess({
         groupData,
       };
     },
-    enabled: !!groupId && status !== 'loading',
+    enabled: !!groupId && status !== 'loading' && !initialData,
+    initialData: initialData && initialData.groupId === groupId ? initialData : undefined,
     staleTime: 10 * 60 * 1000, // 10 minutes - access permissions don't change frequently
     refetchOnWindowFocus: false,
     retry: (failureCount, error) => {

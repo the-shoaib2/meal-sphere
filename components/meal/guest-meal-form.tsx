@@ -28,13 +28,14 @@ type GuestMealFormData = z.infer<typeof guestMealSchema>
 interface GuestMealFormProps {
   roomId: string
   onSuccess?: () => void
+  initialData?: any
 }
 
-export default function GuestMealForm({ roomId, onSuccess }: GuestMealFormProps) {
+export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
 
-  const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId)
+  const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId, initialData)
 
   const form = useForm<GuestMealFormData>({
     resolver: zodResolver(guestMealSchema),

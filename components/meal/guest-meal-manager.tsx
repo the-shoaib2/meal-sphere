@@ -15,22 +15,23 @@ interface GuestMealManagerProps {
   roomId: string
   date: Date
   onUpdate?: () => void
+  initialData?: any
 }
 
-export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealManagerProps) {
+export default function GuestMealManager({ roomId, date, onUpdate, initialData }: GuestMealManagerProps) {
   const { data: session } = useSession()
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [pendingChanges, setPendingChanges] = useState<Map<string, number>>(new Map())
   const [savedStates, setSavedStates] = useState<Map<string, boolean>>(new Map())
-  
-  const { 
-    guestMeals, 
-    getUserGuestMeals, 
-    updateGuestMeal, 
-    deleteGuestMeal, 
+
+  const {
+    guestMeals,
+    getUserGuestMeals,
+    updateGuestMeal,
+    deleteGuestMeal,
     mealSettings,
-    isLoading 
-  } = useMeal(roomId)
+    isLoading
+  } = useMeal(roomId, initialData)
 
   const userGuestMeals = getUserGuestMeals(date)
   const guestMealLimit = mealSettings?.guestMealLimit || 10
@@ -38,13 +39,13 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
   // Auto-save changes after a delay
   useEffect(() => {
     const timeouts = new Map<string, NodeJS.Timeout>()
-    
+
     pendingChanges.forEach((newCount, guestMealId) => {
       // Clear existing timeout for this meal
       if (timeouts.has(guestMealId)) {
         clearTimeout(timeouts.get(guestMealId)!)
       }
-      
+
       // Set new timeout
       const timeout = setTimeout(async () => {
         setIsUpdating(guestMealId)
@@ -52,7 +53,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
           await updateGuestMeal(guestMealId, newCount)
           setSavedStates(prev => new Map(prev).set(guestMealId, true))
           onUpdate?.()
-          
+
           // Clear saved state after 2 seconds
           setTimeout(() => {
             setSavedStates(prev => {
@@ -67,7 +68,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
         } finally {
           setIsUpdating(null)
         }
-        
+
         // Remove from pending changes
         setPendingChanges(prev => {
           const newMap = new Map(prev)
@@ -75,10 +76,10 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
           return newMap
         })
       }, 1000) // 1 second delay
-      
+
       timeouts.set(guestMealId, timeout)
     })
-    
+
     // Cleanup timeouts
     return () => {
       timeouts.forEach(timeout => clearTimeout(timeout))
@@ -87,7 +88,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
 
   const handleCountChange = (guestMealId: string, newCount: number) => {
     if (newCount < 1 || newCount > guestMealLimit) return
-    
+
     setPendingChanges(prev => new Map(prev).set(guestMealId, newCount))
     setSavedStates(prev => new Map(prev).set(guestMealId, false))
   }
@@ -149,7 +150,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
               const currentCount = pendingCount !== undefined ? pendingCount : guestMeal.count
               const isSaved = savedStates.get(guestMeal.id)
               const isPending = pendingChanges.has(guestMeal.id)
-              
+
               return (
                 <div key={guestMeal.id} className="group relative p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
                   <div className="flex items-center justify-between">
@@ -167,7 +168,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3">
                       {/* Count Controls */}
                       <div className="flex items-center gap-2 bg-background border rounded-full p-1">
@@ -180,7 +181,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        
+
                         <div className="flex items-center gap-1 min-w-[3rem] justify-center">
                           <span className="font-bold text-lg">
                             {isUpdating === guestMeal.id ? "..." : currentCount}
@@ -192,7 +193,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
                             <Check className="h-3 w-3 text-green-500" />
                           )}
                         </div>
-                        
+
                         <Button
                           variant="ghost"
                           size="icon"
@@ -203,7 +204,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
-                      
+
                       {/* Delete Button */}
                       <Button
                         variant="ghost"
@@ -216,7 +217,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
                       </Button>
                     </div>
                   </div>
-                  
+
                   {/* Status Indicator */}
                   {isPending && (
                     <div className="absolute top-2 right-2">
@@ -228,7 +229,7 @@ export default function GuestMealManager({ roomId, date, onUpdate }: GuestMealMa
             })}
           </div>
         )}
-        
+
         <div className="pt-4 border-t">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Daily limit</span>

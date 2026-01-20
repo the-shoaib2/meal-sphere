@@ -1,32 +1,31 @@
-"use client"
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/services/prisma';
+import { redirect } from 'next/navigation';
+import { fetchExpensesData } from '@/lib/services/expenses-service';
+import { fetchGroupAccessData } from '@/lib/services/groups-service';
+import { ExpensesPageContent } from '@/components/finance/expenses-page-content';
+import { NoGroupState } from "@/components/empty-states/no-group-state";
+import { NoPeriodState } from "@/components/empty-states/no-period-state";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { ExpenseList } from "@/components/finance/expense-list"
-import { ExtraExpenseDialog } from "@/components/finance/extra-expense-dialog"
-import { useActiveGroup } from "@/contexts/group-context"
-import { Plus } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useCurrentPeriod } from "@/hooks/use-periods"
-import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
-import { useSession } from "next-auth/react"
-import { NoGroupState } from "@/components/empty-states/no-group-state"
-import { useGroups } from "@/hooks/use-groups"
+export const dynamic = 'force-dynamic';
 
-export default function ExpensesPage() {
-  const { data: session } = useSession();
-  const { activeGroup } = useActiveGroup()
-  const [open, setOpen] = useState(false)
-  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
-  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
-  const userRole = activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role
+export default async function ExpensesPage() {
+  const session = await getServerSession(authOptions);
 
-  const handleSuccess = () => {
-    setOpen(false);
-  };
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
 
-  // Check if user has no groups - show empty state
-  if (!isLoadingGroups && userGroups.length === 0) {
+  // 1. Resolve Active Group
+  const activeMember = await prisma.roomMember.findFirst({
+    where: { userId: session.user.id, isCurrent: true },
+    include: { room: true }
+  });
+
+  const activeGroup = activeMember?.room;
+
+  if (!activeGroup) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -42,37 +41,43 @@ export default function ExpensesPage() {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">Extra Expenses</h1>
-          <p className="text-muted-foreground text-sm">
-            Track additional expenses like utilities, rent, internet, and more for {activeGroup?.name}.
-          </p>
+  // 2. Fetch Initial Data for the active group (Expenses and Access)
+  const [expensesData, accessData] = await Promise.all([
+    fetchExpensesData(session.user.id, activeGroup.id),
+    fetchGroupAccessData(activeGroup.id, session.user.id)
+  ]);
+
+  // 3. Handle No Period State server-side
+  if (!expensesData.currentPeriod) {
+    const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
+    return (
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Extra Expenses</h1>
+            <p className="text-muted-foreground text-sm">
+              Track additional expenses for {activeGroup.name}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setOpen(true)}
-            size="sm"
-            className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Expense
-          </Button>
-        </div>
-      </div>
-      <ExtraExpenseDialog open={open} onOpenChange={setOpen} onSuccess={handleSuccess} />
-      {/* Show PeriodNotFoundCard if no period */}
-      {!currentPeriod && !isPeriodLoading ? (
-        <PeriodNotFoundCard
-          userRole={userRole}
-          isLoading={isPeriodLoading}
-          groupId={activeGroup?.id}
-          userId={session?.user?.id}
+        <NoPeriodState
+          isPrivileged={isPrivileged}
+          periodMode={expensesData.roomData?.periodMode || 'MONTHLY'}
         />
-      ) : (
-        <ExpenseList />
-      )}
-    </div>
-  )
+      </div>
+    );
+  }
+
+  // 4. Render client component (Content Wrapper) to handle dialog state
+  return (
+    <ExpensesPageContent
+      activeGroup={activeGroup}
+      userRole={accessData.userRole}
+      initialData={{
+        ...expensesData,
+        groupId: activeGroup.id
+      }}
+      initialAccessData={accessData}
+    />
+  );
 }

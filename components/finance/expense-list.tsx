@@ -19,18 +19,22 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import Image from "next/image"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
-import { useExtraExpense, type ExtraExpense } from "@/hooks/use-expense"
+import { useExtraExpense, type ExtraExpense, type ExpensesPageData } from "@/hooks/use-expense"
 import { ExpenseActions } from "@/components/finance/expense-actions"
 import { Skeleton } from "@/components/ui/skeleton"
 
-export function ExpenseList() {
+interface ExpenseListProps {
+  initialData?: ExpensesPageData;
+}
+
+export function ExpenseList({ initialData }: ExpenseListProps) {
   const queryClient = useQueryClient()
   const { data: session } = useSession()
   const { activeGroup } = useActiveGroup()
   const [selectedType, setSelectedType] = useState<string>("")
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()))
   const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()))
-  const { expenses = [], isLoading, error, deleteExpense } = useExtraExpense()
+  const { expenses = [], isLoading, error, deleteExpense } = useExtraExpense(initialData)
   const deleteMutation = deleteExpense as { isPending: boolean, mutateAsync: (id: string) => Promise<any> }
   const [selectedExpense, setSelectedExpense] = useState<ExtraExpense | null>(null)
   const { t } = useLanguage()

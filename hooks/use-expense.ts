@@ -34,10 +34,21 @@ export interface UpdateExtraExpenseInput extends Partial<Omit<ExtraExpense, 'id'
   receipt?: File;
 }
 
-export function useExtraExpense() {
+export interface ExpensesPageData {
+  expenses: ExtraExpense[];
+  currentPeriod?: any;
+  roomData?: any;
+  userRole?: string | null;
+  groupId?: string;
+}
+
+export function useExtraExpense(initialData?: ExpensesPageData) {
   const { activeGroup } = useActiveGroup();
   const queryClient = useQueryClient();
   const groupId = activeGroup?.id;
+
+  // Priority: 1. Passed initialData, 2. Server-side data
+  const effectiveInitialData = initialData && initialData.groupId === groupId ? initialData.expenses : undefined;
 
   // Fetch extra expenses for the active group
   const {
@@ -62,8 +73,9 @@ export function useExtraExpense() {
       });
       return data;
     },
-    enabled: !!groupId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: !!groupId && !effectiveInitialData,
+    initialData: effectiveInitialData,
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });

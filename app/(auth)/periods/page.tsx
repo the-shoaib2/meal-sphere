@@ -2,9 +2,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
 import { fetchPeriodsData } from '@/lib/services/period-service';
-import { fetchGroupsData } from '@/lib/services/groups-service'; // Need to resolve active group
+import { fetchGroupAccessData, fetchGroupsData } from '@/lib/services/groups-service';
 import { PeriodManagement } from '@/components/periods/period-management';
-import { Group } from '@/hooks/use-groups';
+import { NoGroupState } from '@/components/empty-states/no-group-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,36 +16,49 @@ export default async function PeriodsPage() {
   }
 
   // We need to know the active group to fetch periods.
-  // Since we don't have client context here, we rely on the same logic as the layout/provider
-  // to determine the "current" group (the one marked isCurrent, or the first one).
-
-  // NOTE: This is a slight duplication of logic from layout.tsx, but necessary for the page to pre-fetch 
-  // data for the *correct* group. Re-fetching groups data here is cheap because of unstable_cache.
   let activeGroupId: string | null = null;
+  let activeGroupName: string | null = null;
 
   try {
     const groupsData = await fetchGroupsData(session.user.id);
     const activeGroup = groupsData.activeGroup || (groupsData.myGroups && groupsData.myGroups.length > 0 ? groupsData.myGroups[0] : null);
-    if (activeGroup) {
-      activeGroupId = activeGroup.id;
+
+    if (!activeGroup) {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Period Management</h1>
+              <p className="text-muted-foreground text-sm">
+                Manage your group's meal periods
+              </p>
+            </div>
+          </div>
+          <NoGroupState />
+        </div>
+      );
     }
+
+    activeGroupId = activeGroup.id;
+    activeGroupName = activeGroup.name;
   } catch (error) {
     console.error('Error determining active group for periods page:', error);
   }
 
   let periodsData = null;
+  let accessData = null;
 
   if (activeGroupId) {
     try {
-      periodsData = await fetchPeriodsData(session.user.id, activeGroupId);
+      // Fetch both in parallel
+      [periodsData, accessData] = await Promise.all([
+        fetchPeriodsData(session.user.id, activeGroupId),
+        fetchGroupAccessData(activeGroupId, session.user.id)
+      ]);
     } catch (error) {
       console.error('Error fetching periods data:', error);
     }
   }
-
-  // Transform the periodsData into the format expected by usePeriodsPageData (PeriodsPageData)
-  // periodsData from fetchPeriodsData has structure: { periods, activePeriod, periodStats, roomData, ... }
-  // PeriodsPageData expects: { periods, currentPeriod, periodMode }
 
   let initialData = null;
 
@@ -56,6 +69,8 @@ export default async function PeriodsPage() {
       initialPeriodSummary: periodsData.initialPeriodSummary,
       periodMode: periodsData.roomData?.periodMode || 'MONTHLY',
       groupId: activeGroupId,
+      groupName: activeGroupName,
+      initialAccessData: accessData,
     };
   }
 

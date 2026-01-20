@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Group } from '@/hooks/use-groups';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
 import { toast } from 'react-hot-toast';
+import { setCurrentGroupAction } from '@/lib/actions/group-actions';
 
 const ENC_KEY = 'ms_active_group_ctx';
 type GroupContextType = {
@@ -114,78 +115,69 @@ export function GroupProvider({
 
   // Handle setting active group
   const handleSetActiveGroup = async (group: Group | null) => {
-    // Optimistically update UI
+    if (!group) {
+      // Clear active group
+      setActiveGroup(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(ENC_KEY);
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      startTransition(() => {
+        router.refresh();
+      });
+      return;
+    }
+
+    // Capture previous state for rollback
+    const previousGroup = activeGroup;
+
+    // OPTIMISTIC UPDATE: Update UI immediately
     setActiveGroup(group);
 
-    if (group) {
+    startTransition(async () => {
       try {
-        // Save to localStorage
+        // Save to localStorage immediately for persistence on reload
         const encrypted = encryptData(JSON.stringify(group));
         if (typeof window !== 'undefined') {
           localStorage.setItem(ENC_KEY, encrypted);
         }
 
-        // Update database to set isCurrent flag
-        const response = await fetch('/api/groups/set-current', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ groupId: group.id }),
-        });
+        // Call Server Action instead of API fetch
+        const result = await setCurrentGroupAction(group.id);
 
-        if (!response.ok) {
-          throw new Error('Failed to set current group');
+        if (result?.error) {
+          throw new Error(result.error);
         }
 
-        // Invalidate relevant queries when active group changes
+        // Surgical invalidation (though Server Action does revalidatePath)
+        // Redundant but safe for react-query users
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['meals'] });
-        queryClient.invalidateQueries({ queryKey: ['expenses'] });
         queryClient.invalidateQueries({ queryKey: ['periods'] });
 
-        // Trigger router refresh to update Server Components with transition state
-        startTransition(() => {
-          router.refresh();
-        });
+        // Router.refresh is handled by revalidatePath in the Server Action,
+        // but calling it here within startTransition ensures the UI stays "pending" 
+        // until the server render is complete.
+        router.refresh();
+
       } catch (error) {
         console.error('Failed to switch group:', error);
+        toast.error('Failed to switch group. Reverting...');
 
-        toast.error('Failed to switch group. Please refresh the page.');
-
-        // Revert to previous state on error
-        const encrypted = typeof window !== 'undefined' ? localStorage.getItem(ENC_KEY) : null;
-        if (encrypted) {
-          try {
-            const decryptedStr = decryptData(encrypted);
-            if (decryptedStr) {
-              const previousGroup = JSON.parse(decryptedStr);
-              setActiveGroup(previousGroup as Group);
-            }
-          } catch {
-            setActiveGroup(null);
+        // ROLLBACK on error
+        setActiveGroup(previousGroup);
+        if (previousGroup) {
+          const encrypted = encryptData(JSON.stringify(previousGroup));
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(ENC_KEY, encrypted);
           }
         } else {
-          setActiveGroup(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(ENC_KEY);
+          }
         }
       }
-    } else {
-      // Clear active group
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(ENC_KEY);
-      }
-
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['meals'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
-
-      // Refresh to show empty state with transition state
-      startTransition(() => {
-        router.refresh();
-      });
-    }
+    });
   };
 
   // Set loading state based on session status and initial group load

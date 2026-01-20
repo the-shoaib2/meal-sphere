@@ -1,62 +1,24 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useActiveGroup } from './group-context';
-import { useCurrentPeriod, usePeriods, useStartPeriod, useEndPeriod, PeriodSummary, PeriodsPageData } from '@/hooks/use-periods';
-import { MealPeriod, PeriodStatus } from '@prisma/client';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import { PeriodsPageData } from '@/hooks/use-periods';
 
 interface PeriodContextType {
-    // Data
-    currentPeriod: MealPeriod | null;
-    activePeriodSummary: PeriodSummary | null;
+    periodsData: PeriodsPageData | null;
     isLoading: boolean;
     error: Error | null;
-
-    // Actions
-    startNewPeriod: (data: any) => Promise<any>;
-    endCurrentPeriod: (endDate?: Date) => Promise<any>;
-
-    // Helpers
-    hasActivePeriod: boolean;
 }
 
 const PeriodContext = createContext<PeriodContextType | undefined>(undefined);
 
 export function PeriodProvider({ children, initialData }: { children: ReactNode; initialData?: PeriodsPageData }) {
-    const { activeGroup } = useActiveGroup();
-
-    // Use hooks to fetch data
-    // We prioritize the "Current Period" for global context
-    const {
-        data: currentPeriod,
-        isLoading: isLoadingPeriod,
-        error: periodError
-    } = useCurrentPeriod(initialData);
-
-    // We might also want separate summary if needed, but often it's fetched on demand
-    // For global context, maybe we keep it light.
-
-    const startPeriodMutation = useStartPeriod();
-    const endPeriodMutation = useEndPeriod();
-
-    const startNewPeriod = async (data: any) => {
-        return startPeriodMutation.mutateAsync(data);
-    };
-
-    const endCurrentPeriod = async (endDate?: Date) => {
-        if (!currentPeriod?.id) throw new Error('No active period to end');
-        return endPeriodMutation.mutateAsync({ periodId: currentPeriod.id, endDate });
-    };
-
-    const value = {
-        currentPeriod: currentPeriod || null,
-        activePeriodSummary: null, // We could fetch this if needed globally
-        isLoading: isLoadingPeriod,
-        error: periodError,
-        startNewPeriod,
-        endCurrentPeriod,
-        hasActivePeriod: !!currentPeriod,
-    };
+    // We strictly rely on server-provided data.
+    // When the group changes, router.refresh() will update this initialData prop via the layout.
+    const value = useMemo(() => ({
+        periodsData: initialData || null,
+        isLoading: false,
+        error: null,
+    }), [initialData]);
 
     return (
         <PeriodContext.Provider value={value}>

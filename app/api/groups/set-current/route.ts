@@ -41,35 +41,56 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Use transaction for atomic updates
-        await prisma.$transaction([
-            // Set all user's groups to isCurrent = false
-            prisma.roomMember.updateMany({
-                where: {
-                    userId: session.user.id,
-                },
-                data: {
-                    isCurrent: false,
-                },
-            }),
-            // Set the selected group as current
-            prisma.roomMember.update({
-                where: {
-                    userId_roomId: {
-                        userId: session.user.id,
-                        roomId: groupId,
-                    },
-                },
-                data: {
-                    isCurrent: true,
-                },
-            }),
-        ]);
+        // Efficiently switch groups:
+        // 1. Unset any currently active group (should be at most one)
+        // 2. Set the new group as active
+        // This avoids O(N) writes where N is user's total groups
+
+        await prisma.$transaction(async (tx) => {
+             // Find currently active group for this user
+             const currentActive = await tx.roomMember.findFirst({
+                 where: {
+                     userId: session.user.id,
+                     isCurrent: true
+                 },
+                 select: { roomId: true }
+             });
+
+             // If the active group is already the requested one, do nothing
+             if (currentActive?.roomId === groupId) {
+                 return;
+             }
+
+             // If there is an active group, unset it
+             if (currentActive) {
+                 await tx.roomMember.update({
+                     where: {
+                         userId_roomId: {
+                             userId: session.user.id,
+                             roomId: currentActive.roomId
+                         }
+                     },
+                     data: { isCurrent: false }
+                 });
+             }
+
+             // Set new group as active
+             await tx.roomMember.update({
+                 where: {
+                     userId_roomId: {
+                         userId: session.user.id,
+                         roomId: groupId
+                     }
+                 },
+                 data: { isCurrent: true }
+             });
+        });
 
         // Revalidate paths that depend on group data
         revalidatePath('/(auth)', 'layout');
         revalidatePath('/dashboard');
         revalidatePath('/groups');
+        revalidatePath('/periods');
 
         return NextResponse.json({ success: true });
     } catch (error) {

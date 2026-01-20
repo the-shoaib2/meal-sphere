@@ -4,7 +4,7 @@ import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useActiveGroup } from '@/contexts/group-context';
-import { useGroupBalances, useGetBalance, useGetTransactions } from '@/hooks/use-account-balance';
+import { useGroupBalances, useGetBalance, useGetTransactions, type BalancePageData } from '@/hooks/use-account-balance';
 import { useCurrentPeriod } from '@/hooks/use-periods';
 import PrivilegedView from '@/components/account-balance/privileged-view';
 import MemberView from '@/components/account-balance/member-view';
@@ -21,23 +21,25 @@ function isPrivileged(role?: string) {
   return !!role && PRIVILEGED_ROLES.includes(role);
 }
 
-export default function AccountBalancePanel() {
+export default function AccountBalancePanel({ initialData }: { initialData?: BalancePageData }) {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const router = useRouter(); // Added useRouter initialization
 
-  const userRole = (activeGroup as any)?.userRole || activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role;
+  const userRoleFromHook = (activeGroup as any)?.userRole || activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role;
+  const userRole = (initialData && initialData.groupId === activeGroup?.id) ? initialData.userRole : userRoleFromHook;
   const hasPrivilege = isPrivileged(userRole);
 
-  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod();
+  const { data: currentPeriodFromHook, isLoading: isPeriodLoading } = useCurrentPeriod();
+  const currentPeriod = (initialData && initialData.groupId === activeGroup?.id) ? initialData.currentPeriod : currentPeriodFromHook;
   const handleViewDetails = (userId: string) => {
     window.dispatchEvent(new CustomEvent('routeChangeStart'));
     router.push(`/account-balance/${userId}`);
   };
-  const { data: groupData, isLoading: isLoadingBalances } = useGroupBalances(activeGroup?.id!, hasPrivilege, true);
-  const { data: ownBalance, isLoading: isLoadingOwnBalance } = useGetBalance(activeGroup?.id!, session?.user?.id!, true);
-  const { data: ownTransactions, isLoading: isLoadingTransactions } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id);
+  const { data: groupData, isLoading: isLoadingBalances } = useGroupBalances(activeGroup?.id!, hasPrivilege, true, initialData);
+  const { data: ownBalance, isLoading: isLoadingOwnBalance } = useGetBalance(activeGroup?.id!, session?.user?.id!, true, initialData);
+  const { data: ownTransactions, isLoading: isLoadingTransactions } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id, initialData);
 
   // Check if user has no groups - show empty state
   if (!isLoadingGroups && userGroups.length === 0) {

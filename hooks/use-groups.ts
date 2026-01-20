@@ -92,7 +92,7 @@ interface UseGroupsReturn {
     isLoading: boolean;
     error: Error | null;
   };
-  useGroupDetails: (groupId: string, password?: string) => UseQueryResult<Group, Error>;
+  useGroupDetails: (groupId: string, initialData?: any, password?: string) => UseQueryResult<Group, Error>;
   getGroupDetails: (groupId: string, password?: string) => Promise<Group>;
   createGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, CreateGroupInput>>;
   updateGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>>;
@@ -249,15 +249,16 @@ export function useGroups(): UseGroupsReturn {
     }
   }, []);
 
-  const useGroupDetails = (groupId: string, password?: string) => {
+  const useGroupDetails = (groupId: string, initialData?: any, password?: string) => {
     return useQuery<Group, Error>({
       queryKey: ['group', groupId],
       queryFn: () => {
         if (!groupId) throw new Error('Group ID is required');
         return getGroupDetails(groupId, password);
       },
-      enabled: !!groupId,
-      staleTime: 0, // Always fetch fresh data
+      enabled: !!groupId && !initialData,
+      initialData: initialData,
+      staleTime: initialData ? 10 * 60 * 1000 : 0, // Cache for 10 mins if initial data provided
       refetchOnWindowFocus: true,
       retry: (failureCount, error: any) => {
         // Don't retry if it's a password required error

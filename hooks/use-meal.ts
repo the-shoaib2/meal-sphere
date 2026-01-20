@@ -124,6 +124,18 @@ export interface UserMealStats {
   }>;
 }
 
+export interface MealsPageData {
+  meals: Meal[];
+  guestMeals: GuestMeal[];
+  settings: MealSettings | null;
+  autoSettings: AutoMealSettings | null;
+  userStats: any;
+  currentPeriod: any;
+  roomData: any;
+  userRole: string | null;
+  groupId?: string;
+}
+
 interface UseMealReturn {
   // Data
   meals: Meal[];
@@ -165,10 +177,13 @@ interface UseMealReturn {
   getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
 }
 
-export function useMeal(roomId?: string): UseMealReturn {
+export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
-  const { data: currentPeriod } = useCurrentPeriod();
+  const { data: currentPeriodFromHook } = useCurrentPeriod();
+
+  // Priority: 1. Passed initialData, 2. Server-side currentPeriod
+  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData : null;
 
   // Unified Query Hook
   const { data: data, isLoading: isLoadingUnified, error: unifiedError } = useQuery({
@@ -182,8 +197,10 @@ export function useMeal(roomId?: string): UseMealReturn {
       }
       return response.json();
     },
-    enabled: !!roomId && !!session?.user?.id,
-    staleTime: 60 * 1000,
+    // DISABLE client-side fetch if we have matching initialData
+    enabled: !!roomId && !!session?.user?.id && !effectiveInitialData,
+    initialData: effectiveInitialData,
+    staleTime: Infinity, // Rely on server/mutations
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false
   });
@@ -191,9 +208,10 @@ export function useMeal(roomId?: string): UseMealReturn {
   // Derived state from unified data
   const meals: Meal[] = data?.meals || [];
   const guestMeals: GuestMeal[] = data?.guestMeals || [];
-  const mealSettings: MealSettings | null = data?.settings || null;
-  const autoMealSettings: AutoMealSettings | null = data?.autoSettings || null;
+  const mealSettings: MealSettings | null = data?.settings || data?.mealSettings || null;
+  const autoMealSettings: AutoMealSettings | null = data?.autoSettings || data?.autoMealSettings || null;
   const userMealStats: UserMealStats | null = data?.userStats || null;
+  const currentPeriod = data?.currentPeriod || currentPeriodFromHook;
 
   // Loading states are now consolidated
   const isLoading = isLoadingUnified;
@@ -218,7 +236,7 @@ export function useMeal(roomId?: string): UseMealReturn {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meals', roomId] }); // Keep legacy for safety if used elsewhere
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
     },

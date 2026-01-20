@@ -1,26 +1,78 @@
-"use client"
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/services/prisma';
+import { redirect } from 'next/navigation';
+import { fetchAccountBalanceData } from '@/lib/services/balance-service';
+import AccountBalancePanel from '@/components/account-balance';
+import { NoGroupState } from "@/components/empty-states/no-group-state";
+import { NoPeriodState } from "@/components/empty-states/no-period-state";
 
-import { Suspense } from "react"
-import AccountBalancePanel from '@/components/account-balance'
-import { Card, CardContent } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
+export const dynamic = 'force-dynamic';
 
-export default function AccountBalancePage() {
-  return (
-    <Suspense fallback={<AccountBalanceLoading />}>
-      <AccountBalancePanel />
-    </Suspense>
-  )
-}
+export default async function AccountBalancePage() {
+  const session = await getServerSession(authOptions);
 
-function AccountBalanceLoading() {
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
+
+  // 1. Resolve Active Group
+  const activeMember = await prisma.roomMember.findFirst({
+    where: { userId: session.user.id, isCurrent: true },
+    include: { room: true }
+  });
+
+  const activeGroup = activeMember?.room;
+
+  if (!activeGroup) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Account Balance</h1>
+            <p className="text-muted-foreground text-sm">
+              Track your meal expenses and payments
+            </p>
+          </div>
+        </div>
+        <NoGroupState />
+      </div>
+    );
+  }
+
+  // 2. Fetch Initial Data for the active group
+  const balanceData = await fetchAccountBalanceData(session.user.id, activeGroup.id);
+
+  // 3. Handle No Period State server-side
+  if (!balanceData.currentPeriod) {
+    const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(balanceData.userRole || '');
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Account Balance</h1>
+            <p className="text-muted-foreground text-sm">
+              Track your meal expenses and payments for {activeGroup.name}
+            </p>
+          </div>
+        </div>
+        <NoPeriodState
+          isPrivileged={isPrivileged}
+          periodMode={balanceData.summary?.roomData?.periodMode || 'MONTHLY'}
+        />
+      </div>
+    );
+  }
+
+  // 4. Render client component with initial data
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
+      <AccountBalancePanel
+        initialData={{
+          ...balanceData,
+          groupId: activeGroup.id
+        }}
+      />
     </div>
-  )
+  );
 }

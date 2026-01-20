@@ -24,13 +24,20 @@ export interface RoomMealSummary {
 }
 
 export interface MealSummary {
-  totalMeals: number;
-  totalCost: number;
-  mealRate: number;
-  userMeals: number;
-  userCost: number;
   startDate: string;
   endDate: string;
+}
+
+export interface CalculationsPageData {
+  groupBalanceSummary: any;
+  userBalance: any;
+  memberBalances: any[];
+  mealRateInfo: any;
+  payments: any[];
+  currentPeriod: any;
+  roomData: any;
+  userRole: string | null;
+  groupId?: string;
 }
 
 interface CalculationParams {
@@ -46,10 +53,33 @@ export function useRoomCalculations({
   startDate,
   endDate,
   enabled = true,
-  dependencies = []
-}: CalculationParams = {}) {
+  dependencies = [],
+  initialData
+}: CalculationParams & { initialData?: CalculationsPageData } = {}) {
   const { data: session } = useSession();
   const { data: currentPeriod } = useCurrentPeriod();
+
+  // Mapping CalculationsPageData to RoomMealSummary
+  const effectiveInitialData = useMemo(() => {
+    if (!initialData || initialData.groupId !== roomId) return undefined;
+    
+    return {
+      totalMeals: initialData.mealRateInfo?.totalMeals || 0,
+      totalCost: initialData.mealRateInfo?.totalExpenses || 0,
+      mealRate: initialData.mealRateInfo?.mealRate || 0,
+      startDate: initialData.currentPeriod?.startDate || '',
+      endDate: initialData.currentPeriod?.endDate || '',
+      userSummaries: (initialData.memberBalances || []).map(m => ({
+        userId: m.userId,
+        userName: m.user?.name || 'Unknown',
+        userImage: m.user?.image,
+        mealCount: m.mealCount || 0,
+        cost: m.totalSpent || 0,
+        paid: m.balance || 0, // In this app's context, balance often means paid/received
+        balance: m.availableBalance || 0
+      }))
+    } as RoomMealSummary;
+  }, [initialData, roomId]);
 
   // Memoize resolved room ID to prevent unnecessary re-renders
   const resolvedRoomId = useMemo(() => {
@@ -94,8 +124,9 @@ export function useRoomCalculations({
       });
       return data;
     },
-    enabled: isEnabled,
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    enabled: isEnabled && !effectiveInitialData,
+    initialData: effectiveInitialData,
+    staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
     refetchOnMount: false,
