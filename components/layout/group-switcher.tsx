@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ChevronsUpDown, Plus, Users, Check, Loader } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 import {
   DropdownMenu,
@@ -101,29 +102,40 @@ export function GroupSwitcher() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className="max-h-[300px] overflow-y-auto gap-1 flex flex-col p-1">
           {groups.map((group) => (
             <DropdownMenuItem
               key={group.id}
-              onClick={() => handleGroupSelect(group)}
-              className="flex items-center justify-between gap-2 p-2 cursor-pointer"
+              onSelect={(e) => {
+                e.preventDefault()
+                handleGroupSelect(group)
+              }}
+              className={cn(
+                "w-full flex items-center px-3 py-2 text-sm font-medium rounded-sm hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer outline-none",
+                activeGroup?.id === group.id
+                  ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                  : "text-muted-foreground"
+              )}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex size-6 items-center justify-center rounded-lg border">
-                  <Users className="size-3 shrink-0" />
-                </div>
+              {activeGroup?.id === group.id && (
+                <div className="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
+              )}
+              <div className="flex items-center gap-3 min-w-0 w-full">
+                <Users className={cn(
+                  "h-4 w-4 transition-colors",
+                  activeGroup?.id === group.id
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                )} />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{group.name}</span>
                   {group.userRole && (
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="truncate text-xs opacity-70">
                       {group.userRole.charAt(0).toUpperCase() + group.userRole.slice(1).toLowerCase()}
                     </span>
                   )}
                 </div>
               </div>
-              {activeGroup?.id === group.id && (
-                <Check className="h-4 w-4 text-primary ml-auto" />
-              )}
             </DropdownMenuItem>
           ))}
         </div>
