@@ -12,13 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell } from 'lucide-react';
+import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell, FileSpreadsheet } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useGroups } from '@/hooks/use-groups';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import ExcelImportExport from '@/components/excel/excel-import-export';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -740,279 +741,294 @@ export function SettingsTab({
                   </div>
                 ))}
               </div>
+
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t pt-6">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Data Management
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Import and export group data
+              </p>
+            </div>
+            <div className="p-4 border rounded-lg bg-card text-card-foreground shadow-sm">
+              <ExcelImportExport />
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t pt-6">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Manage what notifications you receive from this group
+              </p>
             </div>
 
-            <div className="space-y-4 border-t pt-6">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
-                  Notifications
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Manage what notifications you receive from this group
-                </p>
-              </div>
-
-              {isLoadingNotifications ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : notificationSettings ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                    <div className="space-y-1">
-                      <Label htmlFor="groupMessages">Group Messages</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Get notified when members send messages
-                      </p>
-                    </div>
-                    <Switch
-                      id="groupMessages"
-                      checked={notificationSettings.groupMessages}
-                      onCheckedChange={() => handleNotificationToggle('groupMessages')}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                    <div className="space-y-1">
-                      <Label htmlFor="announcements">Announcements</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Get notified about admin announcements
-                      </p>
-                    </div>
-                    <Switch
-                      id="announcements"
-                      checked={notificationSettings.announcements}
-                      onCheckedChange={() => handleNotificationToggle('announcements')}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                    <div className="space-y-1">
-                      <Label htmlFor="mealUpdates">Meal Updates</Label>
-                      <p className="text-xs text-muted-foreground">
-                        Updates about meal planning
-                      </p>
-                    </div>
-                    <Switch
-                      id="mealUpdates"
-                      checked={notificationSettings.mealUpdates}
-                      onCheckedChange={() => handleNotificationToggle('mealUpdates')}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                    <div className="space-y-1">
-                      <Label htmlFor="memberActivity">Member Activity</Label>
-                      <p className="text-xs text-muted-foreground">
-                        When members join or leave
-                      </p>
-                    </div>
-                    <Switch
-                      id="memberActivity"
-                      checked={notificationSettings.memberActivity}
-                      onCheckedChange={() => handleNotificationToggle('memberActivity')}
-                    />
-                  </div>
-
-                  {(isAdmin || isCreator) && (
-                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                      <div className="space-y-1">
-                        <Label htmlFor="joinRequests">Join Requests</Label>
-                        <p className="text-xs text-muted-foreground">
-                          When users request to join
-                        </p>
-                      </div>
-                      <Switch
-                        id="joinRequests"
-                        checked={notificationSettings.joinRequests}
-                        onCheckedChange={() => handleNotificationToggle('joinRequests')}
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Alert>
-                  <AlertDescription>Failed to load notification settings</AlertDescription>
-                </Alert>
-              )}
-            </div>
-
-            <div className="space-y-4 border-t pt-6">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
-                <p className="text-sm text-muted-foreground">
-                  These actions are irreversible and will permanently affect your group. Please proceed with caution.
-                </p>
-              </div>
-
+            {isLoadingNotifications ? (
               <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : notificationSettings ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="groupMessages">Group Messages</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Get notified when members send messages
+                    </p>
+                  </div>
+                  <Switch
+                    id="groupMessages"
+                    checked={notificationSettings.groupMessages}
+                    onCheckedChange={() => handleNotificationToggle('groupMessages')}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="announcements">Announcements</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Get notified about admin announcements
+                    </p>
+                  </div>
+                  <Switch
+                    id="announcements"
+                    checked={notificationSettings.announcements}
+                    onCheckedChange={() => handleNotificationToggle('announcements')}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="mealUpdates">Meal Updates</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Updates about meal planning
+                    </p>
+                  </div>
+                  <Switch
+                    id="mealUpdates"
+                    checked={notificationSettings.mealUpdates}
+                    onCheckedChange={() => handleNotificationToggle('mealUpdates')}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                  <div className="space-y-1">
+                    <Label htmlFor="memberActivity">Member Activity</Label>
+                    <p className="text-xs text-muted-foreground">
+                      When members join or leave
+                    </p>
+                  </div>
+                  <Switch
+                    id="memberActivity"
+                    checked={notificationSettings.memberActivity}
+                    onCheckedChange={() => handleNotificationToggle('memberActivity')}
+                  />
+                </div>
+
+                {(isAdmin || isCreator) && (
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                    <div className="space-y-1">
+                      <Label htmlFor="joinRequests">Join Requests</Label>
+                      <p className="text-xs text-muted-foreground">
+                        When users request to join
+                      </p>
+                    </div>
+                    <Switch
+                      id="joinRequests"
+                      checked={notificationSettings.joinRequests}
+                      onCheckedChange={() => handleNotificationToggle('joinRequests')}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Alert>
+                <AlertDescription>Failed to load notification settings</AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <div className="space-y-4 border-t pt-6">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+              <p className="text-sm text-muted-foreground">
+                These actions are irreversible and will permanently affect your group. Please proceed with caution.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
+                <div className="space-y-1">
+                  <h4 className="font-medium text-destructive">Leave Group</h4>
+                  <p className="text-sm text-muted-foreground">
+                    You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    if (isCreator) {
+                      toast.error('You must transfer the Admin role to another member before leaving the group.');
+                      return;
+                    }
+                    setIsLeaveDialogOpen(true);
+                  }}
+                  disabled={leaveGroup.isPending}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Leave
+                </Button>
+              </div>
+
+              {isCreator && (
                 <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
                   <div className="space-y-1">
-                    <h4 className="font-medium text-destructive">Leave Group</h4>
+                    <h4 className="font-medium text-destructive">Delete Group</h4>
                     <p className="text-sm text-muted-foreground">
-                      You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
+                      This will permanently delete the group and all associated data. This action cannot be undone. All members will lose access to the group and its content.
                     </p>
                   </div>
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={() => {
-                      if (isCreator) {
-                        toast.error('You must transfer the Admin role to another member before leaving the group.');
-                        return;
-                      }
-                      setIsLeaveDialogOpen(true);
-                    }}
-                    disabled={leaveGroup.isPending}
+                    onClick={() => setIsDeleteDialogOpen(true)}
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Leave
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Group
                   </Button>
                 </div>
-
-                {isCreator && (
-                  <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
-                    <div className="space-y-1">
-                      <h4 className="font-medium text-destructive">Delete Group</h4>
-                      <p className="text-sm text-muted-foreground">
-                        This will permanently delete the group and all associated data. This action cannot be undone. All members will lose access to the group and its content.
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => setIsDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Group
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-
-            <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Delete Group</DialogTitle>
-                  <DialogDescription>
-                    This action cannot be undone. This will permanently delete the group and all associated data including.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="mt-2">
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li>All group messages and announcements</li>
-                    <li>Member roles and permissions</li>
-                    <li>Activity logs and history</li>
-                    <li>Meal plans and shopping lists</li>
-                    <li>Payment records and transactions</li>
-                  </ul>
-                  <span className="font-medium block pt-4">
-                    To confirm, please type <span className="font-bold text-destructive">{group?.name}</span>:
-                  </span>
-                  <Input
-                    placeholder="Enter group name"
-                    value={deleteGroupName}
-                    onChange={(e) => setDeleteGroupName(e.target.value)}
-                    className={`${isDeleteNameValid
-                      ? "border-green-500 focus-visible:ring-green-500"
-                      : deleteGroupName
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                      }`}
-                    disabled={deleteGroup.isPending}
-                  />
-                  {deleteGroupName && !isDeleteNameValid && (
-                    <span className="text-sm text-destructive block">
-                      The name doesn't match the group name
-                    </span>
-                  )}
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline" disabled={deleteGroup.isPending}>
-                      Cancel
-                    </Button>
-                  </DialogClose>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleDeleteGroup}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    disabled={deleteGroup.isPending || !isDeleteNameValid}
-                  >
-                    {deleteGroup.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Group
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <AlertDialog open={isLeaveDialogOpen} onOpenChange={handleLeaveDialogOpenChange}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Leave Group</AlertDialogTitle>
-                  <AlertDialogDescription asChild>
-                    <div className="text-sm text-muted-foreground">
-                      <p>Are you sure you want to leave this group?</p>
-                      <div className="bg-muted/50 p-3 rounded-md my-3">
-                        <span className="text-sm font-medium block mb-2">This action will:</span>
-                        <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
-                          <li>Remove you from all group activities</li>
-                          <li>Revoke your access to group content</li>
-                          <li>Cancel any pending meal registrations</li>
-                          <li>Remove you from group notifications</li>
-                        </ul>
-                      </div>
-                      <p>
-                        You won't be able to access this group again unless you're re-invited.
-                      </p>
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel
-                    disabled={isLeaving || leaveGroup.isPending}
-                  >
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleLeaveGroup}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    disabled={isLeaving || leaveGroup.isPending}
-                  >
-                    {isLeaving || leaveGroup.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Leaving...
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Leave Group
-                      </>
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
 
+          <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Group</DialogTitle>
+                <DialogDescription>
+                  This action cannot be undone. This will permanently delete the group and all associated data including.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-2">
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>All group messages and announcements</li>
+                  <li>Member roles and permissions</li>
+                  <li>Activity logs and history</li>
+                  <li>Meal plans and shopping lists</li>
+                  <li>Payment records and transactions</li>
+                </ul>
+                <span className="font-medium block pt-4">
+                  To confirm, please type <span className="font-bold text-destructive">{group?.name}</span>:
+                </span>
+                <Input
+                  placeholder="Enter group name"
+                  value={deleteGroupName}
+                  onChange={(e) => setDeleteGroupName(e.target.value)}
+                  className={`${isDeleteNameValid
+                    ? "border-green-500 focus-visible:ring-green-500"
+                    : deleteGroupName
+                      ? "border-destructive focus-visible:ring-destructive"
+                      : ""
+                    }`}
+                  disabled={deleteGroup.isPending}
+                />
+                {deleteGroupName && !isDeleteNameValid && (
+                  <span className="text-sm text-destructive block">
+                    The name doesn't match the group name
+                  </span>
+                )}
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" disabled={deleteGroup.isPending}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteGroup}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={deleteGroup.isPending || !isDeleteNameValid}
+                >
+                  {deleteGroup.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Group
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <AlertDialog open={isLeaveDialogOpen} onOpenChange={handleLeaveDialogOpenChange}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Leave Group</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="text-sm text-muted-foreground">
+                    <p>Are you sure you want to leave this group?</p>
+                    <div className="bg-muted/50 p-3 rounded-md my-3">
+                      <span className="text-sm font-medium block mb-2">This action will:</span>
+                      <ul className="text-sm list-disc list-inside space-y-1 text-muted-foreground">
+                        <li>Remove you from all group activities</li>
+                        <li>Revoke your access to group content</li>
+                        <li>Cancel any pending meal registrations</li>
+                        <li>Remove you from group notifications</li>
+                      </ul>
+                    </div>
+                    <p>
+                      You won't be able to access this group again unless you're re-invited.
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  disabled={isLeaving || leaveGroup.isPending}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleLeaveGroup}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isLeaving || leaveGroup.isPending}
+                >
+                  {isLeaving || leaveGroup.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Leaving...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Leave Group
+                    </>
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
         </form>
       </CardContent>
-    </Card>
+    </Card >
   );
 } 

@@ -63,9 +63,6 @@ const data: {
         { title: "Balance", url: "/account-balance", icon: PieChart },
         { title: "Calculations", url: "/calculations", icon: Calculator },
 
-        { category: "Tools" },
-        { title: "Excel", url: "/excel", icon: FileSpreadsheet },
-
         { category: "Account" },
         { title: "Settings", url: "/settings", icon: Settings2 },
     ],
