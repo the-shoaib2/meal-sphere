@@ -403,7 +403,7 @@ export function useGroups(): UseGroupsReturn {
       const errorMessage = error.response?.data?.message || 'Failed to leave group';
 
       if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
-        toast.error('Group creator cannot leave. Please transfer ownership or delete the group.');
+        toast.error('You must transfer the Admin role to another member before leaving the group.');
       } else {
         toast.error(errorMessage);
       }

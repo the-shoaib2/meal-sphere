@@ -861,7 +861,7 @@ export function SettingsTab({
                     variant="destructive"
                     onClick={() => {
                       if (isCreator) {
-                        toast.error('You must transfer ownership to another member before leaving the group.');
+                        toast.error('You must transfer the Admin role to another member before leaving the group.');
                         return;
                       }
                       setIsLeaveDialogOpen(true);
