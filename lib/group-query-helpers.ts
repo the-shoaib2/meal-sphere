@@ -87,7 +87,10 @@ export async function getUserGroups(userId: string, includeMembers = false) {
         isCurrentMember: true,
       }));
     },
-    { ttl: CACHE_TTL.GROUPS_LIST || 120 }
+    { 
+      ttl: CACHE_TTL.GROUPS_LIST || 120,
+      tags: ['groups', `user:${userId}`]
+    }
   );
 }
 
@@ -171,7 +174,10 @@ export async function getGroupWithMembers(groupId: string, userId?: string) {
         isCurrentMember: !!userRole,
       };
     },
-    { ttl: CACHE_TTL.GROUP_DETAILS || 180 }
+    { 
+      ttl: CACHE_TTL.GROUP_DETAILS || 180,
+      tags: ['groups', `group:${groupId}`]
+    }
   );
 }
 
@@ -260,7 +266,10 @@ export async function getPublicGroups(limit = 50, userId?: string) {
         };
       });
     },
-    { ttl: CACHE_TTL.GROUPS_LIST || 120 }
+    { 
+      ttl: CACHE_TTL.GROUPS_LIST || 120,
+      tags: ['groups', 'public_groups']
+    }
   );
 }
 

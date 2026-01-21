@@ -558,8 +558,8 @@ model JoinRequest {
   @@index([status])
   @@index([createdAt])
   @@index([roomId, createdAt])
-  @@index([roomId, status, createdAt]) // Group: Pending requests by group
-  @@index([userId, status]) // Group: User's pending requests
+  @@index([roomId, status, createdAt])
+  @@index([userId, status])
 }
 
 /// GROUP MESSAGE MODEL
@@ -583,7 +583,7 @@ model GroupMessage {
 /// GROUP ACTIVITY LOG MODEL
 model GroupActivityLog {
   id        String   @id @default(uuid())
-  type      String // e.g., MEMBER_JOINED, SETTINGS_CHANGED, etc.
+  type      String
   details   Json?
   roomId    String
   userId    String
@@ -677,8 +677,8 @@ model AutoMealSettings {
   guestMealEnabled  Boolean    @default(false)
   startDate         DateTime   @default(now())
   endDate           DateTime?
-  excludedDates     String[] // Store dates as strings
-  excludedMealTypes MealType[] // Store meal types to exclude
+  excludedDates     String[]
+  excludedMealTypes MealType[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -753,22 +753,22 @@ model MealPeriod {
   @@index([startDate, endDate])
   @@index([createdAt])
   @@index([roomId, status])
-  @@index([roomId, startDate]) // Optimized: Sorting periods
+  @@index([roomId, startDate])
 }
 
 /// TRANSACTION HISTORY MODEL
 model TransactionHistory {
   id            String   @id @default(uuid())
-  transactionId String // Reference to the original transaction ID (might be deleted)
-  action        String // UPDATE, DELETE
+  transactionId String
+  action        String
   amount        Float
   type          String
   description   String?
-  userId        String // The user whose balance was affected
-  targetUserId  String // The target user (if applicable)
+  userId        String
+  targetUserId  String
   roomId        String
   periodId      String?
-  changedBy     String // Who made the change
+  changedBy     String
   changedAt     DateTime @default(now())
 
   // Snapshot of relations at time of history creation
@@ -776,6 +776,6 @@ model TransactionHistory {
   changedByUser User @relation(fields: [changedBy], references: [id], onDelete: Cascade)
 
   @@index([roomId, transactionId])
-  @@index([roomId, changedAt(sort: Desc)]) // Optimized for dashboard activity feed
+  @@index([roomId, changedAt(sort: Desc)])
   @@index([transactionId])
 }

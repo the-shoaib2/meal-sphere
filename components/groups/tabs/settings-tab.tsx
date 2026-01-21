@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';
+import { useActiveGroup } from '@/contexts/group-context';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -162,6 +163,7 @@ export function SettingsTab({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const router = useRouter();
+  const { updateGroupData } = useActiveGroup();
 
   // const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   // const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
@@ -172,8 +174,15 @@ export function SettingsTab({
   const [tagError, setTagError] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
   const [isDeleteNameValid, setIsDeleteNameValid] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   // Notification settings state
-  const [notificationSettings, setNotificationSettings] = useState<GroupNotificationSettings | null>(null);
+  const [notificationSettings, setNotificationSettings] = useState<GroupNotificationSettings | null>({
+    groupMessages: true,
+    announcements: true,
+    mealUpdates: true,
+    memberActivity: true,
+    joinRequests: true,
+  });
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   // Store previous group values for comparison
   const prevGroupRef = useState<PreviousGroupSettings | null>(null);
@@ -183,7 +192,7 @@ export function SettingsTab({
     defaultValues: {
       name: group?.name || '',
       description: group?.description || '',
-      bannerUrl: group?.bannerUrl || '/group-images/abstract.png',
+      bannerUrl: group?.bannerUrl || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png',
       isPrivate: group?.isPrivate || false,
       maxMembers: group?.maxMembers || undefined,
       tags: (group as any)?.tags || [],
@@ -191,9 +200,9 @@ export function SettingsTab({
     },
   });
 
-  const { register, handleSubmit, watch, formState: { errors }, setValue } = form;
+  const { register, handleSubmit, watch, formState: { errors, dirtyFields }, setValue } = form;
   const isPrivateForm = watch('isPrivate');
-  const bannerUrl = watch('bannerUrl') || '/group-images/abstract.png';
+  const bannerUrl = watch('bannerUrl') || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png';
   const formTags = watch('tags') || [];
   const formFeatures = watch('features') || {};
 
@@ -213,29 +222,61 @@ export function SettingsTab({
   // Update form values when group data changes
   useEffect(() => {
     if (group) {
-      setValue('name', group.name);
-      setValue('description', group.description || '');
-      setValue('bannerUrl', group.bannerUrl || '/group-images/abstract.png');
-      setValue('isPrivate', group.isPrivate);
-      setValue('maxMembers', group.maxMembers || undefined);
-      setValue('tags', (group as any).tags || []);
+      if (!dirtyFields.name) setValue('name', group.name);
+      if (!dirtyFields.description) setValue('description', group.description || '');
+      // Always update bannerUrl as it's handled separately or we want the latest
+      if (!dirtyFields.bannerUrl) setValue('bannerUrl', group.bannerUrl || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png');
+      if (!dirtyFields.isPrivate) setValue('isPrivate', group.isPrivate);
+      if (!dirtyFields.maxMembers) setValue('maxMembers', group.maxMembers || undefined);
+      if (!dirtyFields.tags) setValue('tags', (group as any).tags || []);
+      // Assuming features update individually via switches usually.
       setValue('features', (group as any).features || {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group, setValue]);
 
   // ... notification logic ...
 
+  const handleImageUpdate = async (url: string) => {
+    try {
+      // Optimistically update form
+      setValue('bannerUrl', url, { shouldDirty: true });
+      // Updates context immediately for Group Switcher and others
+      updateGroupData(groupId, { bannerUrl: url });
+
+      setIsLoading(true);
+      const result = await updateGroupAction(groupId, { bannerUrl: url });
+
+      if (!result.success) throw new Error(result.error);
+
+      router.refresh();
+      onUpdate();
+      toast.success('Group photo updated');
+    } catch (error: any) {
+      toast.error('Failed to update group photo');
+      // Revert on failure?
+      if (group?.bannerUrl) {
+        setValue('bannerUrl', group.bannerUrl);
+        // Revert context?
+        updateGroupData(groupId, { bannerUrl: group.bannerUrl });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
       setIsLoading(true);
-      const prev = prevGroupRef[0];
 
       const result = await updateGroupAction(groupId, {
         name: data.name,
         description: data.description,
         bannerUrl: data.bannerUrl,
         isPrivate: data.isPrivate,
-        maxMembers: typeof data.maxMembers === 'string' ? (data.maxMembers === '' ? null : Number(data.maxMembers)) : data.maxMembers,
+        maxMembers: typeof data.maxMembers === 'string'
+          ? (data.maxMembers === '' ? undefined : Number(data.maxMembers))
+          : (data.maxMembers === null ? undefined : data.maxMembers),
         tags: data.tags,
         features: data.features,
       });
@@ -296,17 +337,56 @@ export function SettingsTab({
   // ... leave dialog handlers ...
 
   const handleDeleteGroup = async () => {
-    if (!groupId || !isDeleteNameValid) return;
+    if (!groupId || !isDeleteNameValid || isDeleting) return;
     try {
+      setIsDeleting(true);
       const result = await deleteGroupAction(groupId);
       if (!result.success) throw new Error(result.error);
 
       setIsDeleteDialogOpen(false); // Only close after success
       toast.success('Group deleted');
       router.push('/groups');
-    } catch (error) {
-      toast.error('Failed to delete group');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete group');
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  const handleAddTag = () => {
+    const tag = newTag.trim().toLowerCase();
+    if (!tag) return;
+    if (formTags.includes(tag)) {
+      setTagError('Tag already exists');
+      return;
+    }
+    if (formTags.length >= 10) {
+      setTagError('Maximum 10 tags allowed');
+      return;
+    }
+    setValue('tags', [...formTags, tag], { shouldDirty: true });
+    setNewTag('');
+    setTagError('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setValue('tags', formTags.filter(t => t !== tagToRemove), { shouldDirty: true });
+  };
+
+  const handleNotificationToggle = (key: keyof GroupNotificationSettings) => {
+    if (!notificationSettings) return;
+    setNotificationSettings(prev => prev ? {
+      ...prev,
+      [key]: !prev[key]
+    } : null);
+    toast.success('Notification settings updated');
   };
 
   const handleLeaveDialogOpenChange = (open: boolean) => {
@@ -524,7 +604,7 @@ export function SettingsTab({
             <div className="space-y-2">
               <GroupImageSelection
                 selectedImage={bannerUrl}
-                onSelect={(url) => setValue('bannerUrl', url, { shouldDirty: true })}
+                onSelect={handleImageUpdate}
               />
             </div>
 
@@ -795,7 +875,7 @@ export function SettingsTab({
                     }
                     setIsLeaveDialogOpen(true);
                   }}
-                  disabled={leaveGroup.isPending}
+                  disabled={isLeaving}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Leave
@@ -845,14 +925,17 @@ export function SettingsTab({
                 <Input
                   placeholder="Enter group name"
                   value={deleteGroupName}
-                  onChange={(e) => setDeleteGroupName(e.target.value)}
+                  onChange={(e) => {
+                    setDeleteGroupName(e.target.value);
+                    setIsDeleteNameValid(e.target.value === group?.name);
+                  }}
                   className={`${isDeleteNameValid
                     ? "border-green-500 focus-visible:ring-green-500"
                     : deleteGroupName
                       ? "border-destructive focus-visible:ring-destructive"
                       : ""
                     }`}
-                  disabled={deleteGroup.isPending}
+                  disabled={isDeleting}
                 />
                 {deleteGroupName && !isDeleteNameValid && (
                   <span className="text-sm text-destructive block">
@@ -862,7 +945,7 @@ export function SettingsTab({
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline" disabled={deleteGroup.isPending}>
+                  <Button type="button" variant="outline" disabled={isDeleting}>
                     Cancel
                   </Button>
                 </DialogClose>
@@ -871,9 +954,9 @@ export function SettingsTab({
                   variant="destructive"
                   onClick={handleDeleteGroup}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  disabled={deleteGroup.isPending || !isDeleteNameValid}
+                  disabled={isDeleting || !isDeleteNameValid}
                 >
-                  {deleteGroup.isPending ? (
+                  {isDeleting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Deleting...
@@ -913,16 +996,16 @@ export function SettingsTab({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel
-                  disabled={isLeaving || leaveGroup.isPending}
+                  disabled={isLeaving}
                 >
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleLeaveGroup}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  disabled={isLeaving || leaveGroup.isPending}
+                  disabled={isLeaving}
                 >
-                  {isLeaving || leaveGroup.isPending ? (
+                  {isLeaving ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Leaving...

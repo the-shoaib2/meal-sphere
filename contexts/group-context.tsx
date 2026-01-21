@@ -16,6 +16,7 @@ type GroupContextType = {
   isLoading: boolean;
   isSwitchingGroup: boolean;
   groups: Group[];
+  updateGroupData: (groupId: string, data: Partial<Group>) => void;
 };
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
@@ -180,6 +181,30 @@ export function GroupProvider({
     });
   };
 
+  const updateGroupData = (groupId: string, data: Partial<Group>) => {
+    // Update active group if it matches
+    if (activeGroup?.id === groupId) {
+      const updated = { ...activeGroup, ...data } as Group;
+      setActiveGroup(updated);
+
+      // Update local storage
+      try {
+        const encrypted = encryptData(JSON.stringify(updated));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(ENC_KEY, encrypted);
+        }
+      } catch (error) {
+        console.error('Failed to save updated active group:', error);
+      }
+    }
+
+    // Update query cache
+    queryClient.setQueryData(['user-groups', session?.user?.id], (oldGroups: Group[] | undefined) => {
+      if (!oldGroups) return oldGroups;
+      return oldGroups.map(g => g.id === groupId ? { ...g, ...data } : g);
+    });
+  };
+
   // Set loading state based on session status and initial group load
   useEffect(() => {
     if (status !== 'loading') {
@@ -191,7 +216,7 @@ export function GroupProvider({
   const contextIsLoading = status === 'loading' || isLoading;
 
   return (
-    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, isLoading: contextIsLoading, isSwitchingGroup, groups }}>
+    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, updateGroupData, isLoading: contextIsLoading, isSwitchingGroup, groups }}>
       {children}
     </GroupContext.Provider>
   );

@@ -223,7 +223,10 @@ export async function GET(req: NextRequest) {
         // Default: for authenticated users, return groups where they are members
         return await getUserGroups(session.user.id, false);
       },
-      { ttl: CACHE_TTL.GROUPS_LIST }
+      { 
+        ttl: CACHE_TTL.GROUPS_LIST,
+        tags: ['groups', `user:${session?.user?.id || 'anonymous'}`]
+      }
     );
 
     const duration = Date.now() - startTime;

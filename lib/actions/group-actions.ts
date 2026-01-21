@@ -21,6 +21,7 @@ import {
   UpdateGroupData 
 } from '@/lib/services/groups-service';
 import { prisma } from '@/lib/services/prisma';
+import { cacheInvalidateByTag } from '@/lib/cache/cache-service';
 
 export type ActionState = {
   success?: boolean;
@@ -59,6 +60,10 @@ export async function createGroupAction(data: CreateGroupData): Promise<ActionSt
     revalidatePath('/groups');
     revalidateTag('user-groups');
     revalidateTag('groups');
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`user:${userId}`);
+    await cacheInvalidateByTag('groups');
     
     return { success: true, data: group };
   } catch (error: any) {
@@ -78,6 +83,11 @@ export async function updateGroupAction(groupId: string, data: UpdateGroupData):
     revalidatePath('/groups');
     revalidateTag(`group-${groupId}`);
     revalidateTag('groups');
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`group:${groupId}`);
+    await cacheInvalidateByTag('groups');
+    await cacheInvalidateByTag(`user:${userId}`); // For lists
     
     return { success: true, data: group };
   } catch (error: any) {
@@ -100,6 +110,11 @@ export async function deleteGroupAction(groupId: string): Promise<ActionState> {
     revalidateTag('groups');
     revalidateTag(`user-${userId}`);
     revalidateTag(`group-${groupId}`);
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`group:${groupId}`);
+    await cacheInvalidateByTag('groups');
+    await cacheInvalidateByTag(`user:${userId}`);
     
     return { success: true };
   } catch (error: any) {
@@ -118,6 +133,11 @@ export async function joinGroupAction(groupId: string, password?: string, token?
     revalidateTag(`group-${groupId}`);
     revalidateTag('groups');
     revalidateTag(`user-${userId}`);
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`group:${groupId}`);
+    await cacheInvalidateByTag('groups');
+    await cacheInvalidateByTag(`user:${userId}`);
     
     return { success: true };
   } catch (error: any) {
@@ -132,8 +152,13 @@ export async function createJoinRequestAction(groupId: string, message?: string)
     await createJoinRequest(groupId, userId, message);
     
     revalidatePath(`/groups/${groupId}`);
-    revalidateTag(`join-requests-${groupId}`);
+    revalidateTag(`user-${userId}`);
     revalidateTag(`group-${groupId}`);
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`group:${groupId}`);
+    await cacheInvalidateByTag('groups');
+    await cacheInvalidateByTag(`user:${userId}`);
     
     return { success: true };
   } catch (error: any) {
@@ -163,6 +188,11 @@ export async function leaveGroupAction(groupId: string): Promise<ActionState> {
     revalidateTag(`group-${groupId}`);
     revalidateTag('groups');
     revalidateTag(`user-${userId}`);
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`group:${groupId}`);
+    await cacheInvalidateByTag('groups');
+    await cacheInvalidateByTag(`user:${userId}`);
     
     return { success: true };
   } catch (error: any) {
@@ -188,6 +218,11 @@ export async function processJoinRequestAction(requestId: string, action: 'appro
     revalidateTag(`group-${request.roomId}`);
     revalidateTag(`user-${request.userId}`);
     revalidatePath(`/groups/${request.roomId}`);
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag(`group:${request.roomId}`);
+    await cacheInvalidateByTag(`user:${request.userId}`);
+    await cacheInvalidateByTag(`user:${userId}`);
     
     return { success: true };
   } catch (error: any) {
@@ -212,6 +247,10 @@ export async function setCurrentGroupAction(groupId: string): Promise<ActionStat
     revalidateTag('user-groups');
     revalidateTag('groups');
     revalidateTag(`user-${userId}`);
+
+    // Invalidate Redis cache
+    await cacheInvalidateByTag('groups');
+    await cacheInvalidateByTag(`user:${userId}`);
     
     return { success: true };
   } catch (error: any) {
