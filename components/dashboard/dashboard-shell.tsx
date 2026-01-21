@@ -2,29 +2,31 @@
 
 import { ReactNode, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardRefreshContext } from '@/contexts/dashboard-refresh-context';
+import { DashboardContext } from '@/contexts/dashboard-context';
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
 import { useActiveGroup } from '@/contexts/group-context';
+
+// Types
+import { DashboardActivity, DashboardChartData } from '@/types/dashboard';
 
 interface DashboardShellProps {
     header: ReactNode;
     children: ReactNode;
+    // Data props from server
+    activities?: DashboardActivity[];
+    chartData?: DashboardChartData[];
 }
 
 /**
  * DashboardShell - Wrapper component that manages dashboard refresh state
- * 
- * Architecture:
- * - Server Component (page.tsx): Handles data fetching
- * - Client Component (this): Manages refresh interactivity
- * 
- * Benefits:
- * - Keeps header visible during refresh (better UX)
- * - Shows skeleton for content while re-fetching
- * - Provides refresh context to child components
- * - Detects group switching and shows skeleton during transition
+ *                  AND provides unified dashboard data context.
  */
-export function DashboardShell({ header, children }: DashboardShellProps) {
+export function DashboardShell({
+    header,
+    children,
+    activities,
+    chartData
+}: DashboardShellProps) {
     const router = useRouter();
     const [isRefreshing, startTransition] = useTransition();
     const { isSwitchingGroup } = useActiveGroup();
@@ -39,7 +41,21 @@ export function DashboardShell({ header, children }: DashboardShellProps) {
     const isLoading = isRefreshing || isSwitchingGroup;
 
     return (
-        <DashboardRefreshContext.Provider value={{ refresh, isRefreshing }}>
+        <DashboardContext.Provider
+            value={{
+                // Data
+                activities,
+                chartData,
+
+                // Status
+                isLoading,
+                error: null, // Basic error handling is done via error.tsx boundaries
+
+                // Refresh Logic
+                refresh,
+                isRefreshing
+            }}
+        >
             {/* Keep header visible during refresh */}
             {header}
 
@@ -49,6 +65,6 @@ export function DashboardShell({ header, children }: DashboardShellProps) {
             ) : (
                 children
             )}
-        </DashboardRefreshContext.Provider>
+        </DashboardContext.Provider>
     );
 }

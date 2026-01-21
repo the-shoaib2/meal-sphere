@@ -88,7 +88,7 @@ interface UseGroupsReturn {
   data: Group[];
   isLoading: boolean;
   error: Error | null;
-  useGroupsList: (options: { filter: 'my' | 'public' | 'all' }) => {
+  useGroupsList: (options: { filter: 'my' | 'public' | 'all'; initialData?: Group[] }) => {
     data: Group[];
     isLoading: boolean;
     error: Error | null;
@@ -99,7 +99,12 @@ interface UseGroupsReturn {
   updateGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>>;
   joinGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>>;
   leaveGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, string>>;
-  deleteGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { previousGroups: Group[] | undefined }>>;
+  deleteGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { 
+    previousUserGroups: Group[] | undefined;
+    previousMyGroups: Group[] | undefined;
+    previousPublicGroups: Group[] | undefined;
+    previousAllGroups: Group[] | undefined;
+  }>>;
   useJoinRequests: (groupId: string) => {
     data: JoinRequest[];
     isLoading: boolean;
@@ -148,7 +153,7 @@ export function useGroups(): UseGroupsReturn {
   const isLoading = status === 'loading' || isLoadingGroups;
 
   // Get groups list based on filter
-  const useGroupsList = ({ filter }: { filter: 'my' | 'public' | 'all' }) => {
+  const useGroupsList = ({ filter, initialData }: { filter: 'my' | 'public' | 'all'; initialData?: Group[] }) => {
     const { data: groupsList = [], isLoading: listLoading, error: listError } = useQuery<Group[], Error>({
       queryKey: ['groups', filter],
       queryFn: async () => {
@@ -165,6 +170,7 @@ export function useGroups(): UseGroupsReturn {
         }
       },
       enabled: !!session?.user?.id && !!filter,
+      initialData: initialData,
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false
     });
@@ -279,9 +285,16 @@ export function useGroups(): UseGroupsReturn {
       // Optimistically add the new group to the cache
       queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => [data, ...old]);
 
-      // Optionally, redirect to the new group page
-      router.push(`/groups/${data.id}`);
-      toast.success('Group created successfully');
+      // Optimistically update lists for immediate UI feedback
+      queryClient.setQueryData(['groups', 'my'], (old: Group[] = []) => [data, ...old]);
+      queryClient.setQueryData(['groups', 'all'], (old: Group[] = []) => [data, ...old]);
+      
+      if (!data.isPrivate) {
+          queryClient.setQueryData(['groups', 'public'], (old: Group[] = []) => [data, ...old]);
+      }
+
+      // No invalidation here - trust the optimistic update
+      // Let the calling component handle navigation and toast
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error creating group:', error);
@@ -308,7 +321,8 @@ export function useGroups(): UseGroupsReturn {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group'] });
       queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-
+      
+      router.refresh();
       toast.success('Successfully joined the group!');
     },
     onError: (error) => {
@@ -396,6 +410,7 @@ export function useGroups(): UseGroupsReturn {
 
 
       toast.success('You have left the group successfully');
+      router.refresh();
       router.push('/groups');
     },
     onError: (error: AxiosError<{ message: string }>, groupId: string, context: LeaveGroupContext | undefined) => {
@@ -429,47 +444,77 @@ export function useGroups(): UseGroupsReturn {
     },
   });
   // Delete group
-  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { previousGroups: Group[] | undefined }>({
+  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { 
+    previousUserGroups: Group[] | undefined;
+    previousMyGroups: Group[] | undefined;
+    previousPublicGroups: Group[] | undefined;
+    previousAllGroups: Group[] | undefined;
+  }>({
     mutationFn: async ({ groupId }) => {
       await axios.delete(`/api/groups/${groupId}`);
     },
     onMutate: async ({ groupId }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['user-groups', session?.user?.id] });
+      await queryClient.cancelQueries({ queryKey: ['groups', 'my'] });
+      await queryClient.cancelQueries({ queryKey: ['groups', 'public'] });
+      await queryClient.cancelQueries({ queryKey: ['groups', 'all'] });
       await queryClient.cancelQueries({ queryKey: ['group', groupId] });
 
-      // Snapshot the previous value
-      const previousGroups = queryClient.getQueryData<Group[]>(['user-groups', session?.user?.id]);
+      // Snapshot the previous values
+      const previousUserGroups = queryClient.getQueryData<Group[]>(['user-groups', session?.user?.id]);
+      const previousMyGroups = queryClient.getQueryData<Group[]>(['groups', 'my']);
+      const previousPublicGroups = queryClient.getQueryData<Group[]>(['groups', 'public']);
+      const previousAllGroups = queryClient.getQueryData<Group[]>(['groups', 'all']);
 
-      // Optimistically update the groups list
-      if (Array.isArray(previousGroups)) {
-        queryClient.setQueryData(['user-groups', session?.user?.id],
-          previousGroups.filter(g => g.id !== groupId)
-        );
+      // Optimistically update the user groups list
+      if (previousUserGroups) {
+        queryClient.setQueryData(['user-groups', session?.user?.id], previousUserGroups.filter(g => g.id !== groupId));
       }
 
-      // Remove the group from cache
-      queryClient.removeQueries({ queryKey: ['group', groupId] });
+      // Optimistically update the other lists
+      if (previousMyGroups) {
+        queryClient.setQueryData(['groups', 'my'], previousMyGroups.filter(g => g.id !== groupId));
+      }
+      if (previousPublicGroups) {
+        queryClient.setQueryData(['groups', 'public'], previousPublicGroups.filter(g => g.id !== groupId));
+      }
+      if (previousAllGroups) {
+        queryClient.setQueryData(['groups', 'all'], previousAllGroups.filter(g => g.id !== groupId));
+      }
 
-      return { previousGroups };
+      // NOTE: Do NOT remove the group from cache here. 
+      // Doing so causes the current page (Group Settings) to lose data and unmount/show error 
+      // before the navigation in onSuccess allows us to leave the page.
+      // queryClient.removeQueries({ queryKey: ['group', groupId] });
+
+      return { previousUserGroups, previousMyGroups, previousPublicGroups, previousAllGroups };
     },
     onSuccess: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-
       toast.success('Group deleted successfully');
+      router.refresh();
       router.push('/groups');
     },
     onError: (error: AxiosError<{ message: string }>, variables, context) => {
       console.error('Error deleting group:', error);
       // Rollback on error
-      if (context?.previousGroups) {
-        queryClient.setQueryData(['user-groups', session?.user?.id], context.previousGroups);
+      if (context?.previousUserGroups) {
+        queryClient.setQueryData(['user-groups', session?.user?.id], context.previousUserGroups);
+      }
+      if (context?.previousMyGroups) {
+        queryClient.setQueryData(['groups', 'my'], context.previousMyGroups);
+      }
+      if (context?.previousPublicGroups) {
+        queryClient.setQueryData(['groups', 'public'], context.previousPublicGroups);
+      }
+      if (context?.previousAllGroups) {
+        queryClient.setQueryData(['groups', 'all'], context.previousAllGroups);
       }
       toast.error(error.response?.data?.message || 'Failed to delete group');
     },
     onSettled: () => {
-      // Always refetch after error or success
+      // Only refetch user-groups to keep the session context somewhat fresh, 
+      // but avoid refetching the main lists to preserve optimistic deletion
       queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
     },
   });

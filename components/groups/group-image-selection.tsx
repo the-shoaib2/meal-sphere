@@ -44,7 +44,7 @@ export function GroupImageSelection({ selectedImage, onSelect }: GroupImageSelec
         if (isLoading) return;
         setIsLoading(true);
         try {
-            const response = await axios.get(`/ api / images / group - images ? page = ${ pageNum }& limit=15`); // Load more since they are smaller
+            const response = await axios.get(`/api/images/group-images?page=${pageNum}&limit=15`); // Load more since they are smaller
             const newImages = response.data.images;
             setImages(prev => reset ? newImages : [...prev, ...newImages]);
             setHasMore(response.data.hasMore);
@@ -86,7 +86,7 @@ export function GroupImageSelection({ selectedImage, onSelect }: GroupImageSelec
     return (
         <div className="space-y-4">
             <Label>Group Image</Label>
-            
+
             <div className="flex items-center gap-4">
                 {/* Circular Preview Area - Persistent Camera Icon */}
                 <div className="group relative h-20 w-20 rounded-full overflow-hidden border-2 border-muted bg-muted shrink-0">
@@ -107,18 +107,18 @@ export function GroupImageSelection({ selectedImage, onSelect }: GroupImageSelec
                             {/* Placeholder background if needed, currently plain muted */}
                         </div>
                     )}
-                    
+
                     {/* Always Visible Camera Icon Button */}
                     <div className="absolute inset-0 flex items-center justify-center z-10">
                         <Dialog open={open} onOpenChange={setOpen}>
                             <DialogTrigger asChild>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     className="bg-black/40 text-white hover:bg-black/60 hover:text-white rounded-full h-8 w-8 transition-all hover:scale-110"
                                     onClick={() => {
                                         setTempSelected(selectedImage);
-                                        if(images.length === 0) setPage(1);
+                                        if (images.length === 0) setPage(1);
                                     }}
                                 >
                                     <Camera className="h-4 w-4" />
@@ -132,7 +132,7 @@ export function GroupImageSelection({ selectedImage, onSelect }: GroupImageSelec
                                         Choose a suggested image for your group.
                                     </DialogDescription>
                                 </DialogHeader>
-                                
+
                                 <div className="flex-1 overflow-hidden flex flex-col bg-muted/5">
                                     <ScrollArea className="flex-1 p-4">
                                         {/* Smaller Grid Images: grid-cols-4 sm:grid-cols-5 */}

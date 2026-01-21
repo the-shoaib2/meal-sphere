@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useDashboardRefresh } from "@/contexts/dashboard-refresh-context";
+import { useDashboardContext } from "@/contexts/dashboard-context";
 
 export default function DashboardRefreshButton() {
     // Consume context instead of local state
-    const { refresh, isRefreshing } = useDashboardRefresh();
+    const { refresh, isRefreshing } = useDashboardContext();
 
     return (
         <Button

@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
 import { fetchGroupsData } from '@/lib/services/groups-service';
 import { GroupsView } from '@/components/groups/groups-view';
+import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,14 +19,11 @@ export default async function GroupsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
-          <p className="text-muted-foreground text-sm">
-            Join existing groups or create your own to start planning meals together.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        heading="Groups"
+        text="Join existing groups or create your own to start planning meals together."
+        className="mb-8"
+      />
 
       <GroupsView initialData={data} />
     </div>

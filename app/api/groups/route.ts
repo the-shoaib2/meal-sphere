@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { z } from 'zod';
@@ -99,30 +100,9 @@ export async function POST(req: Request) {
       throw new Error('Failed to create group: No group was returned from database');
     }
 
-    // Invalidate caches
-    // We need to invalidate the creator's group list and public lists
-    // Using simple pattern matching or just clearing keys
-    /* 
-       Note: Advanced invalidation would use a Redis pattern scan or tag-based invalidation.
-       For now, since we have short TTLs (2 mins), waiting is okay, but explicit clearing is better.
-       However, we don't have a direct 'invalidatePattern' exposed in basic cache-service easily without scan.
-       
-       Let's rely on short TTL for lists, OR implemented a focused clear if key structure is predictable.
-       The key is `groups_list:${userId}:${filter}`.
-    */
-    // We can't easily clear all wildcards without a scan command in Redis/memory.
-    // But we CAN clear the specific user's cache if we know it.
-    // Ideally we'd have `cacheService.invalidate('groups_list:' + session.user.id + ':*')`
-    
-    // For this step, we will trust the short TTL (2 min) or the user can refresh. 
-    // BUT the critical one is "My Groups".
-    // Let's at least try to clear the specific "my" and "all" filters for the user.
-    /*
-    await Promise.all([
-      cacheDelete(`groups_list:${session.user.id}:my`),
-      cacheDelete(`groups_list:${session.user.id}:all`),
-    ]);
-    */
+    // Invalidate caches using revalidateTag for Next.js unstable_cache
+    revalidateTag(`user-${session.user.id}`, { force: true } as any);
+    revalidateTag('groups', { force: true } as any);
     
     return NextResponse.json(group);
   } catch (error) {

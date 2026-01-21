@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { fetchGroupDetails, fetchGroupAccessData } from '@/lib/services/groups-service';
 import { GroupPageContent } from '@/components/groups/group-page-content';
 import { NoGroupState } from "@/components/empty-states/no-group-state";
+import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,10 +33,10 @@ export default async function GroupPage(props: { params: Promise<{ id: string }>
     return (
       <div className="space-y-6 p-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Group Not Found</h1>
-          <p className="text-muted-foreground text-sm">
-            The group you are looking for does not exist or you do not have permission to view it.
-          </p>
+          <PageHeader
+            heading="Group Not Found"
+            text="The group you are looking for does not exist or you do not have permission to view it."
+          />
         </div>
         <NoGroupState />
       </div>

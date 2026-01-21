@@ -15,7 +15,6 @@ import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { DashboardOverview } from '@/components/dashboard/dashboard-overview';
 import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 import { DashboardQuickActions } from '@/components/dashboard/dashboard-quick-actions';
-import { StaticDashboardProvider } from '@/contexts/dashboard-context';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { PageHeader } from '@/components/shared/page-header';
 
@@ -61,33 +60,31 @@ export default async function DashboardPage() {
         return (
             <DashboardShell
                 header={
-                    <PageHeader heading="Dashboard Overview" />
+                    <PageHeader heading="Dashboard" />
                 }
             >
-        <NoPeriodState
-            isPrivileged={isPrivileged}
-            // For dashboard, we might want a slightly different description
-            title="No Active Period"
-            description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
-        />
+                <NoPeriodState
+                    isPrivileged={isPrivileged}
+                    // For dashboard, we might want a slightly different description
+                    title="No Active Period"
+                    description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
+                />
             </DashboardShell >
         );
-}
+    }
 
-// 4. Render UI
-return (
-    <DashboardShell
-        header={
-            <PageHeader heading="Dashboard">
-                <DashboardRefreshButton />
-            </PageHeader>
-        }
-    >
-        <div className="space-y-4 sm:space-y-6">
-            <StaticDashboardProvider
-                activities={data.activities}
-                chartData={data.chartData}
-            >
+    // 4. Render UI
+    return (
+        <DashboardShell
+            header={
+                <PageHeader heading="Dashboard">
+                    <DashboardRefreshButton />
+                </PageHeader>
+            }
+            activities={data.activities}
+            chartData={data.chartData}
+        >
+            <div className="space-y-4 sm:space-y-6">
                 {/* Overview Section */}
                 <DashboardOverview summaryData={data.summary} />
 
@@ -105,8 +102,7 @@ return (
                     mealRateTrend={data.analytics.mealRateTrend}
                     roomStats={data.analytics.roomStats}
                 />
-            </StaticDashboardProvider>
-        </div>
-    </DashboardShell>
-);
+            </div>
+        </DashboardShell>
+    );
 }

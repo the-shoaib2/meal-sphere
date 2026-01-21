@@ -32,6 +32,8 @@ export function GroupsView({ initialData }: GroupsViewProps) {
     const { data: session } = useSession();
     const [searchQuery, setSearchQuery] = useState('');
 
+    const { useGroupsList } = useGroups();
+
     // Get the active tab from URL search params, default to 'my-groups'
     const [activeTab, setActiveTab] = useState(() => {
         const tabFromUrl = searchParams?.get('tab');
@@ -40,15 +42,21 @@ export function GroupsView({ initialData }: GroupsViewProps) {
             : 'my-groups';
     });
 
-    // Use initial data, no client-side fetching on mount
-    const [groups, setGroups] = useState<Group[]>(
-        activeTab === 'my-groups' ? initialData.myGroups : initialData.publicGroups
-    );
+    // Use the hook with initial data based on the active tab
+    // We fetch both lists to ensure switching tabs feels instant, 
+    // relying on the hook's staleTime config to avoid unnecessary refetches
+    const { data: myGroups } = useGroupsList({
+        filter: 'my',
+        initialData: initialData.myGroups
+    });
 
-    // Update groups when tab changes
-    useEffect(() => {
-        setGroups(activeTab === 'my-groups' ? initialData.myGroups : initialData.publicGroups);
-    }, [activeTab, initialData]);
+    const { data: publicGroups } = useGroupsList({
+        filter: 'public',
+        initialData: initialData.publicGroups
+    });
+
+    // Determine which groups to show based on active tab
+    const groups = activeTab === 'my-groups' ? myGroups : publicGroups;
 
     // Update URL when tab changes
     const handleTabChange = (value: string) => {

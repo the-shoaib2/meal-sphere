@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
@@ -75,6 +76,11 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await req.json();
     const validatedData = updateGroupSchema.parse(body);
 
@@ -100,11 +106,17 @@ export async function PATCH(
     });
 
     // Invalidate caches
+    // Invalidate caches
+    // 1. Redis Cache
     await Promise.all([
       cacheDelete(`group_details:${id}:*`),
       cacheDelete(`groups_list:*`),
       cacheDelete(`group_with_members:${id}:*`)
     ]);
+
+    // 2. Next.js Server Cache
+    // revalidateTag(`group-${id}`);
+    // revalidateTag(`user-${session.user.id}`);
 
     return NextResponse.json(updatedGroup);
   } catch (error) {
@@ -123,6 +135,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
 
     // Validate group access
     const validation = await validateGroupAccess(id);
@@ -141,6 +157,11 @@ export async function DELETE(
     await prisma.room.delete({
       where: { id }
     });
+
+    // Invalidate caches
+    revalidateTag(`group-${id}`, { force: true } as any);
+    revalidateTag(`user-${session.user.id}`, { force: true } as any);
+    revalidateTag('groups', { force: true } as any);
 
     return NextResponse.json({ message: 'Group deleted successfully' }, { status: 200 });
   } catch (error) {
