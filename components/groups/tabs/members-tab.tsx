@@ -52,6 +52,7 @@ interface MembersTabProps {
   currentUserId?: string;
   members: Member[];
   onMemberUpdate: () => void;
+  initialInviteTokens?: any[];
 }
 
 export function MembersTab({
@@ -62,6 +63,7 @@ export function MembersTab({
   currentUserId,
   members,
   onMemberUpdate,
+  initialInviteTokens = [],
 }: MembersTabProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -162,7 +164,11 @@ export function MembersTab({
                 {members.length} {members.length === 1 ? 'member' : 'members'} in this group
               </p>
             </div>
-            <InviteCard groupId={groupId} group={group} />
+            <InviteCard
+              groupId={groupId}
+              group={group}
+              initialTokens={initialInviteTokens}
+            />
           </div>
 
           <div className="divide-y">

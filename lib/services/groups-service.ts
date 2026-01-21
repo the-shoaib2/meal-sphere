@@ -3,6 +3,8 @@ import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
 import { cacheDelete } from '@/lib/cache/cache-service';
+import { Role } from '@prisma/client';
+import { sendGroupInviteEmail } from './email-utils';
 
 export async function fetchGroupsData(userId: string) {
   const cacheKey = `groups-${userId}`;
@@ -408,6 +410,100 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
   return decryptData(encrypted);
 }
 
+export async function fetchGroupInviteTokens(groupId: string, userId: string) {
+  const cacheKey = `group-invites-${groupId}-${userId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      const membership = await prisma.roomMember.findFirst({
+        where: {
+          roomId: groupId,
+          userId,
+          role: { in: ['ADMIN', 'MODERATOR', 'MANAGER'] },
+        },
+      });
+
+      if (!membership) {
+        return encryptData({
+          error: "Unauthorized",
+          data: [],
+          timestamp: new Date().toISOString(),
+          executionTime: performance.now() - start
+        });
+      }
+
+      const inviteTokens = await prisma.inviteToken.findMany({
+        where: {
+          roomId: groupId,
+          expiresAt: {
+            gt: new Date()
+          }
+        },
+        include: {
+          createdByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Generate invite URL for each token
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const formattedData = inviteTokens.map(token => ({
+        ...token,
+        inviteUrl: `${baseUrl}/groups/join/${token.token}`
+      }));
+
+      const end = performance.now();
+      const executionTime = end - start;
+
+      const result = {
+        data: formattedData,
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey, 'group-invites'],
+    { 
+      revalidate: 30, 
+      tags: [`group-${groupId}-invites`, `user-${userId}`] 
+    }
+  );
+
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}
+
+export async function resolveInviteToken(token: string) {
+  const invite = await prisma.inviteToken.findUnique({
+    where: { token },
+    select: {
+      roomId: true,
+      expiresAt: true,
+      role: true
+    }
+  });
+
+  if (!invite) return null;
+
+  // Check expiration
+  if (invite.expiresAt && invite.expiresAt < new Date()) {
+    return null;
+  }
+
+  return invite;
+}
+
 
 // --- CRUD Operations ---
 
@@ -435,7 +531,7 @@ export async function createGroup(data: CreateGroupData) {
         createdBy: userId,
         periodMode: 'MONTHLY',
         memberCount: 1,
-        bannerUrl: bannerUrl || '',
+        bannerUrl: bannerUrl || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png',
         features: {
           join_requests: isPrivate,
           messages: true,
@@ -461,10 +557,6 @@ export async function createGroup(data: CreateGroupData) {
 
     if (!group) throw new Error("Failed to create group");
 
-    // @ts-ignore
-    revalidateTag(`user-${userId}`);
-    revalidateTag('groups');
-
     return group;
 }
 
@@ -478,61 +570,25 @@ export type UpdateGroupData = {
     features?: Record<string, boolean>;
 };
 
-export async function updateGroup(groupId: string, userId: string, data: UpdateGroupData) {
-    // Permission check
-    // Logic: validateAdminAccess(groupId) checks if user is ADMIN. 
-    // Optimization: query membership directly
-    const membership = await prisma.roomMember.findUnique({
-        where: { userId_roomId: { userId, roomId: groupId } }
-    });
-    
-    if (!membership || membership.role !== 'ADMIN') {
-        throw new Error("Unauthorized: Admin access required");
-    }
-
+export async function updateGroup(groupId: string, data: UpdateGroupData) {
     const updatedGroup = await prisma.room.update({
         where: { id: groupId },
         data: data,
     });
 
-    // Invalidate caches
-    // Redis
-    await Promise.all([
-      cacheDelete(`group_details:${groupId}:*`),
-      cacheDelete(`groups_list:*`),
-      cacheDelete(`group_with_members:${groupId}:*`)
-    ]);
-    
-    // Server Cache
-    revalidateTag(`group-${groupId}`);
-    revalidateTag('groups');
-
     return updatedGroup;
 }
 
-export async function deleteGroup(groupId: string, userId: string) {
-    // Permission check: Only Creator
+export async function deleteGroup(groupId: string) {
     const group = await prisma.room.findUnique({ where: { id: groupId } });
     if (!group) throw new Error("Group not found");
-    if (group.createdBy !== userId) throw new Error("Unauthorized: Only creator can delete group");
 
     await prisma.room.delete({ where: { id: groupId } });
-
-    revalidateTag(`group-${groupId}`);
-    revalidateTag(`user-${userId}`);
-    revalidateTag('groups');
-    
-    // Invalidate Redis
-    await Promise.all([
-      cacheDelete(`group_details:${groupId}:*`),
-      cacheDelete(`groups_list:*`),
-      cacheDelete(`group_with_members:${groupId}:*`)
-    ]);
 
     return true;
 }
 
-export async function joinGroup(groupId: string, userId: string, password?: string) {
+export async function joinGroup(groupId: string, userId: string, password?: string, token?: string) {
     const group = await prisma.room.findUnique({
         where: { id: groupId },
         select: {
@@ -543,7 +599,29 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
 
     if (!group) throw new Error('Group not found');
     if (group.members.length > 0) throw new Error('Already a member');
-    if (group.isPrivate) throw new Error('Private group: Request access instead');
+    
+    // Allow private groups if a token is provided
+    if (group.isPrivate && !token) throw new Error('Private group: Request access instead');
+    
+    let role = 'MEMBER';
+    
+    // Validate token if provided
+    if (token) {
+        const invite = await prisma.inviteToken.findUnique({
+            where: { token },
+            select: { roomId: true, role: true, expiresAt: true }
+        });
+        
+        if (!invite || invite.roomId !== groupId) {
+            throw new Error('Invalid or expired invite token');
+        }
+        
+        if (invite.expiresAt && invite.expiresAt < new Date()) {
+            throw new Error('Invite token has expired');
+        }
+        
+        role = invite.role;
+    }
     
     const memberCount = await prisma.roomMember.count({ where: { roomId: groupId } });
     if (group.maxMembers && memberCount >= group.maxMembers) throw new Error('Group is full');
@@ -552,7 +630,8 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
         data: {
             userId,
             roomId: groupId,
-            role: 'MEMBER'
+            role: role as Role,
+            isCurrent: true // Set as current group when joining via invite
         },
         include: {
             user: { select: { id: true, name: true, image: true } }
@@ -564,9 +643,16 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
         data: { memberCount: memberCount + 1 }
     });
     
-    revalidateTag(`group-${groupId}`);
-    revalidateTag(`user-${userId}`);
-
+    // If it was a token join, update the token as used? 
+    // The InviteToken model has usedAt but it's not unique per user. 
+    // For simplicity, we just leave it or could update usedAt.
+    if (token) {
+        await prisma.inviteToken.update({
+            where: { token },
+            data: { usedAt: new Date() }
+        });
+    }
+    
     return result;
 }
 
@@ -595,17 +681,6 @@ export async function leaveGroup(groupId: string, userId: string) {
         }
     });
 
-    revalidateTag(`group-${groupId}`);
-    revalidateTag(`user-${userId}`);
-    revalidateTag('groups');
-    
-    // Invalidate Redis
-    await Promise.all([
-      cacheDelete(`group_details:${groupId}:*`),
-      cacheDelete(`groups_list:*`),
-      cacheDelete(`group_with_members:${groupId}:*`)
-    ]);
-
     return true;
 }
 
@@ -632,9 +707,6 @@ export async function createJoinRequest(groupId: string, userId: string, message
             status: 'PENDING'
         }
     });
-    
-    // Invalidate admin's request view
-    revalidateTag(`group-${groupId}`);
     
     return request;
 }
@@ -668,22 +740,13 @@ export async function fetchGroupRequests(groupId: string) {
     });
 }
 
-export async function processJoinRequest(requestId: string, action: 'approve' | 'reject', userId: string) {
+export async function processJoinRequest(requestId: string, action: 'approve' | 'reject') {
     const request = await prisma.joinRequest.findUnique({
         where: { id: requestId },
         include: { room: true }
     });
 
     if (!request) throw new Error("Request not found");
-
-    // Verify admin permission
-    const membership = await prisma.roomMember.findUnique({
-        where: { userId_roomId: { userId, roomId: request.roomId } }
-    });
-
-    if (!membership || membership.role !== 'ADMIN') {
-        throw new Error("Unauthorized: Admin access required");
-    }
 
     if (action === 'approve') {
         const memberCount = await prisma.roomMember.count({ where: { roomId: request.roomId } });
@@ -708,102 +771,219 @@ export async function processJoinRequest(requestId: string, action: 'approve' | 
                 data: { memberCount: { increment: 1 } }
             })
         ]);
-        
-        revalidateTag(`group-${request.roomId}`);
-        revalidateTag(`user-${request.userId}`);
     } else {
         await prisma.joinRequest.update({
             where: { id: requestId },
             data: { status: 'REJECTED' }
         });
-        revalidateTag(`group-${request.roomId}`);
     }
 
     return { success: true };
 }
 
-export async function generateGroupInvite(groupId: string, userId: string, role: string = 'MEMBER', expiresInDays?: number | null) {
-     // Verify admin permission or if public group allows member invites (assuming admin only for now based on UI)
-    const membership = await prisma.roomMember.findUnique({
-        where: { userId_roomId: { userId, roomId: groupId } }
-    });
-
-    // Allow members to invite if it's not a private group or configured otherwise? 
-    // For now, mirroring existing logic which likely checks if user is member.
-    if (!membership) throw new Error("Unauthorized");
-
-    // Logic to generate a token (could be JWT or stored in DB)
-    // For simplicity, we'll assume a method that returns a signed token URL or stores it.
-    // Setting up a dummy implementation as the original code was calling an API endpoint.
-    // In a real app, this would create an Invite record or sign a token.
-    
-    // Using a simple signed token approach (mocked for this refactor as we don't have the token utils exposed here yet)
-    // We will return a mock structure compatible with the UI.
-    
-    const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000) : null;
-    
-    // In a real scenario you'd use a library like `jsonwebtoken` or store in `Invite` table.
-    // For this refactor, we will assume there is an `Invite` model or similar, but the previous code 
-    // called `/api/groups/${groupId}/invite` which likely did this.
-    // I will use a simple string for now.
-    const token = Buffer.from(JSON.stringify({ groupId, role, expiresAt })).toString('base64');
-    
-    return {
-        token,
-        inviteUrl: `${process.env.NEXT_PUBLIC_APP_URL}/join?token=${token}`,
-        expiresAt: expiresAt?.toISOString() || null,
-        role
-    };
-}
-
-export async function sendGroupInvitations(groupId: string, userId: string, emails: string[], role: string) {
-    // Verify membership
-    const membership = await prisma.roomMember.findUnique({
-        where: { userId_roomId: { userId, roomId: groupId } },
-        include: { room: true }
-    });
-
-    if (!membership) throw new Error("Unauthorized");
-
-    const sent = [];
-    const skipped = { existingMembers: [] as string[], pendingInvitations: [] as string[] };
-
-    for (const email of emails) {
-        // Check if user exists
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (user) {
-            // Check if already member
-            const existingMember = await prisma.roomMember.findUnique({
-                where: { userId_roomId: { userId: user.id, roomId: groupId } }
-            });
-            if (existingMember) {
-                skipped.existingMembers.push(email);
-                continue;
+export async function generateGroupInvite(groupId: string, userId: string, role: string = 'MEMBER', expiresInDays: number = 7) {
+    // Validate the group exists and user has permission
+    const group = await prisma.room.findUnique({
+      where: { id: groupId },
+      include: {
+        members: {
+          where: {
+            userId: userId,
+            role: {
+              in: [Role.ADMIN, Role.MODERATOR, Role.MANAGER]
             }
+          }
         }
+      }
+    });
 
-        // Logic to send email
-        // In a real implementation we would call the email service here.
-        // Assuming success for this refactor.
-        sent.push(email);
+    if (!group) {
+      throw new Error("Group not found");
     }
 
+    if (group.members.length === 0) {
+      throw new Error("Unauthorized - You need admin permissions to create invites");
+    }
+
+    // Check if group is full
+    const currentMemberCount = await prisma.roomMember.count({
+      where: { roomId: groupId }
+    });
+
+    if (group.maxMembers && currentMemberCount >= group.maxMembers) {
+      throw new Error("Group is full. Cannot create more invites.");
+    }
+
+    // Generate a unique token
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let token = '';
+    for (let i = 0; i < 10; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // Calculate expiration date
+    let expiresAt: Date | null = null;
+    if (expiresInDays !== null && expiresInDays !== 0) {
+      const expiryMs = expiresInDays * 24 * 60 * 60 * 1000;
+      expiresAt = new Date(Date.now() + expiryMs);
+    }
+
+    // Create invite token
+    const inviteToken = await prisma.inviteToken.create({
+      data: {
+        token,
+        roomId: groupId,
+        createdBy: userId,
+        role: role as Role,
+        expiresAt
+      }
+    });
+
+    // Create activity log
+    await prisma.groupActivityLog.create({
+      data: {
+        type: "INVITE_TOKEN_CREATED",
+        details: {
+          token: token,
+          role: role,
+          expiresAt: expiresAt
+        },
+        roomId: groupId,
+        userId: userId
+      }
+    });
+
+    // Generate invite URL
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const inviteUrl = `${baseUrl}/groups/join/${token}`;
+
     return {
-        success: true,
-        message: `Sent ${sent.length} invitations`,
-        invitations: sent,
-        skipped
+      token: inviteToken.token,
+      inviteUrl,
+      expiresAt: inviteToken.expiresAt,
+      role: inviteToken.role
     };
 }
 
-export async function setCurrentGroup(groupId: string, userId: string) {
-    // Verify membership
-    const membership = await prisma.roomMember.findUnique({
-        where: { userId_roomId: { userId, roomId: groupId } }
+export async function sendGroupInvitations(groupId: string, userId: string, emails: string[], role: string = 'MEMBER') {
+    // Get group details and verify permissions
+    const group = await prisma.room.findUnique({
+      where: { id: groupId },
+      select: {
+        id: true,
+        name: true,
+        members: {
+          where: {
+            userId: userId,
+            role: {
+              in: ["ADMIN", "MANAGER", "MODERATOR"]
+            }
+          }
+        }
+      },
     });
-    
-    if (!membership) throw new Error("Not a member of this group");
 
+    if (!group) throw new Error("Group not found");
+    if (group.members.length === 0) throw new Error("Unauthorized");
+
+    // Get sender's information
+    const sender = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, image: true }
+    });
+
+    if (!sender) throw new Error("Sender not found");
+
+    const uniqueEmails = [...new Set(emails)];
+
+    // Check for existing members
+    const existingMemberUsers = await prisma.user.findMany({
+      where: {
+        email: { in: uniqueEmails },
+        rooms: {
+          some: { roomId: groupId }
+        }
+      },
+      select: { email: true }
+    });
+
+    const existingMemberEmails = existingMemberUsers.map(u => u.email).filter((e): e is string => !!e);
+
+    // Check for existing invitations
+    const existingInvitations = await prisma.invitation.findMany({
+      where: {
+        email: { in: uniqueEmails },
+        groupId,
+        expiresAt: { gt: new Date() }
+      },
+      select: { email: true }
+    });
+
+    const pendingInviteEmails = existingInvitations.map(i => i.email);
+
+    // Filter out emails that are already members or have pending invitations
+    const validEmails = uniqueEmails.filter(email => 
+      !existingMemberEmails.includes(email) && !pendingInviteEmails.includes(email)
+    );
+
+    const skipped = {
+      existingMembers: existingMemberEmails,
+      pendingInvitations: pendingInviteEmails
+    };
+
+    if (validEmails.length === 0) {
+      return {
+        success: true,
+        message: `All emails are already members or have pending invitations`,
+        skipped
+      };
+    }
+
+    // Create invitations and send emails
+    const invitations = await Promise.all(
+      validEmails.map(async (email) => {
+        const invitation = await prisma.invitation.create({
+          data: {
+            code: Math.random().toString(36).substring(2, 15),
+            email: email,
+            role: role as any,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+            groupId,
+            createdBy: userId
+          }
+        });
+
+        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const inviteUrl = `${baseUrl}/groups/join?code=${invitation.code}&groupId=${groupId}`;
+
+        await sendGroupInviteEmail(
+          email,
+          email.split('@')[0],
+          group.name,
+          inviteUrl,
+          role,
+          sender as any
+        );
+
+        return invitation;
+      })
+    );
+
+    return {
+      success: true,
+      message: `Successfully sent ${invitations.length} invitation(s).`,
+      invitations: invitations.map(inv => ({
+        code: inv.code,
+        email: inv.email,
+        expiresAt: inv.expiresAt,
+        groupId: inv.groupId
+      })),
+      skipped
+    };
+}
+
+
+export async function setCurrentGroup(groupId: string, userId: string) {
     await prisma.$transaction([
         // Unset current for all user's groups
         prisma.roomMember.updateMany({
@@ -817,25 +997,14 @@ export async function setCurrentGroup(groupId: string, userId: string) {
         })
     ]);
     
-    revalidateTag(`user-${userId}`);
     return true;
 }
 
-export async function updatePeriodMode(groupId: string, userId: string, mode: 'MONTHLY' | 'CUSTOM') {
-    // Verify membership and admin/owner role
-    const membership = await prisma.roomMember.findUnique({
-        where: { userId_roomId: { userId, roomId: groupId } }
-    });
-    
-    if (!membership || !['ADMIN', 'MANAGER', 'OWNER'].includes(membership.role)) {
-        throw new Error("Unauthorized: Admin access required");
-    }
-
+export async function updatePeriodMode(groupId: string, mode: 'MONTHLY' | 'CUSTOM') {
     const updatedGroup = await prisma.room.update({
         where: { id: groupId },
         data: { periodMode: mode }
     });
     
-    revalidateTag(`group-${groupId}`);
     return updatedGroup;
 }

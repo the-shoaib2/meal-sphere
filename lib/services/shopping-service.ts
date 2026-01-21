@@ -86,59 +86,26 @@ export async function fetchShoppingData(userId: string, roomId: string, periodId
     return decryptData(encrypted);
 }
 
-export async function createShoppingItem(userId: string, roomId: string, data: { description: string, amount: number, date: Date, receiptFile?: File }) {
-    // Check membership
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { rooms: { where: { roomId } } }
+export async function createShoppingItem(userId: string, roomId: string, data: { description: string, amount: number, date: Date, receiptUrl?: string | null, periodId: string }) {
+    const { description, amount, date, receiptUrl, periodId } = data;
+
+    const item = await prisma.shoppingItem.create({
+        data: {
+            name: description.substring(0, 50) || 'Shopping Item',
+            description,
+            quantity: amount,
+            date,
+            receiptUrl,
+            userId,
+            roomId,
+            periodId
+        }
     });
-
-    if (!user || user.rooms.length === 0) throw new Error("Unauthorized");
-
-    // Upload receipt
-    let receiptUrl = null;
-    if (data.receiptFile) {
-        receiptUrl = await uploadReceipt(data.receiptFile, userId, roomId);
-    }
-
-    // Prepare data
-    const shoppingData = await addPeriodIdToData(roomId, {
-        name: data.description.substring(0, 50) || 'Shopping Item',
-        description: data.description,
-        quantity: data.amount, // Using quantity as amount based on API logic
-        date: data.date,
-        receiptUrl,
-        userId,
-        roomId
-    });
-
-    const item = await prisma.shoppingItem.create({ data: shoppingData });
-
-    // Notify
-    const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true } });
-    await notifyRoomMembersBatch(
-        roomId,
-        NotificationType.PAYMENT_CREATED, // Maybe add SHOPPING_CREATED type later? using PAYMENT as per API
-        `${user.name} added a new shopping item of ${data.amount} for ${data.description} in ${room?.name || 'the group'}.`,
-        userId
-    );
-
-    // Invalidate
-    await invalidateShoppingCache(roomId, item.periodId || undefined);
-    revalidateTag(`group-${roomId}`);
-    revalidateTag(`shopping-${roomId}`);
 
     return item;
 }
 
-export async function updateShoppingItem(userId: string, itemId: string, updateData: any) {
-    const currentItem = await prisma.shoppingItem.findUnique({
-        where: { id: itemId },
-        include: { room: { include: { members: { where: { userId } } } } }
-    });
-
-    if (!currentItem || currentItem.room.members.length === 0) throw new Error("Unauthorized");
-
+export async function updateShoppingItem(itemId: string, updateData: any) {
     const allowedUpdates = ['name', 'quantity', 'unit', 'purchased'];
     const filteredUpdates: any = {};
     Object.keys(updateData).forEach(key => {
@@ -151,26 +118,10 @@ export async function updateShoppingItem(userId: string, itemId: string, updateD
         include: { user: { select: { id: true, name: true, email: true, image: true } } }
     });
 
-    await invalidateShoppingCache(currentItem.roomId, currentItem.periodId || undefined);
-    revalidateTag(`group-${currentItem.roomId}`);
-    revalidateTag(`shopping-${currentItem.roomId}`);
-
     return updatedItem;
 }
 
-export async function deleteShoppingItem(userId: string, itemId: string, roomId: string) {
-    const currentItem = await prisma.shoppingItem.findUnique({
-        where: { id: itemId },
-        include: { room: { include: { members: { where: { userId } } } } }
-    });
-
-    if (!currentItem || currentItem.room.members.length === 0) throw new Error("Unauthorized");
-
+export async function deleteShoppingItem(itemId: string) {
     await prisma.shoppingItem.delete({ where: { id: itemId } });
-
-    await invalidateShoppingCache(roomId, currentItem.periodId || undefined);
-    revalidateTag(`group-${roomId}`);
-    revalidateTag(`shopping-${roomId}`);
-
     return { success: true };
 }

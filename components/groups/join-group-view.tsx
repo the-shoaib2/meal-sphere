@@ -105,12 +105,13 @@ interface JoinGroupViewProps {
   initialIsMember: boolean;
   initialRequestStatus: 'pending' | 'approved' | 'rejected' | null;
   groupId: string;
+  inviteToken?: string | null;
 }
 
-export function JoinGroupView({ initialGroup, initialIsMember, initialRequestStatus, groupId }: JoinGroupViewProps) {
+export function JoinGroupView({ initialGroup, initialIsMember, initialRequestStatus, groupId, inviteToken }: JoinGroupViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const code = searchParams?.get('code');
+  const code = searchParams?.get('code') || inviteToken;
 
   // State
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +243,8 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       const targetGroupId = groupId;
 
       // Check if this is a public join or private request
-      if (group?.isPrivate) {
+      // If we have an invite token, it's a direct join even if private
+      if (group?.isPrivate && !inviteToken) {
         // Private Group Flow
         const result = await createJoinRequestAction(targetGroupId, values.message);
         if (!result.success) throw new Error(result.error || 'Failed to send join request');
@@ -250,8 +252,8 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         setRequestStatus('pending');
         toast.success('Join request sent successfully!');
       } else {
-        // Public Group Flow
-        const result = await joinGroupAction(targetGroupId);
+        // Public Group Flow OR Invite Token Flow
+        const result = await joinGroupAction(targetGroupId, undefined, inviteToken || undefined);
         if (!result.success) throw new Error(result.error || 'Failed to join group');
 
         toast.success('Successfully joined the group!');
@@ -265,7 +267,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
     } finally {
       setIsJoining(false);
     }
-  }, [groupId, router, group?.isPrivate]);
+  }, [groupId, router, group?.isPrivate, inviteToken]);
 
   // Handle form submission
   const handleSubmit = useCallback((e: React.FormEvent) => {

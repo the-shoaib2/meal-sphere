@@ -425,8 +425,6 @@ export async function fetchUnifiedMealSystem(userId: string, groupId: string) {
 // --- Mutation Actions ---
 
 export async function toggleMeal(roomId: string, userId: string, date: Date, type: MealType) {
-    await validateActivePeriod(roomId);
-    
     const currentPeriod = await getCurrentPeriod(roomId);
     if (!currentPeriod) throw new Error("No active period found");
     
@@ -455,12 +453,6 @@ export async function toggleMeal(roomId: string, userId: string, date: Date, typ
         });
     }
 
-    // Invalidate
-    await invalidateMealCache(roomId, currentPeriod.id);
-    revalidateTag(`group-${roomId}`);
-    revalidateTag(`user-${userId}`); // Should also invalidate user stats
-    revalidateTag('meals');
-
     return !existingMeal; // Returns true if created (active), false if deleted
 }
 
@@ -488,37 +480,15 @@ export async function createGuestMeal(data: { roomId: string; userId: string; da
             date,
             type,
             count,
-            periodId: currentPeriod?.id // Optional? Schema might allow null but we should try to link it
+            periodId: currentPeriod?.id
         },
         include: { user: { select: { name: true } } }
     });
 
-    // Notify Managers
-    const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true } });
-    const managers = await prisma.roomMember.findMany({ where: { roomId, role: 'MANAGER' }, include: { user: true } });
-    
-    const userName = (await prisma.user.findUnique({ where: { id: userId } }))?.name || "User";
-    
-    for (const manager of managers) {
-        // We use createNotification generally
-        // Note: The API imported createNotification from utils.
-    }
-
-    // Invalidate
-    await invalidateMealCache(roomId, currentPeriod?.id);
-    revalidateTag(`group-${roomId}`);
-    revalidateTag('meals');
-    
     return guestMeal;
 }
 
-export async function updateMealSettings(roomId: string, userId: string, data: any) {
-    // Permission check
-    const member = await prisma.roomMember.findUnique({ where: { userId_roomId: { userId, roomId } } });
-    if (!member || !['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(member.role)) {
-        throw new Error("Unauthorized");
-    }
-
+export async function updateMealSettings(roomId: string, data: any) {
     let settings = await prisma.mealSettings.findUnique({ where: { roomId } });
     if (!settings) settings = await prisma.mealSettings.create({ data: { ...createDefaultSettings(), roomId } });
 
@@ -527,16 +497,10 @@ export async function updateMealSettings(roomId: string, userId: string, data: a
         data: { ...data, updatedAt: new Date() }
     });
 
-    revalidateTag(`group-${roomId}`);
-    // No specific cache invalidation function for just settings, but meal cache covers it?
     return updated;
 }
 
 export async function updateAutoMealSettings(roomId: string, userId: string, data: any) {
-    // Check if globally enabled
-    const settings = await prisma.mealSettings.findUnique({ where: { roomId } });
-    if (data.isEnabled && settings && !settings.autoMealEnabled) throw new Error("Auto meal system is disabled for this group");
-
     let autoSettings = await prisma.autoMealSettings.findUnique({ where: { userId_roomId: { userId, roomId } } });
     if (!autoSettings) {
         autoSettings = await prisma.autoMealSettings.create({ 
@@ -549,7 +513,6 @@ export async function updateAutoMealSettings(roomId: string, userId: string, dat
         data: { ...data, updatedAt: new Date() }
     });
 
-    revalidateTag(`group-${roomId}`);
     return updated;
 }
 

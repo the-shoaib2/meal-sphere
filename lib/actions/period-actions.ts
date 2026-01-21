@@ -4,8 +4,17 @@ import { revalidatePath, revalidateTag as _revalidateTag } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { PeriodService, CreatePeriodData } from '@/lib/services/period-service';
+import { 
+  startPeriod, 
+  endPeriod, 
+  lockPeriod, 
+  unlockPeriod, 
+  archivePeriod, 
+  restartPeriod,
+  CreatePeriodData 
+} from '@/lib/services/period-service';
 import { updatePeriodMode } from '@/lib/services/groups-service';
+import { prisma } from '@/lib/services/prisma';
 
 export type ActionState = {
   success?: boolean;
@@ -21,16 +30,32 @@ async function getUserId() {
   return session.user.id;
 }
 
+async function validateAdminAccess(groupId: string, userId: string) {
+  const membership = await prisma.roomMember.findUnique({
+    where: {
+      userId_roomId: {
+        userId,
+        roomId: groupId,
+      },
+    },
+  });
+
+  if (!membership || !['MANAGER', 'ADMIN', 'MODERATOR'].includes(membership.role)) {
+    throw new Error('Insufficient permissions: Admin access required');
+  }
+}
+
 export async function startPeriodAction(data: CreatePeriodData & { groupId: string }): Promise<ActionState> {
   try {
     const userId = await getUserId();
     const { groupId, ...periodData } = data;
     
-    const result = await PeriodService.startPeriod(groupId, userId, periodData);
+    await validateAdminAccess(groupId, userId);
+    const result = await startPeriod(groupId, userId, periodData);
     
-    // Revalidation is handled in service (revalidateTag 'periods', 'group-[id]')
-    // But we can add specific path revalidation if needed
     revalidatePath('/dashboard/periods');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag('periods');
     
     return { success: true, data: result.period };
   } catch (error: any) {
@@ -42,9 +67,12 @@ export async function startPeriodAction(data: CreatePeriodData & { groupId: stri
 export async function updatePeriodModeAction(groupId: string, mode: 'MONTHLY' | 'CUSTOM'): Promise<ActionState> {
   try {
     const userId = await getUserId();
-    const result = await updatePeriodMode(groupId, userId, mode);
+    await validateAdminAccess(groupId, userId);
+    
+    const result = await updatePeriodMode(groupId, mode);
     
     revalidatePath('/dashboard/periods');
+    revalidateTag(`group-${groupId}`);
     
     return { success: true, data: result };
   } catch (error: any) {
@@ -56,10 +84,13 @@ export async function updatePeriodModeAction(groupId: string, mode: 'MONTHLY' | 
 export async function endPeriodAction(groupId: string, periodId?: string, endDate?: Date): Promise<ActionState> {
   try {
     const userId = await getUserId();
-    const result = await PeriodService.endPeriod(groupId, userId, endDate, periodId);
+    await validateAdminAccess(groupId, userId);
+    
+    const result = await endPeriod(groupId, userId, endDate, periodId);
     
     revalidatePath('/dashboard/periods');
     revalidateTag(`group-${groupId}`);
+    revalidateTag('periods');
     
     return { success: true, data: result };
   } catch (error: any) {
@@ -71,10 +102,13 @@ export async function endPeriodAction(groupId: string, periodId?: string, endDat
 export async function lockPeriodAction(groupId: string, periodId: string): Promise<ActionState> {
   try {
     const userId = await getUserId();
-    const result = await PeriodService.lockPeriod(groupId, userId, periodId);
+    await validateAdminAccess(groupId, userId);
+    
+    const result = await lockPeriod(groupId, userId, periodId);
     
     revalidatePath('/dashboard/periods');
     revalidateTag(`group-${groupId}`);
+    revalidateTag('periods');
     
     return { success: true, data: result };
   } catch (error: any) {
@@ -86,10 +120,13 @@ export async function lockPeriodAction(groupId: string, periodId: string): Promi
 export async function unlockPeriodAction(groupId: string, periodId: string, status: any): Promise<ActionState> {
   try {
     const userId = await getUserId();
-    const result = await PeriodService.unlockPeriod(groupId, userId, periodId, status);
+    await validateAdminAccess(groupId, userId);
+    
+    const result = await unlockPeriod(groupId, userId, periodId, status);
     
     revalidatePath('/dashboard/periods');
     revalidateTag(`group-${groupId}`);
+    revalidateTag('periods');
     
     return { success: true, data: result };
   } catch (error: any) {
@@ -101,10 +138,13 @@ export async function unlockPeriodAction(groupId: string, periodId: string, stat
 export async function archivePeriodAction(groupId: string, periodId: string): Promise<ActionState> {
   try {
     const userId = await getUserId();
-    const result = await PeriodService.archivePeriod(groupId, userId, periodId);
+    await validateAdminAccess(groupId, userId);
+    
+    const result = await archivePeriod(groupId, userId, periodId);
     
     revalidatePath('/dashboard/periods');
     revalidateTag(`group-${groupId}`);
+    revalidateTag('periods');
     
     return { success: true, data: result };
   } catch (error: any) {
@@ -116,10 +156,13 @@ export async function archivePeriodAction(groupId: string, periodId: string): Pr
 export async function restartPeriodAction(groupId: string, periodId: string, data: { newName?: string, withData?: boolean }): Promise<ActionState> {
   try {
     const userId = await getUserId();
-    const result = await PeriodService.restartPeriod(groupId, userId, periodId, data.newName, data.withData);
+    await validateAdminAccess(groupId, userId);
+    
+    const result = await restartPeriod(groupId, userId, periodId, data.newName, data.withData);
     
     revalidatePath('/dashboard/periods');
     revalidateTag(`group-${groupId}`);
+    revalidateTag('periods');
     
     return { success: true, data: result };
   } catch (error: any) {
@@ -127,3 +170,4 @@ export async function restartPeriodAction(groupId: string, periodId: string, dat
     return { error: error.message || 'Failed to restart period' };
   }
 }
+

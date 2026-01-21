@@ -46,16 +46,12 @@ export async function createManualPayment(userId: string, roomId: string, amount
             userId,
             roomId,
             amount: Number(amount),
-            method, // 'CASH' | 'BANK' etc. 
-            status: "COMPLETED", // Manual payments are self-reported? Or validated? Original API sets COMPLETED immediately.
+            method,
+            status: "COMPLETED",
             description,
             date: new Date()
         }
     });
-
-    await invalidatePaymentCache(userId, roomId); // Legacy support
-    revalidateTag(`user-${userId}`);
-    revalidateTag(`group-${roomId}`);
 
     return payment;
 }
@@ -105,8 +101,7 @@ export async function initiateBkashPayment(userId: string, roomId: string, amoun
 
 export async function processBkashCallback(paymentId: string, status: string) {
     const bkashPayment = await prisma.bkashPayment.findUnique({
-        where: { paymentId },
-        include: { room: { select: { name: true } } } // Pre-fetch room name
+        where: { paymentId }
     });
 
     if (!bkashPayment) throw new Error("Payment not found");
@@ -134,19 +129,7 @@ export async function processBkashCallback(paymentId: string, status: string) {
              }
          });
 
-         if (isCompleted) {
-             await createCustomNotification(
-                 bkashPayment.userId,
-                 `Your payment of ৳${bkashPayment.amount} to ${bkashPayment.room.name} has been completed successfully. Transaction ID: ${paymentData.trxID}`
-             );
-         }
-
-         // Cache Invalidation
-         await invalidatePaymentCache(bkashPayment.userId, bkashPayment.roomId);
-         revalidateTag(`user-${bkashPayment.userId}`);
-         revalidateTag(`group-${bkashPayment.roomId}`);
-
-         return { success: true, paymentId };
+         return { success: isCompleted, paymentId };
 
     } else {
          // Failed/Cancelled

@@ -2,7 +2,7 @@ import React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { fetchGroupJoinDetails } from '@/lib/services/groups-service';
+import { fetchGroupJoinDetails, resolveInviteToken } from '@/lib/services/groups-service';
 import { JoinGroupView } from '@/components/groups/join-group-view';
 import { Metadata } from 'next';
 
@@ -23,8 +23,21 @@ export default async function JoinGroupPage(props: { params: Promise<{ id: strin
     notFound();
   }
 
+  let finalGroupId = params.id;
+  let inviteToken: string | null = null;
+
+  // Check if params.id is an invite token (10 chars, uppercase)
+  if (params.id.length === 10 && /^[A-Z]+$/.test(params.id)) {
+    const invite = await resolveInviteToken(params.id);
+    if (!invite) {
+      notFound();
+    }
+    finalGroupId = invite.roomId;
+    inviteToken = params.id;
+  }
+
   // Fetch group details server-side
-  const data = await fetchGroupJoinDetails(params.id, session.user.id);
+  const data = await fetchGroupJoinDetails(finalGroupId, session.user.id);
 
   if (!data?.group) {
     notFound();
@@ -35,7 +48,8 @@ export default async function JoinGroupPage(props: { params: Promise<{ id: strin
       initialGroup={data.group as any}
       initialIsMember={data.isMember}
       initialRequestStatus={data.joinRequest?.status || null}
-      groupId={data.group.id}
+      groupId={finalGroupId}
+      inviteToken={inviteToken}
     />
   );
 }

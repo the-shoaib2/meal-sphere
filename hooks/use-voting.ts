@@ -35,21 +35,26 @@ type VotesResponse = { votes: Vote[] };
 type CreateVoteResponse = { vote: Vote };
 type CastVoteResponse = { vote: Vote };
 
-export function useVoting() {
-  const { activeGroup } = useActiveGroup();
+export function useVoting(options?: {
+  groupId?: string;
+  initialVotes?: Vote[];
+  userId?: string;
+}) {
+  const { activeGroup: contextGroup } = useActiveGroup();
   const { data: session } = useSession();
-  const userId = session?.user?.id;
+  const userId = options?.userId || session?.user?.id;
+  const groupId = options?.groupId || contextGroup?.id;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch all votes using React Query
   const { data: votesData, isLoading: initialLoading } = useQuery<Vote[]>({
-    queryKey: ['votes', activeGroup?.id],
+    queryKey: ['votes', groupId],
     queryFn: async () => {
       assertOnline();
-      if (!activeGroup?.id) return [];
+      if (!groupId) return [];
 
-      const res = await axios.get<VotesResponse>(`/api/groups/${activeGroup.id}/votes`, {
+      const res = await axios.get<VotesResponse>(`/api/groups/${groupId}/votes`, {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
@@ -59,7 +64,8 @@ export function useVoting() {
       });
       return res.data.votes || [];
     },
-    enabled: !!activeGroup?.id,
+    enabled: !!groupId,
+    initialData: options?.initialVotes,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchInterval: 60000, // Refetch every minute to check for expired votes
@@ -74,14 +80,14 @@ export function useVoting() {
   const createVoteMutation = useMutation({
     mutationFn: async (voteData: Partial<Vote> & { candidates: Candidate[]; startDate?: string; endDate?: string }) => {
       assertOnline();
-      if (!activeGroup?.id) throw new Error('No active group');
+      if (!groupId) throw new Error('No active group');
 
-      const res = await axios.post<CreateVoteResponse>(`/api/groups/${activeGroup.id}/votes`, voteData);
+      const res = await axios.post<CreateVoteResponse>(`/api/groups/${groupId}/votes`, voteData);
       return res.data.vote;
     },
     onSuccess: (newVote) => {
       // Optimistically update the cache
-      queryClient.setQueryData<Vote[]>(['votes', activeGroup?.id], (old = []) => [newVote, ...old]);
+      queryClient.setQueryData<Vote[]>(['votes', groupId], (old = []) => [newVote, ...old]);
     },
     onError: (error: any) => {
       toast({
@@ -96,17 +102,17 @@ export function useVoting() {
   const castVoteMutation = useMutation({
     mutationFn: async ({ voteId, candidateId }: { voteId: string; candidateId: string }) => {
       assertOnline();
-      if (!activeGroup?.id || !userId) throw new Error('Missing required data');
+      if (!groupId || !userId) throw new Error('Missing required data');
 
       const res = await axios.patch<CastVoteResponse>(
-        `/api/groups/${activeGroup.id}/votes`,
+        `/api/groups/${groupId}/votes`,
         { voteId, candidateId, userId }
       );
       return res.data.vote;
     },
     onSuccess: (updatedVote) => {
       // Update the cache with the new vote data
-      queryClient.setQueryData<Vote[]>(['votes', activeGroup?.id], (old = []) =>
+      queryClient.setQueryData<Vote[]>(['votes', groupId], (old = []) =>
         old.map((v) => (v.id === updatedVote.id ? updatedVote : v))
       );
 
@@ -159,8 +165,8 @@ export function useVoting() {
   );
 
   const refreshVotes = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['votes', activeGroup?.id] });
-  }, [queryClient, activeGroup?.id]);
+    queryClient.invalidateQueries({ queryKey: ['votes', groupId] });
+  }, [queryClient, groupId]);
 
   return {
     activeVotes,
@@ -171,7 +177,7 @@ export function useVoting() {
     createVote,
     castVote,
     hasVoted,
-    group: activeGroup,
+    group: contextGroup || (options?.groupId ? { id: options.groupId } : null),
     refreshVotes,
   };
 }

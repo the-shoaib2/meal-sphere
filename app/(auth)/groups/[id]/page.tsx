@@ -1,8 +1,7 @@
-```typescript
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { redirect } from 'next/navigation';
-import { getGroupDetails, getGroupAccess, getJoinRequestStatus } from '@/lib/services/groups-service';
+import { fetchGroupDetails, fetchGroupAccessData, fetchGroupRequests, fetchGroupInviteTokens } from '@/lib/services/groups-service';
 import { getVotes } from '@/lib/services/voting-service';
 import { GroupPageContent } from '@/components/groups/group-page-content';
 import { NoGroupState } from "@/components/empty-states/no-group-state";
@@ -21,15 +20,20 @@ export default async function GroupPage(props: { params: Promise<{ id: string }>
 
   // Fetch group details and access data in parallel
   const [groupData, accessData] = await Promise.all([
-    getGroupDetails(groupId, session.user.id),
-    getGroupAccess(groupId, session.user.id)
+    fetchGroupDetails(groupId, session.user.id),
+    fetchGroupAccessData(groupId, session.user.id)
   ]);
 
   const { group } = groupData;
   const isAdmin = accessData.isAdmin;
 
-  // Fetch join requests if admin (only needed for admins)
-  const joinRequests = isAdmin ? await getJoinRequestStatus(groupId) : [];
+  // Fetch join requests and invite tokens if admin
+  const [joinRequests, inviteTokensResult] = await Promise.all([
+    isAdmin ? fetchGroupRequests(groupId) : Promise.resolve([]),
+    isAdmin ? fetchGroupInviteTokens(groupId, session.user.id) : Promise.resolve({ data: [] })
+  ]);
+
+  const inviteTokens = inviteTokensResult.data || [];
 
   // Fetch votes for all members
   const votes = await getVotes(groupId);
@@ -37,7 +41,7 @@ export default async function GroupPage(props: { params: Promise<{ id: string }>
 
   if (!group || !accessData.canAccess) {
     if (accessData.error === "Not a member of this private group") {
-      redirect(`/ groups / join / ${ groupId } `);
+      redirect(`/groups/join/${groupId}`);
     }
 
     return (
@@ -60,6 +64,7 @@ export default async function GroupPage(props: { params: Promise<{ id: string }>
       initialAccessData={accessData}
       joinRequests={joinRequests}
       initialVotes={votes}
+      initialInviteTokens={inviteTokens}
     />
   );
 }

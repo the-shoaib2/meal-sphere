@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// import { useGroups } from '@/hooks/use-groups';
 import { toast } from 'react-hot-toast';
 import { ArrowLeft, Users, Settings, Activity, UserPlus, CheckSquare } from 'lucide-react';
 import { Role } from '@prisma/client';
@@ -23,11 +22,21 @@ interface GroupPageContentProps {
     initialAccessData: any;
     joinRequests?: any[];
     initialVotes?: any[];
+    initialInviteTokens?: any[];
 }
 
 import VotingSystem from '@/components/groups/voting/voting-system';
 
-export function GroupPageContent({ groupId, initialData, initialAccessData, joinRequests, initialVotes = [] }: GroupPageContentProps) {
+export function GroupPageContent(
+    {
+        groupId,
+        initialData,
+        initialAccessData,
+        joinRequests,
+        initialVotes = [],
+        initialInviteTokens = []
+    }: GroupPageContentProps
+) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: session } = useSession();
@@ -252,6 +261,7 @@ export function GroupPageContent({ groupId, initialData, initialAccessData, join
                             currentUserId={session?.user?.id}
                             members={mappedMembers}
                             onMemberUpdate={() => refetch()}
+                            initialInviteTokens={initialInviteTokens}
                         />
                     </TabsContent>
 
@@ -298,4 +308,3 @@ export function GroupPageContent({ groupId, initialData, initialAccessData, join
     );
 }
 
-import VotingSystem from '@/components/groups/voting/voting-system'; // Import at top but putting here for implementation flow (will fix if needed)

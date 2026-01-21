@@ -171,14 +171,14 @@ export async function castVote(voteId: string, userId: string, candidateId: stri
   }
 }
 
-export async function deleteVote(voteId: string, userId: string) {
+export async function deleteVote(voteId: string, userId: string, isAdmin: boolean = false) {
   try {
     const vote = await prisma.vote.findUnique({
       where: { id: voteId }
     });
 
     if (!vote) throw new Error("Vote not found");
-    if (vote.userId !== userId) throw new Error("Unauthorized");
+    if (vote.userId !== userId && !isAdmin) throw new Error("Unauthorized");
 
     await prisma.vote.delete({
       where: { id: voteId }

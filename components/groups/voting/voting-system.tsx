@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, RotateCcw } from "lucide-react"
 import { useRouter } from "next/navigation" // Added useRouter
-// import useVoting from "@/hooks/use-voting" // Removed
-// import { useGroups } from "@/hooks/use-groups" // Removed
-// import { useActiveGroup } from "@/contexts/group-context" // Removed
-// import { useSession } from "next-auth/react" // Removed (passed as prop)
+import { useVoting } from "@/hooks/use-voting"
+import { useGroups } from "@/hooks/use-groups"
+import { useActiveGroup } from "@/contexts/group-context"
+import { useSession } from "next-auth/react"
 import { format, addDays, isAfter, isBefore, startOfDay } from "date-fns"
 import CreateVoteDialog from "./create-vote-dialog"
 import ActiveVoteCard from "./active-vote-card"
@@ -31,11 +31,35 @@ const VOTE_TYPE_OPTIONS = [
   { value: "custom", label: "Custom Vote", backend: "CUSTOM" },
 ];
 
-export default function VotingSystem() {
+interface VotingSystemProps {
+  activeGroup?: any;
+  initialVotes?: any[];
+  currentUser?: any;
+}
+
+export default function VotingSystem({ activeGroup: propGroup, initialVotes, currentUser: propUser }: VotingSystemProps) {
   const { data: session } = useSession()
-  const { activeVotes, pastVotes, loading, initialLoading, isSubmitting, createVote, castVote, hasVoted, group, refreshVotes } = useVoting()
+  const user = propUser || session?.user
+  const { activeGroup: contextGroup, setActiveGroup } = useActiveGroup()
+  const activeGroup = propGroup || contextGroup
+
+  const {
+    activeVotes,
+    pastVotes,
+    loading,
+    initialLoading,
+    isSubmitting,
+    createVote,
+    castVote,
+    hasVoted,
+    refreshVotes
+  } = useVoting({
+    groupId: activeGroup?.id,
+    initialVotes: initialVotes,
+    userId: user?.id
+  })
+
   const { data: groups = [] } = useGroups()
-  const { activeGroup, setActiveGroup } = useActiveGroup()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedVoteType, setSelectedVoteType] = useState("manager")
   const [showVoteDialog, setShowVoteDialog] = useState(false)
@@ -84,7 +108,7 @@ export default function VotingSystem() {
   }
 
   // Get current user info
-  const currentUserId = session?.user?.id
+  const currentUserId = user?.id
   const currentMember = activeGroup?.members?.find((m: any) => m.userId === currentUserId)
   const adminRoles = ["ADMIN"];
   const isAdmin = Boolean(currentMember && adminRoles.includes(String(currentMember.role)));
@@ -104,8 +128,8 @@ export default function VotingSystem() {
 
   // Only non-admins can be candidates
   const nonAdminMembers = (activeGroup?.members || []).filter(
-    m => !adminRoles.includes(String(m.role))
-  ).map(m => ({
+    (m: any) => !adminRoles.includes(String(m.role))
+  ).map((m: any) => ({
     ...m,
     user: {
       ...m.user,
@@ -116,13 +140,13 @@ export default function VotingSystem() {
   }))
   // Get available group members (exclude already selected)
   const availableMembers = nonAdminMembers.filter(
-    m => !selectedCandidateIds.includes(m.userId)
+    (m: any) => !selectedCandidateIds.includes(m.userId)
   )
 
   const handleCreateVote = async () => {
     const candidates = (activeGroup?.members || [])
-      .filter(m => selectedCandidateIds.includes(m.userId))
-      .map(m => ({
+      .filter((m: any) => selectedCandidateIds.includes(m.userId))
+      .map((m: any) => ({
         id: m.userId,
         name: m.user.name || "Unnamed",
         image: m.user.image || undefined
@@ -277,7 +301,7 @@ export default function VotingSystem() {
                 isAdmin={isAdmin}
                 currentUserId={currentUserId}
                 refreshVotes={handleRefreshVotes}
-                candidateOptions={nonAdminMembers.map(m => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
+                candidateOptions={nonAdminMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
                 voteTypeOptions={VOTE_TYPE_OPTIONS}
               />
             );

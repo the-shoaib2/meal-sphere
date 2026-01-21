@@ -316,14 +316,10 @@ export type CreateExpenseData = {
 };
 
 export async function createExpense(data: CreateExpenseData) {
-  const { roomId, userId, description, amount, date, type, receiptUrl } = data;
+  const { roomId, userId, description, amount, date, type, receiptUrl, periodId } = data;
 
-  // Validate active period if not provided
-  let periodId = data.periodId;
   if (!periodId) {
-     const { validateActivePeriod } = await import("@/lib/utils/period-utils");
-     const period = await validateActivePeriod(roomId);
-     periodId = period.id;
+    throw new Error("Period ID is required to create an expense");
   }
 
   // Transaction
@@ -337,14 +333,11 @@ export async function createExpense(data: CreateExpenseData) {
               date,
               type: type as any,
               receiptUrl,
-              periodId: periodId!
+              periodId: periodId
           }
       });
 
       // Account Transaction (Negative amount for Creator)
-      // Logic: Expense paid by User X reduces the Group's debt to User X? 
-      // Wait, original API says: "amount: -amount // Negative amount to decrease group balance"
-      // "targetUserId: user.id".
       await tx.accountTransaction.create({
           data: {
               roomId,
@@ -371,23 +364,13 @@ export type UpdateExpenseData = {
     receiptUrl?: string | null;
 };
 
-export async function updateExpense(expenseId: string, userId: string, data: UpdateExpenseData) {
+export async function updateExpense(expenseId: string, data: UpdateExpenseData) {
     const existingExpense = await prisma.extraExpense.findUnique({
-        where: { id: expenseId },
-        include: { room: { select: { members: { where: { userId }, select: { id: true } } } } }
+        where: { id: expenseId }
     });
 
     if (!existingExpense) {
         throw new Error("Expense not found");
-    }
-
-    if (existingExpense.userId !== userId && existingExpense.room.members.length === 0) {
-        // Allow if user is just a member? Original API line 60 checks if "existingExpense.room.members.length === 0" to deny??
-        // Original API logic:
-        // const existingExpense = findUnique({ where: { id }, include: { room: { select: { members: { where: { email } } } } } })
-        // if (existingExpense.room.members.length === 0) return 403.
-        // So ANY member can update ANY expense? That seems permissive, but I will replicate it.
-        throw new Error("Unauthorized");
     }
 
     const { description, amount, date, type, receiptUrl } = data;
@@ -445,19 +428,13 @@ export async function updateExpense(expenseId: string, userId: string, data: Upd
     return result;
 }
 
-export async function deleteExpense(expenseId: string, userId: string) {
+export async function deleteExpense(expenseId: string) {
     const existingExpense = await prisma.extraExpense.findUnique({
-        where: { id: expenseId },
-        include: { room: { select: { members: { where: { userId }, select: { id: true } } } } }
+        where: { id: expenseId }
     });
 
     if (!existingExpense) {
         throw new Error("Expense not found");
-    }
-    
-    // Original API permission check: must be room member.
-    if (existingExpense.room.members.length === 0) {
-        throw new Error("Unauthorized");
     }
 
     await prisma.$transaction(async (tx) => {
