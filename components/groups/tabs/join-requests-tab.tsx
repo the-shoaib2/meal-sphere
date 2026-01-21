@@ -1,15 +1,15 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X, UserPlus } from 'lucide-react';
+import { Loader2, Check, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useGroups } from '@/hooks/use-groups';
+import { processJoinRequestAction } from '@/lib/actions/group-actions';
+import { useRouter } from 'next/navigation';
 
 interface JoinRequest {
   id: string;
@@ -17,8 +17,8 @@ interface JoinRequest {
   roomId: string;
   message?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // Serialized date
+  updatedAt: string;
   user: {
     id: string;
     name: string | null;
@@ -30,43 +30,43 @@ interface JoinRequest {
 interface JoinRequestsTabProps {
   groupId: string;
   isAdmin: boolean;
+  initialRequests?: JoinRequest[];
 }
 
-export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
-  const { useJoinRequests, handleJoinRequest } = useGroups();
-  const { data: requests, isLoading: isLoadingRequests } = useJoinRequests(groupId);
+export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [] }: JoinRequestsTabProps) {
+  const router = useRouter();
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
 
-  // Handle request approval/rejection with individual loading states
+  // Filter out any that might have been processed locally if we were using state, 
+  // but since we rely on router.refresh(), initialRequests will update.
+  const pendingRequests = initialRequests?.filter(r => r.status === 'PENDING') || [];
+
   const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
     try {
-      await handleJoinRequest.mutateAsync({ groupId, requestId, action });
+      setProcessingId(requestId);
+      setActionType(action);
+
+      const result = await processJoinRequestAction(requestId, action);
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      toast.success(action === 'approve' ? 'Request approved' : 'Request rejected');
+      router.refresh();
     } catch (error: any) {
       console.error('Error processing request:', error);
-      // Error handling is done in the mutation
+      toast.error(error.message || 'Failed to process request');
+    } finally {
+      setProcessingId(null);
+      setActionType(null);
     }
   };
 
   if (!isAdmin) {
     return null;
   }
-
-  if (isLoadingRequests) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold">Join Requests</CardTitle>
-          <CardDescription>Loading join requests...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center p-4">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const pendingRequests = requests?.filter(r => r.status === 'PENDING') || [];
 
   return (
     <Card>
@@ -91,9 +91,8 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
         ) : (
           <div className="space-y-4">
             {pendingRequests.map((request) => {
-              const isProcessing = handleJoinRequest.isPending && 
-                handleJoinRequest.variables?.requestId === request.id;
-              
+              const isProcessing = processingId === request.id;
+
               return (
                 <div
                   key={request.id}
@@ -126,9 +125,9 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
                       variant="outline"
                       className="text-green-600 hover:text-green-700"
                       onClick={() => handleRequest(request.id, 'approve')}
-                      disabled={isProcessing || handleJoinRequest.isPending}
+                      disabled={isProcessing}
                     >
-                      {isProcessing && handleJoinRequest.variables?.action === 'approve' ? (
+                      {isProcessing && actionType === 'approve' ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                       ) : (
                         <Check className="h-4 w-4 mr-1" />
@@ -140,9 +139,9 @@ export function JoinRequestsTab({ groupId, isAdmin }: JoinRequestsTabProps) {
                       variant="outline"
                       className="text-red-600 hover:text-red-700"
                       onClick={() => handleRequest(request.id, 'reject')}
-                      disabled={isProcessing || handleJoinRequest.isPending}
+                      disabled={isProcessing}
                     >
-                      {isProcessing && handleJoinRequest.variables?.action === 'reject' ? (
+                      {isProcessing && actionType === 'reject' ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                       ) : (
                         <X className="h-4 w-4 mr-1" />

@@ -326,3 +326,73 @@ export async function fetchMemberBreakdown(userId: string, groupId: string) {
   const encrypted = await cachedFn();
   return decryptData(encrypted);
 }
+
+/**
+ * Cached wrapper for Room Meal Summary (The main calculation sheet)
+ */
+export async function fetchRoomMealSummary(
+  roomId: string,
+  startDate: string | Date, // Allow string for easier serialization
+  endDate: string | Date,
+  periodId?: string
+) {
+  // Normalize dates to strings for cache key
+  const startStr = typeof startDate === 'string' ? startDate : startDate.toISOString();
+  const endStr = typeof endDate === 'string' ? endDate : endDate.toISOString();
+  
+  const cacheKey = `room-meal-summary-${roomId}-${periodId || startStr + '-' + endStr}`;
+  
+  const cachedFn = unstable_cache(
+      async () => {
+          const { calculateRoomMealSummary } = await import('@/lib/meal-calculations');
+          const sDate = typeof startDate === 'string' ? new Date(startDate) : startDate;
+          const eDate = typeof endDate === 'string' ? new Date(endDate) : endDate;
+          
+          const summary = await calculateRoomMealSummary(roomId, sDate, eDate, periodId);
+          return encryptData(summary);
+      },
+      [cacheKey, 'room-meal-summary'],
+      {
+          revalidate: 60,
+          tags: [`group-${roomId}`, 'calculations', 'meals', 'expenses', 'payments']
+      }
+  );
+  
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}
+
+/**
+ * Cached wrapper for User Meal Summary
+ */
+export async function fetchUserMealSummary(
+  userId: string,
+  roomId: string,
+  startDate: string | Date,
+  endDate: string | Date,
+  periodId?: string
+) {
+  const startStr = typeof startDate === 'string' ? startDate : startDate.toISOString();
+  const endStr = typeof endDate === 'string' ? endDate : endDate.toISOString();
+  
+  const cacheKey = `user-meal-summary-${userId}-${roomId}-${periodId || startStr + '-' + endStr}`;
+  
+  const cachedFn = unstable_cache(
+      async () => {
+          const { calculateUserMealSummary } = await import('@/lib/meal-calculations');
+          const sDate = typeof startDate === 'string' ? new Date(startDate) : startDate;
+          const eDate = typeof endDate === 'string' ? new Date(endDate) : endDate;
+          
+          const summary = await calculateUserMealSummary(userId, roomId, sDate, eDate, periodId);
+          return encryptData(summary);
+      },
+      [cacheKey, 'user-meal-summary'],
+      {
+          revalidate: 60,
+          tags: [`user-${userId}`, `group-${roomId}`, 'calculations']
+      }
+  );
+  
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}

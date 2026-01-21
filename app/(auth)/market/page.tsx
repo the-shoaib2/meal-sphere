@@ -37,7 +37,7 @@ export default async function MarketPage() {
     }
 
     // 2. Fetch Initial Data for the active group
-    const marketDates = await fetchMarketDates(activeGroup.id);
+    const marketDates = await fetchMarketDates(activeGroup.id, session.user.id);
 
     // 3. Determine user role for permissions
     const isManager = ['ADMIN', 'MANAGER', 'MARKET_MANAGER'].includes(activeMember.role);

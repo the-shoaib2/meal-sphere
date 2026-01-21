@@ -10,57 +10,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Copy, Loader2, Lock, Mail, Share2, UserPlus, X, Check, AlertCircle, Users, Settings } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Role } from "@prisma/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { toast } from "react-hot-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Role } from "@prisma/client"; // Ensure this is available or use strict string types
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { sendGroupInviteEmail } from "@/lib/services/email-utils";
+import { generateInviteTokenAction, sendGroupInvitationsAction } from "@/lib/actions/invite-actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { useGroups } from '@/hooks/use-groups';
-
-interface GroupData {
-  id: string;
-  name: string;
-  description: string | null;
-  isPrivate: boolean;
-  maxMembers: number | null;
-  memberCount: number;
-  members?: Array<{
-    id: string;
-    role: string;
-    joinedAt: string;
-    user: {
-      id: string;
-      name: string | null;
-      email: string | null;
-      image: string | null;
-    };
-  }>;
-  createdBy?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface InviteTokenData {
   token: string;
   expiresAt: string | null;
-  role: Role;
+  role: string;
   inviteUrl: string;
 }
 
 interface InviteCardProps {
   groupId: string;
+  group: any;
   className?: string;
 }
 
@@ -73,15 +46,15 @@ interface InviteStatus {
   };
 }
 
-const ROLE_OPTIONS: { value: Role; label: string; description: string }[] = [
-  { value: Role.MEMBER, label: 'Member', description: 'Can view and participate in group activities' },
-  { value: Role.ADMIN, label: 'Admin', description: 'Full access to group settings and management' },
-  { value: Role.MODERATOR, label: 'Moderator', description: 'Can manage members and content' },
-  { value: Role.MANAGER, label: 'Manager', description: 'Can manage group operations' },
-  { value: Role.LEADER, label: 'Leader', description: 'Can lead group activities' },
-  { value: Role.MEAL_MANAGER, label: 'Meal Manager', description: 'Can manage group meals' },
-  { value: Role.ACCOUNTANT, label: 'Accountant', description: 'Can manage group finances' },
-  { value: Role.MARKET_MANAGER, label: 'Market Manager', description: 'Can manage group markets' }
+const ROLE_OPTIONS: { value: string; label: string; description: string }[] = [
+  { value: 'MEMBER', label: 'Member', description: 'Can view and participate in group activities' },
+  { value: 'ADMIN', label: 'Admin', description: 'Full access to group settings and management' },
+  { value: 'MODERATOR', label: 'Moderator', description: 'Can manage members and content' },
+  { value: 'MANAGER', label: 'Manager', description: 'Can manage group operations' },
+  { value: 'LEADER', label: 'Leader', description: 'Can lead group activities' },
+  { value: 'MEAL_MANAGER', label: 'Meal Manager', description: 'Can manage group meals' },
+  { value: 'ACCOUNTANT', label: 'Accountant', description: 'Can manage group finances' },
+  { value: 'MARKET_MANAGER', label: 'Market Manager', description: 'Can manage group markets' }
 ];
 
 const EXPIRATION_OPTIONS = [
@@ -97,36 +70,21 @@ const EXPIRATION_OPTIONS = [
   { value: 0, label: 'Never expire' }
 ];
 
-export function InviteCard({ groupId, className = '' }: InviteCardProps) {
+export function InviteCard({ groupId, group, className = '' }: InviteCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role>('MEMBER');
+  const [selectedRole, setSelectedRole] = useState<string>('MEMBER');
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [isGenerating, setIsGenerating] = useState(false);
   const [inviteToken, setInviteToken] = useState<InviteTokenData | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'link' | 'custom' | 'email'>('link');
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState('');
   const [emails, setEmails] = useState<string[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
   const [inviteStatus, setInviteStatus] = useState<InviteStatus | null>(null);
   const [customExpiry, setCustomExpiry] = useState(7);
 
   const { toast: uiToast } = useToast();
-  const { useGroupDetails } = useGroups();
-  const router = useRouter();
-
-  const { data: group, isLoading, error } = useGroupDetails(groupId);
-
-  useEffect(() => {
-    if (error) {
-      uiToast({
-        title: 'Error',
-        description: error.message || 'Failed to load group details',
-        variant: 'destructive',
-      });
-    }
-  }, [error, uiToast]);
 
   const generateInviteToken = useCallback(async () => {
     try {
@@ -135,44 +93,28 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       // Use the appropriate expiry time based on active tab
       const expiryTime = activeTab === 'custom' ? customExpiry : expiresInDays;
 
-      const response = await fetch(`/api/groups/${groupId}/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          role: selectedRole,
-          expiresInDays: expiryTime === 0 ? null : expiryTime,
-        }),
-      });
+      const result = await generateInviteTokenAction(groupId, selectedRole, expiryTime === 0 ? null : expiryTime);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate invite token');
-      }
-
-      const data = await response.json();
-
-      if (!data.success || !data.data?.token) {
-        throw new Error('Invalid response from server');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate invite token');
       }
 
       setInviteToken({
-        token: data.data.token,
-        expiresAt: data.data.expiresAt,
-        role: data.data.role,
-        inviteUrl: data.data.inviteUrl
+        token: result.data.token,
+        expiresAt: result.data.expiresAt,
+        role: result.data.role,
+        inviteUrl: result.data.inviteUrl
       });
 
       uiToast({
         title: "Success",
         description: "Invite token generated successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating invite token:', error);
       uiToast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate invite token",
+        description: error.message || "Failed to generate invite token",
         variant: "destructive",
       });
     } finally {
@@ -254,27 +196,18 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
       setIsGenerating(true);
       setInviteStatus(null);
 
-      const response = await fetch(`/api/groups/${group.id}/send-invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emails,
-          role: 'MEMBER',
-        }),
-      });
+      const result = await sendGroupInvitationsAction(group.id, emails, 'MEMBER');
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send invitation');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send invitation');
       }
+
+      const data = result.data;
 
       setInviteStatus({
         success: true,
         message: data.message,
-        details: data.details || data.skipped
+        details: data.skipped
       });
 
       uiToast({
@@ -303,7 +236,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
     }
   };
 
-  if (isLoading || !group) {
+  if (!group) {
     return (
       <div className="space-y-4 p-4">
         <Skeleton className="h-10 w-[120px]" />
@@ -504,7 +437,7 @@ export function InviteCard({ groupId, className = '' }: InviteCardProps) {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor="custom-role">Default Role</Label>
-                  <Select value={selectedRole} onValueChange={(value: Role) => setSelectedRole(value)}>
+                  <Select value={selectedRole} onValueChange={(value: string) => setSelectedRole(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>

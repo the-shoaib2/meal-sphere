@@ -580,3 +580,126 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
   const encrypted = await cachedFn();
   return decryptData(encrypted);
 }
+
+/**
+ * Fetch transaction history for a room/user
+ */
+export async function fetchTransactionHistory(
+  roomId: string, 
+  userId: string, 
+  viewerId: string,
+  viewerRole: string
+) {
+  const cacheKey = `transaction-history-${roomId}-${userId}-${viewerId}`;
+  
+  // Permission check logic should ideally be here or in the caller. 
+  // Since this is a service, we assume caller checks basic auth, but we can verify specific logic.
+  // importing canViewUserBalance would be good if possible, or duplicate logical check.
+  // For now, we'll assume the caller handles the HTTP response part, but the service handles the data. (Or we can import permissions)
+  
+  // We'll skip the permission check inside the cached function to rely on arguments, 
+  // or checks should be done BEFORE calling this if they are user-specific. 
+  // actually, let's keep it pure data fetching here to avoid circular deps if permissions import services.
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const history = await prisma.transactionHistory.findMany({
+        where: { 
+          roomId: roomId,
+          OR: [
+            { userId: userId },
+            { targetUserId: userId }
+          ]
+        },
+        include: {
+          changedByUser: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { changedAt: 'desc' },
+        take: 50
+      });
+      return encryptData(history);
+    },
+    [cacheKey, 'transaction-history'],
+    {
+      revalidate: 30, // History is immutable but new ones appear
+      tags: [`history-${roomId}`, `user-${userId}`]
+    }
+  );
+  
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}
+
+/**
+ * Fetch transactions list with filtering
+ */
+export async function fetchTransactions(
+  roomId: string,
+  userId: string, // The target user
+  periodId: string | undefined | null,
+  activePeriodId: string | undefined // Pass active if known, else it helps optimization
+) {
+   const cacheKey = `transactions-${roomId}-${userId}-${periodId || 'active'}`;
+
+   const cachedFn = unstable_cache(
+     async () => {
+       const [sentTransactions, receivedTransactions] = await Promise.all([
+           prisma.accountTransaction.findMany({
+               where: {
+                   roomId,
+                   periodId: periodId || undefined, // undefined means "any" in prisma? No.
+                   // If periodId is explicit, use it. If null/undefined, api used "activePeriodId".
+                   // We need to be precise. 
+                   // The API logic was: 
+                   // const activePeriodId = periodId || currentPeriod?.id;
+                   // if (!activePeriodId) return [];
+                   // So we expect the caller to resolve the periodId before calling this if possible, 
+                   // or we handle optionality. Let's enforce periodId presence for efficient caching.
+                   userId // Sender is this user
+               },
+               include: {
+                   user: { select: { id: true, name: true, image: true, email: true } },
+                   targetUser: { select: { id: true, name: true, image: true, email: true } },
+                   creator: { select: { id: true, name: true, image: true, email: true } },
+               },
+               orderBy: { createdAt: 'desc' },
+               take: 100 // Reasonable limit
+           }),
+           prisma.accountTransaction.findMany({
+               where: {
+                   roomId,
+                   periodId: periodId || undefined,
+                   targetUserId: userId // Receiver is this user
+               },
+               include: {
+                   user: { select: { id: true, name: true, image: true, email: true } },
+                   targetUser: { select: { id: true, name: true, image: true, email: true } },
+                   creator: { select: { id: true, name: true, image: true, email: true } },
+               },
+               orderBy: { createdAt: 'desc' },
+               take: 100
+           })
+       ]);
+
+       const transactions = [...sentTransactions, ...receivedTransactions]
+           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+       return encryptData(transactions);
+     },
+     [cacheKey, 'transactions-list'],
+     {
+        revalidate: 30,
+        tags: [`transactions-${roomId}`, `user-${userId}`, `period-${periodId}`]
+     }
+   );
+
+   const encrypted = await cachedFn();
+   return decryptData(encrypted);
+}

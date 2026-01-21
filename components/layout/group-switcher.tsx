@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useGroups, Group } from "@/hooks/use-groups"
+import { useGroups } from "@/hooks/use-groups" // Keep hook import if used, but Group type likely from types
+import { Group } from "@/types/group"
 import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useLoading } from "@/hooks/use-loading"

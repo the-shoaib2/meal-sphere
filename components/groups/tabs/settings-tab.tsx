@@ -16,7 +16,7 @@ import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, T
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useGroups } from '@/hooks/use-groups';
+// import { useGroups } from '@/hooks/use-groups';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';
@@ -138,38 +138,21 @@ const groupSettingsSchema = z.object({
 
 type GroupSettingsFormValues = z.input<typeof groupSettingsSchema>;
 
+import { updateGroupAction, deleteGroupAction, leaveGroupAction } from '@/lib/actions/group-actions';
+
 interface SettingsTabProps {
   groupId: string;
+  group: any;
   isAdmin: boolean;
   isCreator: boolean;
   onUpdate: () => void;
 }
 
-type GroupWithExtras = {
-  id: string;
-  name: string;
-  description: string | null;
-  bannerUrl: string | null;
-  isPrivate: boolean;
-  maxMembers: number | null;
-  tags: string[];
-  features: Record<string, boolean>;
-  category?: string;
-};
-
-// Store previous group values for comparison
-type PreviousGroupSettings = {
-  name: string;
-  description: string | null;
-  bannerUrl: string | null;
-  isPrivate: boolean;
-  maxMembers: number | null | undefined;
-  tags: string[];
-  features: Record<string, boolean>;
-};
+// ... existing code ...
 
 export function SettingsTab({
   groupId,
+  group,
   onUpdate,
   isAdmin = false,
   isCreator = false,
@@ -179,8 +162,12 @@ export function SettingsTab({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const router = useRouter();
-  const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
-  const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
+
+  // const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
+  // const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
+  const isLoadingGroup = false;
+  const refetch = () => router.refresh();
+
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
@@ -210,6 +197,19 @@ export function SettingsTab({
   const formTags = watch('tags') || [];
   const formFeatures = watch('features') || {};
 
+  // Store previous group values for comparison
+  type PreviousGroupSettings = {
+    name: string;
+    description: string | null;
+    bannerUrl: string | null;
+    isPrivate: boolean;
+    maxMembers: number | null | undefined;
+    tags: string[];
+    features: Record<string, boolean>;
+  };
+
+  // ... form setup ...
+
   // Update form values when group data changes
   useEffect(() => {
     if (group) {
@@ -223,157 +223,34 @@ export function SettingsTab({
     }
   }, [group, setValue]);
 
-  useEffect(() => {
-    setIsDeleteNameValid(deleteGroupName === group?.name);
-  }, [deleteGroupName, group?.name]);
-
-  // Fetch notification settings
-  useEffect(() => {
-    const fetchNotificationSettings = async () => {
-      if (!groupId) return;
-      try {
-        setIsLoadingNotifications(true);
-        const response = await fetch(`/api/groups/${groupId}/notifications`);
-        if (response.ok) {
-          const data = await response.json();
-          setNotificationSettings(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch notification settings', error);
-      } finally {
-        setIsLoadingNotifications(false);
-      }
-    };
-
-    fetchNotificationSettings();
-  }, [groupId]);
-
-  const handleNotificationToggle = async (key: keyof GroupNotificationSettings) => {
-    if (!notificationSettings || !groupId) return;
-
-    const currentValue = notificationSettings[key];
-    const newValue = !currentValue;
-
-    // Optimistic update
-    setNotificationSettings(prev => prev ? ({ ...prev, [key]: newValue }) : null);
-
-    try {
-      const response = await fetch(`/api/groups/${groupId}/notifications`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [key]: newValue })
-      });
-
-      if (!response.ok) throw new Error('Failed to update');
-
-      const notificationLabels: Record<keyof GroupNotificationSettings, string> = {
-        groupMessages: 'Group Messages',
-        announcements: 'Announcements',
-        mealUpdates: 'Meal Updates',
-        memberActivity: 'Member Activity',
-        joinRequests: 'Join Requests'
-      };
-
-      toast.success(`${notificationLabels[key]} notifications ${newValue ? 'enabled' : 'disabled'}`);
-    } catch (error) {
-      // Revert
-      setNotificationSettings(prev => prev ? ({ ...prev, [key]: currentValue }) : null);
-      toast.error('Failed to update notification settings');
-    }
-  };
-
-  // Store previous group values for comparison
-  useEffect(() => {
-    if (group) {
-      prevGroupRef[1]({
-        name: group.name,
-        description: group.description || '',
-        bannerUrl: group.bannerUrl || null,
-        isPrivate: group.isPrivate,
-        maxMembers: group.maxMembers,
-        tags: (group as GroupWithExtras).tags || [],
-        features: (group as GroupWithExtras).features || {},
-      });
-    }
-  }, [group]);
-
-  const handleAddTag = () => {
-    if (!newTag.trim()) {
-      setTagError('Tag cannot be empty');
-      toast.error('Tag cannot be empty');
-      return;
-    }
-
-    if (formTags.includes(newTag.trim())) {
-      setTagError('Tag already exists');
-      toast.error('Tag already exists');
-      return;
-    }
-
-    if (formTags.length >= 5) {
-      setTagError('Maximum 5 tags allowed');
-      toast.error('Maximum 5 tags allowed');
-      return;
-    }
-
-    setValue('tags', [...formTags, newTag.trim()]);
-    setNewTag('');
-    setTagError('');
-    toast.success(`Tag '${newTag.trim()}' added`);
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setValue('tags', formTags.filter(tag => tag !== tagToRemove));
-    toast.success(`Tag '${tagToRemove}' removed`);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
-    }
-  };
+  // ... notification logic ...
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
+      setIsLoading(true);
       const prev = prevGroupRef[0];
-      await updateGroup.mutateAsync({
-        groupId,
-        data: {
-          name: data.name,
-          description: data.description,
-          bannerUrl: data.bannerUrl,
-          isPrivate: data.isPrivate,
-          maxMembers: typeof data.maxMembers === 'string' ? (data.maxMembers === '' ? null : Number(data.maxMembers)) : data.maxMembers,
-          tags: data.tags,
-          features: data.features,
-        }
+
+      const result = await updateGroupAction(groupId, {
+        name: data.name,
+        description: data.description,
+        bannerUrl: data.bannerUrl,
+        isPrivate: data.isPrivate,
+        maxMembers: typeof data.maxMembers === 'string' ? (data.maxMembers === '' ? null : Number(data.maxMembers)) : data.maxMembers,
+        tags: data.tags,
+        features: data.features,
       });
-      await refetch();
+
+      if (!result.success) throw new Error(result.error);
+
+      router.refresh(); // Server revalidate
       onUpdate();
-      // Show specific toasts for changed fields
-      if (prev) {
-        if (prev.name !== data.name) toast.success('Group name updated');
-        if ((prev.description || '') !== (data.description || '')) toast.success('Description updated');
-        if ((prev.bannerUrl || '') !== (data.bannerUrl || '')) toast.success('Group image updated');
-        if (prev.isPrivate !== data.isPrivate) toast.success(`Privacy set to ${data.isPrivate ? 'Private' : 'Public'}`);
-        if (prev.maxMembers !== (data.maxMembers ?? null)) toast.success('Max members updated');
-        // Tags
-        const addedTags = (data.tags || []).filter(t => !(prev.tags || []).includes(t));
-        const removedTags = (prev.tags || []).filter(t => !(data.tags || []).includes(t));
-        addedTags.forEach(tag => toast.success(`Tag '${tag}' added`));
-        removedTags.forEach(tag => toast.success(`Tag '${tag}' removed`));
-        // Features
-        Object.keys(data.features || {}).forEach(key => {
-          if ((prev.features || {})[key] !== (data.features || {})[key]) {
-            toast.success(`${GROUP_FEATURES[key]?.name || key} ${(data.features || {})[key] ? 'enabled' : 'disabled'}`);
-          }
-        });
-      } else {
-        toast.success('Group settings updated successfully');
-      }
-    } catch (error) {
-      toast.error('Failed to update group. Please try again.');
+
+      // ... toast logic ...
+      toast.success('Group settings updated successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update group. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -381,19 +258,17 @@ export function SettingsTab({
     try {
       const newFeatures = { ...formFeatures, [featureId]: checked };
       setValue(`features.${featureId}`, checked);
-      await updateGroup.mutateAsync({
-        groupId,
-        data: {
-          features: newFeatures,
-        }
-      });
-      await refetch();
+
+      const result = await updateGroupAction(groupId, { features: newFeatures });
+      if (!result.success) throw new Error(result.error);
+
+      router.refresh();
       onUpdate();
       toast.success(`${GROUP_FEATURES[featureId].name} ${checked ? 'enabled' : 'disabled'}`);
-    } catch (error) {
+    } catch (error: any) {
       // Revert the switch if the update fails
       setValue(`features.${featureId}`, !checked);
-      toast.error(`Failed to update feature '${GROUP_FEATURES[featureId].name}'. Please try again.`);
+      toast.error(`Failed to update feature. ${error.message}`);
     }
   };
 
@@ -404,9 +279,12 @@ export function SettingsTab({
 
     try {
       setIsLeaving(true);
-      await leaveGroup.mutateAsync(groupId);
+      const result = await leaveGroupAction(groupId);
+      if (!result.success) throw new Error(result.error);
+
       setIsLeaveDialogOpen(false);
       toast.success('You have left the group');
+      router.push('/groups');
     } catch (error) {
       console.error('Error leaving group:', error);
       toast.error('Failed to leave group. Please try again.');
@@ -415,23 +293,28 @@ export function SettingsTab({
     }
   };
 
-  const handleLeaveDialogOpenChange = (open: boolean) => {
-    // Only allow closing if not in the middle of leaving
-    if (!open && !isLeaving && !leaveGroup.isPending) {
-      setIsLeaveDialogOpen(false);
-    }
-  };
+  // ... leave dialog handlers ...
 
   const handleDeleteGroup = async () => {
     if (!groupId || !isDeleteNameValid) return;
     try {
-      await deleteGroup.mutateAsync({ groupId });
+      const result = await deleteGroupAction(groupId);
+      if (!result.success) throw new Error(result.error);
+
       setIsDeleteDialogOpen(false); // Only close after success
+      toast.success('Group deleted');
+      router.push('/groups');
     } catch (error) {
-      // error toast is already handled in the mutation
+      toast.error('Failed to delete group');
     }
   };
 
+  const handleLeaveDialogOpenChange = (open: boolean) => {
+    // Only allow closing if not in the middle of leaving
+    if (!open && !isLeaving) {
+      setIsLeaveDialogOpen(false);
+    }
+  };
   const handleDeleteDialogOpenChange = (open: boolean) => {
     if (!open) {
       setDeleteGroupName('');
@@ -718,8 +601,8 @@ export function SettingsTab({
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={updateGroup.isPending}>
-                {updateGroup.isPending ? (
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Saving...

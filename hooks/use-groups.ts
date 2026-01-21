@@ -24,30 +24,8 @@ type JoinGroupInput = {
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Room } from '@prisma/client';
-import { User } from 'next-auth';
+import { Group, JoinRequest } from '@/types/group';
 
-export interface Group extends Omit<Room, 'createdBy'> {
-  createdByUser: Pick<User, 'id' | 'name' | 'email' | 'image'>;
-  members?: Array<{
-    id: string;
-    userId: string;
-    role: string;
-    joinedAt: string;
-    user: {
-      id: string;
-      name: string | null;
-      email: string | null;
-      image: string | null;
-    };
-  }>;
-  userRole?: string;
-  permissions?: string[];
-  joinedAt?: string;
-  _count?: {
-    members: number;
-  };
-}
 
 interface CreateGroupInput {
   name: string;
@@ -69,21 +47,6 @@ interface UpdateGroupInput {
   bannerUrl?: string;
 }
 
-interface JoinRequest {
-  id: string;
-  userId: string;
-  roomId: string;
-  message?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: Date;
-  updatedAt: Date;
-  user: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    image: string | null;
-  };
-}
 
 interface UseGroupsReturn {
   data: Group[];

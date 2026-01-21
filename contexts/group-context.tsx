@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useTransition } 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Group } from '@/hooks/use-groups';
+import { Group } from '@/types/group';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
 import { toast } from 'react-hot-toast';
 import { setCurrentGroupAction } from '@/lib/actions/group-actions';

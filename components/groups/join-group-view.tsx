@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
 import { Role } from '@prisma/client';
-import { useGroups } from '@/hooks/use-groups';
+// import { useGroups } from '@/hooks/use-groups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { useGroupAccess } from '@/hooks/use-group-access';
 import { isValidId } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { joinGroupAction, createJoinRequestAction, checkJoinStatusAction } from '@/lib/actions/group-actions';
 
 // Update the join room form schema
 const joinRoomSchema = z.object({
@@ -127,7 +128,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   // NOTE: removed useGroupAccess logic as data is now passed via props
 
   // Get resetJoinRequestStatus from useGroups hook
-  const { resetJoinRequestStatus } = useGroups();
+  // const { resetJoinRequestStatus } = useGroups();
 
   // Handle existing member check on mount
   useEffect(() => {
@@ -148,16 +149,17 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
     }));
   }, []);
 
-  // Check join request status from API (still kept for polling updates if needed, primarily after submission)
+  // Check join request status from server action
   const checkJoinRequestStatus = useCallback(async (targetGroupId: string) => {
     try {
       setIsCheckingStatus(true);
-      const response = await fetch(`/api/groups/${targetGroupId}/join-request/my-request`);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.joinRequest) {
-          const status = data.joinRequest.status.toLowerCase();
+      const result = await checkJoinStatusAction(targetGroupId);
+
+      if (result.success && result.data) {
+        const data = result.data;
+        if (data) {
+          const status = data.status.toLowerCase();
           setRequestStatus(status as 'pending' | 'approved' | 'rejected');
 
           // If approved, redirect to group
@@ -199,20 +201,10 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
       const targetGroupId = groupId; // Simplified for SSR version
 
-      const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: values.message
-        })
-      });
+      const result = await createJoinRequestAction(targetGroupId, values.message);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send join request');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send join request');
       }
 
       setRequestStatus('pending');
@@ -234,7 +226,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
     } finally {
       setIsJoining(false);
     }
-  }, [groupId, router]);
+  }, [groupId, router, checkJoinRequestStatus]);
 
   // Handle join request submission
   const handleJoinRequest = useCallback(async (values: JoinRoomFormValues) => {
@@ -252,26 +244,15 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       // Check if this is a public join or private request
       if (group?.isPrivate) {
         // Private Group Flow
-        const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: values.message })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to send join request');
+        const result = await createJoinRequestAction(targetGroupId, values.message);
+        if (!result.success) throw new Error(result.error || 'Failed to send join request');
 
         setRequestStatus('pending');
         toast.success('Join request sent successfully!');
       } else {
         // Public Group Flow
-        const response = await fetch(`/api/groups/join/${targetGroupId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to join group');
+        const result = await joinGroupAction(targetGroupId);
+        if (!result.success) throw new Error(result.error || 'Failed to join group');
 
         toast.success('Successfully joined the group!');
         router.push(`/groups/${targetGroupId}`);
@@ -301,6 +282,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
     handleJoinRequest(formValues);
   }, [group?.isPrivate, showMessageField, formValues, handleJoinRequest]);
+
 
   // Handle code from URL
   useEffect(() => {

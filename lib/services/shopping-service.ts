@@ -1,273 +1,176 @@
 import { prisma } from '@/lib/services/prisma';
-import { unstable_cache } from 'next/cache';
+import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
+const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
-import { getCurrentPeriod } from '@/lib/utils/period-utils';
+import { getShoppingCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys";
+import { invalidateShoppingCache } from "@/lib/cache/cache-invalidation";
+import { notifyRoomMembersBatch } from "@/lib/utils/notification-utils";
+import { NotificationType } from "@prisma/client";
+import { addPeriodIdToData, getPeriodAwareWhereClause } from "@/lib/utils/period-utils";
+import { uploadReceipt } from "@/lib/utils/upload-utils";
 
-/**
- * Fetches all shopping-related data for a user in a specific group
- * Uses unstable_cache for caching and encrypts cached data for security
- * All queries run in parallel using Promise.all()
- */
-export async function fetchShoppingData(userId: string, groupId: string) {
-  const cacheKey = `shopping-data-${userId}-${groupId}`;
-  
-  const cachedFn = unstable_cache(
-    async () => {
-      const start = performance.now();
-      
-      // Get current period first
-      const currentPeriod = await getCurrentPeriod(groupId);
-      
-      if (!currentPeriod) {
-        // No active period - return empty data
-        return encryptData({
-          items: [],
-          purchasedItems: [],
-          unpurchasedItems: [],
-          statistics: {
-            total: 0,
-            purchased: 0,
-            unpurchased: 0,
-            totalQuantity: 0
-          },
-          currentPeriod: null,
-          roomData: null,
-          userRole: null,
-          timestamp: new Date().toISOString(),
-          executionTime: 0
-        });
-      }
+export async function fetchShoppingData(userId: string, roomId: string, periodId?: string, startDate?: string, endDate?: string) {
+    const cacheKey = `shopping-data-${roomId}-${periodId || 'active'}`;
 
-      // Parallel queries for all shopping-related data
-      const [
-        allItems,
-        purchasedItems,
-        unpurchasedItems,
-        itemStats,
-        roomData,
-        membership
-      ] = await Promise.all([
-        // All shopping items for current period
-        prisma.shoppingItem.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
+    const cachedFn = unstable_cache(
+        async () => {
+            // Check membership
+            const member = await prisma.roomMember.findUnique({
+                where: { userId_roomId: { userId, roomId } },
+                include: { room: true }
+            });
+            if (!member) throw new Error("Unauthorized"); // Or handle gracefully
+
+             // Logic to resolve period and whereClause
+            let whereClause: any = { roomId };
+            let currentPeriod = null;
+
+            if (periodId) {
+                whereClause.periodId = periodId;
+                currentPeriod = await prisma.mealPeriod.findUnique({ where: { id: periodId } });
+            } else {
+                 // Determine active period
+                 currentPeriod = await prisma.mealPeriod.findFirst({
+                     where: { roomId, status: 'ACTIVE' }
+                 });
+                 
+                 // If no active period, we might return empty list or specific state
+                 if (!currentPeriod && member.room.periodMode === 'MONTHLY') {
+                     // In monthly mode, maybe we strictly need a period. 
+                     // But for shopping, we might allow viewing history via date range even without active period??
+                     // The page handles (!shoppingData.currentPeriod) by showing NoPeriodState.
+                 }
+
+                 if (currentPeriod) {
+                     whereClause.periodId = currentPeriod.id;
+                 } else {
+                     // If strict period mode and no period, return empty or Indicate no period
+                 }
             }
-          },
-          orderBy: {
-            date: 'desc'
-          }
-        }),
-        
-        // Purchased items
-        prisma.shoppingItem.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id,
-            purchased: true
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: {
-            date: 'desc'
-          }
-        }),
-        
-        // Unpurchased items
-        prisma.shoppingItem.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id,
-            purchased: false
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: {
-            date: 'desc'
-          }
-        }),
-        
-        // Shopping statistics
-        prisma.shoppingItem.aggregate({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          _count: {
-            id: true
-          },
-          _sum: {
-            quantity: true
-          }
-        }),
-        
-        // Room data
-        prisma.room.findUnique({
-          where: {
-            id: groupId
-          },
-          select: {
-            id: true,
-            name: true,
-            memberCount: true,
-            isPrivate: true
-          }
-        }),
-        
-        // User membership and role
-        prisma.roomMember.findUnique({
-          where: {
-            userId_roomId: {
-              userId: userId,
-              roomId: groupId
-            }
-          },
-          select: {
-            role: true,
-            isBanned: true
-          }
-        })
-      ]);
 
-      // Calculate purchased/unpurchased counts
-      const purchasedCount = purchasedItems.length;
-      const unpurchasedCount = unpurchasedItems.length;
+            if (startDate && endDate) {
+                whereClause.date = {
+                    gte: new Date(startDate),
+                    lte: new Date(endDate)
+                };
+            }
 
-      const end = performance.now();
-      const executionTime = end - start;
+            // Fetch Items
+            const items = await prisma.shoppingItem.findMany({
+                where: whereClause,
+                include: {
+                    user: {
+                        select: { id: true, name: true, email: true, image: true }
+                    }
+                },
+                orderBy: { date: 'desc' }
+            });
 
-      const result = {
-        items: allItems,
-        purchasedItems,
-        unpurchasedItems,
-        statistics: {
-          total: itemStats._count.id,
-          purchased: purchasedCount,
-          unpurchased: unpurchasedCount,
-          totalQuantity: itemStats._sum.quantity || 0
+            return encryptData({
+                items,
+                currentPeriod,
+                roomData: {
+                    periodMode: member.room.periodMode,
+                    isPrivate: member.room.isPrivate
+                }
+            });
         },
-        currentPeriod,
-        roomData,
-        userRole: membership?.role || null,
-        isBanned: membership?.isBanned || false,
-        timestamp: new Date().toISOString(),
-        executionTime
-      };
+        [cacheKey, 'shopping-data'],
+        {
+            revalidate: 120, 
+            tags: [`group-${roomId}`, `shopping-${roomId}`]
+        }
+    );
 
-      return encryptData(result);
-    },
-    [cacheKey, 'shopping-data'],
-    { 
-      revalidate: 30, 
-      tags: [`user-${userId}`, `group-${groupId}`, 'shopping'] 
-    }
-  );
-
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+    const encrypted = await cachedFn();
+    return decryptData(encrypted);
 }
 
-/**
- * Fetches shopping list summary with categorization
- */
-export async function fetchShoppingSummary(userId: string, groupId: string) {
-  const cacheKey = `shopping-summary-${userId}-${groupId}`;
-  
-  const cachedFn = unstable_cache(
-    async () => {
-      const start = performance.now();
-      
-      const currentPeriod = await getCurrentPeriod(groupId);
-      
-      if (!currentPeriod) {
-        return encryptData({
-          byCategory: [],
-          byUser: [],
-          recentActivity: [],
-          timestamp: new Date().toISOString(),
-          executionTime: 0
-        });
-      }
+export async function createShoppingItem(userId: string, roomId: string, data: { description: string, amount: number, date: Date, receiptFile?: File }) {
+    // Check membership
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { rooms: { where: { roomId } } }
+    });
 
-      const [byUser, recentActivity] = await Promise.all([
-        // Items grouped by user
-        prisma.shoppingItem.groupBy({
-          by: ['userId'],
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          _count: {
-            id: true
-          }
-        }),
-        
-        // Recent shopping activity
-        prisma.shoppingItem.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: {
-            date: 'desc'
-          },
-          take: 20
-        })
-      ]);
+    if (!user || user.rooms.length === 0) throw new Error("Unauthorized");
 
-      const end = performance.now();
-      const executionTime = end - start;
-
-      const result = {
-        byUser: byUser.map(u => ({
-          userId: u.userId,
-          count: u._count.id
-        })),
-        recentActivity,
-        timestamp: new Date().toISOString(),
-        executionTime
-      };
-
-      return encryptData(result);
-    },
-    [cacheKey, 'shopping-summary'],
-    { 
-      revalidate: 60, 
-      tags: [`user-${userId}`, `group-${groupId}`, 'shopping', 'summary'] 
+    // Upload receipt
+    let receiptUrl = null;
+    if (data.receiptFile) {
+        receiptUrl = await uploadReceipt(data.receiptFile, userId, roomId);
     }
-  );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+    // Prepare data
+    const shoppingData = await addPeriodIdToData(roomId, {
+        name: data.description.substring(0, 50) || 'Shopping Item',
+        description: data.description,
+        quantity: data.amount, // Using quantity as amount based on API logic
+        date: data.date,
+        receiptUrl,
+        userId,
+        roomId
+    });
+
+    const item = await prisma.shoppingItem.create({ data: shoppingData });
+
+    // Notify
+    const room = await prisma.room.findUnique({ where: { id: roomId }, select: { name: true } });
+    await notifyRoomMembersBatch(
+        roomId,
+        NotificationType.PAYMENT_CREATED, // Maybe add SHOPPING_CREATED type later? using PAYMENT as per API
+        `${user.name} added a new shopping item of ${data.amount} for ${data.description} in ${room?.name || 'the group'}.`,
+        userId
+    );
+
+    // Invalidate
+    await invalidateShoppingCache(roomId, item.periodId || undefined);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag(`shopping-${roomId}`);
+
+    return item;
+}
+
+export async function updateShoppingItem(userId: string, itemId: string, updateData: any) {
+    const currentItem = await prisma.shoppingItem.findUnique({
+        where: { id: itemId },
+        include: { room: { include: { members: { where: { userId } } } } }
+    });
+
+    if (!currentItem || currentItem.room.members.length === 0) throw new Error("Unauthorized");
+
+    const allowedUpdates = ['name', 'quantity', 'unit', 'purchased'];
+    const filteredUpdates: any = {};
+    Object.keys(updateData).forEach(key => {
+        if (allowedUpdates.includes(key)) filteredUpdates[key] = updateData[key];
+    });
+
+    const updatedItem = await prisma.shoppingItem.update({
+        where: { id: itemId },
+        data: filteredUpdates,
+        include: { user: { select: { id: true, name: true, email: true, image: true } } }
+    });
+
+    await invalidateShoppingCache(currentItem.roomId, currentItem.periodId || undefined);
+    revalidateTag(`group-${currentItem.roomId}`);
+    revalidateTag(`shopping-${currentItem.roomId}`);
+
+    return updatedItem;
+}
+
+export async function deleteShoppingItem(userId: string, itemId: string, roomId: string) {
+    const currentItem = await prisma.shoppingItem.findUnique({
+        where: { id: itemId },
+        include: { room: { include: { members: { where: { userId } } } } }
+    });
+
+    if (!currentItem || currentItem.room.members.length === 0) throw new Error("Unauthorized");
+
+    await prisma.shoppingItem.delete({ where: { id: itemId } });
+
+    await invalidateShoppingCache(roomId, currentItem.periodId || undefined);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag(`shopping-${roomId}`);
+
+    return { success: true };
 }

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { useGroups } from '@/hooks/use-groups';
+// import { useGroups } from '@/hooks/use-groups';
 import { InviteCard } from '../invite-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserProfileDialog } from '../user-profile-dialog';
@@ -46,6 +46,7 @@ interface Member {
 
 interface MembersTabProps {
   groupId: string;
+  group: any;
   isAdmin: boolean;
   isCreator: boolean;
   currentUserId?: string;
@@ -55,6 +56,7 @@ interface MembersTabProps {
 
 export function MembersTab({
   groupId,
+  group,
   isAdmin,
   isCreator,
   currentUserId,
@@ -65,7 +67,8 @@ export function MembersTab({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
-  const { isLoading } = useGroups();
+  // const { isLoading } = useGroups();
+  const isLoading = false;
   const { toast } = useToast();
 
   const getRoleBadge = (role: Role) => {
@@ -159,7 +162,7 @@ export function MembersTab({
                 {members.length} {members.length === 1 ? 'member' : 'members'} in this group
               </p>
             </div>
-            <InviteCard groupId={groupId} />
+            <InviteCard groupId={groupId} group={group} />
           </div>
 
           <div className="divide-y">

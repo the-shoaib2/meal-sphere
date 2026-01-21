@@ -2,8 +2,10 @@ import { prisma } from './prisma';
 import { PeriodStatus, Role } from '@prisma/client';
 import { createNotification, notifyRoomMembersBatch } from '../utils/notification-utils';
 import { NotificationType } from '@prisma/client';
-import { unstable_cache } from 'next/cache';
+import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
+const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
+import { invalidatePeriodCache } from '@/lib/cache/cache-invalidation';
 
 export interface PeriodSummary {
   id: string;
@@ -236,6 +238,11 @@ export class PeriodService {
       `A new meal period "${data.name}" has started. Period: ${data.startDate.toLocaleDateString()}${data.endDate ? ` - ${data.endDate.toLocaleDateString()}` : ''}`
     );
 
+    // Invalidate Cache
+    await invalidatePeriodCache(roomId, period.id);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag('periods');
+
     return {
       period,
     };
@@ -321,6 +328,11 @@ export class PeriodService {
       `The meal period "${currentPeriod.name}" has ended. Period: ${currentPeriod.startDate.toLocaleDateString()} - ${actualEndDate.toLocaleDateString()}`
     );
 
+    // Invalidate Cache
+    await invalidatePeriodCache(roomId, currentPeriod.id);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag('periods');
+
     return updatedPeriod;
   }
 
@@ -374,6 +386,11 @@ export class PeriodService {
       `The meal period "${period.name}" has been locked. No further edits are allowed.`
     );
 
+    // Invalidate Cache
+    await invalidatePeriodCache(roomId, periodId);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag('periods');
+
     return updatedPeriod;
   }
 
@@ -419,6 +436,11 @@ export class PeriodService {
         status,
       },
     });
+
+    // Invalidate Cache
+    await invalidatePeriodCache(roomId, periodId);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag('periods');
 
     return updatedPeriod;
   }
@@ -695,6 +717,11 @@ export class PeriodService {
       data: archiveData,
     });
 
+    // Invalidate Cache
+    await invalidatePeriodCache(roomId, periodId);
+    revalidateTag(`group-${roomId}`);
+    revalidateTag('periods');
+
     return updatedPeriod;
   }
 
@@ -790,6 +817,12 @@ export class PeriodService {
       }
 
       // Note: Notification will be handled by the API route
+
+      // Invalidate Cache
+      await invalidatePeriodCache(roomId, newPeriod.id); // For new period
+      await invalidatePeriodCache(roomId, originalPeriod.id); // For old period
+      revalidateTag(`group-${roomId}`);
+      revalidateTag('periods');
 
       return newPeriod;
     } catch (error) {

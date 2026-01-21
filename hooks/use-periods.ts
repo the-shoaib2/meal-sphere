@@ -5,6 +5,16 @@ import { toast } from 'sonner';
 import { useActiveGroup } from '@/contexts/group-context';
 import { usePeriodContext } from '@/contexts/period-context';
 import { PeriodStatus } from '@prisma/client';
+import { 
+  startPeriodAction, 
+  updatePeriodModeAction, 
+  endPeriodAction, 
+  lockPeriodAction, 
+  unlockPeriodAction, 
+  archivePeriodAction, 
+  restartPeriodAction 
+} from '@/lib/actions/period-actions';
+
 
 export interface CreatePeriodData {
   name: string;
@@ -206,23 +216,17 @@ export function useStartPeriod() {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch('/api/periods', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          groupId: activeGroup.id,
-        }),
+      
+      const result = await startPeriodAction({
+        ...data,
+        groupId: activeGroup.id
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to start period');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      return response.json();
+      return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
@@ -271,6 +275,107 @@ export function useStartPeriod() {
   });
 }
 
+
+
+export function usePeriodMode(groupId?: string) {
+  const queryClient = useQueryClient();
+  const { activeGroup } = useActiveGroup();
+  const router = useRouter();
+
+  // Use simplified hook if no specific groupId passed (uses activeGroup context)
+  const unified = usePeriodsPageData(false);
+
+  // If we're just checking the current group, use the unified data
+  if (!groupId || groupId === activeGroup?.id) {
+    const updatePeriodMode = useMutation({
+      mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
+        if (!activeGroup?.id) throw new Error('No active group');
+        
+        const result = await updatePeriodModeAction(activeGroup.id, mode);
+        
+        if (result.error) {
+           throw new Error(result.error);
+        }
+        
+        return result.data; 
+      },
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
+        router.refresh();
+        
+        toast.success(`Period mode updated to ${data.periodMode}`, {
+          description: data.periodMode === 'MONTHLY'
+            ? 'Monthly periods will be created automatically'
+            : 'You can now create custom periods manually',
+        });
+      },
+      onError: (error: Error) => {
+        toast.error('Failed to update period mode', {
+          description: error.message,
+        });
+      },
+    });
+
+    return {
+      periodMode: unified.data?.periodMode || 'MONTHLY',
+      isLoading: unified.isLoading,
+      updatePeriodMode: updatePeriodMode.mutate,
+      isUpdating: updatePeriodMode.isPending,
+    };
+  }
+
+  // Fallback to legacy individual fetch for other groups (rare case)
+  const { data: periodMode = 'MONTHLY', isLoading } = useQuery<'MONTHLY' | 'CUSTOM'>({
+    queryKey: ['period-mode', groupId],
+    queryFn: async () => {
+      if (!groupId) return 'MONTHLY';
+      const res = await fetch(`/api/groups/${groupId}/period-mode`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch period mode');
+      const data = await res.json();
+      return data.periodMode || 'MONTHLY';
+    },
+    enabled: !!groupId,
+    staleTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const updatePeriodMode = useMutation({
+    mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
+      if (!groupId) throw new Error('No group ID');
+      
+      const result = await updatePeriodModeAction(groupId, mode);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      return result.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview', groupId] });
+
+      toast.success(`Period mode updated to ${data.periodMode}`, {
+        description: data.periodMode === 'MONTHLY'
+          ? 'Monthly periods will be created automatically'
+          : 'You can now create custom periods manually',
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Failed to update period mode', {
+        description: error.message,
+      });
+    },
+  });
+  
+  return {
+    periodMode,
+    isLoading,
+    updatePeriodMode: updatePeriodMode.mutate,
+    isUpdating: updatePeriodMode.isPending,
+  };
+}
+
 export function useEndPeriod() {
   const queryClient = useQueryClient();
   const { activeGroup } = useActiveGroup();
@@ -281,25 +386,16 @@ export function useEndPeriod() {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'end',
-          endDate: endDate?.toISOString(),
-          groupId: activeGroup.id,
-        }),
-      });
+      
+      const result = await endPeriodAction(activeGroup.id, periodId, endDate);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to end period');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      return response.json();
+      return result.data;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
@@ -342,24 +438,16 @@ export function useLockPeriod() {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'lock',
-          groupId: activeGroup.id,
-        }),
-      });
+      
+      const result = await lockPeriodAction(activeGroup.id, periodId);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to lock period');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      return response.json();
+      return result.data;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
@@ -401,25 +489,16 @@ export function useUnlockPeriod() {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'unlock',
-          groupId: activeGroup.id,
-          status,
-        }),
-      });
+      
+      const result = await unlockPeriodAction(activeGroup.id, periodId, status);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to unlock period');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      return response.json();
+      return result.data;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
@@ -461,24 +540,16 @@ export function useArchivePeriod() {
       if (!activeGroup?.id) {
         throw new Error('No active group selected');
       }
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'archive',
-          groupId: activeGroup.id,
-        }),
-      });
+      
+      const result = await archivePeriodAction(activeGroup.id, periodId);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to archive period');
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      return response.json();
+      return result.data;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
@@ -521,28 +592,15 @@ export function useRestartPeriod() {
         throw new Error('No active group selected');
       }
 
-      const response = await fetch(`/api/periods/${periodId}/restart?groupId=${activeGroup.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ newName, withData }),
-      });
+      const result = await restartPeriodAction(activeGroup.id, periodId, { newName, withData });
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to restart period';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // If we can't parse the error response, use the status text
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      return response.json();
+      return result.data;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
@@ -704,105 +762,4 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
   };
 }
 
-export function usePeriodMode(groupId?: string) {
-  const queryClient = useQueryClient();
-  const { activeGroup } = useActiveGroup();
-  const router = useRouter();
-
-  // Use simplified hook if no specific groupId passed (uses activeGroup context)
-  const unified = usePeriodsPageData(false);
-
-  // If we're just checking the current group, use the unified data
-  if (!groupId || groupId === activeGroup?.id) {
-    const updatePeriodMode = useMutation({
-      mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
-        if (!activeGroup?.id) throw new Error('No active group');
-        const res = await fetch(`/api/groups/${activeGroup.id}/period-mode`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode }),
-        });
-        if (!res.ok) {
-          const error = await res.json();
-          throw new Error(error.error || 'Failed to update period mode');
-        }
-        return res.json();
-      },
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
-        router.refresh();
-        
-        toast.success(`Period mode updated to ${data.periodMode}`, {
-          description: data.periodMode === 'MONTHLY'
-            ? 'Monthly periods will be created automatically'
-            : 'You can now create custom periods manually',
-        });
-      },
-      onError: (error: Error) => {
-        toast.error('Failed to update period mode', {
-          description: error.message,
-        });
-      },
-    });
-
-    return {
-      periodMode: unified.data?.periodMode || 'MONTHLY',
-      isLoading: unified.isLoading,
-      updatePeriodMode: updatePeriodMode.mutate,
-      isUpdating: updatePeriodMode.isPending,
-    };
-  }
-
-  // Fallback to legacy individual fetch for other groups (rare case)
-  const { data: periodMode = 'MONTHLY', isLoading } = useQuery<'MONTHLY' | 'CUSTOM'>({
-    queryKey: ['period-mode', groupId],
-    queryFn: async () => {
-      if (!groupId) return 'MONTHLY';
-      const res = await fetch(`/api/groups/${groupId}/period-mode`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to fetch period mode');
-      const data = await res.json();
-      return data.periodMode || 'MONTHLY';
-    },
-    enabled: !!groupId,
-    staleTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const updatePeriodMode = useMutation({
-    mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
-      if (!groupId) throw new Error('No group ID');
-      const res = await fetch(`/api/groups/${groupId}/period-mode`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to update period mode');
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['periods-overview', groupId] });
-
-      toast.success(`Period mode updated to ${data.periodMode}`, {
-        description: data.periodMode === 'MONTHLY'
-          ? 'Monthly periods will be created automatically'
-          : 'You can now create custom periods manually',
-      });
-    },
-    onError: (error: Error) => {
-      toast.error('Failed to update period mode', {
-        description: error.message,
-      });
-    },
-  });
-
-  return {
-    periodMode,
-    isLoading,
-    updatePeriodMode: updatePeriodMode.mutate,
-    isUpdating: updatePeriodMode.isPending,
-  };
-} 
+ 

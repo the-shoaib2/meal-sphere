@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useGroups } from '@/hooks/use-groups';
+// import { useGroups } from '@/hooks/use-groups';
 import { toast } from 'sonner';
 import { Loader2, Lock, ArrowLeft, Users, LockKeyhole, Hash, Info, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
@@ -48,10 +48,11 @@ const createGroupSchema = z.object({
 
 type CreateGroupInput = z.infer<typeof createGroupSchema>;
 
+import { createGroupAction } from '@/lib/actions/group-actions';
+
 export default function CreateGroupPage() {
   const router = useRouter();
-  const { createGroup } = useGroups();
-  const { mutateAsync: createGroupMutation, isPending } = createGroup;
+  // const { createGroupAction } = await import('@/lib/actions/group-actions');
 
   const form = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema) as any,
@@ -69,32 +70,28 @@ export default function CreateGroupPage() {
     watch,
     formState: { errors, isSubmitting, isDirty, isValid },
     setValue,
-    trigger,
   } = form;
 
   const isPrivate = watch('isPrivate');
   const description = watch('description');
-  const maxMembers = watch('maxMembers');
   const bannerUrl = watch('bannerUrl') || "/group-images/abstract.png";
 
   const onSubmit = async (data: CreateGroupInput) => {
     try {
-      await createGroupMutation({
+      const result = await createGroupAction({
         ...data,
-        // Convert empty string to null for maxMembers
         maxMembers: data.maxMembers || undefined,
         bannerUrl: data.bannerUrl,
-      }, {
-        onSuccess: () => {
-          toast.success('Group created successfully!');
-          router.push('/groups');
-        },
-        onError: (error) => {
-          console.error('Error creating group:', error);
-          toast.error(error.response?.data?.message || 'Failed to create group');
-        }
+        userId: '' // userId is handled by the server action from session
       });
-    } catch (error) {
+
+      if (result.success) {
+        toast.success('Group created successfully!');
+        router.push('/groups');
+      } else {
+        toast.error(result.error || 'Failed to create group');
+      }
+    } catch (error: any) {
       console.error('Unexpected error:', error);
       toast.error('An unexpected error occurred');
     }

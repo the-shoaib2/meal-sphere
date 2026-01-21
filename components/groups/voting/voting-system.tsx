@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, RotateCcw } from "lucide-react"
-import useVoting from "@/hooks/use-voting"
-import { useGroups } from "@/hooks/use-groups"
-import { useActiveGroup } from "@/contexts/group-context"
-import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation" // Added useRouter
+// import useVoting from "@/hooks/use-voting" // Removed
+// import { useGroups } from "@/hooks/use-groups" // Removed
+// import { useActiveGroup } from "@/contexts/group-context" // Removed
+// import { useSession } from "next-auth/react" // Removed (passed as prop)
 import { format, addDays, isAfter, isBefore, startOfDay } from "date-fns"
 import CreateVoteDialog from "./create-vote-dialog"
 import ActiveVoteCard from "./active-vote-card"
