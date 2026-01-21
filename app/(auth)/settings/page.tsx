@@ -9,6 +9,7 @@ import { ActiveSessionsCard } from "@/components/settings/active-sessions-card"
 import { ChangePasswordCard } from "@/components/settings/change-password-card"
 import { PrivacyForm } from "@/components/settings/privacy-form"
 import { NotificationsSettingsCard } from "@/components/settings/notifications-settings-card"
+import { getAllActiveSessions } from "@/lib/auth/session-manager"
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -17,11 +18,14 @@ export default async function SettingsPage() {
     redirect("/login")
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      email: session.user.email,
-    },
-  })
+  const [user, activeSessions] = await Promise.all([
+    prisma.user.findUnique({
+      where: {
+        email: session.user.email,
+      },
+    }),
+    getAllActiveSessions(session.user.id)
+  ])
 
   if (!user) {
     redirect("/login")
@@ -41,9 +45,9 @@ export default async function SettingsPage() {
         <PrivacyForm user={user} />
         <AppearanceForm user={user} />
         <EmailVerificationCard user={user} />
-        <ActiveSessionsCard user={user} />
+        <EmailVerificationCard user={user} />
+        <ActiveSessionsCard user={user} initialSessions={activeSessions} />
         <NotificationsSettingsCard />
-        <ChangePasswordCard user={user} />
       </div>
     </div>
   )

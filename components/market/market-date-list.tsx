@@ -1,16 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { Room, User, MarketDate } from "@prisma/client"
+import type { MarketDate } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { toast } from "react-hot-toast"
 import { useLanguage } from "@/contexts/language-context"
 import { format } from "date-fns"
 import { Calendar, CheckCircle, XCircle } from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { ResponsiveTable } from "../ui/responsive-table"
+import { useRouter } from "next/navigation"
 
 interface MarketDateWithUser extends MarketDate {
   user: {
@@ -22,43 +21,16 @@ interface MarketDateWithUser extends MarketDate {
   fined?: boolean
 }
 
-interface MarketDateListProps {
-  user: User
-  rooms: Room[]
-  isManager: boolean
-}
 
-export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) {
-  const [selectedRoomId, setSelectedRoomId] = useState<string>("")
-  const [marketDates, setMarketDates] = useState<MarketDateWithUser[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+export function MarketDateList({ marketDates: initialMarketDates, isManager, currentUserId }: { marketDates: MarketDateWithUser[], isManager: boolean, currentUserId: string }) {
+  const [marketDates, setMarketDates] = useState<MarketDateWithUser[]>(initialMarketDates)
   const { t } = useLanguage()
-  const isMobile = useIsMobile()
+  const router = useRouter() // Used for refresh if needed
 
+  // Sync with props
   useEffect(() => {
-    if (selectedRoomId) {
-      fetchMarketDates()
-    }
-  }, [selectedRoomId])
-
-  async function fetchMarketDates() {
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/market-dates?roomId=${selectedRoomId}`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch market dates")
-      }
-
-      const data = await response.json()
-      setMarketDates(data)
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to fetch market dates")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    setMarketDates(initialMarketDates);
+  }, [initialMarketDates]);
 
   async function updateMarketDateStatus(id: string, completed: boolean) {
     try {
@@ -75,7 +47,7 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
       }
 
       toast.success("Market date status updated successfully")
-      fetchMarketDates()
+      router.refresh(); // Refresh server data
     } catch (error) {
       console.error(error)
       toast.error("Failed to update market date status")
@@ -94,7 +66,7 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
       }
 
       toast.success("Fine applied successfully")
-      fetchMarketDates()
+      router.refresh(); // Refresh server data
     } catch (error: any) {
       console.error(error)
       toast.error(error.message || "Failed to apply fine")
@@ -118,7 +90,7 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
       render: (value: any, row: MarketDateWithUser) => (
         <div className="flex items-center">
           {value.name}
-          {row.userId === user.id && (
+          {row.userId === currentUserId && (
             <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">You</span>
           )}
         </div>
@@ -163,7 +135,7 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
       title: "Actions",
       render: (_: any, row: MarketDateWithUser) => {
         const isPastDate = new Date(row.date) < new Date()
-        const isCurrentUser = row.userId === user.id
+        const isCurrentUser = row.userId === currentUserId
         const isCompleted = row.status === 'COMPLETED'
 
         return (
@@ -191,37 +163,16 @@ export function MarketDateList({ user, rooms, isManager }: MarketDateListProps) 
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div>
-            <Select onValueChange={setSelectedRoomId} value={selectedRoomId}>
-              <SelectTrigger className="w-full sm:w-auto">
-                <SelectValue placeholder="Select a room" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <ResponsiveTable
+              columns={columns}
+              data={marketDates.map((date) => ({
+                ...date,
+                actions: null, // This is just a placeholder for the actions column
+              }))}
+              emptyMessage="No market dates found"
+            />
           </div>
-
-          {selectedRoomId && (
-            <div className="space-y-4">
-              {isLoading ? (
-                <div className="text-center py-4">Loading...</div>
-              ) : (
-                <ResponsiveTable
-                  columns={columns}
-                  data={marketDates.map((date) => ({
-                    ...date,
-                    actions: null, // This is just a placeholder for the actions column
-                  }))}
-                  emptyMessage="No market dates found"
-                />
-              )}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

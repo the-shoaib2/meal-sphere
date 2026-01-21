@@ -316,3 +316,92 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
   const encrypted = await cachedFn();
   return decryptData(encrypted);
 }
+
+export async function fetchGroupJoinDetails(groupId: string, userId: string) {
+  const cacheKey = `group-join-${groupId}-${userId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      const [group, membership, joinRequest] = await Promise.all([
+        prisma.room.findUnique({
+          where: { id: groupId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            isPrivate: true,
+            memberCount: true,
+            maxMembers: true,
+            createdAt: true,
+            fineEnabled: true,
+            fineAmount: true,
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true
+              }
+            }
+          }
+        }),
+        prisma.roomMember.findUnique({
+          where: {
+            userId_roomId: {
+              userId: userId,
+              roomId: groupId
+            }
+          },
+          select: {
+            role: true,
+            isBanned: true
+          }
+        }),
+        prisma.joinRequest.findFirst({
+          where: {
+            userId: userId,
+            roomId: groupId,
+            status: {
+              in: ['PENDING', 'APPROVED', 'REJECTED'] 
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          select: {
+            status: true,
+            message: true,
+            createdAt: true
+          }
+        })
+      ]);
+
+      const end = performance.now();
+      const executionTime = end - start;
+
+      const result = {
+        group,
+        isMember: !!membership && !membership.isBanned,
+        membership,
+        joinRequest: joinRequest ? {
+          ...joinRequest,
+          status: joinRequest.status.toLowerCase() as 'pending' | 'approved' | 'rejected'
+        } : null,
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey, 'group-join-details'],
+    { 
+      revalidate: 10, // Short cache for join status updates
+      tags: [`group-${groupId}`, `user-${userId}`, 'join-requests'] 
+    }
+  );
+
+  const encrypted = await cachedFn();
+  return decryptData(encrypted);
+}

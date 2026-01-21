@@ -24,25 +24,26 @@ interface Session {
     id: string
     sessionToken: string
     userId: string
-    expires: Date
-    device?: string
-    location?: string
-    lastActive?: string
-    ipAddress?: string
-    deviceType?: string
-    deviceModel?: string
-    userAgent?: string
-    city?: string
-    country?: string
-    latitude?: number
-    longitude?: number
+    expires: Date | string
+    device?: string | null
+    location?: string | null
+    lastActive?: string | null
+    ipAddress?: string | null
+    deviceType?: string | null
+    deviceModel?: string | null
+    userAgent?: string | null
+    city?: string | null
+    country?: string | null
+    latitude?: number | null
+    longitude?: number | null
     isCurrent?: boolean
-    createdAt?: string
-    updatedAt?: string
+    createdAt?: string | Date
+    updatedAt?: string | Date
 }
 
 interface ActiveSessionsCardProps {
     user: User
+    initialSessions?: Session[]
 }
 
 const TableSkeleton = () => (
@@ -62,12 +63,27 @@ const TableSkeleton = () => (
     </>
 )
 
-export function ActiveSessionsCard({ user }: ActiveSessionsCardProps) {
+export function ActiveSessionsCard({ user, initialSessions = [] }: ActiveSessionsCardProps) {
     const isMobile = useIsMobile()
     const [isLoading, setIsLoading] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
     const [selectedSessions, setSelectedSessions] = useState<string[]>([])
     const isFetchingRef = useRef(false)
+
+    // Initialize sessions with processing (isCurrent)
+    useEffect(() => {
+        if (initialSessions.length > 0) {
+            const currentSessionToken = getCurrentSessionTokenFromBrowser()
+            const sessionsWithCurrent = initialSessions.map(session => ({
+                ...session,
+                isCurrent: session.sessionToken === currentSessionToken
+            }))
+            setSessions(sessionsWithCurrent)
+        } else {
+            // Only fetch if no initial data
+            fetchSessions()
+        }
+    }, [initialSessions.length]) // Only run when initialSessions changes (mostly on mount)
 
     const fetchSessions = useCallback(async () => {
         if (isFetchingRef.current) return
@@ -94,9 +110,8 @@ export function ActiveSessionsCard({ user }: ActiveSessionsCardProps) {
         }
     }, [])
 
-    useEffect(() => {
-        fetchSessions()
-    }, [fetchSessions])
+    // Removed the automatic useEffect for fetchSessions since we handle it in the initialization effect
+
 
     const handleRevokeSelected = async () => {
         if (selectedSessions.length === 0) {
@@ -267,8 +282,8 @@ export function ActiveSessionsCard({ user }: ActiveSessionsCardProps) {
                                     <div
                                         key={session.id}
                                         className={`p-3 border rounded-lg space-y-2 ${session.isCurrent
-                                                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300'
-                                                : ''
+                                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300'
+                                            : ''
                                             }`}
                                     >
                                         <div className="flex items-center justify-between">

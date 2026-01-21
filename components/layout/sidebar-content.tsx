@@ -57,6 +57,7 @@ const data: {
         { category: "Management" },
         { title: "Meals", url: "/meals", icon: Utensils },
         { title: "Shopping", url: "/shopping", icon: ShoppingCart },
+        { title: "Market Dates", url: "/market", icon: Calendar },
         { title: "Expenses", url: "/expenses", icon: Receipt },
 
         { category: "Financial" },
