@@ -340,9 +340,17 @@ export function useGroups(): UseGroupsReturn {
       return updatedGroup;
     },
     onSuccess: (data: Group) => {
-      queryClient.invalidateQueries({ queryKey: ['group', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      // toast.success('Group updated successfully');
+      // Optimistically update the user-groups list
+      queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => {
+        return old.map(g => g.id === data.id ? { ...g, ...data } : g);
+      });
+      
+      // Update specific group details
+      queryClient.setQueryData(['group', data.id], data);
+
+      // Invalidate to ensure consistency, but optimistic update handles immediate UI
+      queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
+      // queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] }); // No need to invalidate this one immediately if we trust optimistic
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error updating group:', error);

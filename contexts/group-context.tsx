@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Group } from '@/hooks/use-groups';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
 import { toast } from 'react-hot-toast';
@@ -33,26 +33,26 @@ export function GroupProvider({
   const router = useRouter();
   const [activeGroup, setActiveGroup] = useState<Group | null>(initialActiveGroup);
   const [isLoading, setIsLoading] = useState(true);
-  const [groups, setGroups] = useState<Group[]>(initialGroups);
   const queryClient = useQueryClient();
   const [isSwitchingGroup, startTransition] = useTransition();
-
-  // Update groups when initialGroups changes
-  useEffect(() => {
-    if (initialGroups.length > 0) {
-      setGroups(initialGroups);
-    }
-  }, [initialGroups]);
-
   // Hydrate React Query cache with initial groups
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id && initialGroups.length > 0) {
-      // Set the query data for useGroups hook
-      queryClient.setQueryData(['user-groups', session.user.id], initialGroups);
-      // Also populate the specific 'my' groups filter if needed
-      queryClient.setQueryData(['groups', 'my'], initialGroups);
-    }
-  }, [initialGroups, session?.user?.id, status, queryClient]);
+  // And subscribe to updates using useQuery
+  const { data: groups = [] } = useQuery<Group[]>({
+    queryKey: ['user-groups', session?.user?.id],
+    queryFn: () => {
+      // If we are here, it means cache was invalid/stale/missing
+      // We rely on useGroups hook or other mechanisms to populate this, 
+      // or we could fetch it if needed. 
+      // For now, if we have initialGroups but queryFn is called, return them or empty.
+      return initialGroups;
+    },
+    initialData: initialGroups,
+    enabled: !!session?.user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // We don't need the hydration useEffect anymore because useQuery with initialData handles it
+  // and keeps us subscribed to updates.
 
   // Set initial active group from server-side data
   useEffect(() => {
