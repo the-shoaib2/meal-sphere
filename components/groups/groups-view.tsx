@@ -204,8 +204,29 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
 
     return (
         <>
-            <Card className="group hover:shadow-md transition-shadow flex flex-col h-full">
-                <CardHeader className="pb-3">
+            <Card className="group hover:shadow-md transition-shadow flex flex-col h-full overflow-hidden">
+                <div className="relative h-32 w-full bg-muted">
+                    {group.bannerUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                            src={group.bannerUrl}
+                            alt={group.name}
+                            className="object-cover w-full h-full"
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center w-full h-full bg-primary/10">
+                            <Users className="h-10 w-10 text-primary/40" />
+                        </div>
+                    )}
+                    {isOwner && (
+                        <div className="absolute top-2 right-2">
+                            <Badge variant="secondary" className="text-xs bg-background/80 hover:bg-background/90 backdrop-blur-sm shadow-sm">
+                                Owner
+                            </Badge>
+                        </div>
+                    )}
+                </div>
+                <CardHeader className="pb-3 pt-4">
                     <div className="flex items-start justify-between">
                         <div>
                             <CardTitle className="text-lg flex items-center gap-2">
@@ -215,11 +236,6 @@ function GroupCard({ group, isOwner }: GroupCardProps) {
                                 {group.description || 'No description provided.'}
                             </CardDescription>
                         </div>
-                        {isOwner && (
-                            <Badge variant="secondary" className="text-xs">
-                                Owner
-                            </Badge>
-                        )}
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-4">

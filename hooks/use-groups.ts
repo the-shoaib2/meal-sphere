@@ -66,6 +66,7 @@ interface UpdateGroupInput {
   maxMembers?: number | null;
   tags?: string[];
   features?: Record<string, boolean>;
+  bannerUrl?: string;
 }
 
 interface JoinRequest {

@@ -107,9 +107,12 @@ type GroupNotificationSettings = {
   joinRequests: boolean;
 };
 
+import { GroupImageSelection } from '@/components/groups/group-image-selection';
+
 const groupSettingsSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   description: z.string().optional(),
+  bannerUrl: z.string().optional(),
   isPrivate: z.boolean(),
   maxMembers: z.union([
     z.string()
@@ -146,6 +149,7 @@ type GroupWithExtras = {
   id: string;
   name: string;
   description: string | null;
+  bannerUrl: string | null;
   isPrivate: boolean;
   maxMembers: number | null;
   tags: string[];
@@ -157,6 +161,7 @@ type GroupWithExtras = {
 type PreviousGroupSettings = {
   name: string;
   description: string | null;
+  bannerUrl: string | null;
   isPrivate: boolean;
   maxMembers: number | null | undefined;
   tags: string[];
@@ -191,15 +196,17 @@ export function SettingsTab({
     defaultValues: {
       name: group?.name || '',
       description: group?.description || '',
+      bannerUrl: group?.bannerUrl || '/group-images/abstract.png',
       isPrivate: group?.isPrivate || false,
       maxMembers: group?.maxMembers || undefined,
-      tags: (group as GroupWithExtras)?.tags || [],
-      features: (group as GroupWithExtras)?.features || {},
+      tags: (group as any)?.tags || [],
+      features: (group as any)?.features || {},
     },
   });
 
   const { register, handleSubmit, watch, formState: { errors }, setValue } = form;
   const isPrivateForm = watch('isPrivate');
+  const bannerUrl = watch('bannerUrl') || '/group-images/abstract.png';
   const formTags = watch('tags') || [];
   const formFeatures = watch('features') || {};
 
@@ -208,10 +215,11 @@ export function SettingsTab({
     if (group) {
       setValue('name', group.name);
       setValue('description', group.description || '');
+      setValue('bannerUrl', group.bannerUrl || '/group-images/abstract.png');
       setValue('isPrivate', group.isPrivate);
       setValue('maxMembers', group.maxMembers || undefined);
-      setValue('tags', (group as GroupWithExtras).tags || []);
-      setValue('features', (group as GroupWithExtras).features || {});
+      setValue('tags', (group as any).tags || []);
+      setValue('features', (group as any).features || {});
     }
   }, [group, setValue]);
 
@@ -257,7 +265,16 @@ export function SettingsTab({
       });
 
       if (!response.ok) throw new Error('Failed to update');
-      toast.success('Notification settings updated');
+
+      const notificationLabels: Record<keyof GroupNotificationSettings, string> = {
+        groupMessages: 'Group Messages',
+        announcements: 'Announcements',
+        mealUpdates: 'Meal Updates',
+        memberActivity: 'Member Activity',
+        joinRequests: 'Join Requests'
+      };
+
+      toast.success(`${notificationLabels[key]} notifications ${newValue ? 'enabled' : 'disabled'}`);
     } catch (error) {
       // Revert
       setNotificationSettings(prev => prev ? ({ ...prev, [key]: currentValue }) : null);
@@ -271,6 +288,7 @@ export function SettingsTab({
       prevGroupRef[1]({
         name: group.name,
         description: group.description || '',
+        bannerUrl: group.bannerUrl || null,
         isPrivate: group.isPrivate,
         maxMembers: group.maxMembers,
         tags: (group as GroupWithExtras).tags || [],
@@ -324,6 +342,7 @@ export function SettingsTab({
         data: {
           name: data.name,
           description: data.description,
+          bannerUrl: data.bannerUrl,
           isPrivate: data.isPrivate,
           maxMembers: typeof data.maxMembers === 'string' ? (data.maxMembers === '' ? null : Number(data.maxMembers)) : data.maxMembers,
           tags: data.tags,
@@ -336,6 +355,7 @@ export function SettingsTab({
       if (prev) {
         if (prev.name !== data.name) toast.success('Group name updated');
         if ((prev.description || '') !== (data.description || '')) toast.success('Description updated');
+        if ((prev.bannerUrl || '') !== (data.bannerUrl || '')) toast.success('Group image updated');
         if (prev.isPrivate !== data.isPrivate) toast.success(`Privacy set to ${data.isPrivate ? 'Private' : 'Public'}`);
         if (prev.maxMembers !== (data.maxMembers ?? null)) toast.success('Max members updated');
         // Tags
@@ -619,6 +639,13 @@ export function SettingsTab({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
+              <GroupImageSelection
+                selectedImage={bannerUrl}
+                onSelect={(url) => setValue('bannerUrl', url, { shouldDirty: true })}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="name">Group Name</Label>
               <Input
                 id="name"
@@ -636,6 +663,7 @@ export function SettingsTab({
                 id="description"
                 {...register('description')}
                 placeholder="Enter group description"
+                className="max-h-32"
               />
               {errors.description && (
                 <p className="text-sm text-destructive">{errors.description.message}</p>

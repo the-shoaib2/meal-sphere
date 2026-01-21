@@ -34,6 +34,7 @@ export async function getUserGroups(userId: string, includeMembers = false) {
               description: true,
               isPrivate: true,
               createdAt: true,
+              bannerUrl: true,
               createdByUser: {
                 select: {
                   id: true,
@@ -194,7 +195,8 @@ export async function getPublicGroups(limit = 50, userId?: string) {
           description: true,
           isPrivate: true,
           createdAt: true,
-          // Optimized: removed bannerUrl, category, tags as they aren't used in main list
+          bannerUrl: true,
+          // Optimized: removed category, tags as they aren't used in main list
           createdByUser: {
             select: {
               id: true,

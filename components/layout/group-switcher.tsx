@@ -63,8 +63,15 @@ export function GroupSwitcher() {
         <button
           className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors outline-none cursor-pointer"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            {hasGroups ? (
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground overflow-hidden">
+            {hasGroups && activeGroup?.bannerUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={activeGroup.bannerUrl}
+                alt={activeGroup.name}
+                className="object-cover w-full h-full"
+              />
+            ) : hasGroups ? (
               <Users className="size-4" />
             ) : (
               <Plus className="size-4" />
@@ -121,12 +128,25 @@ export function GroupSwitcher() {
                 <div className="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
               )}
               <div className="flex items-center gap-3 min-w-0 w-full">
-                <Users className={cn(
-                  "h-4 w-4 transition-colors",
-                  activeGroup?.id === group.id
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400"
-                )} />
+                <div className="relative h-5 w-5 rounded-md overflow-hidden shrink-0">
+                  {group.bannerUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={group.bannerUrl}
+                      alt={group.name}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full bg-primary/10">
+                      <Users className={cn(
+                        "h-4 w-4 transition-colors",
+                        activeGroup?.id === group.id
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                      )} />
+                    </div>
+                  )}
+                </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{group.name}</span>
                   {group.userRole && (

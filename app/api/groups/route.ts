@@ -147,6 +147,7 @@ export async function GET(req: NextRequest) {
                   description: true,
                   isPrivate: true,
                   createdAt: true,
+                  bannerUrl: true,
                   memberCount: true,
                   createdByUser: {
                     select: { id: true, name: true, image: true }
@@ -172,6 +173,7 @@ export async function GET(req: NextRequest) {
                   description: true,
                   isPrivate: true,
                   createdAt: true,
+                  bannerUrl: true,
                   memberCount: true,
                   createdByUser: {
                     select: { id: true, name: true, image: true }
