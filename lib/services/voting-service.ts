@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/services/prisma";
 import { Vote, Candidate, Voter } from "@/types/group";
-import { unstable_cache, revalidateTag } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 import { VoteType } from "@prisma/client";
 
 export async function createVote(
@@ -40,7 +40,6 @@ export async function createVote(
       }
     });
     
-    revalidateTag(`votes-${roomId}`);
     return { success: true, data: formatVote(vote) };
   } catch (error) {
     console.error("Error creating vote:", error);
@@ -126,10 +125,6 @@ async function updateVoteStatus(voteId: string, isActive: boolean) {
     data: { isActive },
     select: { roomId: true }
   });
-  
-  if (vote) {
-     revalidateTag(`votes-${vote.roomId}`);
-  }
 }
 
 export async function castVote(voteId: string, userId: string, candidateId: string) {
@@ -185,7 +180,6 @@ export async function castVote(voteId: string, userId: string, candidateId: stri
       }
     });
 
-    revalidateTag(`votes-${updatedVote.roomId}`);
     return { success: true, data: formatVote(updatedVote) };
   } catch (error) {
     console.error("Error casting vote:", error);
@@ -206,7 +200,6 @@ export async function deleteVote(voteId: string, userId: string, isAdmin: boolea
       where: { id: voteId }
     });
 
-    revalidateTag(`votes-${vote.roomId}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting vote:", error);

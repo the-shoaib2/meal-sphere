@@ -6,12 +6,11 @@ import {
   getVotes, 
   castVote, 
   deleteVote, 
-  getVote,
-  VotingType 
+  getVote
 } from "@/lib/services/voting-service";
 import { revalidatePath, revalidateTag as _revalidateTag } from "next/cache";
 import { prisma } from "@/lib/services/prisma";
-import { Role } from "@prisma/client";
+import { Role, VoteType } from "@prisma/client";
 
 const revalidateTag = _revalidateTag as any;
 
@@ -51,7 +50,7 @@ export async function POST(req: NextRequest) {
     const result = await createVote(groupId, access.userId!, {
       title: body.title,
       description: body.description,
-      type: body.type as VotingType,
+      type: body.type as VoteType,
       startDate: body.startDate,
       endDate: body.endDate,
       options: body.candidates || body.options || []
