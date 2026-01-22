@@ -8,7 +8,7 @@ import { fetchDashboardData } from '@/lib/services/dashboard-service';
 import { fetchGroupAccessData } from '@/lib/services/groups-service';
 
 // UI Components
-import DashboardRefreshButton from '@/components/dashboard/refresh-button';
+import { RefreshButton } from '@/components/dashboard/refresh-button';
 import DetailedAnalytics from '@/components/dashboard/detailed-analytics';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
         <DashboardShell
             header={
                 <PageHeader heading="Dashboard">
-                    <DashboardRefreshButton />
+                    <RefreshButton />
                 </PageHeader>
             }
             activities={data.activities}

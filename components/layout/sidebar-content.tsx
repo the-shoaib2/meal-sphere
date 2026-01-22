@@ -57,7 +57,6 @@ const data: {
         { category: "Management" },
         { title: "Meals", url: "/meals", icon: Utensils },
         { title: "Shopping", url: "/shopping", icon: ShoppingCart },
-        { title: "Market Dates", url: "/market", icon: Calendar },
         { title: "Expenses", url: "/expenses", icon: Receipt },
 
         { category: "Financial" },
@@ -120,12 +119,12 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
     return (
         <div className="flex flex-col h-full bg-background/95 backdrop-blur-sm">
-            <div className="space-y-2">
+            <div className="space-y-2 px-2 sm:px-0">
                 {/* Group Switcher Section */}
                 <GroupSwitcher />
 
                 {/* Navigation Items */}
-                <div className="space-y-1 px-2">
+                <div className="space-y-1">
                     {data.navItems.map((item, index) => {
                         if ('category' in item) {
                             return (
@@ -155,7 +154,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
                 {/* Account Section */}
                 <div className="pt-3 border-t border-border/40 mt-auto">
-                    <div className="space-y-1 px-2">
+                    <div className="space-y-1">
                         {data.account.map((item) => {
                             const isDestructive = item.variant === "destructive"
                             const isSignout = item.href === "/signout"

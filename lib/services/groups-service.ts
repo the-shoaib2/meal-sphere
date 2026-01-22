@@ -286,42 +286,88 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
     async () => {
       const start = performance.now();
       
-      const group = await prisma.room.findUnique({
-        where: { id: groupId },
-        include: {
-          createdByUser: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true
-            }
-          },
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  image: true
-                }
+      // Fetch group and user's membership in one go to determine access level
+      const [group, userMembership] = await Promise.all([
+        prisma.room.findUnique({
+          where: { id: groupId },
+          include: {
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                // Only disclose creator email to members/admins later if needed, 
+                // but usually public view might strictly hide it.
+                // Keeping it for now but we'll sanitize the return.
+                email: true,
+                image: true
               }
             },
-            orderBy: {
-              joinedAt: 'asc'
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true
+                  }
+                }
+              },
+              orderBy: {
+                joinedAt: 'asc'
+              }
             }
           }
+        }),
+        prisma.roomMember.findUnique({
+          where: {
+            userId_roomId: {
+              userId: userId,
+              roomId: groupId
+            }
+          },
+          select: { role: true, isBanned: true }
+        })
+      ]);
+
+      if (!group) return null;
+
+      const isMember = !!userMembership && !userMembership.isBanned;
+      const isAdmin = userMembership?.role === 'ADMIN' || userMembership?.role === 'MANAGER'; // Assuming MANAGER is Owner equivalent here based on usage
+      const canViewSensitive = isMember || isAdmin;
+
+      // Sanitize Members List
+      const sanitizedMembers = group.members.map(member => {
+        // Hide email for non-members listening in
+        if (!canViewSensitive) {
+          return {
+            ...member,
+            user: {
+              ...member.user,
+              email: null // Redact email
+            },
+            // Redact other sensitive member fields if any
+            permissions: null,
+            invites: [] 
+          };
         }
+        return member;
       });
 
-      const end = performance.now();
-      const executionTime = end - start;
+      // Sanitize Creator if needed, though usually less critical, strictness is good
+      const sanitizedCreator = {
+        ...group.createdByUser,
+        email: canViewSensitive ? group.createdByUser.email : null
+      };
 
       const result = {
-        group,
+        group: {
+            ...group,
+            createdByUser: sanitizedCreator,
+            members: sanitizedMembers
+        },
         timestamp: new Date().toISOString(),
-        executionTime
+        executionTime: performance.now() - start
       };
 
       return encryptData(result);
@@ -334,6 +380,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
   );
 
   const encrypted = await cachedFn();
+  if (!encrypted) return null;
   return decryptData(encrypted);
 }
 export async function fetchGroupAccessData(groupId: string, userId: string) {

@@ -23,6 +23,7 @@ interface GroupPageContentProps {
     joinRequests?: any[];
     initialVotes?: any[];
     initialInviteTokens?: any[];
+    initialTab?: string;
 }
 
 import VotingSystem from '@/components/groups/voting/voting-system';
@@ -36,7 +37,8 @@ export function GroupPageContent(
         initialAccessData,
         joinRequests,
         initialVotes = [],
-        initialInviteTokens = []
+        initialInviteTokens = [],
+        initialTab = 'members'
     }: GroupPageContentProps
 ) {
     const router = useRouter();
@@ -48,28 +50,38 @@ export function GroupPageContent(
     const { data: group, isLoading, error, refetch } = useGroupDetails(groupId, initialData);
 
     const [showActivityDialog, setShowActivityDialog] = useState(false);
-    const [activeTab, setActiveTab] = useState('members');
+
+    // Initialize with prop if valid, otherwise default
+    const validTabs = ['members', 'join-requests', 'voting', 'settings'];
+    const [activeTab, setActiveTab] = useState(
+        validTabs.includes(initialTab) ? initialTab : 'members'
+    );
+
     const [isMounted, setIsMounted] = useState(false);
     const [isHeaderVisible, setIsHeaderVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
 
     useEffect(() => {
         setIsMounted(true);
-        const tabFromUrl = searchParams?.get('tab');
-        if (tabFromUrl && ['members', 'join-requests', 'voting', 'settings'].includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl);
-        }
-    }, [searchParams]);
+    }, []);
 
     useEffect(() => {
+        let ticking = false;
+
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > lastScrollY && currentScrollY > 100) {
-                setIsHeaderVisible(false);
-            } else {
-                setIsHeaderVisible(true);
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const currentScrollY = window.scrollY;
+                    if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                        setIsHeaderVisible(false);
+                    } else {
+                        setIsHeaderVisible(true);
+                    }
+                    setLastScrollY(currentScrollY);
+                    ticking = false;
+                });
+                ticking = true;
             }
-            setLastScrollY(currentScrollY);
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });

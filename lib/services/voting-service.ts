@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/services/prisma";
-import { Vote, Candidate } from "@/types/group";
-import { unstable_cache } from "next/cache";
-
-// Force dynamic since we're using sensitive data
-// export const dynamic = 'force-dynamic';
-
-export type VotingType = 'MEAL_MANAGER' | 'MEAL_CHOICE' | 'ACCOUNTANT' | 'ROOM_LEADER' | 'MARKET_MANAGER' | 'GROUP_DECISION' | 'EVENT_ORGANIZER' | 'CLEANING_MANAGER' | 'TREASURER' | 'CUSTOM';
+import { Vote, Candidate, Voter } from "@/types/group";
+import { unstable_cache, revalidateTag } from "next/cache";
+import { VoteType } from "@prisma/client";
 
 export async function createVote(
   roomId: string,
@@ -13,7 +9,7 @@ export async function createVote(
   data: {
     title: string;
     description?: string;
-    type: VotingType;
+    type: VoteType;
     startDate: string;
     endDate: string;
     options: Candidate[];
@@ -43,6 +39,8 @@ export async function createVote(
         }
       }
     });
+    
+    revalidateTag(`votes-${roomId}`);
     return { success: true, data: formatVote(vote) };
   } catch (error) {
     console.error("Error creating vote:", error);
@@ -72,43 +70,66 @@ export async function getVote(voteId: string) {
 }
 
 export async function getVotes(roomId: string) {
-  try {
-    const votes = await prisma.vote.findMany({
-      where: { roomId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
+  const cacheKey = `votes-${roomId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      try {
+        const votes = await prisma.vote.findMany({
+          where: { roomId },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+              }
+            }
           }
+        });
+
+        // Check for expired votes and update status
+        const now = new Date();
+        const updates = votes.filter(v => v.isActive && new Date(v.endDate) < now);
+        
+        if (updates.length > 0) {
+          await Promise.all(updates.map(v => updateVoteStatus(v.id, false)));
+          
+          return votes.map(v => {
+            if (v.isActive && new Date(v.endDate) < now) {
+               return { ...v, isActive: false };
+            }
+            return v;
+          }).map(formatVote);
         }
+
+        return votes.map(formatVote);
+      } catch (error) {
+        console.error("Error fetching votes:", error);
+        return [];
       }
-    });
-
-    // Check for expired votes and update status
-    const now = new Date();
-    const updates = votes.filter(v => v.isActive && new Date(v.endDate) < now);
-    
-    if (updates.length > 0) {
-      await Promise.all(updates.map(v => updateVoteStatus(v.id, false)));
-      // Refetch to get updated status
-      return getVotes(roomId);
+    },
+    [cacheKey, 'v1-votes'],
+    {
+      revalidate: 60, // Cache for 1 minute
+      tags: [`votes-${roomId}`]
     }
+  );
 
-    return votes.map(formatVote);
-  } catch (error) {
-    console.error("Error fetching votes:", error);
-    return [];
-  }
+  return cachedFn();
 }
 
 async function updateVoteStatus(voteId: string, isActive: boolean) {
-  await prisma.vote.update({
+  const vote = await prisma.vote.update({
     where: { id: voteId },
-    data: { isActive }
+    data: { isActive },
+    select: { roomId: true }
   });
+  
+  if (vote) {
+     revalidateTag(`votes-${vote.roomId}`);
+  }
 }
 
 export async function castVote(voteId: string, userId: string, candidateId: string) {
@@ -121,11 +142,11 @@ export async function castVote(voteId: string, userId: string, candidateId: stri
     if (!vote.isActive) throw new Error("Vote is no longer active");
     if (new Date(vote.endDate) < new Date()) throw new Error("Vote has expired");
 
-    const results = (typeof vote.results === 'string' ? JSON.parse(vote.results) : (vote.results as any)) || {};
+    const results: Record<string, Voter[]> = (typeof vote.results === 'string' ? JSON.parse(vote.results) : (vote.results as any)) || {};
     
     // Check if user has already voted
-    const hasVoted = Object.values(results).some((voters: any) => 
-      Array.isArray(voters) && voters.some((v: any) => v.id === userId)
+    const hasVoted = Object.values(results).some((voters: Voter[]) => 
+      Array.isArray(voters) && voters.some((v: Voter) => v.id === userId)
     );
 
     if (hasVoted) throw new Error("You have already voted in this poll");
@@ -145,8 +166,8 @@ export async function castVote(voteId: string, userId: string, candidateId: stri
     results[candidateId].push({
       id: user.id,
       name: user.name || 'Unknown',
-      image: user.image
-    });
+      image: user.image || undefined
+    } as Voter);
 
     const updatedVote = await prisma.vote.update({
       where: { id: voteId },
@@ -164,6 +185,7 @@ export async function castVote(voteId: string, userId: string, candidateId: stri
       }
     });
 
+    revalidateTag(`votes-${updatedVote.roomId}`);
     return { success: true, data: formatVote(updatedVote) };
   } catch (error) {
     console.error("Error casting vote:", error);
@@ -184,6 +206,7 @@ export async function deleteVote(voteId: string, userId: string, isAdmin: boolea
       where: { id: voteId }
     });
 
+    revalidateTag(`votes-${vote.roomId}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting vote:", error);
@@ -193,8 +216,12 @@ export async function deleteVote(voteId: string, userId: string, isAdmin: boolea
 
 // Helper to format prisma result to our interface
 function formatVote(vote: any): Vote {
-  const results = typeof vote.results === 'string' ? JSON.parse(vote.results) : (vote.results as Record<string, any[]>);
-  const totalVotes = Object.values(results || {}).reduce((acc: number, voters: any) => acc + (Array.isArray(voters) ? voters.length : 0), 0);
+  const results = typeof vote.results === 'string' 
+    ? (JSON.parse(vote.results) as Record<string, Voter[]>) 
+    : (vote.results as Record<string, Voter[]> || {});
+    
+  const totalVotes = Object.values(results).reduce((acc: number, voters: Voter[]) => 
+    acc + (Array.isArray(voters) ? voters.length : 0), 0);
 
   return {
     ...vote,
@@ -206,5 +233,6 @@ function formatVote(vote: any): Vote {
     options: typeof vote.options === 'string' ? JSON.parse(vote.options) : (vote.options as Candidate[]),
     results: results,
     totalVotes: totalVotes,
+    createdById: vote.userId, // Map userId to createdById for the Vote interface
   };
 }

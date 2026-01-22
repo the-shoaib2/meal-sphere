@@ -89,14 +89,6 @@
   "profile.language": "Language",
   "profile.security": "Security",
   "profile.save": "Save Changes",
-  "market.title": "Market Dates",
-  "market.assign": "Assign Market Date",
-  "market.date": "Date",
-  "market.member": "Member",
-  "market.completed": "Completed",
-  "market.fined": "Fined",
-  "market.fineAmount": "Fine Amount",
-  "market.enableFine": "Enable Fine",
   "expense.title": "Extra Expenses",
   "expense.add": "Add Expense",
   "expense.type": "Type",
@@ -124,4 +116,4 @@
   "notification.error": "Error",
   "notification.warning": "Warning",
   "notification.info": "Information"
-} 
+}

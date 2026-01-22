@@ -21,7 +21,7 @@ export default async function GroupsPage() {
     <div className="space-y-6">
       <PageHeader
         heading="Groups"
-        text="Join existing groups or create your own to start planning meals together."
+        text="Join or create groups to plan meals together."
         className="mb-8"
       />
 

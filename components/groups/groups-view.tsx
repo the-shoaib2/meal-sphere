@@ -77,7 +77,7 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                 className="w-full"
             >
                 <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-                    <TabsList>
+                    <TabsList className="w-fit">
                         <TabsTrigger value="my-groups">My Groups</TabsTrigger>
                         <TabsTrigger value="discover">Discover</TabsTrigger>
                     </TabsList>

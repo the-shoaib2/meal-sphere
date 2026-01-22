@@ -75,8 +75,8 @@ import { useGroups } from "@/hooks/use-groups";
 
 export function InviteCard({ groupId, group: initialGroup, className = '', initialTokens = [] }: InviteCardProps) {
   const { useGroupDetails } = useGroups();
-  const { data: fetchedGroup, isLoading } = useGroupDetails(groupId, null);
-  const group = initialGroup || fetchedGroup;
+  const { data: group, isLoading } = useGroupDetails(groupId, initialGroup);
+
 
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>('MEMBER');

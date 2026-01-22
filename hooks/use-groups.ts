@@ -222,16 +222,21 @@ export function useGroups(): UseGroupsReturn {
   }, []);
 
   const useGroupDetails = (groupId: string, initialData?: any, password?: string) => {
+    const hasInitialData = !!initialData;
     return useQuery<Group, Error>({
       queryKey: ['group', groupId],
       queryFn: () => {
+        if (hasInitialData) return initialData; // Should not happen due to enabled: false, but safety net
         if (!groupId) throw new Error('Group ID is required');
         return getGroupDetails(groupId, password);
       },
       enabled: !!groupId && !initialData,
       initialData: initialData,
-      staleTime: initialData ? 10 * 60 * 1000 : 0, // Cache for 10 mins if initial data provided
-      refetchOnWindowFocus: true,
+      staleTime: initialData ? Infinity : 10 * 60 * 1000, 
+      gcTime: initialData ? Infinity : 30 * 60 * 1000,
+      refetchOnWindowFocus: !hasInitialData,
+      refetchOnMount: !hasInitialData,
+      refetchOnReconnect: !hasInitialData,
       retry: (failureCount, error: any) => {
         // Don't retry if it's a password required error
         if (error?.requiresPassword) return false;
