@@ -8,6 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useCurrentPeriod } from "@/hooks/use-periods"
+import { NoPeriodState } from "@/components/empty-states/no-period-state"
 
 export default function BkashPaymentPage() {
   const router = useRouter()
@@ -17,6 +19,24 @@ export default function BkashPaymentPage() {
   const [showPayment, setShowPayment] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const handleBack = () => {
+    router.push("/dashboard/payments")
+  }
+
+  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod();
+
+  if (!isPeriodLoading && !currentPeriod) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={handleBack} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Payments
+        </Button>
+        <NoPeriodState />
+      </div>
+    );
+  }
 
   // Sample data - would come from API
   const rooms = [
@@ -61,9 +81,7 @@ export default function BkashPaymentPage() {
     setShowPayment(false)
   }
 
-  const handleBack = () => {
-    router.push("/dashboard/payments")
-  }
+
 
   return (
     <div className="space-y-6">

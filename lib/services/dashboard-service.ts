@@ -272,7 +272,8 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
           totalActiveGroups: activeGroupsCount,
           groupId: resolvedGroupId,
           groupName: roomData?.name || 'Unknown Group',
-          groupBalance: groupBalanceSummary
+          groupBalance: groupBalanceSummary,
+          currentPeriod: currentPeriod
         },
         activities: allActivities,
         chartData,

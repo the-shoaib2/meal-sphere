@@ -8,6 +8,51 @@ import { v4 as uuidv4 } from 'uuid';
 import { createCustomNotification } from "@/lib/utils/notification-utils";
 import { invalidatePaymentCache } from "@/lib/cache/cache-invalidation";
 import { PaymentMethod } from '@prisma/client';
+import { getCurrentPeriod } from './period-service';
+
+export async function fetchPaymentsData(userId: string, groupId: string) {
+    const cacheKey = `payments-data-${userId}-${groupId}`;
+    
+    const cachedFn = unstable_cache(
+        async () => {
+            const [
+                payments,
+                activePeriod,
+                room
+            ] = await Promise.all([
+                prisma.payment.findMany({
+                    where: { roomId: groupId },
+                    include: {
+                        user: {
+                            select: { id: true, name: true, image: true }
+                        }
+                    },
+                    orderBy: { date: 'desc' }
+                }),
+                getCurrentPeriod(groupId),
+                prisma.room.findUnique({
+                    where: { id: groupId },
+                    select: { periodMode: true }
+                })
+            ]);
+
+            return encryptData({
+                payments,
+                currentPeriod: activePeriod,
+                roomData: room
+            });
+        },
+        [cacheKey, 'payments-page-data'],
+        {
+            revalidate: 60,
+            tags: [`group-${groupId}-payments`, `group-${groupId}-periods`]
+        }
+    );
+
+    const encrypted = await cachedFn();
+    return decryptData(encrypted);
+}
+
 
 export async function fetchPayments(userId: string, roomId?: string) {
     const cacheKey = `payments-${userId}-${roomId || 'all'}`;
