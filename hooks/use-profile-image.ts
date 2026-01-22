@@ -11,9 +11,9 @@ interface UseProfileImageReturn {
   image: string | null
   isLoading: boolean
   isLoaded: boolean
-  updateImage: (imageUrl: string) => Promise<void>
+  updateImage: (imageUrl: string, options?: { silent?: boolean }) => Promise<void>
   getInitials: (name?: string | null) => string
-  removeImage: () => Promise<void>
+  removeImage: (options?: { silent?: boolean }) => Promise<void>
 }
 
 const isValidImageUrl = (url: string | null): boolean => {
@@ -60,7 +60,7 @@ export function useProfileImage({
     }
   }, [initialImage, lazyLoad])
 
-  const updateImage = async (imageUrl: string) => {
+  const updateImage = async (imageUrl: string, options: { silent?: boolean } = {}) => {
     setIsLoading(true)
     setIsLoaded(false)
     try {
@@ -87,7 +87,9 @@ export function useProfileImage({
         onImageUpdate(imageUrl)
       }
 
-      toast.success("Profile image updated successfully")
+      if (!options.silent) {
+        toast.success("Profile image updated successfully")
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to load image. Please try a different image URL.")
       setImage(null)
@@ -98,7 +100,7 @@ export function useProfileImage({
     }
   }
 
-  const removeImage = async () => {
+  const removeImage = async (options: { silent?: boolean } = {}) => {
     setIsLoading(true)
     try {
       setImage(null)
@@ -109,7 +111,9 @@ export function useProfileImage({
         onImageUpdate("")
       }
 
-      toast.success("Profile image removed successfully")
+      if (!options.silent) {
+        toast.success("Profile image removed successfully")
+      }
     } catch (error) {
       toast.error("Failed to remove profile image")
       throw error

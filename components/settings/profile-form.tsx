@@ -84,7 +84,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
       email: user.email || "",
       image: user.image || "",
     })
-    updateImage(user.image || "")
+    updateImage(user.image || "", { silent: true })
     setIsEditing(false)
   }
 
