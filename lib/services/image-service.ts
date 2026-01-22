@@ -15,7 +15,7 @@ export type FetchImagesParams = {
 };
 
 export async function fetchGroupImages({ page = 1, limit = 20, category = 'all' }: FetchImagesParams) {
-    const imagesDirectory = path.join(process.cwd(), 'public/group-images');
+    const imagesDirectory = path.join(process.cwd(), 'public/images');
     
     // Check if directory exists
     if (!fs.existsSync(imagesDirectory)) {
@@ -29,7 +29,7 @@ export async function fetchGroupImages({ page = 1, limit = 20, category = 'all' 
       .filter(file => /\.(png|jpg|jpeg|gif|webp)$/i.test(file))
       .map(file => ({
         id: file,
-        src: `/group-images/${file}`,
+        src: `/images/${file}`,
         alt: file.split('.')[0].replace(/-/g, ' '),
         category: 'All' 
       }));

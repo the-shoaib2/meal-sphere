@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "react-hot-toast"
 import { useProfileImage } from "@/hooks/use-profile-image"
-import { Pencil, X, Check } from "lucide-react"
+import { Pencil, X, Check, Camera } from "lucide-react"
+import { ImagePicker } from "@/components/shared/image-picker"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -35,6 +36,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [isPickerOpen, setIsPickerOpen] = useState(false)
   const { image, updateImage, getInitials, isLoaded } = useProfileImage({
     initialImage: user.image,
     onImageUpdate: async (imageUrl) => {
@@ -135,13 +137,23 @@ export function ProfileForm({ user }: ProfileFormProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center space-x-3">
-          <Avatar className="h-16 w-16">
-            {isLoaded && image ? (
-              <AvatarImage src={image} alt={user.name || "User"} />
-            ) : (
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+          <div className="relative group">
+            <Avatar className="h-16 w-16">
+              {isLoaded && image ? (
+                <AvatarImage src={image} alt={user.name || "User"} />
+              ) : (
+                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+              )}
+            </Avatar>
+            {isEditing && (
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full cursor-pointer transition-opacity hover:bg-black/60"
+                onClick={() => setIsPickerOpen(true)}
+              >
+                <Camera className="h-6 w-6 text-white" />
+              </div>
             )}
-          </Avatar>
+          </div>
           <div>
             <h3 className="text-base font-medium">{user.name}</h3>
             <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -216,6 +228,14 @@ export function ProfileForm({ user }: ProfileFormProps) {
             />
           </form>
         </Form>
+        <ImagePicker
+          open={isPickerOpen}
+          onOpenChange={setIsPickerOpen}
+          selectedImage={image || ""}
+          onSelect={(newImage) => updateImage(newImage, { silent: true })}
+          title="Select Profile Image"
+          description="Choose a new profile picture from our gallery."
+        />
       </CardContent>
     </Card>
   )

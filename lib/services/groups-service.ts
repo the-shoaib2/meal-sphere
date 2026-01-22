@@ -689,7 +689,7 @@ export async function createGroup(data: CreateGroupData) {
         createdBy: userId,
         periodMode: 'MONTHLY',
         memberCount: 1,
-        bannerUrl: bannerUrl || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png',
+        bannerUrl: bannerUrl || '/images/9099ffd8-d09b-4883-bac1-04be1274bb82.png',
         features: {
           join_requests: isPrivate,
           messages: true,

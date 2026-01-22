@@ -59,7 +59,7 @@ export default function CreateGroupPage() {
     defaultValues: {
       isPrivate: false,
       maxMembers: null,
-      bannerUrl: "/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png", // Default image
+      bannerUrl: "/images/9099ffd8-d09b-4883-bac1-04be1274bb82.png", // Default image
     },
     mode: 'onChange',
   });
@@ -74,7 +74,7 @@ export default function CreateGroupPage() {
 
   const isPrivate = watch('isPrivate');
   const description = watch('description');
-  const bannerUrl = watch('bannerUrl') || "/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png";
+  const bannerUrl = watch('bannerUrl') || "/images/9099ffd8-d09b-4883-bac1-04be1274bb82.png";
 
   const onSubmit = async (data: CreateGroupInput) => {
     try {

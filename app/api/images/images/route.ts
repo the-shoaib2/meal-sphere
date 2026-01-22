@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const category = searchParams.get('category') || 'all';
 
-    const imagesDirectory = path.join(process.cwd(), 'public/group-images');
+    const imagesDirectory = path.join(process.cwd(), 'public/images');
     
     // Check if directory exists
     if (!fs.existsSync(imagesDirectory)) {
@@ -25,9 +25,9 @@ export async function GET(req: NextRequest) {
       .filter(file => /\.(png|jpg|jpeg|gif|webp)$/i.test(file))
       .map(file => ({
         id: file,
-        src: `/group-images/${file}`,
+        src: `/images/${file}`,
         alt: file.split('.')[0].replace(/-/g, ' '),
-        category: 'All' // For now, we don't have subfolders, so everything is "All" or we can randomize categories if needed
+        category: 'All'
       }));
 
     // Simple categorization logic (mocking since we have flat folder)
