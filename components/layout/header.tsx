@@ -18,6 +18,7 @@ export function Header() {
   const isMobile = useIsMobile()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false)
 
   useEffect(() => {
     if (screenfull.isEnabled) {
@@ -37,10 +38,12 @@ export function Header() {
     }
   }
 
+  const hideOnMobileSearch = isMobile && isSearchExpanded ? "hidden" : "flex"
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center backdrop-blur-md border-b border-border/40" suppressHydrationWarning>
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center gap-4" suppressHydrationWarning>
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className={`items-center gap-2 md:gap-4 ${hideOnMobileSearch}`}>
           {/* Mobile Sidebar Trigger */}
           <div className="lg:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -73,9 +76,13 @@ export function Header() {
           </Link>
         </div>
         <div className="flex-1 flex justify-center">
-          <HeaderSearch />
+          <HeaderSearch
+            isMobile={!!isMobile}
+            isExpanded={isSearchExpanded}
+            onToggleExpand={setIsSearchExpanded}
+          />
         </div>
-        <div className="flex items-center gap-4">
+        <div className={`items-center gap-4 ${isMobile && isSearchExpanded ? "hidden" : "flex"}`}>
           <Button
             variant="ghost"
             size="icon"

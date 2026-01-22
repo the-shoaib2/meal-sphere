@@ -20,17 +20,34 @@ import { NoGroupState } from "@/components/empty-states/no-group-state"
 import { PageHeader } from "@/components/shared/page-header"
 
 const VOTE_TYPE_OPTIONS = [
-  { value: "manager", label: "Manager Election", backend: "MEAL_MANAGER" },
-  { value: "meal", label: "Meal Preference", backend: "MEAL_CHOICE" },
-  { value: "accountant", label: "Accountant Election", backend: "ACCOUNTANT" },
-  { value: "leader", label: "Room Leader Election", backend: "ROOM_LEADER" },
-  { value: "market_manager", label: "Market Manager Election", backend: "MARKET_MANAGER" },
-  { value: "group_decision", label: "Group Decision", backend: "GROUP_DECISION" },
-  { value: "event_organizer", label: "Event Organizer", backend: "EVENT_ORGANIZER" },
-  { value: "cleaning_manager", label: "Cleaning Manager", backend: "CLEANING_MANAGER" },
-  { value: "treasurer", label: "Treasurer", backend: "TREASURER" },
-  { value: "custom", label: "Custom Vote", backend: "CUSTOM" },
+  {
+    label: "Elections",
+    options: [
+      { value: "manager", label: "Manager Election", backend: "MEAL_MANAGER" },
+      { value: "leader", label: "Room Leader Election", backend: "ROOM_LEADER" },
+      { value: "accountant", label: "Accountant Election", backend: "ACCOUNTANT" },
+      { value: "treasurer", label: "Treasurer", backend: "TREASURER" },
+      { value: "market_manager", label: "Market Manager Election", backend: "MARKET_MANAGER" },
+      { value: "cleaning_manager", label: "Cleaning Manager", backend: "CLEANING_MANAGER" },
+    ]
+  },
+  {
+    label: "Decisions",
+    options: [
+      { value: "meal", label: "Meal Preference", backend: "MEAL_CHOICE" },
+      { value: "group_decision", label: "Group Decision", backend: "GROUP_DECISION" },
+      { value: "event_organizer", label: "Event Organizer", backend: "EVENT_ORGANIZER" },
+    ]
+  },
+  {
+    label: "Other",
+    options: [
+      { value: "custom", label: "Custom Vote", backend: "CUSTOM" },
+    ]
+  }
 ];
+
+const FLAT_VOTE_TYPE_OPTIONS = VOTE_TYPE_OPTIONS.flatMap(g => g.options);
 
 interface VotingSystemProps {
   activeGroup?: any;
@@ -63,6 +80,10 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   const { data: groups = [] } = useGroups()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedVoteType, setSelectedVoteType] = useState("manager")
+  const [customVoteType, setCustomVoteType] = useState("")
+  const [description, setDescription] = useState("")
+  const [candidateType, setCandidateType] = useState<"member" | "custom">("member")
+  const [customCandidates, setCustomCandidates] = useState<string[]>([]) // List of custom candidate names
   const [showVoteDialog, setShowVoteDialog] = useState(false)
   const [selectedCandidate, setSelectedCandidate] = useState("")
   const [selectedRoom, setSelectedRoom] = useState(activeGroup?.id || "")
@@ -83,6 +104,19 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
       setEndDate(startDate)
     }
   }, [startDate, endDate])
+
+  // Auto-fill description based on vote type
+  useEffect(() => {
+    if (selectedVoteType === "custom") {
+      setDescription("")
+      return
+    }
+
+    const option = FLAT_VOTE_TYPE_OPTIONS.find(o => o.value === selectedVoteType)
+    if (option) {
+      setDescription(`Vote to decide on ${option.label}`)
+    }
+  }, [selectedVoteType])
 
   // Keep selectedRoom in sync with activeGroup
   useEffect(() => {
@@ -135,13 +169,24 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   )
 
   const handleCreateVote = async () => {
-    const candidates = (activeGroup?.members || [])
-      .filter((m: any) => selectedCandidateIds.includes(m.userId))
-      .map((m: any) => ({
-        id: m.userId,
-        name: m.user.name || "Unnamed",
-        image: m.user.image || undefined
-      }))
+    let candidates: Candidate[] = [];
+
+    if (candidateType === "member") {
+      candidates = (activeGroup?.members || [])
+        .filter((m: any) => selectedCandidateIds.includes(m.userId))
+        .map((m: any) => ({
+          id: m.userId,
+          name: m.user.name || "Unnamed",
+          image: m.user.image || undefined
+        }));
+    } else {
+      // Create custom candidates with generated IDs
+      candidates = customCandidates.map(name => ({
+        id: crypto.randomUUID(),
+        name: name
+      }));
+    }
+
     if (candidates.length === 0) return
     setCreateVoteError(null)
     try {
@@ -155,9 +200,14 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
         const [h, m] = endTimeStr.split(":").map(Number)
         end.setHours(h, m, 0, 0)
       }
+      const title = selectedVoteType === "custom"
+        ? customVoteType
+        : FLAT_VOTE_TYPE_OPTIONS.find(o => o.value === selectedVoteType)?.label || "Vote";
+
       const result = await createVote({
-        title: selectedVoteType === "manager" ? "Manager Election" : "Meal Preference",
-        type: selectedVoteType as any,
+        title,
+        description,
+        type: selectedVoteType === "custom" ? "custom" : selectedVoteType,
         candidates,
         startDate: start.toISOString(),
         endDate: end.toISOString(),
@@ -193,7 +243,14 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
       setStartTimeStr(getDefaultStartTimeStr())
       setEndDate(addDays(startOfDay(new Date()), 1))
       setEndTimeStr("")
+      setEndTimeStr("")
       setCreateVoteError(null)
+      setCustomVoteType("")
+      setCustomCandidates([])
+      setCandidateType("member")
+
+      const option = FLAT_VOTE_TYPE_OPTIONS.find(o => o.value === selectedVoteType)
+      setDescription(option && selectedVoteType !== "custom" ? `Vote to decide on ${option.label}` : "")
     }
   }
 
@@ -225,6 +282,14 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
               onOpenChange={handleOpenChange}
               selectedVoteType={selectedVoteType}
               setSelectedVoteType={setSelectedVoteType}
+              customVoteType={customVoteType}
+              setCustomVoteType={setCustomVoteType}
+              description={description}
+              setDescription={setDescription}
+              candidateType={candidateType}
+              setCandidateType={setCandidateType}
+              customCandidates={customCandidates}
+              setCustomCandidates={setCustomCandidates}
               selectedCandidateIds={selectedCandidateIds}
               setSelectedCandidateIds={setSelectedCandidateIds}
               nonAdminMembers={eligibleMembers}
@@ -244,6 +309,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
               createVoteError={createVoteError}
               setShowCreateDialog={setShowCreateDialog}
               activeVotesCount={activeVotes.length}
+              voteTypeOptions={VOTE_TYPE_OPTIONS}
             />
           )}
         </div>
@@ -276,7 +342,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
                 currentUserId={currentUserId}
                 refreshVotes={handleRefreshVotes}
                 candidateOptions={eligibleMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
-                voteTypeOptions={VOTE_TYPE_OPTIONS}
+                voteTypeOptions={FLAT_VOTE_TYPE_OPTIONS}
               />
             );
           })

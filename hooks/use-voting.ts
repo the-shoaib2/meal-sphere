@@ -21,6 +21,7 @@ export interface Voter {
 export interface Vote {
   id: string;
   title: string;
+  description?: string;
   type: string;
   isActive: boolean;
   startDate?: string;

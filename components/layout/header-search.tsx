@@ -16,13 +16,27 @@ interface SearchResult {
     url: string
 }
 
-export function HeaderSearch() {
+interface HeaderSearchProps {
+    isMobile?: boolean
+    isExpanded?: boolean
+    onToggleExpand?: (expanded: boolean) => void
+}
+
+export function HeaderSearch({ isMobile, isExpanded, onToggleExpand }: HeaderSearchProps) {
     const router = useRouter()
     const [query, setQuery] = React.useState("")
     const [results, setResults] = React.useState<SearchResult[]>([])
-    const [open, setOpen] = React.useState(false)
+    // If controlled (via props), use props.details; otherwise local state
+    const [localOpen, setLocalOpen] = React.useState(false)
     const [loading, setLoading] = React.useState(false)
     const inputRef = React.useRef<HTMLInputElement>(null)
+
+    // Derived open state: controlled vs uncontrolled logic
+    // For dropdown results visibility:
+    const isOpen = localOpen
+
+    // For mobile input expansion:
+    const showInput = !isMobile || isExpanded
 
     const debouncedQuery = useDebounce(query, 300)
 
@@ -34,27 +48,33 @@ export function HeaderSearch() {
                 .then(data => {
                     setResults(data.results || [])
                     setLoading(false)
-                    setOpen(true)
+                    setLocalOpen(true)
                 })
                 .catch(() => setLoading(false))
         } else {
             setResults([])
-            setOpen(false)
+            setLocalOpen(false)
         }
     }, [debouncedQuery])
 
     const handleSelect = (url: string) => {
         router.push(url)
-        setOpen(false)
+        setLocalOpen(false)
         setQuery("")
+        if (isMobile && onToggleExpand) {
+            onToggleExpand(false)
+        }
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (query) {
             router.push(`/search?q=${encodeURIComponent(query)}`)
-            setOpen(false)
+            setLocalOpen(false)
             setQuery("")
+            if (isMobile && onToggleExpand) {
+                onToggleExpand(false)
+            }
         }
     }
 
@@ -62,15 +82,28 @@ export function HeaderSearch() {
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (inputRef.current && !inputRef.current.contains(event.target as Node) && !(event.target as Element).closest('.search-results')) {
-                setOpen(false)
+                setLocalOpen(false)
             }
         }
         document.addEventListener("mousedown", handleClickOutside)
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
 
+    if (!showInput) {
+        return (
+            <button
+                type="button"
+                onClick={() => onToggleExpand?.(true)}
+                className="flex items-center justify-center p-2 text-muted-foreground hover:text-foreground"
+            >
+                <Search className="h-5 w-5" />
+                <span className="sr-only">Search</span>
+            </button>
+        )
+    }
+
     return (
-        <div className="relative w-full max-w-[450px] md:w-[300px] lg:w-[450px]" ref={inputRef as any}>
+        <div className={`relative w-full ${isMobile ? 'flex-1' : 'max-w-[450px] md:w-[300px] lg:w-[450px]'}`} ref={inputRef as any}>
             <form onSubmit={handleSubmit} className="relative w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -81,26 +114,35 @@ export function HeaderSearch() {
                     value={query}
                     onChange={(e) => {
                         setQuery(e.target.value)
-                        if (e.target.value.length === 0) setOpen(false)
+                        if (e.target.value.length === 0) setLocalOpen(false)
                     }}
                     onFocus={() => {
-                        if (query.length >= 2 && results.length > 0) setOpen(true)
+                        if (query.length >= 2 && results.length > 0) setLocalOpen(true)
                     }}
+                    autoFocus={isMobile && isExpanded}
                 />
                 {loading ? (
                     <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-                ) : query && (
+                ) : (
                     <button
                         type="button"
-                        onClick={() => { setQuery(""); setOpen(false); inputRef.current?.focus(); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                            setQuery("");
+                            setLocalOpen(false);
+                            inputRef.current?.focus();
+                            if (isMobile && onToggleExpand && !query) {
+                                // If query is empty, close the expanded view
+                                onToggleExpand(false);
+                            }
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                     >
-                        <X className="h-4 w-4" />
+                        {query ? <X className="h-4 w-4" /> : (isMobile ? <X className="h-4 w-4" /> : null)}
                     </button>
                 )}
             </form>
 
-            {open && results.length > 0 && (
+            {isOpen && results.length > 0 && (
                 <div className="search-results absolute top-full mt-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95 overflow-hidden z-50">
                     <div className="max-h-[300px] overflow-y-auto p-1">
                         {results.slice(0, 5).map((result) => (
@@ -132,8 +174,11 @@ export function HeaderSearch() {
                             className="border-t p-2 text-center text-sm text-primary hover:bg-muted cursor-pointer font-medium flex items-center justify-center gap-1"
                             onClick={() => {
                                 router.push(`/search?q=${encodeURIComponent(query)}`)
-                                setOpen(false)
+                                setLocalOpen(false)
                                 setQuery("")
+                                if (isMobile && onToggleExpand) {
+                                    onToggleExpand(false)
+                                }
                             }}
                         >
                             View all {results.length} results <ChevronRight className="h-3 w-3" />
