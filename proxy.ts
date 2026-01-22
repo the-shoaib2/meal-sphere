@@ -136,6 +136,51 @@ export default async function middleware(request: NextRequest) {
         );
       }
     }
+  } else {
+    // Fallback to in-memory rate limiting when Redis is not available
+    const { rateLimitInMemory } = await import('./lib/middleware/rate-limit-memory');
+    
+    if (isAuthApi) {
+      const result = await rateLimitInMemory(request, {
+        maxRequests: process.env.NODE_ENV === "development" ? 100 : 10,
+        windowMs: 60000, // 1 minute
+        keyPrefix: 'auth',
+      });
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: "Too many login attempts. Try again later." },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": result.limit.toString(),
+              "X-RateLimit-Remaining": result.remaining.toString(),
+              "X-RateLimit-Reset": result.reset.toString(),
+            },
+          }
+        );
+      }
+    } else if (isApiRoute) {
+      const result = await rateLimitInMemory(request, {
+        maxRequests: process.env.NODE_ENV === "development" ? 500 : 100,
+        windowMs: 10000, // 10 seconds
+        keyPrefix: 'api',
+      });
+
+      if (!result.success) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": result.limit.toString(),
+              "X-RateLimit-Remaining": result.remaining.toString(),
+              "X-RateLimit-Reset": result.reset.toString(),
+            },
+          }
+        );
+      }
+    }
   }
 
   /* -------------------------------------------------------------- */
