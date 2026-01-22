@@ -330,6 +330,9 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
                       onSelect={(date) => date && setStartDate(date)}
                       disabled={(date) => date < startOfDay(new Date())}
                       initialFocus
+                      captionLayout="dropdown"
+                      fromYear={new Date().getFullYear()}
+                      toYear={new Date().getFullYear() + 5}
                     />
                   </PopoverContent>
                 </Popover>
@@ -358,6 +361,9 @@ const CreateVoteDialog: React.FC<CreateVoteDialogProps> = ({
                       onSelect={(date) => date && setEndDate(date)}
                       disabled={(date) => date < startDate}
                       initialFocus
+                      captionLayout="dropdown"
+                      fromYear={new Date().getFullYear()}
+                      toYear={new Date().getFullYear() + 5}
                     />
                   </PopoverContent>
                 </Popover>

@@ -198,6 +198,9 @@ export function MarketDateForm({ user, rooms }: MarketDateFormProps) {
                             onSelect={field.onChange}
                             disabled={(date) => date < new Date()}
                             initialFocus
+                            captionLayout="dropdown"
+                            fromYear={new Date().getFullYear()}
+                            toYear={new Date().getFullYear() + 2}
                           />
                         </PopoverContent>
                       </Popover>

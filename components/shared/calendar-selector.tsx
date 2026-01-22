@@ -37,6 +37,8 @@ export default function Calendar22() {
             mode="single"
             selected={date}
             captionLayout="dropdown"
+            fromYear={1900}
+            toYear={new Date().getFullYear()}
             onSelect={(date) => {
               setDate(date)
               setOpen(false)
