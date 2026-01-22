@@ -27,6 +27,8 @@ interface GroupPageContentProps {
 
 import VotingSystem from '@/components/groups/voting/voting-system';
 
+import { useGroups } from '@/hooks/use-groups';
+
 export function GroupPageContent(
     {
         groupId,
@@ -42,11 +44,8 @@ export function GroupPageContent(
     const { data: session } = useSession();
 
     // Use group details hook with initial data
-    // const { data: group, isLoading, error, refetch } = useGroups().useGroupDetails(groupId, initialData);
-    const group = initialData;
-    const isLoading = false;
-    const error = null;
-    const refetch = () => router.refresh();
+    const { useGroupDetails } = useGroups();
+    const { data: group, isLoading, error, refetch } = useGroupDetails(groupId, initialData);
 
     const [showActivityDialog, setShowActivityDialog] = useState(false);
     const [activeTab, setActiveTab] = useState('members');

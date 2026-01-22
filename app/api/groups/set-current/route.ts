@@ -47,45 +47,8 @@ export async function POST(request: NextRequest) {
         // 2. Set the new group as active
         // This avoids O(N) writes where N is user's total groups
 
-        await prisma.$transaction(async (tx) => {
-             // Find currently active group for this user
-             const currentActive = await tx.roomMember.findFirst({
-                 where: {
-                     userId: session.user.id,
-                     isCurrent: true
-                 },
-                 select: { roomId: true }
-             });
-
-             // If the active group is already the requested one, do nothing
-             if (currentActive?.roomId === groupId) {
-                 return;
-             }
-
-             // If there is an active group, unset it
-             if (currentActive) {
-                 await tx.roomMember.update({
-                     where: {
-                         userId_roomId: {
-                             userId: session.user.id,
-                             roomId: currentActive.roomId
-                         }
-                     },
-                     data: { isCurrent: false }
-                 });
-             }
-
-             // Set new group as active
-             await tx.roomMember.update({
-                 where: {
-                     userId_roomId: {
-                         userId: session.user.id,
-                         roomId: groupId
-                     }
-                 },
-                 data: { isCurrent: true }
-             });
-        });
+        // Efficiently switch groups using service
+        await setCurrentGroup(groupId, session.user.id);
 
         // Revalidate paths that depend on group data
         revalidatePath('/(auth)', 'layout');

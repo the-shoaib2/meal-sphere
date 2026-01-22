@@ -110,7 +110,7 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
       },
       { 
         ttl: CACHE_TTL.GROUPS_LIST,
-        tags: ['groups', `user:${userId || 'anonymous'}`]
+        tags: ['groups', `user-${userId || 'anonymous'}`]
       }
     );
 }
@@ -838,6 +838,10 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
             data: { usedAt: new Date() }
         });
     }
+
+    revalidateTag(`group-${groupId}`);
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     
     return result;
 }
@@ -1012,6 +1016,11 @@ export async function processJoinRequest(requestId: string, action: 'approve' | 
         ]);
     }
 
+    revalidateTag(`group-${request.roomId}`);
+    revalidateTag(`user-${request.userId}`);
+    revalidateTag('join-requests'); // Invalidate general join requests list
+    revalidateTag(`group-${request.roomId}-join-requests`); // Invalidate group specific list
+
     return { success: true };
 }
 
@@ -1091,6 +1100,8 @@ export async function generateGroupInvite(groupId: string, userId: string, role:
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const inviteUrl = `${baseUrl}/groups/join/${token}`;
 
+    revalidateTag(`group-${groupId}-invites`);
+    
     return {
       token: inviteToken.token,
       inviteUrl,
@@ -1230,6 +1241,9 @@ export async function setCurrentGroup(groupId: string, userId: string) {
              data: { isCurrent: true }
         })
     ]);
+
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     
     return true;
 }
