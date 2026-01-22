@@ -119,10 +119,8 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   const handleRemoveCandidate = (idx: number) => setSelectedCandidateIds((prev) => prev.length === 1 ? prev : prev.filter((_, i) => i !== idx))
   const handleCandidateChange = (idx: number, value: string) => setSelectedCandidateIds((prev) => prev.map((c, i) => i === idx ? value : c))
 
-  // Only non-admins can be candidates
-  const nonAdminMembers = (activeGroup?.members || []).filter(
-    (m: any) => !adminRoles.includes(String(m.role))
-  ).map((m: any) => ({
+  // All members can be candidates
+  const eligibleMembers = (activeGroup?.members || []).map((m: any) => ({
     ...m,
     user: {
       ...m.user,
@@ -132,7 +130,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
     }
   }))
   // Get available group members (exclude already selected)
-  const availableMembers = nonAdminMembers.filter(
+  const availableMembers = eligibleMembers.filter(
     (m: any) => !selectedCandidateIds.includes(m.userId)
   )
 
@@ -229,7 +227,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
               setSelectedVoteType={setSelectedVoteType}
               selectedCandidateIds={selectedCandidateIds}
               setSelectedCandidateIds={setSelectedCandidateIds}
-              nonAdminMembers={nonAdminMembers}
+              nonAdminMembers={eligibleMembers}
               availableMembers={availableMembers}
               handleAddCandidate={handleAddCandidate}
               handleRemoveCandidate={handleRemoveCandidate}
@@ -277,7 +275,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
                 isAdmin={isAdmin}
                 currentUserId={currentUserId}
                 refreshVotes={handleRefreshVotes}
-                candidateOptions={nonAdminMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
+                candidateOptions={eligibleMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
                 voteTypeOptions={VOTE_TYPE_OPTIONS}
               />
             );

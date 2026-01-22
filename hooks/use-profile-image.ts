@@ -18,6 +18,9 @@ interface UseProfileImageReturn {
 
 const isValidImageUrl = (url: string | null): boolean => {
   if (!url) return false
+  // Allow local images starting with /
+  if (url.startsWith('/')) return true
+  
   try {
     const parsed = new URL(url)
     return parsed.protocol === 'http:' || parsed.protocol === 'https:'

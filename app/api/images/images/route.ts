@@ -20,12 +20,14 @@ export async function GET(req: NextRequest) {
 
     const fileNames = fs.readdirSync(imagesDirectory);
     
+    const baseUrl = process.env.NEXTAUTH_URL || '';
+    
     // Filter for image files
     const allImages = fileNames
       .filter(file => /\.(png|jpg|jpeg|gif|webp)$/i.test(file))
       .map(file => ({
         id: file,
-        src: `/images/${file}`,
+        src: `${baseUrl}/images/${file}`,
         alt: file.split('.')[0].replace(/-/g, ' '),
         category: 'All'
       }));
