@@ -1,10 +1,119 @@
 import { prisma } from '@/lib/services/prisma';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
 import { cacheDelete } from '@/lib/cache/cache-service';
-import { Role } from '@prisma/client';
+import { Role, NotificationType } from '@prisma/client';
 import { sendGroupInviteEmail } from './email-utils';
+
+import { getUserGroups, getPublicGroups, getGroupWithMembers } from '@/lib/group-query-helpers';
+import { getGroupData } from '@/lib/auth/group-auth';
+import { CACHE_TTL } from '@/lib/cache/cache-keys';
+import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
+
+export async function fetchGroupsList(userId: string | undefined, filter: string) {
+    // Generate cache key based on user and filter
+    const cacheKey = `groups_list:${userId || 'anonymous'}:${filter}`;
+
+    return await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        // If user is not authenticated OR filter is 'public', return public groups
+        if (!userId || filter === 'public') {
+          return await getPublicGroups(50, userId);
+        }
+
+        // For 'all' filter - Optimized Split Query
+        if (filter === 'all') {
+          const [publicGroups, myGroups] = await Promise.all([
+             // 1. Fetch all public groups
+             prisma.room.findMany({
+                where: { isPrivate: false, isActive: true },
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isPrivate: true,
+                  createdAt: true,
+                  bannerUrl: true,
+                  memberCount: true,
+                  createdByUser: {
+                    select: { id: true, name: true, image: true }
+                  },
+                  members: {
+                    where: { userId: userId },
+                    select: { role: true, joinedAt: true, isCurrent: true }
+                  }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+             }),
+             // 2. Fetch my groups (private or public)
+             prisma.room.findMany({
+                where: { 
+                    isActive: true,
+                    members: { some: { userId: userId } }
+                },
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  isPrivate: true,
+                  createdAt: true,
+                  bannerUrl: true,
+                  memberCount: true,
+                  createdByUser: {
+                    select: { id: true, name: true, image: true }
+                  },
+                  members: {
+                    where: { userId: userId },
+                    select: { role: true, joinedAt: true, isCurrent: true }
+                  }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+             })
+          ]);
+
+          // Merge and Deduplicate (by ID)
+          const allGroupsMap = new Map();
+          myGroups.forEach(g => allGroupsMap.set(g.id, g));
+          publicGroups.forEach(g => {
+              if (!allGroupsMap.has(g.id)) {
+                  allGroupsMap.set(g.id, g);
+              }
+          });
+          
+          const combinedGroups = Array.from(allGroupsMap.values())
+             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+          // Standardize response format
+          return combinedGroups.map((group: any) => {
+            const membership = group.members?.[0];
+            const role = (membership?.role as Role) || null;
+            return {
+              ...group,
+              members: [], // Don't leak other members
+              userRole: role,
+              permissions: role ? (ROLE_PERMISSIONS[role] || []) : [],
+              joinedAt: membership?.joinedAt || null,
+              isCurrent: membership?.isCurrent || false,
+              isCurrentMember: !!membership
+            };
+          });
+        }
+
+        // Default: for authenticated users, return groups where they are members
+        return await getUserGroups(userId, false);
+      },
+      { 
+        ttl: CACHE_TTL.GROUPS_LIST,
+        tags: ['groups', `user:${userId || 'anonymous'}`]
+      }
+    );
+}
 
 export async function fetchGroupsData(userId: string) {
   const cacheKey = `groups-${userId}`;
@@ -559,6 +668,9 @@ export async function createGroup(data: CreateGroupData) {
 
     if (!group) throw new Error("Failed to create group");
 
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
+
     return group;
 }
 
@@ -576,16 +688,88 @@ export async function updateGroup(groupId: string, data: UpdateGroupData) {
     const updatedGroup = await prisma.room.update({
         where: { id: groupId },
         data: data,
+        include: {
+          createdByUser: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true
+            }
+          }
+        }
     });
+
+    await Promise.all([
+      cacheDelete(`group_details:${groupId}:*`),
+      cacheDelete(`groups_list:*`),
+      cacheDelete(`group_with_members:${groupId}:*`)
+    ]);
+    
+    // Also revalidate next tags
+    revalidateTag(`group-${groupId}`);
 
     return updatedGroup;
 }
 
-export async function deleteGroup(groupId: string) {
+export async function fetchGroupActivityLogs(groupId: string, userId: string) {
+    const cacheKey = `group-activity:${groupId}:${userId}`;
+    
+    // Authorization check
+    const membership = await prisma.roomMember.findUnique({
+        where: { userId_roomId: { userId, roomId: groupId } },
+        select: { role: true, isBanned: true }
+    });
+
+    if (!membership || !['ADMIN', 'MODERATOR'].includes(membership.role)) {
+        throw new Error('Unauthorized');
+    }
+
+    if (membership.isBanned) {
+        throw new Error('You are banned from this group');
+    }
+
+    return await cacheGetOrSet(
+        cacheKey,
+        async () => {
+            return prisma.groupActivityLog.findMany({
+                where: { roomId: groupId },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            image: true
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 50
+            });
+        },
+        { 
+            ttl: 60, // 1 minute cache
+            tags: [`group-${groupId}-activity`]
+        }
+    );
+}
+
+export async function deleteGroup(groupId: string, userId: string) {
     const group = await prisma.room.findUnique({ where: { id: groupId } });
     if (!group) throw new Error("Group not found");
 
+    // Authorization check should be here or outside. 
+    // Assuming outside for now or simplistic check if userId passed.
+    if (group.createdBy !== userId) {
+        throw new Error('Only the group creator can delete this group');
+    }
+
     await prisma.room.delete({ where: { id: groupId } });
+
+    revalidateTag(`group-${groupId}`);
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
 
     return true;
 }
@@ -666,23 +850,55 @@ export async function leaveGroup(groupId: string, userId: string) {
 
     if (!membership) throw new Error("Not a member of this group");
     
-    // Creator cannot leave (must delete or transfer ownership)
-    if (membership.room.createdBy === userId) {
-        throw new Error("CREATOR_CANNOT_LEAVE: You must transfer ownership or delete the group.");
+    // Check if creator logic is still valid or if we allow creator to leave if they are the only one?
+    // "CREATOR_CANNOT_LEAVE" check was here.
+    // However, members/me/route.ts allowed deleting group if last member.
+    
+    // New Logic compatible with members/me/route.ts
+    // 1. Get all members
+    const groupMembers = await prisma.roomMember.findMany({
+        where: { roomId: groupId },
+        orderBy: { joinedAt: 'asc' }
+    });
+
+    // 2. If user is ADMIN and there are other members, promote someone else
+    if (membership.role === 'ADMIN' && groupMembers.length > 1) {
+        // Find another admin or next oldest
+        const nextAdmin = groupMembers.find(
+            m => m.userId !== userId && m.role === 'ADMIN'
+        ) || groupMembers.find(m => m.userId !== userId);
+
+        if (nextAdmin && nextAdmin.role !== 'ADMIN') {
+            await prisma.roomMember.update({
+                where: { id: nextAdmin.id },
+                data: { role: 'ADMIN' }
+            });
+        }
     }
 
+    // 3. Delete membership
     await prisma.roomMember.delete({
         where: { userId_roomId: { userId, roomId: groupId } }
     });
 
-    // Update member count
-    await prisma.room.update({
-        where: { id: groupId },
-        data: { 
-            memberCount: { decrement: 1 }
-        }
+    // 4. Check remaining members
+    const remainingMembers = await prisma.roomMember.count({
+        where: { roomId: groupId }
     });
 
+    if (remainingMembers === 0) {
+        // Delete group if empty
+        await prisma.room.delete({ where: { id: groupId } });
+        cacheDelete(`groups_list:*`);
+    } else {
+        // Update count
+        await prisma.room.update({
+            where: { id: groupId },
+            data: { memberCount: remainingMembers }
+        });
+    }
+
+    revalidateTag(`group-${groupId}`);
     return true;
 }
 
@@ -771,13 +987,29 @@ export async function processJoinRequest(requestId: string, action: 'approve' | 
             prisma.room.update({
                 where: { id: request.roomId },
                 data: { memberCount: { increment: 1 } }
+            }),
+            prisma.notification.create({
+                data: {
+                    userId: request.userId,
+                    type: 'JOIN_REQUEST_APPROVED',
+                    message: `Your join request for ${request.room.name} has been approved!`
+                }
             })
         ]);
     } else {
-        await prisma.joinRequest.update({
-            where: { id: requestId },
-            data: { status: 'REJECTED' }
-        });
+        await prisma.$transaction([
+            prisma.joinRequest.update({
+                where: { id: requestId },
+                data: { status: 'REJECTED' }
+            }),
+            prisma.notification.create({
+                data: {
+                    userId: request.userId,
+                    type: 'JOIN_REQUEST_REJECTED',
+                    message: `Your join request for ${request.room.name} has been rejected.`
+                }
+            })
+        ]);
     }
 
     return { success: true };
@@ -1002,11 +1234,267 @@ export async function setCurrentGroup(groupId: string, userId: string) {
     return true;
 }
 
-export async function updatePeriodMode(groupId: string, mode: 'MONTHLY' | 'CUSTOM') {
-    const updatedGroup = await prisma.room.update({
+export async function updatePeriodMode(groupId: string, mode: 'MONTHLY' | 'CUSTOM', userId: string) {
+    // Get group information
+    const room = await prisma.room.findUnique({
         where: { id: groupId },
-        data: { periodMode: mode }
+        select: { periodMode: true }
+    });
+
+    if (!room) {
+        throw new Error('Group not found');
+    }
+
+    // Get member info within this group
+    const member = await prisma.roomMember.findFirst({
+        where: {
+            roomId: groupId,
+            userId: userId,
+        },
+    });
+
+    // Check permissions
+    let canChange = false;
+    if (member) {
+        if (['ADMIN', 'MANAGER', 'MODERATOR'].includes(member.role)) {
+            canChange = true;
+        }
+    }
+
+    if (!canChange) {
+        throw new Error('Insufficient permissions. Only admins or authorized staff can change period mode.');
+    }
+
+    // Check if there's an active period
+    const activePeriod = await prisma.mealPeriod.findFirst({
+        where: {
+            roomId: groupId,
+            status: 'ACTIVE',
+        },
+    });
+
+    // 1. If currently in MONTHLY mode and has an active period, cannot change mode
+    if (room.periodMode === 'MONTHLY' && activePeriod) {
+         throw new Error('Cannot change period mode while a monthly period is active. Please end the current period first.');
+    }
+
+    // Update the room's period mode
+    const updatedRoom = await prisma.room.update({
+        where: { id: groupId },
+        data: { periodMode: mode },
+    });
+
+    // 2. If switching to MONTHLY mode, create current month period if no active period exists
+    if (mode === 'MONTHLY' && !activePeriod) {
+        const now = new Date();
+        const monthName = format(now, 'MMMM yyyy');
+        const startDate = startOfMonth(now);
+
+        // Check if a period with this name already exists (any status)
+        const existingMonthPeriod = await prisma.mealPeriod.findFirst({
+            where: {
+                roomId: groupId,
+                name: monthName,
+            },
+        });
+
+        if (!existingMonthPeriod) {
+            await prisma.mealPeriod.create({
+                data: {
+                    name: monthName,
+                    startDate,
+                    endDate: null,
+                    status: 'ACTIVE',
+                    roomId: groupId,
+                    createdBy: userId,
+                    openingBalance: 0,
+                    carryForward: false,
+                },
+            });
+        }
+    }
+
+    revalidateTag(`group-${groupId}`);
+    
+    return updatedRoom;
+}
+
+// --- Notifications ---
+
+export async function getNotificationSettings(groupId: string, userId: string) {
+    const settings = await prisma.groupNotificationSettings.findUnique({
+      where: {
+        userId_groupId: {
+          userId,
+          groupId,
+        },
+      },
+    });
+
+    if (!settings) {
+      return {
+        groupMessages: true,
+        announcements: true,
+        mealUpdates: true,
+        memberActivity: true,
+        joinRequests: false,
+      };
+    }
+    return settings;
+}
+
+export async function updateNotificationSettings(groupId: string, userId: string, settings: any) {
+    const { groupMessages, announcements, mealUpdates, memberActivity, joinRequests } = settings;
+
+    return await prisma.groupNotificationSettings.upsert({
+      where: {
+        userId_groupId: {
+          userId,
+          groupId,
+        },
+      },
+      create: {
+        userId,
+        groupId,
+        groupMessages,
+        announcements,
+        mealUpdates,
+        memberActivity,
+        joinRequests,
+      },
+      update: {
+        groupMessages,
+        announcements,
+        mealUpdates,
+        memberActivity,
+        joinRequests,
+      },
+    });
+}
+
+// --- Member Management ---
+
+export async function removeMemberFromGroup(groupId: string, adminUserId: string, targetMemberId: string) {
+    // Check admin permissions
+    const adminMember = await prisma.roomMember.findFirst({
+        where: { roomId: groupId, userId: adminUserId }
+    });
+
+    if (!adminMember || !['ADMIN', 'MANAGER'].includes(adminMember.role)) {
+        throw new Error("Unauthorized: Only admins can remove members");
+    }
+
+    const targetMember = await prisma.roomMember.findUnique({
+        where: { id: targetMemberId, roomId: groupId },
+        include: { user: true }
+    });
+
+    if (!targetMember) throw new Error("Member not found");
+
+    if (targetMember.role === 'ADMIN' || targetMember.role === 'MANAGER') {
+         throw new Error("Cannot remove an admin/owner");
+    }
+
+    await prisma.roomMember.delete({
+        where: { id: targetMemberId }
+    });
+
+    // Log activity
+    await prisma.groupActivityLog.create({
+        data: {
+            type: 'MEMBER_REMOVED',
+            roomId: groupId,
+            userId: adminUserId,
+            details: {
+                targetUserId: targetMember.userId,
+                targetUserName: targetMember.user.name
+            }
+        }
+    });
+
+    // Notification
+    await prisma.notification.create({
+        data: {
+          userId: targetMember.userId,
+          type: NotificationType.MEMBER_REMOVED,
+          message: 'You have been removed from the group'
+        }
+    });
+
+    // Update count
+    const count = await prisma.roomMember.count({ where: { roomId: groupId } });
+    await prisma.room.update({
+        where: { id: groupId },
+        data: { memberCount: count }
+    });
+
+    revalidateTag(`group-${groupId}`);
+    return true;
+}
+
+export async function updateMemberRole(groupId: string, adminUserId: string, targetMemberId: string, newRole: Role) {
+     // Check admin permissions
+    const adminMember = await prisma.roomMember.findFirst({
+        where: { roomId: groupId, userId: adminUserId }
+    });
+
+    if (!adminMember || !['ADMIN', 'MANAGER'].includes(adminMember.role)) { 
+        throw new Error("Unauthorized");
+    }
+
+    const targetMember = await prisma.roomMember.findUnique({
+        where: { id: targetMemberId, roomId: groupId },
+        include: { user: true }
     });
     
-    return updatedGroup;
+    // Support previous behavior where ID might be User ID if primary lookup fails
+    if (!targetMember) {
+         // Try finding by userId
+        const targetByUserId = await prisma.roomMember.findUnique({
+            where: { userId_roomId: { userId: targetMemberId, roomId: groupId } },
+            include: { user: true }
+        });
+        
+        if (!targetByUserId) throw new Error("Member not found");
+        
+        return await _performRoleUpdate(groupId, adminUserId, targetByUserId, newRole);
+    }
+    
+    return await _performRoleUpdate(groupId, adminUserId, targetMember, newRole);
+}
+
+async function _performRoleUpdate(groupId: string, adminId: string, targetMember: any, newRole: Role) {
+    if (targetMember.role === 'MANAGER') throw new Error("Cannot change owner role");
+
+    const updated = await prisma.roomMember.update({
+        where: { id: targetMember.id },
+        data: { role: newRole },
+        include: { user: true }
+    });
+
+    // Log activity
+    await prisma.groupActivityLog.create({
+      data: {
+        type: "ROLE_CHANGED",
+        roomId: groupId,
+        userId: adminId,
+        details: {
+          targetUserId: targetMember.userId,
+          targetUserName: targetMember.user.name,
+          newRole: newRole
+        }
+      }
+    });
+
+    // Notification
+    await prisma.notification.create({
+      data: {
+        userId: targetMember.userId,
+        type: NotificationType.MEMBER_ADDED, // Reusing type
+        message: `Your role has been changed to ${newRole}`
+      }
+    });
+    
+    revalidateTag(`group-${groupId}`);
+    return updated;
 }

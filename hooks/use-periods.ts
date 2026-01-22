@@ -5,15 +5,7 @@ import { toast } from 'sonner';
 import { useActiveGroup } from '@/contexts/group-context';
 import { usePeriodContext } from '@/contexts/period-context';
 import { PeriodStatus } from '@prisma/client';
-import { 
-  startPeriodAction, 
-  updatePeriodModeAction, 
-  endPeriodAction, 
-  lockPeriodAction, 
-  unlockPeriodAction, 
-  archivePeriodAction, 
-  restartPeriodAction 
-} from '@/lib/actions/period-actions';
+// Actions import removed
 
 
 export interface CreatePeriodData {
@@ -217,16 +209,24 @@ export function useStartPeriod() {
         throw new Error('No active group selected');
       }
       
-      const result = await startPeriodAction({
-        ...data,
-        groupId: activeGroup.id
+      const response = await fetch('/api/periods', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          groupId: activeGroup.id
+        }),
       });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start period');
       }
 
-      return result.data;
+      const result = await response.json();
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
@@ -291,13 +291,19 @@ export function usePeriodMode(groupId?: string) {
       mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
         if (!activeGroup?.id) throw new Error('No active group');
         
-        const result = await updatePeriodModeAction(activeGroup.id, mode);
-        
-        if (result.error) {
-           throw new Error(result.error);
+        const response = await fetch(`/api/groups/${activeGroup.id}/period-mode`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode })
+        });
+
+        if (!response.ok) {
+           const result = await response.json();
+           throw new Error(result.error || 'Failed to update period mode');
         }
-        
-        return result.data; 
+
+        const data = await response.json();
+        return data; 
       },
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
@@ -343,13 +349,19 @@ export function usePeriodMode(groupId?: string) {
     mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
       if (!groupId) throw new Error('No group ID');
       
-      const result = await updatePeriodModeAction(groupId, mode);
-      
-      if (result.error) {
-        throw new Error(result.error);
+      const response = await fetch(`/api/groups/${groupId}/period-mode`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
+      });
+
+      if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to update period mode');
       }
-      
-      return result.data;
+
+      const data = await response.json();
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
@@ -387,13 +399,22 @@ export function useEndPeriod() {
         throw new Error('No active group selected');
       }
       
-      const result = await endPeriodAction(activeGroup.id, periodId, endDate);
+      const response = await fetch(`/api/periods/${periodId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'end', 
+          endDate, 
+          groupId: activeGroup.id 
+        })
+      });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to end period');
       }
 
-      return result.data;
+      return await response.json();
     },
 
     onSuccess: () => {
@@ -439,13 +460,21 @@ export function useLockPeriod() {
         throw new Error('No active group selected');
       }
       
-      const result = await lockPeriodAction(activeGroup.id, periodId);
+      const response = await fetch(`/api/periods/${periodId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'lock', 
+          groupId: activeGroup.id 
+        })
+      });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to lock period');
       }
 
-      return result.data;
+      return await response.json();
     },
 
     onSuccess: () => {
@@ -490,13 +519,22 @@ export function useUnlockPeriod() {
         throw new Error('No active group selected');
       }
       
-      const result = await unlockPeriodAction(activeGroup.id, periodId, status);
+      const response = await fetch(`/api/periods/${periodId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'unlock', 
+          status,
+          groupId: activeGroup.id 
+        })
+      });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to unlock period');
       }
 
-      return result.data;
+      return await response.json();
     },
 
     onSuccess: () => {
@@ -541,13 +579,21 @@ export function useArchivePeriod() {
         throw new Error('No active group selected');
       }
       
-      const result = await archivePeriodAction(activeGroup.id, periodId);
+      const response = await fetch(`/api/periods/${periodId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'archive', 
+          groupId: activeGroup.id 
+        })
+      });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to archive period');
       }
 
-      return result.data;
+      return await response.json();
     },
 
     onSuccess: () => {
@@ -592,13 +638,22 @@ export function useRestartPeriod() {
         throw new Error('No active group selected');
       }
 
-      const result = await restartPeriodAction(activeGroup.id, periodId, { newName, withData });
+      const response = await fetch(`/api/periods/${periodId}/restart?groupId=${activeGroup.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          newName, 
+          withData 
+        })
+      });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to restart period');
       }
 
-      return result.data;
+      const data = await response.json();
+      return data.period;
     },
 
     onSuccess: () => {

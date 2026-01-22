@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
-import { prisma } from "@/lib/services/prisma";
+import { fetchGroupActivityLogs } from "@/lib/services/groups-service";
 
 export async function GET(
   req: Request,
@@ -15,53 +15,15 @@ export async function GET(
 
     const { id } = await context.params;
 
-    // OPTIMIZED: Parallel queries for membership check and activity logs
-    const [membership, activities] = await Promise.all([
-      prisma.roomMember.findUnique({
-        where: {
-          userId_roomId: {
-            userId: session.user.id,
-            roomId: id
-          }
-        },
-        select: {
-          role: true,
-          isBanned: true
-        }
-      }),
-      prisma.groupActivityLog.findMany({
-        where: {
-          roomId: id
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        take: 50 // Limit to last 50 activities
-      })
-    ]);
-
-    // Check if user is admin/moderator after fetching data
-    if (!membership || !['ADMIN', 'MODERATOR'].includes(membership.role)) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    if (membership.isBanned) {
-      return new NextResponse("You are banned from this group", { status: 403 });
-    }
+    const activities = await fetchGroupActivityLogs(id, session.user.id);
 
     return NextResponse.json(activities);
   } catch (error) {
     console.error("Error fetching activity logs:", error);
+    if (error instanceof Error) {
+        if (error.message === 'Unauthorized') return new NextResponse("Unauthorized", { status: 401 });
+        if (error.message.includes('banned')) return new NextResponse("You are banned from this group", { status: 403 });
+    }
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

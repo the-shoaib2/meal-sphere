@@ -913,3 +913,21 @@ export async function fetchPeriodDetails(userId: string, groupId: string, period
   const encrypted = await cachedFn();
   return decryptData(encrypted);
 }
+
+export const PeriodService = {
+  ensureMonthPeriod,
+  validatePeriodUniqueness,
+  startPeriod,
+  endPeriod,
+  lockPeriod,
+  unlockPeriod,
+  getCurrentPeriod,
+  getPeriods,
+  getPeriod,
+  calculatePeriodSummary,
+  archivePeriod,
+  restartPeriod,
+  copyPeriodData,
+  getPeriodsByMonth,
+  fetchPeriodsData
+};

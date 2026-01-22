@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import prisma from "@/lib/services/prisma";
-import { Role, NotificationType } from '@prisma/client';
+import { Role } from '@prisma/client';
+import { processJoinRequest } from "@/lib/services/groups-service";
 
 export async function PATCH(
   request: NextRequest,
@@ -75,47 +76,21 @@ export async function PATCH(
       );
     }
 
-    // Update join request status
-    const updatedRequest = await prisma.joinRequest.update({
-      where: { id: requestId },
-      data: {
-        status: action === 'approve' ? 'APPROVED' : 'REJECTED'
-      }
-    });
+    // Delegate processing to service
+    const result = await processJoinRequest(requestId, action);
 
-    // If approved, add user to group
-    if (action === 'approve') {
-      await prisma.roomMember.create({
-        data: {
-          roomId: groupId,
-          userId: joinRequest.userId,
-          role: Role.MEMBER
-        }
-      });
-
-      // Create notification for approved request
-      await prisma.notification.create({
-        data: {
-          userId: joinRequest.userId,
-          type: NotificationType.JOIN_REQUEST_APPROVED,
-          message: `Your join request for ${joinRequest.room.name} has been approved!`
-        }
-      });
-    } else {
-      // Create notification for rejected request
-      await prisma.notification.create({
-        data: {
-          userId: joinRequest.userId,
-          type: NotificationType.JOIN_REQUEST_REJECTED,
-          message: `Your join request for ${joinRequest.room.name} has been rejected.`
-        }
-      });
-    }
-
+    // If successful, return the updated request (fetching it again or just returning success)
+    // The service returns { success: true }. 
+    // We can fetch the updated request if needed, but the client might just need success.
+    // The previous implementation returned full updated request.
+    const finalRequest = await prisma.joinRequest.findUnique({ where: { id: requestId } });
+    
     return NextResponse.json({
       message: `Join request ${action}d successfully`,
-      joinRequest: updatedRequest
+      joinRequest: finalRequest
     });
+
+
   } catch (error) {
     console.error('Error handling join request:', error);
     return NextResponse.json(

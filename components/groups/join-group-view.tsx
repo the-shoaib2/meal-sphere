@@ -21,7 +21,7 @@ import { useGroupAccess } from '@/hooks/use-group-access';
 import { isValidId } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { joinGroupAction, createJoinRequestAction, checkJoinStatusAction } from '@/lib/actions/group-actions';
+// Actions import removed
 
 // Update the join room form schema
 const joinRoomSchema = z.object({
@@ -155,12 +155,11 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
     try {
       setIsCheckingStatus(true);
 
-      const result = await checkJoinStatusAction(targetGroupId);
-
-      if (result.success && result.data) {
-        const data = result.data;
-        if (data) {
-          const status = data.status.toLowerCase();
+      const response = await fetch(`/api/groups/${targetGroupId}/join-request/my-request`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.joinRequest) {
+          const status = data.joinRequest.status.toLowerCase();
           setRequestStatus(status as 'pending' | 'approved' | 'rejected');
 
           // If approved, redirect to group
@@ -172,9 +171,11 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
             return;
           }
         } else {
-          // No join request found, reset status
+          // No join request found (status 404 or just null)
           setRequestStatus(null);
         }
+      } else {
+        setRequestStatus(null);
       }
     } catch (error) {
       console.error('Error checking join request status:', error);
@@ -202,9 +203,14 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
       const targetGroupId = groupId; // Simplified for SSR version
 
-      const result = await createJoinRequestAction(targetGroupId, values.message);
+      const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: values.message })
+      });
 
-      if (!result.success) {
+      if (!response.ok) {
+        const result = await response.json();
         throw new Error(result.error || 'Failed to send join request');
       }
 
@@ -246,15 +252,31 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       // If we have an invite token, it's a direct join even if private
       if (group?.isPrivate && !inviteToken) {
         // Private Group Flow
-        const result = await createJoinRequestAction(targetGroupId, values.message);
-        if (!result.success) throw new Error(result.error || 'Failed to send join request');
+        const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: values.message })
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to send join request');
+        }
 
         setRequestStatus('pending');
         toast.success('Join request sent successfully!');
       } else {
         // Public Group Flow OR Invite Token Flow
-        const result = await joinGroupAction(targetGroupId, undefined, inviteToken || undefined);
-        if (!result.success) throw new Error(result.error || 'Failed to join group');
+        const response = await fetch(`/api/groups/${targetGroupId}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inviteToken: inviteToken || undefined })
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to join group');
+        }
 
         toast.success('Successfully joined the group!');
         router.push(`/groups/${targetGroupId}`);

@@ -48,11 +48,11 @@ const createGroupSchema = z.object({
 
 type CreateGroupInput = z.infer<typeof createGroupSchema>;
 
-import { createGroupAction } from '@/lib/actions/group-actions';
+// Actions import removed
 
 export default function CreateGroupPage() {
   const router = useRouter();
-  // const { createGroupAction } = await import('@/lib/actions/group-actions');
+
 
   const form = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema) as any,
@@ -78,17 +78,24 @@ export default function CreateGroupPage() {
 
   const onSubmit = async (data: CreateGroupInput) => {
     try {
-      const result = await createGroupAction({
-        ...data,
-        maxMembers: data.maxMembers || undefined,
-        bannerUrl: data.bannerUrl,
-        userId: '' // userId is handled by the server action from session
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          maxMembers: data.maxMembers || undefined,
+          bannerUrl: data.bannerUrl,
+        }),
       });
 
-      if (result.success) {
+      if (response.ok) {
         toast.success('Group created successfully!');
+        router.refresh();
         router.push('/groups');
       } else {
+        const result = await response.json();
         toast.error(result.error || 'Failed to create group');
       }
     } catch (error: any) {

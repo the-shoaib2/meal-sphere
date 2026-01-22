@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { revalidatePath } from 'next/cache';
+import { setCurrentGroup } from '@/lib/services/groups-service';
 
 export async function POST(request: NextRequest) {
     try {

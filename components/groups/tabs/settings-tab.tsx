@@ -139,7 +139,7 @@ const groupSettingsSchema = z.object({
 
 type GroupSettingsFormValues = z.input<typeof groupSettingsSchema>;
 
-import { updateGroupAction, deleteGroupAction, leaveGroupAction } from '@/lib/actions/group-actions';
+// Actions import removed
 
 interface SettingsTabProps {
   groupId: string;
@@ -245,9 +245,18 @@ export function SettingsTab({
       updateGroupData(groupId, { bannerUrl: url });
 
       setIsLoading(true);
-      const result = await updateGroupAction(groupId, { bannerUrl: url });
+      const response = await fetch(`/api/groups/${groupId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bannerUrl: url }),
+      });
 
-      if (!result.success) throw new Error(result.error);
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update group photo');
+      }
 
       router.refresh();
       onUpdate();
@@ -269,19 +278,28 @@ export function SettingsTab({
     try {
       setIsLoading(true);
 
-      const result = await updateGroupAction(groupId, {
-        name: data.name,
-        description: data.description,
-        bannerUrl: data.bannerUrl,
-        isPrivate: data.isPrivate,
-        maxMembers: typeof data.maxMembers === 'string'
-          ? (data.maxMembers === '' ? undefined : Number(data.maxMembers))
-          : (data.maxMembers === null ? undefined : data.maxMembers),
-        tags: data.tags,
-        features: data.features,
+      const response = await fetch(`/api/groups/${groupId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description,
+          bannerUrl: data.bannerUrl,
+          isPrivate: data.isPrivate,
+          maxMembers: typeof data.maxMembers === 'string'
+            ? (data.maxMembers === '' ? undefined : Number(data.maxMembers))
+            : (data.maxMembers === null ? undefined : data.maxMembers),
+          tags: data.tags,
+          features: data.features,
+        }),
       });
 
-      if (!result.success) throw new Error(result.error);
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update group');
+      }
 
       router.refresh(); // Server revalidate
       onUpdate();
@@ -300,8 +318,18 @@ export function SettingsTab({
       const newFeatures = { ...formFeatures, [featureId]: checked };
       setValue(`features.${featureId}`, checked);
 
-      const result = await updateGroupAction(groupId, { features: newFeatures });
-      if (!result.success) throw new Error(result.error);
+      const response = await fetch(`/api/groups/${groupId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ features: newFeatures }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update feature');
+      }
 
       router.refresh();
       onUpdate();
@@ -320,8 +348,14 @@ export function SettingsTab({
 
     try {
       setIsLeaving(true);
-      const result = await leaveGroupAction(groupId);
-      if (!result.success) throw new Error(result.error);
+      const response = await fetch(`/api/groups/${groupId}/leave`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to leave group');
+      }
 
       setIsLeaveDialogOpen(false);
       toast.success('You have left the group');
@@ -340,8 +374,14 @@ export function SettingsTab({
     if (!groupId || !isDeleteNameValid || isDeleting) return;
     try {
       setIsDeleting(true);
-      const result = await deleteGroupAction(groupId);
-      if (!result.success) throw new Error(result.error);
+      const response = await fetch(`/api/groups/${groupId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to delete group');
+      }
 
       setIsDeleteDialogOpen(false); // Only close after success
       toast.success('Group deleted');

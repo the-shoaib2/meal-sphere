@@ -46,8 +46,7 @@ export function GroupSwitcher() {
   if (isLoading) {
     return (
       <div className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm">
-        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Loader className="size-4 animate-spin" />
+        <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">
           <div className="h-4 w-24 bg-muted rounded animate-pulse mb-1"></div>
@@ -64,7 +63,7 @@ export function GroupSwitcher() {
         <button
           className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors outline-none cursor-pointer"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground overflow-hidden">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
             {hasGroups && activeGroup?.bannerUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -129,7 +128,7 @@ export function GroupSwitcher() {
                 <div className="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
               )}
               <div className="flex items-center gap-3 min-w-0 w-full">
-                <div className="relative h-5 w-5 rounded-md overflow-hidden shrink-0">
+                <div className="relative h-5 w-5 rounded-full overflow-hidden shrink-0">
                   {group.bannerUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

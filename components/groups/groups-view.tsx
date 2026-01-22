@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
-import type { Group } from '@/hooks/use-groups';
+import type { Group } from '@/types/group';
 
 
 interface GroupsViewProps {

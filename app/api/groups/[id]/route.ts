@@ -8,6 +8,7 @@ import { validateGroupAccess, validateAdminAccess, getGroupData } from '@/lib/au
 import { cacheGetOrSet, cacheDelete } from '@/lib/cache/cache-service';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
 import { getGroupWithMembers } from '@/lib/group-query-helpers';
+import { updateGroup, deleteGroup, fetchGroupDetails } from '@/lib/services/groups-service';
 
 // Schema for updating a group
 const updateGroupSchema = z.object({
@@ -38,22 +39,8 @@ export async function GET(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Use cached helper for group data
-    const cacheKey = `group_details:${id}:${session.user.id}`;
+    const groupData = await fetchGroupDetails(id, session.user.id);
     
-    const groupData = await cacheGetOrSet(
-      cacheKey,
-      async () => {
-        // Use optimized data fetcher that handles access control internally
-        const data = await getGroupData(id, session.user.id);
-        if (!data) {
-          throw new Error('Group not found or access denied');
-        }
-        return data;
-      },
-      { ttl: CACHE_TTL.GROUP_DETAILS }
-    );
-
     return NextResponse.json(groupData, {
       headers: {
         'Cache-Control': 'public, max-age=120, s-maxage=180',
@@ -90,33 +77,7 @@ export async function PATCH(
       return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
-    const updatedGroup = await prisma.room.update({
-      where: { id },
-      data: validatedData,
-      include: {
-        createdByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
-      }
-    });
-
-    // Invalidate caches
-    // Invalidate caches
-    // 1. Redis Cache
-    await Promise.all([
-      cacheDelete(`group_details:${id}:*`),
-      cacheDelete(`groups_list:*`),
-      cacheDelete(`group_with_members:${id}:*`)
-    ]);
-
-    // 2. Next.js Server Cache
-    // revalidateTag(`group-${id}`);
-    // revalidateTag(`user-${session.user.id}`);
+    const updatedGroup = await updateGroup(id, validatedData);
 
     return NextResponse.json(updatedGroup);
   } catch (error) {
@@ -140,125 +101,14 @@ export async function DELETE(
        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Validate group access
-    const validation = await validateGroupAccess(id);
-    if (!validation.success || !validation.authResult) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
-    }
-
-    const { authResult } = validation;
-
-    // Only creator can delete the group
-    if (!authResult.isCreator) {
-      return NextResponse.json({ error: 'Only the group creator can delete this group' }, { status: 403 });
-    }
-
-    // Delete the group (cascade will handle related data)
-    await prisma.room.delete({
-      where: { id }
-    });
-
-    // Invalidate caches
-    revalidateTag(`group-${id}`, { force: true } as any);
-    revalidateTag(`user-${session.user.id}`, { force: true } as any);
-    revalidateTag('groups', { force: true } as any);
+    await deleteGroup(id, session.user.id);
 
     return NextResponse.json({ message: 'Group deleted successfully' }, { status: 200 });
   } catch (error) {
     console.error('Error deleting group:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-// POST /api/groups/[id]/join - Join a group (public groups only)
-export async function POST(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    if (error instanceof Error && error.message.includes('Only the group creator')) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
     }
-
-    const { id } = await context.params;
-    const body = await req.json();
-    const validatedData = joinGroupSchema.parse(body);
-
-    // Check if group exists and get basic info
-    const group = await prisma.room.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        isPrivate: true,
-        maxMembers: true,
-        members: {
-          where: { userId: session.user.id },
-          select: { id: true }
-        }
-      }
-    });
-
-    if (!group) {
-      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
-    }
-
-    // Check if user is already a member
-    if (group.members.length > 0) {
-      return NextResponse.json({ error: 'Already a member of this group' }, { status: 400 });
-    }
-
-    // For private groups, require join request instead of direct joining
-    if (group.isPrivate) {
-      return NextResponse.json({
-        error: 'This is a private group. Please send a join request instead of trying to join directly.'
-      }, { status: 403 });
-    }
-
-    // Check if group is full
-    const memberCount = await prisma.roomMember.count({
-      where: { roomId: group.id }
-    });
-
-    if (group.maxMembers && memberCount >= group.maxMembers) {
-      return NextResponse.json({ error: 'Group is full' }, { status: 400 });
-    }
-
-    // Create membership (only for public groups)
-    const result = await prisma.roomMember.create({
-      data: {
-        userId: session.user.id,
-        roomId: group.id,
-        role: 'MEMBER'
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
-      }
-    });
-
-    // Update member count
-    await prisma.room.update({
-      where: { id },
-      data: { memberCount: memberCount + 1 }
-    });
-
-    return NextResponse.json({
-      message: 'Successfully joined the group',
-      membership: result
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.format() }, { status: 400 });
-    }
-    console.error('Error joining group:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

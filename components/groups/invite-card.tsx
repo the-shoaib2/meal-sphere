@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { generateGroupInviteAction, sendGroupInvitationsAction } from "@/lib/actions/group-actions";
+// Actions import removed
 
 
 interface InviteTokenData {
@@ -33,7 +33,7 @@ interface InviteTokenData {
 
 interface InviteCardProps {
   groupId: string;
-  group: any;
+  group?: any;
   className?: string;
   initialTokens?: any[];
 }
@@ -71,7 +71,13 @@ const EXPIRATION_OPTIONS = [
   { value: 0, label: 'Never expire' }
 ];
 
-export function InviteCard({ groupId, group, className = '', initialTokens = [] }: InviteCardProps) {
+import { useGroups } from "@/hooks/use-groups";
+
+export function InviteCard({ groupId, group: initialGroup, className = '', initialTokens = [] }: InviteCardProps) {
+  const { useGroupDetails } = useGroups();
+  const { data: fetchedGroup, isLoading } = useGroupDetails(groupId, null);
+  const group = initialGroup || fetchedGroup;
+
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>('MEMBER');
   const [expiresInDays, setExpiresInDays] = useState(7);
@@ -103,13 +109,18 @@ export function InviteCard({ groupId, group, className = '', initialTokens = [] 
       const expiryTime = activeTab === 'custom' ? customExpiry : expiresInDays;
 
       // Replacing API call with Server Action
-      const result = await generateGroupInviteAction(groupId, {
-        role: selectedRole,
-        expiresInDays: expiryTime === 0 ? null : expiryTime
+      const response = await fetch(`/api/groups/${groupId}/invites/link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: selectedRole }) // Default role or selected
       });
 
-      if (result.error) throw new Error(result.error);
-      const data = result.data;
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to generate link');
+      }
+
+      const data = await response.json();
 
       setInviteToken({
         token: data.token,
@@ -205,13 +216,21 @@ export function InviteCard({ groupId, group, className = '', initialTokens = [] 
       setInviteStatus(null);
 
       // Sending via Server Action
-      const result = await sendGroupInvitationsAction(group.id, {
-        emails,
-        role: 'MEMBER'
+      const response = await fetch(`/api/groups/${group.id}/invites/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails,
+          role: 'MEMBER'
+        })
       });
 
-      if (result.error) throw new Error(result.error);
-      const data = result.data;
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to send invitations');
+      }
+
+      const data = await response.json();
 
       setInviteStatus({
         success: true,
@@ -245,13 +264,15 @@ export function InviteCard({ groupId, group, className = '', initialTokens = [] 
     }
   };
 
-  if (!group) {
+  if (!group && isLoading) {
     return (
       <div className="space-y-4 p-4">
         <Skeleton className="h-10 w-[120px]" />
       </div>
     );
   }
+
+  if (!group) return null;
 
   const { name, isPrivate, memberCount, maxMembers } = group;
   const isGroupFull = maxMembers ? memberCount >= maxMembers : false;

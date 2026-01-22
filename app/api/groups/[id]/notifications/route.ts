@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import prisma from '@/lib/services/prisma';
+import { getNotificationSettings, updateNotificationSettings } from '@/lib/services/groups-service';
 
 export async function PATCH(
   request: Request,
@@ -15,33 +15,8 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { groupMessages, announcements, mealUpdates, memberActivity, joinRequests } = body;
-
-    // Update notification settings
-    const updatedSettings = await prisma.groupNotificationSettings.upsert({
-      where: {
-        userId_groupId: {
-          userId: session.user.id,
-          groupId: id,
-        },
-      },
-      create: {
-        userId: session.user.id,
-        groupId: id,
-        groupMessages,
-        announcements,
-        mealUpdates,
-        memberActivity,
-        joinRequests,
-      },
-      update: {
-        groupMessages,
-        announcements,
-        mealUpdates,
-        memberActivity,
-        joinRequests,
-      },
-    });
+    
+    const updatedSettings = await updateNotificationSettings(id, session.user.id, body);
 
     return NextResponse.json(updatedSettings);
   } catch (error) {
@@ -61,25 +36,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const settings = await prisma.groupNotificationSettings.findUnique({
-      where: {
-        userId_groupId: {
-          userId: session.user.id,
-          groupId: id,
-        },
-      },
-    });
-
-    if (!settings) {
-      // Return default settings if none exist
-      return NextResponse.json({
-        groupMessages: true,
-        announcements: true,
-        mealUpdates: true,
-        memberActivity: true,
-        joinRequests: false,
-      });
-    }
+    const settings = await getNotificationSettings(id, session.user.id);
 
     return NextResponse.json(settings);
   } catch (error) {

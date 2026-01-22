@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Group } from '@/types/group';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
 import { toast } from 'react-hot-toast';
-import { setCurrentGroupAction } from '@/lib/actions/group-actions';
+// Actions import removed
 
 const ENC_KEY = 'ms_active_group_ctx';
 type GroupContextType = {
@@ -144,11 +144,18 @@ export function GroupProvider({
           localStorage.setItem(ENC_KEY, encrypted);
         }
 
-        // Call Server Action instead of API fetch
-        const result = await setCurrentGroupAction(group.id);
+        // Call API instead of Server Action
+        const response = await fetch('/api/groups/set-current', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ groupId: group.id }),
+        });
 
-        if (result?.error) {
-          throw new Error(result.error);
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || 'Failed to switch group');
         }
 
         // Surgical invalidation (though Server Action does revalidatePath)

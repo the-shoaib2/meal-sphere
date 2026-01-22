@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
-import { processJoinRequestAction } from '@/lib/actions/group-actions';
+// Actions import removed
 import { useRouter } from 'next/navigation';
 
 interface JoinRequest {
@@ -47,10 +47,17 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [] }: Join
       setProcessingId(requestId);
       setActionType(action);
 
-      const result = await processJoinRequestAction(requestId, action);
+      const response = await fetch(`/api/groups/${groupId}/join-request/${requestId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
 
-      if (!result.success) {
-        throw new Error(result.error);
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to process request');
       }
 
       toast.success(action === 'approve' ? 'Request approved' : 'Request rejected');

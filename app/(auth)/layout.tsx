@@ -7,7 +7,7 @@ import { Header } from "@/components/layout/header"
 import { GroupProvider } from "@/contexts/group-context"
 import { redirect } from "next/navigation"
 import { fetchGroupsData } from "@/lib/services/groups-service"
-import { Group } from "@/hooks/use-groups"
+import { Group } from "@/types/group";
 import { PeriodProvider } from "@/contexts/period-context"
 import { fetchPeriodsData } from "@/lib/services/period-service"
 import { PeriodsPageData } from "@/hooks/use-periods"

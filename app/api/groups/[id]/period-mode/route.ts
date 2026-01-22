@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/services/prisma';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { updatePeriodMode } from '@/lib/services/groups-service';
 
 // Enable aggressive caching for better performance
 export const revalidate = 0; // Cache for 0 seconds
@@ -74,91 +75,7 @@ export async function PATCH(
             );
         }
 
-
-        // Get group information
-        const room = await prisma.room.findUnique({
-            where: { id: groupId },
-            select: { periodMode: true }
-        });
-
-        if (!room) {
-            return NextResponse.json({ error: 'Group not found' }, { status: 404 });
-        }
-
-        // Get member info within this group
-        const member = await prisma.roomMember.findFirst({
-            where: {
-                roomId: groupId,
-                userId: session.user.id,
-            },
-        });
-
-        // Check permissions
-        let canChange = false;
-        if (member) {
-            if (['ADMIN', 'MANAGER', 'MODERATOR'].includes(member.role)) {
-                canChange = true;
-            }
-        }
-
-        if (!canChange) {
-            return NextResponse.json(
-                { error: 'Insufficient permissions. Only admins or authorized staff can change period mode.' },
-                { status: 403 }
-            );
-        }
-
-        // Check if there's an active period
-        const activePeriod = await prisma.mealPeriod.findFirst({
-            where: {
-                roomId: groupId,
-                status: 'ACTIVE',
-            },
-        });
-
-        // 1. If currently in MONTHLY mode and has an active period, cannot change mode
-        if (room.periodMode === 'MONTHLY' && activePeriod) {
-            return NextResponse.json(
-                { error: 'Cannot change period mode while a monthly period is active. Please end the current period first.' },
-                { status: 400 }
-            );
-        }
-
-        // Update the room's period mode
-        const updatedRoom = await prisma.room.update({
-            where: { id: groupId },
-            data: { periodMode: mode },
-        });
-
-        // 2. If switching to MONTHLY mode, create current month period if no active period exists
-        if (mode === 'MONTHLY' && !activePeriod) {
-            const now = new Date();
-            const monthName = format(now, 'MMMM yyyy');
-            const startDate = startOfMonth(now);
-
-            // Check if a period with this name already exists (any status)
-            const existingMonthPeriod = await prisma.mealPeriod.findFirst({
-                where: {
-                    roomId: groupId,
-                    name: monthName,
-                },
-            });
-
-            if (!existingMonthPeriod) {
-                await prisma.mealPeriod.create({
-                    data: {
-                        name: monthName,
-                        startDate,
-                        endDate: null,
-                        status: 'ACTIVE',
-                        roomId: groupId,
-                        createdBy: session.user.id,
-                        openingBalance: 0,
-                        carryForward: false,
-                    },
-                });
-            }
-        }
+        const updatedRoom = await updatePeriodMode(groupId, mode, session.user.id);
 
         return NextResponse.json({
             success: true,
@@ -167,6 +84,18 @@ export async function PATCH(
         });
     } catch (error) {
         console.error('Error updating period mode:', error);
+        // Handle specific errors
+        if (error instanceof Error) {
+            if (error.message.includes('Insufficient permissions')) {
+                return NextResponse.json({ error: error.message }, { status: 403 });
+            }
+            if (error.message.includes('Cannot change period mode')) {
+                return NextResponse.json({ error: error.message }, { status: 400 });
+            }
+            if (error.message.includes('Group not found')) {
+                return NextResponse.json({ error: error.message }, { status: 404 });
+            }
+        }
         return NextResponse.json(
             { error: 'Failed to update period mode' },
             { status: 500 }
