@@ -15,6 +15,8 @@ import { toast } from "react-hot-toast"
 import { useProfileImage } from "@/hooks/use-profile-image"
 import { Pencil, X, Check, Camera } from "lucide-react"
 import { ImagePicker } from "@/components/shared/image-picker"
+import { ImageViewDialog } from "@/components/shared/image-view-dialog"
+import { cn } from "@/lib/utils"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -37,12 +39,20 @@ export function ProfileForm({ user }: ProfileFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [viewOpen, setViewOpen] = useState(false)
+
   const { image, updateImage, getInitials, isLoaded } = useProfileImage({
     initialImage: user.image,
     onImageUpdate: async (imageUrl) => {
       form.setValue("image", imageUrl)
     }
   })
+
+  const handleImageClick = () => {
+    if (!isEditing && image) {
+      setViewOpen(true)
+    }
+  }
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -137,7 +147,13 @@ export function ProfileForm({ user }: ProfileFormProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center space-x-3">
-          <div className="relative group">
+          <div
+            className={cn(
+              "relative group",
+              !isEditing && image && "cursor-pointer"
+            )}
+            onClick={handleImageClick}
+          >
             <Avatar className="h-16 w-16">
               {isLoaded && image ? (
                 <AvatarImage src={image} alt={user.name || "User"} />
@@ -148,7 +164,10 @@ export function ProfileForm({ user }: ProfileFormProps) {
             {isEditing && (
               <div
                 className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full cursor-pointer transition-opacity hover:bg-black/60"
-                onClick={() => setIsPickerOpen(true)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsPickerOpen(true)
+                }}
               >
                 <Camera className="h-6 w-6 text-white" />
               </div>
@@ -235,6 +254,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
           onSelect={(newImage) => updateImage(newImage, { silent: true })}
           title="Select Profile Image"
           description="Choose a new profile picture from our gallery."
+        />
+        <ImageViewDialog
+          open={viewOpen}
+          onOpenChange={setViewOpen}
+          imageSrc={image || ""}
         />
       </CardContent>
     </Card>

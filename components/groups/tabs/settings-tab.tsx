@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell, FileSpreadsheet } from 'lucide-react';
+import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell, FileSpreadsheet, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -194,6 +194,7 @@ export function SettingsTab({
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [stats, setStats] = useState<ComponentStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -266,6 +267,21 @@ export function SettingsTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group, setValue]);
 
+  // Cancel editing handler
+  const handleCancel = () => {
+    setIsEditing(false);
+    // Reset form to original values
+    if (group) {
+      setValue('name', group.name);
+      setValue('description', group.description || '');
+      setValue('bannerUrl', group.bannerUrl || '');
+      setValue('isPrivate', group.isPrivate);
+      setValue('maxMembers', group.maxMembers || undefined);
+      setValue('tags', (group as any).tags || []);
+      setValue('features', (group as any).features || {});
+    }
+  };
+
   // ... notification logic ...
 
   const handleImageUpdate = async (url: string) => {
@@ -274,6 +290,12 @@ export function SettingsTab({
       setValue('bannerUrl', url, { shouldDirty: true });
       // Updates context immediately for Group Switcher and others
       updateGroupData(groupId, { bannerUrl: url });
+
+      // No need to save immediately, wait for Save Changes? 
+      // Actually image upload is usually instant. Let's keep it instant for now
+      // but maybe only if isEditing? Or allow image change anytime? 
+      // Requirement says "when edit button click then from can edit and camara icon click".
+      // So fetch should happen.
 
       setIsLoading(true);
       const response = await fetch(`/api/groups/${groupId}`, {
@@ -308,6 +330,7 @@ export function SettingsTab({
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
       setIsLoading(true);
+      // Determine if only partial update needed? For now update all.
 
       const response = await fetch(`/api/groups/${groupId}`, {
         method: 'PATCH',
@@ -337,6 +360,7 @@ export function SettingsTab({
 
       // ... toast logic ...
       toast.success('Group settings updated successfully');
+      setIsEditing(false); // Exit edit mode on success
     } catch (error: any) {
       toast.error(error.message || 'Failed to update group. Please try again.');
     } finally {
@@ -345,6 +369,9 @@ export function SettingsTab({
   };
 
   const handleFeatureToggle = async (featureId: string, checked: boolean) => {
+    // Only allow toggle if editing
+    if (!isEditing) return;
+
     try {
       const newFeatures = { ...formFeatures, [featureId]: checked };
       setValue(`features.${featureId}`, checked);
@@ -448,6 +475,7 @@ export function SettingsTab({
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
+    if (!isEditing) return;
     setValue('tags', formTags.filter(t => t !== tagToRemove), { shouldDirty: true });
   };
 
@@ -665,9 +693,38 @@ export function SettingsTab({
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Group Settings</CardTitle>
-        <CardDescription>Manage your group settings and preferences</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
+        <div className="space-y-1">
+          <CardTitle>Group Settings</CardTitle>
+          <CardDescription>Manage your group settings and preferences</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          {!isEditing ? (
+            <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className='bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500' onClick={handleCancel} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button variant="outline" onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -676,6 +733,7 @@ export function SettingsTab({
               <GroupImageSelection
                 selectedImage={bannerUrl}
                 onSelect={handleImageUpdate}
+                isEditing={isEditing}
               />
             </div>
 
@@ -685,6 +743,7 @@ export function SettingsTab({
                 id="name"
                 {...register('name')}
                 placeholder="Enter group name"
+                disabled={!isEditing}
               />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -698,6 +757,7 @@ export function SettingsTab({
                 {...register('description')}
                 placeholder="Enter group description"
                 className="max-h-32"
+                disabled={!isEditing}
               />
               {errors.description && (
                 <p className="text-sm text-destructive">{errors.description.message}</p>
@@ -712,6 +772,7 @@ export function SettingsTab({
                   type="number"
                   {...register('maxMembers')}
                   placeholder="Enter maximum number of members"
+                  disabled={!isEditing}
                 />
                 {errors.maxMembers && (
                   <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
@@ -726,8 +787,9 @@ export function SettingsTab({
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Add a tag"
+                    disabled={!isEditing}
                   />
-                  <Button type="button" onClick={handleAddTag}>
+                  <Button type="button" onClick={handleAddTag} disabled={!isEditing}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -741,7 +803,7 @@ export function SettingsTab({
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-destructive"
+                        className={`ml-1 hover:text-destructive ${!isEditing ? 'hidden' : ''}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -751,21 +813,7 @@ export function SettingsTab({
               </div>
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
+            {/* Button group moved to header */}
 
             <div className="space-y-4">
               <Label>Features</Label>
@@ -781,9 +829,10 @@ export function SettingsTab({
                     id="isPrivate"
                     checked={isPrivateForm}
                     onCheckedChange={(checked) => {
+                      if (!isEditing) return;
                       setValue('isPrivate', checked);
-                      handleSubmit(onSubmit)();
                     }}
+                    disabled={!isEditing}
                   />
                 </div>
 
@@ -799,6 +848,7 @@ export function SettingsTab({
                       id={key}
                       checked={formFeatures[key] ?? feature.defaultValue}
                       onCheckedChange={(checked) => handleFeatureToggle(key, checked)}
+                      disabled={!isEditing}
                     />
                   </div>
                 ))}
