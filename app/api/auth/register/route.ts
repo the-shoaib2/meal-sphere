@@ -4,6 +4,7 @@ import { createVerificationToken } from "@/lib/services/email-utils"
 import { sendVerificationEmail } from "@/lib/services/email-utils"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
+import { BCRYPT_ROUNDS } from "@/lib/constants/security"
 
 import { UAParser } from 'ua-parser-js'
 
@@ -94,9 +95,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password
-    // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+    // Hash password with consistent rounds
+    const hashedPassword = await bcrypt.hash(validatedData.password, BCRYPT_ROUNDS);
 
     // Extract client info for session tracking
     const { userAgent, ipAddress } = extractClientInfo(request as NextRequest);

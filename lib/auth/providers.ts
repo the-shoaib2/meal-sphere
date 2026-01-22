@@ -44,31 +44,16 @@ export const credentialsProvider = CredentialsProvider({
       }
     }) as (User & { password: string | null }) | null;
 
-    if (!user || !user.password) {
-      throw new Error("Invalid credentials");
-    }
-
+    // Use a dummy hash if user doesn't exist to prevent timing attacks
+    const passwordHash = user?.password || '$2a$12$dummyhashtopreventtimingattack1234567890abcdefghijklmnopqr';
+    
     const isPasswordValid = await bcrypt.compare(
       credentials.password as string,
-      user.password
+      passwordHash
     );
 
-    if (!isPasswordValid) {
+    if (!user || !user.password || !isPasswordValid) {
       throw new Error("Invalid credentials");
-    }
-
-    // Progressive Password Migration
-    // If we encounter an old cost-12 hash, re-hash it to cost-10 and update in background.
-    // This ensures active users automatically get faster future logins.
-    if (user.password.includes('$12$')) {
-        bcrypt.hash(credentials.password as string, 10).then(newHash => {
-            prisma.user.update({
-                where: { id: user.id },
-                data: { password: newHash }
-            }).catch(() => {
-                // Ignore update errors
-            });
-        });
     }
 
     return {

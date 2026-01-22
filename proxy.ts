@@ -17,23 +17,32 @@ const redis =
 
 const ratelimit = redis
   ? {
+      // Authentication endpoints - strict limits in production
       auth: new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(
-          process.env.NODE_ENV === "development" ? 200 : 500, 
+          process.env.NODE_ENV === "development" ? 500 : 10, // 10 attempts/min in prod
           "60 s"
         ),
         analytics: true,
         prefix: "rl_auth",
       }),
+      // General API endpoints - reasonable limits
       api: new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(
-          process.env.NODE_ENV === "development" ? 1000 : 100,
+          process.env.NODE_ENV === "development" ? 500 : 100, // 100 req/10s in prod
           "10 s"
         ),
         analytics: true,
         prefix: "rl_api",
+      }),
+      // Sensitive operations (password reset, email sending)
+      sensitive: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, "60 s"), // 5 per minute
+        analytics: true,
+        prefix: "rl_sensitive",
       }),
     }
   : null;

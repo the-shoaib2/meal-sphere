@@ -248,6 +248,7 @@ export async function validateGroupAccess(groupId: string) {
 
 /**
  * Middleware function to validate admin permissions
+ * SECURITY FIX: Now properly checks membership and ban status
  */
 export async function validateAdminAccess(groupId: string) {
   const authResult = await checkGroupPermission(groupId, [Role.ADMIN]);
@@ -260,6 +261,25 @@ export async function validateAdminAccess(groupId: string) {
     };
   }
 
+  // CRITICAL FIX: Verify user is actually a member
+  if (!authResult.isMember) {
+    return {
+      success: false,
+      error: "Not a member of this group",
+      status: 403
+    };
+  }
+
+  // CRITICAL FIX: Verify user is not banned and has a role
+  if (authResult.userRole === null) {
+    return {
+      success: false,
+      error: "No role assigned in this group",
+      status: 403
+    };
+  }
+
+  // Check admin permission
   if (!authResult.hasPermission) {
     return {
       success: false,

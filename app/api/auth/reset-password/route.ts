@@ -4,6 +4,7 @@ import { prisma } from "@/lib/services/prisma"
 import * as bcrypt from "bcryptjs"
 import { z } from "zod"
 import { createHash } from "crypto"
+import { BCRYPT_ROUNDS } from "@/lib/constants/security"
 
 const resetPasswordSchema = z.object({
   token: z.string(),
@@ -37,8 +38,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: "Token has expired. Please request a new one." }, { status: 400 });
     }
 
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash new password with consistent rounds
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     // Update user
     await prisma.user.update({

@@ -5,6 +5,7 @@ import { Search, Loader2, X, User, Home, ShoppingBag, Receipt, ChevronRight } fr
 import { useRouter } from "next/navigation"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface SearchResult {
@@ -91,19 +92,22 @@ export function HeaderSearch({ isMobile, isExpanded, onToggleExpand }: HeaderSea
 
     if (!showInput) {
         return (
-            <button
+            <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => onToggleExpand?.(true)}
-                className="flex items-center justify-center p-2 text-muted-foreground hover:text-foreground"
+                className="relative group rounded-lg active:scale-95"
+                aria-label="Open search"
             >
-                <Search className="h-5 w-5" />
+                <Search className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 <span className="sr-only">Search</span>
-            </button>
+            </Button>
         )
     }
 
     return (
-        <div className={`relative w-full ${isMobile ? 'flex-1' : 'max-w-[450px] md:w-[300px] lg:w-[450px]'}`} ref={inputRef as any}>
+        <div className={`relative w-full ${isMobile ? 'flex-1 animate-in fade-in-0 slide-in-from-right-4 duration-300' : 'max-w-[450px] md:w-[300px] lg:w-[450px]'}`} ref={inputRef as any}>
             <form onSubmit={handleSubmit} className="relative w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input

@@ -38,51 +38,72 @@ export function Header() {
     }
   }
 
-  const hideOnMobileSearch = isMobile && isSearchExpanded ? "hidden" : "flex"
-
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center backdrop-blur-md border-b border-border/40" suppressHydrationWarning>
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center gap-4" suppressHydrationWarning>
-        <div className={`items-center gap-2 md:gap-4 ${hideOnMobileSearch}`}>
-          {/* Mobile Sidebar Trigger */}
-          <div className="lg:hidden">
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild suppressHydrationWarning>
-                <Button variant="ghost" size="icon" className="mr-2">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64">
-                <SheetHeader className="px-4 py-4 border-b">
-                  <SheetTitle className="text-left flex items-center gap-2">
-                    <Utensils className="h-5 w-5" />
-                    MealSphere
-                  </SheetTitle>
-                  {/* <SheetDescription className="sr-only">
-                    Mobile navigation menu
-                  </SheetDescription> */}
-                </SheetHeader>
-                <div className="h-full overflow-y-auto">
-                  <SidebarContent onNavigate={() => setIsMobileMenuOpen(false)} />
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          <Link href="/" className="flex items-center gap-2 font-semibold justify-center md:justify-start w-full md:w-auto">
-            <Utensils className="h-6 w-6 hidden md:block" />
-            <span className="text-xl">MealSphere</span>
-          </Link>
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center gap-2 md:gap-4" suppressHydrationWarning>
+        {/* Mobile Sidebar Trigger - Always visible */}
+        <div className="lg:hidden flex-shrink-0">
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild suppressHydrationWarning>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-64">
+              <SheetHeader className="px-4 py-4 border-b">
+                <SheetTitle className="text-left flex items-center gap-2">
+                  <Utensils className="h-5 w-5" />
+                  MealSphere
+                </SheetTitle>
+              </SheetHeader>
+              <div className="h-full overflow-y-auto">
+                <SidebarContent onNavigate={() => setIsMobileMenuOpen(false)} />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
-        <div className="flex-1 flex justify-center">
+
+        {/* Title - Hidden instantly when search opens, smooth fade-in when search closes */}
+        <Link
+          href="/"
+          className={`items-center gap-2 font-semibold ${isMobile && isSearchExpanded
+              ? 'hidden'
+              : 'flex animate-in fade-in-0 slide-in-from-left-4 duration-300'
+            } md:flex md:animate-none flex-shrink-0`}
+        >
+          <Utensils className="h-6 w-6 hidden md:block" />
+          <span className="text-xl">MealSphere</span>
+        </Link>
+
+        {/* Search - Centered on desktop only */}
+        <div className="hidden md:flex flex-1 justify-center">
           <HeaderSearch
-            isMobile={!!isMobile}
-            isExpanded={isSearchExpanded}
-            onToggleExpand={setIsSearchExpanded}
+            isMobile={false}
+            isExpanded={false}
+            onToggleExpand={() => { }}
           />
         </div>
-        <div className={`items-center gap-4 ${isMobile && isSearchExpanded ? "hidden" : "flex"}`}>
+
+        {/* Spacer for mobile when search is not expanded */}
+        {isMobile && !isSearchExpanded && <div className="flex-1" />}
+
+        {/* Search expanded on mobile - takes full width with animation */}
+        <div className={`transition-all duration-300 ease-out ${isMobile && isSearchExpanded
+          ? 'flex-1 opacity-100 translate-x-0'
+          : 'w-0 opacity-0 translate-x-4 overflow-hidden md:hidden'
+          } md:hidden`}>
+          {isMobile && isSearchExpanded && (
+            <HeaderSearch
+              isMobile={true}
+              isExpanded={isSearchExpanded}
+              onToggleExpand={setIsSearchExpanded}
+            />
+          )}
+        </div>
+        {/* Right side actions - Always visible */}
+        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          {/* Fullscreen toggle - Desktop only */}
           <Button
             variant="ghost"
             size="icon"
@@ -98,8 +119,29 @@ export function Header() {
             <span className="sr-only">{isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</span>
           </Button>
 
-          <NotificationBell />
+          {/* Search button - Mobile only, shown when not expanded with animation */}
+          <div className={`transition-all duration-300 ease-out ${isMobile && !isSearchExpanded
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 translate-x-4 w-0 overflow-hidden pointer-events-none'
+            } md:hidden`}>
+            {isMobile && !isSearchExpanded && (
+              <HeaderSearch
+                isMobile={true}
+                isExpanded={false}
+                onToggleExpand={setIsSearchExpanded}
+              />
+            )}
+          </div>
 
+          {/* Notification - Hidden on mobile when search is expanded with animation */}
+          <div className={`transition-all duration-300 ease-out ${isMobile && isSearchExpanded
+            ? 'opacity-0 translate-x-4 w-0 overflow-hidden pointer-events-none'
+            : 'opacity-100 translate-x-0'
+            }`}>
+            <NotificationBell />
+          </div>
+
+          {/* User Avatar - Always visible */}
           <UserAvatar user={session?.user} />
         </div>
       </div>
