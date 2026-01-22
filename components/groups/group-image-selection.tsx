@@ -185,12 +185,13 @@ export function GroupImageSelection({ selectedImage, onSelect }: GroupImageSelec
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <h4 className="text-sm font-medium leading-none">Group Icon</h4>
-                    <p className="text-xs text-muted-foreground max-w-[200px]">
-                        {!selectedImage ? "Required: Select an image" : "Change group icon"}
-                    </p>
-                </div>
+                {!selectedImage && (
+                    <div className="space-y-1">
+                        <p className="text-xs text-destructive font-medium">
+                            Required: Select an image
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

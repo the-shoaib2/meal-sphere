@@ -4,7 +4,6 @@ import React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -41,6 +40,11 @@ export default function ExcelImportExport() {
   const [isDownloadInProgress, setIsDownloadInProgress] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [downloadType, setDownloadType] = useState<'excel' | 'pdf' | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const {
     isExporting,
@@ -216,45 +220,26 @@ export default function ExcelImportExport() {
     await downloadTemplate()
   }
 
-  // Show skeleton while loading
-  if (!hasActiveGroup) {
+  // Show skeleton while loading or mounting to prevent hydration mismatch
+  if (!isMounted || !hasActiveGroup) {
     return <ExcelSkeleton />
   }
 
   // Show message if no active group
   if (!activeGroup) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Excel Import/Export</h2>
-          <p className="text-muted-foreground">Import and export meal data in Excel format</p>
+      <div className="space-y-4">
+        <div className="flex flex-col items-center justify-center h-64">
+          <p className="text-muted-foreground text-center">
+            No group selected. Please select a group to use Excel import/export features.
+          </p>
         </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center h-64">
-            <p className="text-muted-foreground text-center">
-              No group selected. Please select a group to use Excel import/export features.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Excel Import/Export</h2>
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-muted-foreground">
-            Import and export meal data in Excel format for <strong>{activeGroup?.name}</strong>
-          </p>
-          {permissions.userRole && (
-            <Badge variant={isPrivileged ? "default" : "outline"} className="text-xs">
-              {permissions.userRole}
-            </Badge>
-          )}
-        </div>
-      </div>
+    <div className="space-y-4">
 
       <Tabs defaultValue="export">
         <TabsList className="grid w-full grid-cols-2">
@@ -290,12 +275,12 @@ export default function ExcelImportExport() {
 
           {/* Preview and Download Section */}
           {(isPreviewLoading || (showPreview && canExport)) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>
+            <div className="space-y-4 pt-4 border-t">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">
                   {activeGroup?.name || "Group"}
-                </CardTitle>
-                <CardDescription>
+                </h3>
+                <p className="text-sm text-muted-foreground">
                   Export preview for {activeGroup?.name || "Group"} —
                   {dateRange === 'month' && (
                     <> {format(startDate, 'MMMM yyyy')}</>
@@ -309,9 +294,9 @@ export default function ExcelImportExport() {
                   {dateRange === 'custom' && (
                     <> {format(startDate, 'PPP')} - {format(endDate, 'PPP')}</>
                   )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </div>
+              <div className="space-y-4">
                 {isPreviewLoading && <ExcelPreviewSkeleton />}
                 {!isPreviewLoading && showPreview && previewData && (
                   <>
@@ -353,7 +338,7 @@ export default function ExcelImportExport() {
                                 )}
                               </div>
                             </div>
-                            
+
                             {previewData.meals && Array.isArray(previewData.meals) && previewData.meals.length > 0 && (
                               <PreviewTable title="Meals" rows={previewData.meals} />
                             )}
@@ -406,18 +391,19 @@ export default function ExcelImportExport() {
                     </div>
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </TabsContent>
 
-        <TabsContent value="import" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Data</CardTitle>
-              <CardDescription>Import data from Excel format</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <TabsContent value="import" className="space-y-8 mt-4">
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Import Data</h3>
+              <p className="text-sm text-muted-foreground">Import data from Excel format</p>
+            </div>
+
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Import data from an Excel file. Make sure the file format matches the template.
               </p>
@@ -452,8 +438,7 @@ export default function ExcelImportExport() {
                   You do not have permission to import data to this group.
                 </p>
               )}
-            </CardContent>
-            <CardFooter>
+
               <Button
                 onClick={handleImport}
                 disabled={isImporting || !canImport || !selectedFile}
@@ -471,21 +456,19 @@ export default function ExcelImportExport() {
                   </>
                 )}
               </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Template</CardTitle>
-              <CardDescription>Download a template for data import</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="space-y-4 pt-8 border-t">
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold">Import Template</h3>
+              <p className="text-sm text-muted-foreground">Download a template for data import</p>
+            </div>
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Download a template Excel file to use for importing data. Fill in the template with your data and
                 then import it using the form above.
               </p>
-            </CardContent>
-            <CardFooter>
               <Button
                 variant="outline"
                 className="w-full"
@@ -504,8 +487,8 @@ export default function ExcelImportExport() {
                   </>
                 )}
               </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
       <DownloadProgressDialog
@@ -514,6 +497,6 @@ export default function ExcelImportExport() {
         type={downloadType || 'excel'}
         onClose={() => setIsDownloadInProgress(false)}
       />
-    </div>
+    </div >
   )
 }

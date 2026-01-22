@@ -1,5 +1,3 @@
-import React from "react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -59,12 +57,12 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
   exportScopeValue,
   selectedUserIdValue,
 }) => (
-  <Card className="w-full">
-    <CardHeader>
-      <CardTitle className="text-base sm:text-lg">Data Selection</CardTitle>
-      <CardDescription className="text-xs sm:text-sm">Select the export options and date range</CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4 w-full">
+  <div className="space-y-6 w-full">
+    <div className="space-y-1">
+      <h3 className="text-base sm:text-lg font-semibold">Data Selection</h3>
+      <p className="text-xs sm:text-sm text-muted-foreground">Select the export options and date range</p>
+    </div>
+    <div className="space-y-4 w-full">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
         <div className="space-y-2">
           <Label>Export Type</Label>
@@ -90,20 +88,26 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
             <SelectContent>
               {canExportUser && (
                 <SelectItem value="user">
-                  <User className="h-4 w-4 mr-2" />
-                  My Data
+                  <span className="flex items-center">
+                    <User className="h-4 w-4 mr-2" />
+                    My Data
+                  </span>
                 </SelectItem>
               )}
               {canExportAll && (
                 <SelectItem value="all">
-                  <Users className="h-4 w-4 mr-2" />
-                  All Data
+                  <span className="flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    All Data
+                  </span>
                 </SelectItem>
               )}
               {canExportIndividual && (
                 <SelectItem value="individual">
-                  <Shield className="h-4 w-4 mr-2" />
-                  Individual User
+                  <span className="flex items-center">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Individual User
+                  </span>
                 </SelectItem>
               )}
             </SelectContent>
@@ -204,8 +208,8 @@ const ExportDataSelection: React.FC<ExcelExportDataSelectionCardProps> = ({
           )}
         </Button>
       </div>
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 )
 
-export default ExportDataSelection 
+export default ExportDataSelection

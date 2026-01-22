@@ -116,6 +116,9 @@ export function GroupPageContent(
         router.push(`/groups/${groupId}?${params.toString()}`, { scroll: false });
     };
 
+    const { isAdmin } = initialAccessData;
+    const { userRole, isCreator } = initialAccessData;
+
     if (isLoading || !group) {
         return (
             <div className="space-y-6">
@@ -137,18 +140,22 @@ export function GroupPageContent(
                                 <Users className="h-4 w-4 hidden sm:block" />
                                 Members
                             </TabsTrigger>
-                            <TabsTrigger value="join-requests" className="flex items-center gap-2">
-                                <UserPlus className="h-4 w-4 hidden sm:block" />
-                                Requests
-                            </TabsTrigger>
+                            {isAdmin && (
+                                <TabsTrigger value="join-requests" className="flex items-center gap-2">
+                                    <UserPlus className="h-4 w-4 hidden sm:block" />
+                                    Requests
+                                </TabsTrigger>
+                            )}
                             <TabsTrigger value="voting" className="flex items-center gap-2">
                                 <CheckSquare className="h-4 w-4 hidden sm:block" />
                                 Voting
                             </TabsTrigger>
-                            <TabsTrigger value="settings" className="flex items-center gap-2">
-                                <Settings className="h-4 w-4 hidden sm:block" />
-                                Settings
-                            </TabsTrigger>
+                            {isAdmin && (
+                                <TabsTrigger value="settings" className="flex items-center gap-2">
+                                    <Settings className="h-4 w-4 hidden sm:block" />
+                                    Settings
+                                </TabsTrigger>
+                            )}
                         </TabsList>
                         <div className="mt-6">
                             <TabsContent value="members">
@@ -171,8 +178,6 @@ export function GroupPageContent(
             </div>
         );
     }
-
-    const { userRole, isAdmin, isCreator } = initialAccessData;
 
     // Keep local feature flags and tags logic
     type GroupWithExtras = typeof group & {

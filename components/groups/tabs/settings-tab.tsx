@@ -139,6 +139,14 @@ const groupSettingsSchema = z.object({
 
 type GroupSettingsFormValues = z.input<typeof groupSettingsSchema>;
 
+interface ComponentStats {
+  meals: number;
+  shopping: number;
+  payments: number;
+  expenses: number;
+  members: number;
+}
+
 // Actions import removed
 
 interface SettingsTabProps {
@@ -184,6 +192,29 @@ export function SettingsTab({
     joinRequests: true,
   });
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [stats, setStats] = useState<ComponentStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setIsLoadingStats(true);
+        const response = await fetch(`/api/groups/${groupId}/stats`);
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.stats);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    if (groupId) {
+      fetchStats();
+    }
+  }, [groupId]);
   // Store previous group values for comparison
   const prevGroupRef = useState<PreviousGroupSettings | null>(null);
 
@@ -783,12 +814,66 @@ export function SettingsTab({
                 Data Management
               </h3>
               <p className="text-sm text-muted-foreground">
-                Import and export group data
+                Overview of all group components and data management.
               </p>
             </div>
-            <div className="p-4 border rounded-lg bg-card text-card-foreground shadow-sm">
-              <ExcelImportExport />
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="bg-muted/30 border-none shadow-none">
+                <CardHeader className="p-4 pb-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Settings className="h-3 w-3" />
+                    Meals Recorded
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <div className="text-2xl font-bold">
+                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.meals ?? 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/30 border-none shadow-none">
+                <CardHeader className="p-4 pb-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Tag className="h-3 w-3" />
+                    Shopping Items
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <div className="text-2xl font-bold">
+                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.shopping ?? 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/30 border-none shadow-none">
+                <CardHeader className="p-4 pb-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Users className="h-3 w-3" />
+                    Total Members
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <div className="text-2xl font-bold">
+                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.members ?? 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/30 border-none shadow-none">
+                <CardHeader className="p-4 pb-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <FileSpreadsheet className="h-3 w-3" />
+                    Payments & Fees
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <div className="text-2xl font-bold">
+                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : (stats?.payments ?? 0) + (stats?.expenses ?? 0)}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+
+            <ExcelImportExport />
           </div>
 
           <div className="space-y-4 border-t pt-6">
