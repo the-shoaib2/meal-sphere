@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/services/prisma';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { updatePeriodMode } from '@/lib/services/groups-service';
+import { unstable_cache } from 'next/cache';
 
 // Enable aggressive caching for better performance
 export const revalidate = 0; // Cache for 0 seconds
@@ -20,31 +21,24 @@ export async function GET(
 
         const { id: groupId } = await params;
 
-        // OPTIMIZED: Only select the periodMode field - minimal data transfer
-        const room = await prisma.room.findUnique({
-            where: { id: groupId },
-            select: {
-                periodMode: true
+        const getPeriodMode = unstable_cache(
+            async (id: string) => {
+                const room = await prisma.room.findUnique({
+                    where: { id },
+                    select: { periodMode: true },
+                });
+                return room?.periodMode || 'MONTHLY';
             },
-        });
-
-        if (!room) {
-            return NextResponse.json({ error: 'Group not found' }, { status: 404 });
-        }
-
-        // Return with aggressive cache headers for maximum performance
-        return NextResponse.json(
-            { periodMode: room.periodMode || 'MONTHLY' },
+            [`group-${groupId}-period-mode`],
             {
-                headers: {
-                    // Cache for 60 seconds, allow stale content for 2 minutes while revalidating
-                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-                    'Pragma': 'no-cache',
-                    'Expires': '0',
-                    'Surrogate-Control': 'no-store'
-                },
+                tags: [`group-${groupId}`],
+                revalidate: 60 * 60 // 1 hour default, invalidated by tags
             }
         );
+
+        const periodMode = await getPeriodMode(groupId);
+
+        return NextResponse.json({ periodMode });
     } catch (error) {
         console.error('Error fetching period mode:', error);
         return NextResponse.json(

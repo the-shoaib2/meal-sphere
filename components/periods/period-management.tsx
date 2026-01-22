@@ -71,7 +71,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
   const isPrivileged = ["ADMIN", "MANAGER", "MODERATOR"].includes(userRole ?? "");
 
   // Period mode management
-  const { periodMode, isLoading: periodModeLoading, updatePeriodMode, isUpdating } = usePeriodMode(activeGroup?.id);
+  const { periodMode = 'MONTHLY', isLoading: periodModeLoading, updatePeriodMode, isUpdating } = usePeriodMode(activeGroup?.id);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showRestartDialog, setShowRestartDialog] = useState(false);

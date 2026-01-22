@@ -51,7 +51,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
     
-    if (error.message?.includes('already an active period')) {
+    if (error.message?.includes('already an active period') || error.message?.includes('active')) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
     

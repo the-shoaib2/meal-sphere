@@ -162,13 +162,44 @@ export async function startPeriod(
   userId: string,
   data: CreatePeriodData
 ) {
-  const existingActivePeriod = await prisma.mealPeriod.findFirst({
-    where: {
-      roomId,
-      status: PeriodStatus.ACTIVE,
-    },
-  });
+  // 1. Run all validation checks in parallel
+  const [existingActivePeriod, overlappingPeriod, uniqueName] = await Promise.all([
+    // Check for existing active period
+    prisma.mealPeriod.findFirst({
+      where: {
+        roomId,
+        status: PeriodStatus.ACTIVE,
+      },
+    }),
+    // Check for date overlaps (if end date exists)
+    data.endDate ? prisma.mealPeriod.findFirst({
+      where: {
+        roomId,
+        OR: [
+          { startDate: { lte: data.startDate }, endDate: { gte: data.startDate }, },
+          { startDate: { lte: data.endDate }, endDate: { gte: data.endDate }, },
+          { startDate: { gte: data.startDate }, endDate: { lte: data.endDate }, },
+        ],
+      },
+    }) : Promise.resolve(null),
+    // Calculate unique name
+    (async () => {
+       let originalName = data.name;
+       let counter = 1;
+       let finalName = originalName;
+       while (true) {
+         const existing = await prisma.mealPeriod.findFirst({
+           where: { roomId, name: finalName },
+           select: { id: true }
+         });
+         if (!existing) return finalName;
+         counter++;
+         finalName = `${originalName} (${counter})`;
+       }
+    })()
+  ]);
 
+  // 2. Process validation results
   if (existingActivePeriod) {
     throw new Error(`There is already an active period "${existingActivePeriod.name}" for this group. Please end it first before starting a new period.`);
   }
@@ -177,11 +208,14 @@ export async function startPeriod(
     throw new Error('Start date must be before end date');
   }
 
-  await validatePeriodUniqueness(roomId, data);
+  if (overlappingPeriod) {
+    const endDateStr = overlappingPeriod.endDate ? overlappingPeriod.endDate.toLocaleDateString() : 'No end date';
+    throw new Error(`Period dates overlap with existing period "${overlappingPeriod.name}" (${overlappingPeriod.startDate.toLocaleDateString()} - ${endDateStr}). Each group can only have one period active at a time.`);
+  }
 
   const period = await prisma.mealPeriod.create({
     data: {
-      name: data.name,
+      name: uniqueName,
       startDate: data.startDate,
       endDate: data.endDate,
       openingBalance: data.openingBalance || 0,
@@ -192,6 +226,9 @@ export async function startPeriod(
       status: PeriodStatus.ACTIVE,
     },
   });
+
+  revalidateTag(`group-${roomId}`);
+  revalidateTag('periods');
 
   return {
     period,
@@ -248,6 +285,10 @@ export async function endPeriod(roomId: string, userId: string, endDate?: Date, 
     });
   }
 
+  revalidateTag(`group-${roomId}`);
+  revalidateTag(`period-${currentPeriod.id}`);
+  revalidateTag('periods');
+
   return updatedPeriod;
 }
 
@@ -278,6 +319,10 @@ export async function lockPeriod(roomId: string, userId: string, periodId: strin
     },
   });
 
+  revalidateTag(`group-${roomId}`);
+  revalidateTag(`period-${periodId}`);
+  revalidateTag('periods');
+
   return updatedPeriod;
 }
 
@@ -307,6 +352,10 @@ export async function unlockPeriod(roomId: string, userId: string, periodId: str
       status,
     },
   });
+
+  revalidateTag(`group-${roomId}`);
+  revalidateTag(`period-${periodId}`);
+  revalidateTag('periods');
 
   return updatedPeriod;
 }
@@ -541,6 +590,10 @@ export async function archivePeriod(roomId: string, userId: string, periodId: st
     data: archiveData,
   });
 
+  revalidateTag(`group-${roomId}`);
+  revalidateTag(`period-${periodId}`);
+  revalidateTag('periods');
+
   return updatedPeriod;
 }
 
@@ -613,6 +666,9 @@ export async function restartPeriod(roomId: string, userId: string, periodId: st
     if (withData) {
       await copyPeriodData(originalPeriod.id, newPeriod.id);
     }
+
+    revalidateTag(`group-${roomId}`);
+    revalidateTag('periods');
 
     return newPeriod;
   } catch (error) {

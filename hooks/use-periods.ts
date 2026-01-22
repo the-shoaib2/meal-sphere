@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 import { useActiveGroup } from '@/contexts/group-context';
 import { usePeriodContext } from '@/contexts/period-context';
 import { PeriodStatus } from '@prisma/client';
@@ -55,6 +55,7 @@ export interface PeriodsPageData {
   periodMode: 'MONTHLY' | 'CUSTOM';
   initialPeriodSummary?: PeriodSummary;
   groupId?: string;
+  selectedPeriodId?: string;
 }
 
 export function usePeriodsPageData(includeArchived = false, initialData?: PeriodsPageData) {
@@ -231,45 +232,25 @@ export function useStartPeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      toast.success('Period started successfully! 🎉', {
-        description: 'All members have been notified about the new period.',
-      });
+      router.refresh();
+      toast.success('Period started successfully!');
     },
     onError: (error: Error) => {
       // Enhanced error handling with specific messages
       const errorMessage = error.message;
 
       if (errorMessage.includes('already an active period')) {
-        toast.error('Cannot start new period', {
-          description: 'There is already an active period. Please end the current period first before starting a new one.',
-          action: {
-            label: 'View Current Period',
-            onClick: () => {
-              // You could navigate to the current period view here
-              console.log('Navigate to current period view');
-            },
-          },
-        });
+        toast.error('Active period exists. End the current one first.');
       } else if (errorMessage.includes('already exists in this group')) {
-        toast.error('Duplicate period name', {
-          description: 'A period with this name already exists. Please choose a different name.',
-        });
+        toast.error('Period name already exists.');
       } else if (errorMessage.includes('Insufficient permissions')) {
-        toast.error('Permission denied', {
-          description: 'Only admins and moderators can start new periods.',
-        });
+        toast.error('Permission denied.');
       } else if (errorMessage.includes('Start date must be before end date')) {
-        toast.error('Invalid dates', {
-          description: 'The start date must be before the end date.',
-        });
+        toast.error('Start date must be before end date.');
       } else if (errorMessage.includes('overlap')) {
-        toast.error('Date overlap detected', {
-          description: 'The period dates overlap with an existing period. Each group can only have one period active at a time.',
-        });
+        toast.error('Date overlap detected.');
       } else {
-        toast.error('Failed to start period', {
-          description: errorMessage,
-        });
+        toast.error(`Start failed: ${errorMessage}`);
       }
     },
   });
@@ -309,16 +290,10 @@ export function usePeriodMode(groupId?: string) {
         queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
         router.refresh();
         
-        toast.success(`Period mode updated to ${data.periodMode}`, {
-          description: data.periodMode === 'MONTHLY'
-            ? 'Monthly periods will be created automatically'
-            : 'You can now create custom periods manually',
-        });
+        toast.success(`Period mode updated to ${data.periodMode}`);
       },
       onError: (error: Error) => {
-        toast.error('Failed to update period mode', {
-          description: error.message,
-        });
+        toast.error(`Update failed: ${error.message}`);
       },
     });
 
@@ -367,16 +342,10 @@ export function usePeriodMode(groupId?: string) {
       queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
       queryClient.invalidateQueries({ queryKey: ['periods-overview', groupId] });
 
-      toast.success(`Period mode updated to ${data.periodMode}`, {
-        description: data.periodMode === 'MONTHLY'
-          ? 'Monthly periods will be created automatically'
-          : 'You can now create custom periods manually',
-      });
+      toast.success(`Period mode updated to ${data.periodMode}`);
     },
     onError: (error: Error) => {
-      toast.error('Failed to update period mode', {
-        description: error.message,
-      });
+      toast.error(`Update failed: ${error.message}`);
     },
   });
   
@@ -420,30 +389,18 @@ export function useEndPeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      toast.success('Period ended successfully! 📊', {
-        description: 'The period has been closed and calculations are ready for review.',
-      });
+      toast.success('Period ended successfully!');
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
 
       if (errorMessage.includes('No active period found') || errorMessage.includes('not active')) {
-        // If it's already ended or not active, we can consider this a "success" state for the UI 
-        // in terms of "we wanted it ended, and it is ended".
-        // But let's verify by invalidating.
         queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
-        
-        toast.info('Period already ended', {
-          description: 'This period appears to be already ended. The view has been updated.',
-        });
+        toast.success('Period already ended');
       } else if (errorMessage.includes('Insufficient permissions')) {
-        toast.error('Permission denied', {
-          description: 'Only admins and moderators can end periods.',
-        });
+        toast.error('Permission denied.');
       } else {
-        toast.error('Failed to end period', {
-          description: errorMessage,
-        });
+        toast.error(`End failed: ${errorMessage}`);
       }
     },
   });
@@ -480,29 +437,19 @@ export function useLockPeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      toast.success('Period locked successfully! 🔒', {
-        description: 'No further changes can be made to this period.',
-      });
+      toast.success('Period locked successfully!');
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
 
       if (errorMessage.includes('Period not found')) {
-        toast.error('Period not found', {
-          description: 'The specified period could not be found.',
-        });
+        toast.error('Period not found');
       } else if (errorMessage.includes('already locked')) {
-        toast.error('Period already locked', {
-          description: 'This period is already locked.',
-        });
+        toast.error('Period already locked');
       } else if (errorMessage.includes('Insufficient permissions')) {
-        toast.error('Permission denied', {
-          description: 'Only admins and moderators can lock periods.',
-        });
+        toast.error('Permission denied.');
       } else {
-        toast.error('Failed to lock period', {
-          description: errorMessage,
-        });
+        toast.error(`Lock failed: ${errorMessage}`);
       }
     },
   });
@@ -540,29 +487,19 @@ export function useUnlockPeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      toast.success('Period unlocked successfully! 🔓', {
-        description: 'Changes can now be made to this period.',
-      });
+      toast.success('Period unlocked successfully!');
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
 
       if (errorMessage.includes('Period not found')) {
-        toast.error('Period not found', {
-          description: 'The specified period could not be found.',
-        });
+        toast.error('Period not found');
       } else if (errorMessage.includes('not locked')) {
-        toast.error('Period not locked', {
-          description: 'This period is not currently locked.',
-        });
+        toast.error('Period not locked');
       } else if (errorMessage.includes('Insufficient permissions')) {
-        toast.error('Permission denied', {
-          description: 'Only admins and moderators can unlock periods.',
-        });
+        toast.error('Permission denied.');
       } else {
-        toast.error('Failed to unlock period', {
-          description: errorMessage,
-        });
+        toast.error(`Unlock failed: ${errorMessage}`);
       }
     },
   });
@@ -599,29 +536,19 @@ export function useArchivePeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      toast.success('Period archived successfully! 📦', {
-        description: 'The period has been moved to archives for long-term storage.',
-      });
+      toast.success('Period archived successfully!');
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
 
       if (errorMessage.includes('Period not found')) {
-        toast.error('Period not found', {
-          description: 'The specified period could not be found.',
-        });
+        toast.error('Period not found');
       } else if (errorMessage.includes('already archived')) {
-        toast.error('Period already archived', {
-          description: 'This period is already archived.',
-        });
+        toast.error('Period already archived');
       } else if (errorMessage.includes('Insufficient permissions')) {
-        toast.error('Permission denied', {
-          description: 'Only admins and moderators can archive periods.',
-        });
+        toast.error('Permission denied.');
       } else {
-        toast.error('Failed to archive period', {
-          description: errorMessage,
-        });
+        toast.error(`Archive failed: ${errorMessage}`);
       }
     },
   });
@@ -659,29 +586,19 @@ export function useRestartPeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      toast.success('Period restarted successfully! 🔄', {
-        description: 'A new period has been created with the same settings.',
-      });
+      toast.success('Period restarted successfully!');
     },
     onError: (error: Error) => {
       const errorMessage = error.message;
 
       if (errorMessage.includes('Period not found')) {
-        toast.error('Period not found', {
-          description: 'The specified period could not be found.',
-        });
+        toast.error('Period not found');
       } else if (errorMessage.includes('already an active period')) {
-        toast.error('Active period exists', {
-          description: 'Please end the current active period before restarting another.',
-        });
+        toast.error('Active period exists. End it first.');
       } else if (errorMessage.includes('Insufficient permissions')) {
-        toast.error('Permission denied', {
-          description: 'Only admins and moderators can restart periods.',
-        });
+        toast.error('Permission denied.');
       } else {
-        toast.error('Failed to restart period', {
-          description: errorMessage,
-        });
+        toast.error(`Restart failed: ${errorMessage}`);
       }
     },
   });
@@ -690,7 +607,7 @@ export function useRestartPeriod() {
 export function usePeriodManagement(initialData?: PeriodsPageData) {
   const { activeGroup } = useActiveGroup();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(
-    initialData?.currentPeriod?.id || null
+    initialData?.selectedPeriodId || initialData?.currentPeriod?.id || null
   );
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);

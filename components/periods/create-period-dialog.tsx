@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Plus, Settings2 } from 'lucide-react';
+import { Calendar, Plus, Settings2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ export function CreatePeriodDialog({
   onSubmit,
   disabled,
   disabledReason,
-  periodMode = 'CUSTOM',
+  periodMode = 'MONTHLY',
   onPeriodModeToggle,
   periodModeLoading,
   isUpdatingMode,
@@ -43,7 +43,7 @@ export function CreatePeriodDialog({
     startDate: new Date(),
     endDate: null,
     openingBalance: 0,
-    carryForward: false,
+    carryForward: true,
     notes: '',
   });
 
@@ -250,7 +250,14 @@ export function CreatePeriodDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !formData.name}>
-              {isSubmitting ? 'Creating...' : 'Start Period'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Start Period'
+              )}
             </Button>
           </DialogFooter>
         </form>

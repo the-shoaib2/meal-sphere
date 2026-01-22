@@ -1249,43 +1249,40 @@ export async function setCurrentGroup(groupId: string, userId: string) {
 }
 
 export async function updatePeriodMode(groupId: string, mode: 'MONTHLY' | 'CUSTOM', userId: string) {
-    // Get group information
-    const room = await prisma.room.findUnique({
-        where: { id: groupId },
-        select: { periodMode: true }
-    });
+    // 1. Fetch all necessary data in parallel
+    const [room, member, activePeriod] = await Promise.all([
+        prisma.room.findUnique({
+            where: { id: groupId },
+            select: { periodMode: true }
+        }),
+        prisma.roomMember.findFirst({
+            where: {
+                roomId: groupId,
+                userId: userId,
+            },
+            select: { role: true } // Optimized select
+        }),
+        prisma.mealPeriod.findFirst({
+            where: {
+                roomId: groupId,
+                status: 'ACTIVE',
+            },
+        })
+    ]);
 
     if (!room) {
         throw new Error('Group not found');
     }
 
-    // Get member info within this group
-    const member = await prisma.roomMember.findFirst({
-        where: {
-            roomId: groupId,
-            userId: userId,
-        },
-    });
-
     // Check permissions
     let canChange = false;
-    if (member) {
-        if (['ADMIN', 'MANAGER', 'MODERATOR'].includes(member.role)) {
-            canChange = true;
-        }
+    if (member && ['ADMIN', 'MANAGER', 'MODERATOR'].includes(member.role)) {
+        canChange = true;
     }
 
     if (!canChange) {
         throw new Error('Insufficient permissions. Only admins or authorized staff can change period mode.');
     }
-
-    // Check if there's an active period
-    const activePeriod = await prisma.mealPeriod.findFirst({
-        where: {
-            roomId: groupId,
-            status: 'ACTIVE',
-        },
-    });
 
     // 1. If currently in MONTHLY mode and has an active period, cannot change mode
     if (room.periodMode === 'MONTHLY' && activePeriod) {

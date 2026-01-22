@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { PeriodHistoryCard } from '@/components/periods/period-history-card';
 import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, Loader2, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
+import { useRouter } from 'next/navigation';
 
 
 export function PeriodsListSection({
@@ -38,6 +39,7 @@ export function PeriodsListSection({
   setShowArchiveDialog: (open: boolean) => void;
   isPrivileged: boolean;
 }) {
+  const router = useRouter();
   const [showHistory, setShowHistory] = useState(false);
 
   if (!activeGroup || !periods) {
@@ -84,7 +86,13 @@ export function PeriodsListSection({
                         {period.isLocked ? (
                           <span className="text-red-600 font-semibold">Locked</span>
                         ) : (
-                          <span className="text-green-600 font-semibold">{period.status}</span>
+                          <span className={`${period.status === 'ACTIVE' ? 'text-green-600' :
+                              period.status === 'ENDED' ? 'text-yellow-600' :
+                                period.status === 'ARCHIVED' ? 'text-gray-500' :
+                                  'text-gray-600'
+                            } font-semibold`}>
+                            {period.status}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -100,7 +108,7 @@ export function PeriodsListSection({
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedPeriodId(period.id)}>
+                                <DropdownMenuItem onClick={() => router.push(`/periods/${period.id}`)}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View
                                 </DropdownMenuItem>

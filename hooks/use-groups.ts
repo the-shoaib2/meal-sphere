@@ -76,6 +76,7 @@ interface UseGroupsReturn {
   };
   handleJoinRequest: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string; requestId: string; action: 'approve' | 'reject' }>>;
   resetJoinRequestStatus: (groupId: string) => void;
+  updatePeriodMode: ReturnType<typeof useMutation<{ periodMode: string }, AxiosError<{ message: string }>, { groupId: string; mode: 'MONTHLY' | 'CUSTOM' }>>;
 }
 
 export function useGroups(): UseGroupsReturn {
@@ -542,7 +543,26 @@ export function useGroups(): UseGroupsReturn {
     // Also clear join requests list for this group
     queryClient.removeQueries({ queryKey: ['join-requests', groupId] });
     queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
+    queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
   }, [queryClient]);
+
+  // Update Period Mode
+  const updatePeriodMode = useMutation<{ periodMode: string }, AxiosError<{ message: string }>, { groupId: string; mode: 'MONTHLY' | 'CUSTOM' }>({
+    mutationFn: async ({ groupId, mode }) => {
+      const { data } = await axios.patch(`/api/groups/${groupId}/period-mode`, { mode });
+      return data;
+    },
+    onSuccess: (data, { groupId }) => {
+        // Invalidate group details to reflect mode change
+        queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+        
+        toast.success(`Period mode updated to ${data.periodMode}`);
+    },
+    onError: (error) => {
+        console.error('Error updating period mode:', error);
+        toast.error(error.response?.data?.message || 'Failed to update period mode');
+    }
+  });
 
   return {
     data: userGroups,
@@ -559,6 +579,7 @@ export function useGroups(): UseGroupsReturn {
     useJoinRequests,
     handleJoinRequest,
     resetJoinRequestStatus,
+    updatePeriodMode,
   };
 }
 
