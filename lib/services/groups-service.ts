@@ -679,7 +679,7 @@ export type UpdateGroupData = {
     description?: string;
     isPrivate?: boolean;
     maxMembers?: number;
-    bannerUrl?: string;
+    bannerUrl?: string | null;
     tags?: string[];
     features?: Record<string, boolean>;
 };

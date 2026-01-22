@@ -16,7 +16,7 @@ const updateGroupSchema = z.object({
   description: z.string().max(500).optional(),
   isPrivate: z.boolean().optional(),
   maxMembers: z.number().min(1).optional(),
-  bannerUrl: z.string().url().optional(),
+  bannerUrl: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   features: z.record(z.string(), z.boolean()).optional()
 });

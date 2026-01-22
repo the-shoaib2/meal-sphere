@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { prisma } from "@/lib/services/prisma";
-import { validateAdminAccess } from "@/lib/auth/group-auth";
+import { validateGroupAccess, canPerformAction, Permission } from "@/lib/auth/group-auth";
 import { GroupInvitesService } from "@/lib/services/group-invites-service";
 import { z } from "zod";
 
@@ -28,10 +28,24 @@ export async function POST(
     const body = await request.json();
     const { role } = generateTokenSchema.parse(body);
 
-    // Verify admin access
-    const validation = await validateAdminAccess(groupId);
-    if (!validation.success) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
+    // Verify group access (must be at least a member)
+    const access = await validateGroupAccess(groupId);
+    if (!access.success || !access.authResult) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    const { authResult } = access;
+    
+    // Permission Logic:
+    // 1. If generating a MEMBER invite, any active member can do it (unless banned, which is checked in validateGroupAccess)
+    // 2. If generating an invite for ADMIN/MODERATOR/etc, user must have MANAGE_MEMBERS permission
+
+    if (role !== "MEMBER") {
+      // Check for elevated permissions
+      const canManageMembers = await canPerformAction(groupId, 'manage_members');
+      if (!canManageMembers) {
+         return NextResponse.json({ error: 'Insufficient permissions to create privileged invites' }, { status: 403 });
+      }
     }
 
     const inviteToken = await GroupInvitesService.generateLinkToken(groupId, session.user.id, role as any);
