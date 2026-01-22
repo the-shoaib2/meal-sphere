@@ -8,6 +8,8 @@ import MealManagement from "@/components/meal/meal-management";
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { Badge } from '@/components/ui/badge';
+import { ShieldCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,14 +52,20 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
     const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Meal Management</h1>
-            <p className="text-muted-foreground text-sm">
-              Track and manage your meals for {activeGroup.name}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          heading="Meal Management"
+          text={
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground">Track and manage your meals for {activeGroup.name}</span>
+              {accessData.userRole && (
+                <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  {accessData.userRole}
+                </Badge>
+              )}
+            </div>
+          }
+        />
         <NoPeriodState
           isPrivileged={isPrivileged}
           periodMode={mealsData.roomData?.periodMode || 'MONTHLY'}

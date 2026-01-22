@@ -17,6 +17,7 @@ import PastVotesList from "./past-votes-list"
 import LoadingSkeletons from "./loading-skeletons"
 import { Candidate, Vote as VoteType, ActiveVote, PastVote, Voter } from "./types"
 import { NoGroupState } from "@/components/empty-states/no-group-state"
+import { PageHeader } from "@/components/shared/page-header"
 
 const VOTE_TYPE_OPTIONS = [
   { value: "manager", label: "Manager Election", backend: "MEAL_MANAGER" },
@@ -94,14 +95,6 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   if (groups.length === 0 && !initialLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Voting System</h1>
-            <p className="text-muted-foreground text-sm">
-              Participate in group votes and elections
-            </p>
-          </div>
-        </div>
         <NoGroupState />
       </div>
     );
@@ -227,24 +220,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   return (
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Voting System</h2>
-          <div className="mb-1">
-            <p className="text-muted-foreground text-sm">
-              Participate in room votes and elections for
-              <span className="ml-1 font-semibold text-primary">{activeGroup.name}</span>
-            </p>
-          </div>
-        </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefreshVotes} title="Refresh votes">
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RotateCcw className="mr-2 h-4 w-4" />
-            )}
-            Refresh
-          </Button>
           {isMember && (
             <CreateVoteDialog
               open={showCreateDialog}

@@ -187,7 +187,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
 
   // Unified Query Hook
   const { data: data, isLoading: isLoadingUnified, error: unifiedError } = useQuery({
-    queryKey: ['unified-meal-data', roomId],
+    queryKey: ['meal-data', roomId],
     queryFn: async () => {
       if (!roomId) return null;
       // We pass the current userId via session, but API also derives it from session.
@@ -258,7 +258,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] }); // Keep legacy
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
@@ -275,7 +275,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       await axios.patch(`/api/meals/guest/${guestMealId}`, { count });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
       toast.success('Guest meal updated successfully');
@@ -292,7 +292,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       await axios.delete(`/api/meals/guest/${guestMealId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
       toast.success('Guest meal deleted successfully');
@@ -310,7 +310,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       toast.success('Meal settings updated successfully');
     },
     onError: (error: any) => {
@@ -324,14 +324,33 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
     mutationFn: async (settings: Partial<AutoMealSettings>) => {
       await axios.patch(`/api/meals/auto-settings?roomId=${roomId}&userId=${session?.user?.id}`, settings);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
-      toast.success('Auto meal settings updated successfully');
+    onMutate: async (newSettings) => {
+      await queryClient.cancelQueries({ queryKey: ['meal-data', roomId] });
+      const previousData = queryClient.getQueryData(['meal-data', roomId]);
+
+      queryClient.setQueryData(['meal-data', roomId], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          autoSettings: {
+            ...old.autoSettings,
+            ...newSettings
+          }
+        };
+      });
+
+      return { previousData };
     },
-    onError: (error: any) => {
-      console.error('Error updating auto meal settings:', error);
-      toast.error(error.response?.data?.message || 'Failed to update auto meal settings');
+    onError: (err, newSettings, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['meal-data', roomId], context.previousData);
+      }
+      console.error('Error updating auto meal settings:', err);
+      toast.error('Failed to update auto meal settings');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
     }
   });
 
@@ -345,7 +364,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified-meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
       toast.success('Auto meals processed successfully');

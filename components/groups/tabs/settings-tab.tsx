@@ -192,7 +192,7 @@ export function SettingsTab({
     defaultValues: {
       name: group?.name || '',
       description: group?.description || '',
-      bannerUrl: group?.bannerUrl || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png',
+      bannerUrl: group?.bannerUrl || '',
       isPrivate: group?.isPrivate || false,
       maxMembers: group?.maxMembers || undefined,
       tags: (group as any)?.tags || [],
@@ -202,7 +202,7 @@ export function SettingsTab({
 
   const { register, handleSubmit, watch, formState: { errors, dirtyFields }, setValue } = form;
   const isPrivateForm = watch('isPrivate');
-  const bannerUrl = watch('bannerUrl') || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png';
+  const bannerUrl = watch('bannerUrl') || '';
   const formTags = watch('tags') || [];
   const formFeatures = watch('features') || {};
 
@@ -225,7 +225,7 @@ export function SettingsTab({
       if (!dirtyFields.name) setValue('name', group.name);
       if (!dirtyFields.description) setValue('description', group.description || '');
       // Always update bannerUrl as it's handled separately or we want the latest
-      if (!dirtyFields.bannerUrl) setValue('bannerUrl', group.bannerUrl || '/group-images/9099ffd8-d09b-4883-bac1-04be1274bb82.png');
+      if (!dirtyFields.bannerUrl) setValue('bannerUrl', group.bannerUrl || '');
       if (!dirtyFields.isPrivate) setValue('isPrivate', group.isPrivate);
       if (!dirtyFields.maxMembers) setValue('maxMembers', group.maxMembers || undefined);
       if (!dirtyFields.tags) setValue('tags', (group as any).tags || []);

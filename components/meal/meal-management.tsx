@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
+import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
-import { Plus, Settings, Clock, Users, Utensils, Minus, Zap } from "lucide-react"
+import { Plus, Settings, Clock, Users, Utensils, Minus, Zap, ShieldCheck } from "lucide-react"
 import { format, startOfMonth, endOfMonth, isToday, isSameDay, eachDayOfInterval } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
@@ -170,44 +171,51 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     <PageHeader
       heading="Meal Management"
       text={
-        <span className="flex items-center flex-wrap">
-          Manage meals for {groupName || "your group"}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground">Manage meals for {groupName || "your group"}</span>
           {userRole && (
-            <span className="ml-2">
-              • <Badge variant={canManageMealSettings ? "default" : "outline"} className="text-xs bg-blue-600 ml-1">{userRole}</Badge>
-            </span>
+            <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1">
+              <ShieldCheck className="h-3 w-3" />
+              {userRole}
+            </Badge>
           )}
           {currentPeriod && (
-            <span className="ml-2">
-              • <Badge variant={isPeriodLocked(currentPeriod) ? "destructive" : "default"} className="text-xs ml-1">
-                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "(Locked)" : ""}
-              </Badge>
-            </span>
+            <Badge
+              variant={isPeriodLocked(currentPeriod) ? "destructive" : "outline"}
+              className={cn(
+                "text-[10px] font-bold px-2 uppercase tracking-wider",
+                !isPeriodLocked(currentPeriod) && "border-green-500/50 text-green-600 bg-green-50"
+              )}
+            >
+              {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
+            </Badge>
           )}
-        </span>
+        </div>
       }
     >
-      <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
-      {canManageMealSettings && (
-        <>
+      <div className="flex items-center gap-2">
+        <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
+        {canManageMealSettings && (
           <Button
             variant="outline"
             size="icon"
+            className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
             onClick={() => setSettingsOpen(true)}
             title="Meal Settings"
           >
             <Settings className="h-4 w-4" />
           </Button>
-        </>
-      )}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setAutoSettingsOpen(true)}
-        title="Auto Meal Settings"
-      >
-        <Clock className="h-4 w-4" />
-      </Button>
+        )}
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
+          onClick={() => setAutoSettingsOpen(true)}
+          title="Auto Meal Settings"
+        >
+          <Clock className="h-4 w-4" />
+        </Button>
+      </div>
     </PageHeader>
   );
 
