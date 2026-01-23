@@ -21,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';
 import { useActiveGroup } from '@/contexts/group-context';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -172,6 +174,8 @@ export function SettingsTab({
   const [isLeaving, setIsLeaving] = useState(false);
   const router = useRouter();
   const { updateGroupData } = useActiveGroup();
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   // const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   // const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
@@ -330,24 +334,25 @@ export function SettingsTab({
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
       setIsLoading(true);
-      // Determine if only partial update needed? For now update all.
+
+      const updatePayload = {
+        name: data.name,
+        description: data.description,
+        bannerUrl: data.bannerUrl,
+        isPrivate: data.isPrivate,
+        maxMembers: typeof data.maxMembers === 'string'
+          ? (data.maxMembers === '' ? undefined : Number(data.maxMembers))
+          : (data.maxMembers === null ? undefined : data.maxMembers),
+        tags: data.tags,
+        features: data.features,
+      };
 
       const response = await fetch(`/api/groups/${groupId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: data.name,
-          description: data.description,
-          bannerUrl: data.bannerUrl,
-          isPrivate: data.isPrivate,
-          maxMembers: typeof data.maxMembers === 'string'
-            ? (data.maxMembers === '' ? undefined : Number(data.maxMembers))
-            : (data.maxMembers === null ? undefined : data.maxMembers),
-          tags: data.tags,
-          features: data.features,
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (!response.ok) {
@@ -355,10 +360,28 @@ export function SettingsTab({
         throw new Error(result.error || 'Failed to update group');
       }
 
-      router.refresh(); // Server revalidate
-      onUpdate();
+      const updatedGroup = await response.json();
 
-      // ... toast logic ...
+      // IMMEDIATE UPDATE: Update context and group switcher
+      updateGroupData(groupId, {
+        name: data.name,
+        description: data.description,
+        bannerUrl: data.bannerUrl,
+        isPrivate: data.isPrivate,
+        maxMembers: typeof data.maxMembers === 'string'
+          ? (data.maxMembers === '' ? null : Number(data.maxMembers))
+          : data.maxMembers,
+        tags: data.tags,
+        features: data.features,
+      });
+
+      // Invalidate React Query cache to ensure all components update
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+
+      router.refresh(); // Server revalidate
+      onUpdate(); // Trigger parent component update
+
       toast.success('Group settings updated successfully');
       setIsEditing(false); // Exit edit mode on success
     } catch (error: any) {
@@ -388,6 +411,13 @@ export function SettingsTab({
         const data = await response.json();
         throw new Error(data.error || 'Failed to update feature');
       }
+
+      // IMMEDIATE UPDATE: Update context with new features
+      updateGroupData(groupId, { features: newFeatures } as any);
+
+      // Invalidate React Query cache
+      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
 
       router.refresh();
       onUpdate();

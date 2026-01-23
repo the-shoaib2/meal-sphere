@@ -33,7 +33,13 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
   const hasPrivilege = isPrivileged(userRole);
 
   const { data: currentPeriodFromHook, isLoading: isPeriodLoading } = useCurrentPeriod();
-  const currentPeriod = (initialData && initialData.groupId === activeGroup?.id) ? initialData.currentPeriod : currentPeriodFromHook;
+
+  // CRITICAL FIX: Prioritize initialData.currentPeriod to prevent false "no period" state
+  // Only fall back to hook data if initialData is not for the current group
+  const currentPeriod = (initialData && initialData.groupId === activeGroup?.id && initialData.currentPeriod)
+    ? initialData.currentPeriod
+    : currentPeriodFromHook;
+
   const handleViewDetails = (userId: string) => {
     window.dispatchEvent(new CustomEvent('routeChangeStart'));
     router.push(`/account-balance/${userId}`);
@@ -83,7 +89,10 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
     </PageHeader>
   );
 
-  // Show PeriodNotFoundCard if no period
+  // Show PeriodNotFoundCard only if:
+  // 1. No period from initialData AND
+  // 2. No period from hook AND
+  // 3. Hook is not loading
   if (!currentPeriod && !isPeriodLoading) {
     return (
       <div className="space-y-6">
