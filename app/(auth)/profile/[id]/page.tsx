@@ -1,19 +1,20 @@
-"use client"
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CalendarDays, Mail, User as UserIcon, Shield, Component } from "lucide-react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useParams } from "next/navigation"
+import { CalendarDays, Mail, User as UserIcon, Component } from "lucide-react"
+import { fetchUserProfile } from "@/lib/services/user-service"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth/auth"
+import { redirect } from "next/navigation"
+import { Metadata } from "next"
 
 interface Room {
     id: string
     name: string
-    description: string
-    category: string
+    description: string | null
+    category: string | null
     memberCount: number
+    isPrivate: boolean
 }
 
 interface RoomMember {
@@ -24,53 +25,68 @@ interface RoomMember {
 interface UserProfile {
     id: string
     name: string
-    email: string
+    email: string | null
     image: string | null
-    role?: string
-    createdAt: string
+    createdAt: Date
     rooms: RoomMember[]
+    profileVisibility?: string
+    isPrivate?: boolean
 }
 
-export default function ProfilePage() {
-    const params = useParams()
-    const id = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : null
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
 
-    const { data: user, isLoading: loading } = useQuery({
-        queryKey: ["user", id],
-        queryFn: async () => {
-            if (!id) return null
-            const response = await fetch(`/api/users/${id}`)
-            if (!response.ok) {
-                throw new Error("Failed to fetch user")
-            }
-            return response.json() as Promise<UserProfile>
-        },
-        enabled: !!id,
-    })
-
-    if (loading) {
-        return (
-            <div className="container max-w-4xl py-8 space-y-8 animate-in fade-in-50">
-                <div className="flex items-center gap-6">
-                    <Skeleton className="h-24 w-24 rounded-full" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-8 w-64" />
-                        <Skeleton className="h-4 w-48" />
-                    </div>
-                </div>
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Skeleton className="h-48" />
-                    <Skeleton className="h-48" />
-                </div>
-            </div>
-        )
+    if (!session?.user?.id) {
+        return { title: 'Profile' }
     }
+
+    const user = await fetchUserProfile(session.user.id, id)
+
+    return {
+        title: user?.name ? `${user.name}'s Profile` : 'Profile',
+        description: user?.name ? `View ${user.name}'s profile and groups` : 'User profile',
+    }
+}
+
+export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
+    const session = await getServerSession(authOptions)
+
+    // Require authentication
+    if (!session?.user?.id) {
+        redirect('/api/auth/signin')
+    }
+
+    // Fetch user profile with privacy controls
+    const user = await fetchUserProfile(session.user.id, id) as UserProfile | null
 
     if (!user) {
         return (
             <div className="container flex flex-col items-center justify-center min-h-[50vh] gap-4">
                 <h2 className="text-2xl font-bold">User not found</h2>
                 <p className="text-muted-foreground">The user you are looking for does not exist.</p>
+            </div>
+        )
+    }
+
+    // Handle private profiles
+    if (user.isPrivate) {
+        return (
+            <div className="container max-w-4xl py-8 space-y-8 animate-in fade-in-50">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8">
+                    <Avatar className="h-32 w-32 border-4 border-muted">
+                        <AvatarImage src={user.image || ""} alt={user.name} />
+                        <AvatarFallback className="text-4xl bg-primary/10 text-primary">
+                            {user.name?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1 text-center md:text-left space-y-2 pt-2">
+                        <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
+                        <p className="text-muted-foreground">This profile is private</p>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -87,20 +103,15 @@ export default function ProfilePage() {
                 </Avatar>
 
                 <div className="flex-1 text-center md:text-left space-y-2 pt-2">
-                    <div className="flex flex-col md:flex-row items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
-                        {user.role && (
-                            <Badge variant={user.role === 'ADMIN' ? 'destructive' : 'secondary'} className="uppercase text-xs" >
-                                {user.role}
-                            </Badge>
-                        )}
-                    </div>
+                    <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
 
                     <div className="flex flex-col gap-1 text-muted-foreground">
-                        <div className="flex items-center justify-center md:justify-start gap-2">
-                            <Mail className="h-4 w-4" />
-                            <span>{user.email}</span>
-                        </div>
+                        {user.email && (
+                            <div className="flex items-center justify-center md:justify-start gap-2">
+                                <Mail className="h-4 w-4" />
+                                <span>{user.email}</span>
+                            </div>
+                        )}
                         <div className="flex items-center justify-center md:justify-start gap-2">
                             <CalendarDays className="h-4 w-4" />
                             <span>Joined {new Date(user.createdAt).toLocaleDateString()}</span>
@@ -124,10 +135,6 @@ export default function ProfilePage() {
                             <div>
                                 <p className="text-muted-foreground font-medium">Full Name</p>
                                 <p>{user.name}</p>
-                            </div>
-                            <div>
-                                <p className="text-muted-foreground font-medium">Role</p>
-                                <p className="capitalize">{(user.role || 'Member').toLowerCase().replace('_', ' ')}</p>
                             </div>
                             <div>
                                 <p className="text-muted-foreground font-medium">Status</p>
