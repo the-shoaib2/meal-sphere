@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
 import { fetchAccountBalanceData } from '@/lib/services/balance-service';
-import AccountBalancePanel from '@/components/account-balance';
+import AccountBalancePanel from '@/components/account-balance/account-balance';
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { PageHeader } from "@/components/shared/page-header";

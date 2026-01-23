@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
@@ -10,49 +9,39 @@ import {
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGetAccountHistory, type HistoryRecord } from '@/hooks/use-account-balance';
+import { InsufficientPermissionsState } from '@/components/empty-states/insufficient-permissions-state';
 
 interface TransactionHistoryProps {
     transactionId: string | null;
     userId?: string;
     roomId?: string;
+    periodId?: string;
     onBack: () => void;
+    initialData?: HistoryRecord[];
 }
 
-interface HistoryRecord {
-    id: string;
-    action: string;
-    amount: number;
-    type: string;
-    description: string | null;
-    changedAt: string;
-    changedByUser: {
-        id: string;
-        name: string | null;
-        image: string | null;
-        email: string | null;
-    };
-}
-
-export function TransactionHistory({ transactionId, userId, roomId, onBack }: TransactionHistoryProps) {
+export function TransactionHistory({ transactionId, userId, roomId, periodId, onBack, initialData }: TransactionHistoryProps) {
     const isGlobal = transactionId === "ALL";
 
-    const { data: history, isLoading } = useQuery<HistoryRecord[]>({
-        queryKey: isGlobal ? ['account-history', userId, roomId] : ['transaction-history', transactionId],
-        queryFn: async () => {
-            if (isGlobal) {
-                if (!userId || !roomId) return [];
-                const res = await fetch(`/api/account-balance/history?userId=${userId}&roomId=${roomId}`);
-                if (!res.ok) throw new Error('Failed to fetch account history');
-                return res.json();
-            } else {
-                if (!transactionId) return [];
-                const res = await fetch(`/api/account-balance/transactions/${transactionId}/history`);
-                if (!res.ok) throw new Error('Failed to fetch history');
-                return res.json();
-            }
-        },
-        enabled: isGlobal ? (!!userId && !!roomId) : !!transactionId,
-    });
+    const { data: history, isLoading, error } = useGetAccountHistory(
+        roomId || '',
+        userId || '',
+        periodId,
+        { groupId: roomId, history: initialData } as any
+    );
+
+    const isForbidden = (error as any)?.message?.includes('403');
+
+    if (isForbidden) {
+        return (
+            <InsufficientPermissionsState
+                title="History Access Restricted"
+                description="You don't have permission to view the transaction audit log for this account."
+                showBackButton={false}
+            />
+        );
+    }
 
     return (
         <Card>

@@ -18,12 +18,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, ArrowRight } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
+import { BALANCE_PRIVILEGED_ROLES, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 
-// Using the same PRIVILEGED_ROLES from centralized configuration
-const PRIVILEGED_ROLES = ['ADMIN', 'ACCOUNTANT'];
+// Using centralized configuration
+const PRIVILEGED_ROLES = BALANCE_PRIVILEGED_ROLES;
 
 function isPrivileged(role?: string) {
-  return !!role && PRIVILEGED_ROLES.includes(role || '');
+  return hasBalancePrivilege(role);
 }
 
 const getRoleBadgeVariant = (role: string) => {

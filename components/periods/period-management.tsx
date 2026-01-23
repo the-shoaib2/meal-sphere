@@ -131,35 +131,29 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
         <PeriodManagementSkeleton />
       ) : (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Period Management</h1>
-              <p className="text-sm text-muted-foreground">
-                Manage your periods and their statuses.
-              </p>
-            </div>
-
+          <PageHeader
+            heading="Period Management"
+            text="Manage your periods and their statuses"
+          >
             {isPrivileged && (
-              <div className="flex items-center gap-3">
-                <CreatePeriodDialog
-                  open={showCreateDialog}
-                  onOpenChange={setShowCreateDialog}
-                  onSubmit={handleStartPeriod}
-                  disabled={!!currentPeriod}
-                  disabledReason={
-                    currentPeriod
-                      ? 'End the current period before starting a new one'
-                      : undefined
-                  }
-                  periodMode={periodMode}
-                  onPeriodModeToggle={handlePeriodModeToggle}
-                  periodModeLoading={periodModeLoading}
-                  isUpdatingMode={isUpdating}
-                  currentPeriodExists={!!currentPeriod}
-                />
-              </div>
+              <CreatePeriodDialog
+                open={showCreateDialog}
+                onOpenChange={setShowCreateDialog}
+                onSubmit={handleStartPeriod}
+                disabled={!!currentPeriod}
+                disabledReason={
+                  currentPeriod
+                    ? 'End the current period before starting a new one'
+                    : undefined
+                }
+                periodMode={periodMode}
+                onPeriodModeToggle={handlePeriodModeToggle}
+                periodModeLoading={periodModeLoading}
+                isUpdatingMode={isUpdating}
+                currentPeriodExists={!!currentPeriod}
+              />
             )}
-          </div>
+          </PageHeader>
 
           {/* Current Period Summary (should be first) */}
           <CurrentPeriodStatusCard

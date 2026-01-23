@@ -517,7 +517,7 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
       const currentPeriod = await getCurrentPeriod(groupId);
       const periodId = currentPeriod?.id;
 
-      const [summary, roomData, membership, ownTransactions] = await Promise.all([
+      const [summary, roomData, membership, ownTransactions, history] = await Promise.all([
         getGroupBalanceSummary(groupId, true),
         prisma.room.findUnique({
           where: { id: groupId },
@@ -538,6 +538,28 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
             targetUser: { select: { id: true, name: true, image: true, email: true } }
           },
           orderBy: { createdAt: 'desc' },
+          take: 50
+        }),
+        prisma.transactionHistory.findMany({
+          where: { 
+            roomId: groupId,
+            periodId: periodId,
+            OR: [
+              { userId: userId },
+              { targetUserId: userId }
+            ]
+          },
+          include: {
+            changedByUser: {
+              select: {
+                id: true,
+                name: true,
+                image: true,
+                email: true
+              }
+            }
+          },
+          orderBy: { changedAt: 'desc' },
           take: 50
         })
       ]);
@@ -561,6 +583,7 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
         summary,
         ownBalance,
         ownTransactions,
+        history,
         currentPeriod: summary?.currentPeriod || currentPeriod,
         roomData,
         userRole: membership?.role || null,
@@ -588,24 +611,19 @@ export async function fetchTransactionHistory(
   roomId: string, 
   userId: string, 
   viewerId: string,
-  viewerRole: string
+  viewerRole: string,
+  periodId?: string
 ) {
-  const cacheKey = `transaction-history-${roomId}-${userId}-${viewerId}`;
+  const cacheKey = `transaction-history-${roomId}-${userId}-${viewerId}-${periodId || 'all'}`;
   
-  // Permission check logic should ideally be here or in the caller. 
-  // Since this is a service, we assume caller checks basic auth, but we can verify specific logic.
-  // importing canViewUserBalance would be good if possible, or duplicate logical check.
-  // For now, we'll assume the caller handles the HTTP response part, but the service handles the data. (Or we can import permissions)
-  
-  // We'll skip the permission check inside the cached function to rely on arguments, 
-  // or checks should be done BEFORE calling this if they are user-specific. 
-  // actually, let's keep it pure data fetching here to avoid circular deps if permissions import services.
+  // ...
   
   const cachedFn = unstable_cache(
     async () => {
       const history = await prisma.transactionHistory.findMany({
         where: { 
           roomId: roomId,
+          periodId: periodId || undefined,
           OR: [
             { userId: userId },
             { targetUserId: userId }

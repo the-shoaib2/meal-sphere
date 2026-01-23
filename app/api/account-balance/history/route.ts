@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const roomId = searchParams.get('roomId');
+    const periodId = searchParams.get('periodId');
 
     if (!userId || !roomId) {
       return NextResponse.json({ error: 'Missing userId or roomId' }, { status: 400 });
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     const history = await prisma.transactionHistory.findMany({
       where: { 
         roomId: roomId,
+        periodId: periodId || undefined,
         OR: [
           { userId: userId },
           { targetUserId: userId }

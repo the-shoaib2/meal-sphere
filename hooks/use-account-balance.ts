@@ -66,10 +66,26 @@ export type AccountTransaction = {
   targetUser: { id: string; name: string; image?: string; email?: string };
 };
 
+export type HistoryRecord = {
+  id: string;
+  action: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  changedAt: string;
+  changedByUser: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    email: string | null;
+  };
+};
+
 export interface BalancePageData {
   summary: GroupBalanceSummary | null;
   ownBalance: UserBalance | null;
   ownTransactions: AccountTransaction[];
+  history?: HistoryRecord[];
   currentPeriod: any;
   roomData: any;
   userRole: string | null;
@@ -143,6 +159,29 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
     initialData: effectiveInitialData,
     staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useGetAccountHistory(roomId: string, userId: string, periodId?: string, initialData?: BalancePageData) {
+  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData.history : undefined;
+
+  return useQuery<HistoryRecord[]>({
+    queryKey: ['account-history', userId, roomId, periodId],
+    queryFn: async () => {
+      const url = new URL('/api/account-balance/history', window.location.origin);
+      url.searchParams.set('userId', userId);
+      url.searchParams.set('roomId', roomId);
+      if (periodId) url.searchParams.set('periodId', periodId);
+
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error('Failed to fetch account history');
+      return res.json();
+    },
+    enabled: !!roomId && !!userId && !effectiveInitialData,
+    initialData: effectiveInitialData,
+    staleTime: Infinity,
+    gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }

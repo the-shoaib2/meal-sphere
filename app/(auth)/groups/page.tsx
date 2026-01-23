@@ -22,7 +22,6 @@ export default async function GroupsPage() {
       <PageHeader
         heading="Groups"
         text="Join or create groups to plan meals together."
-        className="mb-8"
       />
 
       <GroupsView initialData={data} />
