@@ -30,12 +30,12 @@ export function GroupProvider({
   initialGroups?: Group[];
   initialActiveGroup?: Group | null;
 }) {
+  const [isSwitchingGroup, startTransition] = useTransition();
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeGroup, setActiveGroup] = useState<Group | null>(initialActiveGroup);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
-  const [isSwitchingGroup, startTransition] = useTransition();
   // Hydrate React Query cache with initial groups
   // And subscribe to updates using useQuery
   const { data: groups = [] } = useQuery<Group[]>({

@@ -14,7 +14,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, ArrowRight } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
@@ -120,9 +120,9 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
           <CardTitle>All Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[600px] w-full">
-            <div className="rounded-md border">
-              <Table>
+          <ScrollArea className="h-[600px] w-full whitespace-nowrap rounded-md border">
+            <div className="w-full">
+              <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
@@ -137,7 +137,7 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                 <TableBody>
                   {members.map((member: any) => (
                     <TableRow key={member.userId}>
-                      <TableCell>
+                      <TableCell className="max-w-xs overflow-hidden">
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarImage src={member.user.image || ''} />
@@ -189,6 +189,7 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                 </TableBody>
               </Table>
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </CardContent>
       </Card>
@@ -204,13 +205,13 @@ const StatCard = ({ icon: Icon, title, value, isCurrency = false, isPositive }: 
   isPositive?: boolean,
 }) => (
   <Card>
-    <CardContent className="p-4 flex items-center gap-4">
-      <div className="p-2 bg-muted rounded-md">
-        <Icon className="h-6 w-6 text-muted-foreground" />
+    <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+      <div className="p-1.5 sm:p-2 bg-muted rounded-md mb-1 sm:mb-0">
+        <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">{title}</p>
-        <p className={`text-xl font-bold ${isCurrency ? (isPositive ? 'text-green-600' : 'text-red-600') : ''}`}>
+        <p className="text-[10px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
+        <p className={`text-sm sm:text-xl font-bold truncate ${isCurrency ? (isPositive ? 'text-green-600' : 'text-red-600') : ''}`}>
           {value}
         </p>
       </div>

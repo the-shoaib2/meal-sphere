@@ -172,11 +172,11 @@ const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
         <Card key={i}>
-          <CardContent className="p-4 flex items-center gap-4">
-            <Skeleton className="h-6 w-6 rounded-md" /> {/* Icon */}
-            <div>
-              <Skeleton className="h-4 w-24 mb-1" /> {/* Title */}
-              <Skeleton className="h-6 w-20" /> {/* Value */}
+          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <Skeleton className="h-4 w-4 sm:h-6 sm:w-6 rounded-md mb-1 sm:mb-0" /> {/* Icon */}
+            <div className="flex flex-col items-center sm:items-start w-full">
+              <Skeleton className="h-2.5 sm:h-4 w-16 sm:w-24 mb-1" /> {/* Title */}
+              <Skeleton className="h-4 sm:h-6 w-12 sm:w-20" /> {/* Value */}
             </div>
           </CardContent>
         </Card>
@@ -185,11 +185,11 @@ const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       {[...Array(3)].map((_, i) => (
         <Card key={i}>
-          <CardContent className="p-4 flex items-center gap-4">
-            <Skeleton className="h-6 w-6 rounded-md" />
-            <div>
-              <Skeleton className="h-4 w-24 mb-1" />
-              <Skeleton className="h-6 w-20" />
+          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <Skeleton className="h-4 w-4 sm:h-6 sm:w-6 rounded-md mb-1 sm:mb-0" />
+            <div className="flex flex-col items-center sm:items-start w-full">
+              <Skeleton className="h-2.5 sm:h-4 w-16 sm:w-24 mb-1" />
+              <Skeleton className="h-4 sm:h-6 w-12 sm:w-20" />
             </div>
           </CardContent>
         </Card>
