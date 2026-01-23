@@ -8,7 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // import { useGroups } from '@/hooks/use-groups';
-import { Search, Plus, Users, ArrowRight } from 'lucide-react';
+import { Search, Plus, Users, ArrowRight, Compass } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -77,9 +77,15 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                 className="w-full"
             >
                 <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-                    <TabsList className="w-fit">
-                        <TabsTrigger value="my-groups">My Groups</TabsTrigger>
-                        <TabsTrigger value="discover">Discover</TabsTrigger>
+                    <TabsList className="w-full flex">
+                        <TabsTrigger value="my-groups" className="flex-1 flex items-center justify-center gap-2">
+                            <Users className="h-4 w-4" />
+                            My Groups
+                        </TabsTrigger>
+                        <TabsTrigger value="discover" className="flex-1 flex items-center justify-center gap-2">
+                            <Compass className="h-4 w-4" />
+                            Discover
+                        </TabsTrigger>
                     </TabsList>
 
                     <div className="flex gap-2">

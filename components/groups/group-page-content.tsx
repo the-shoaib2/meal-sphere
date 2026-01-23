@@ -139,22 +139,22 @@ export function GroupPageContent(
                         </div>
                     </div>
                     <Tabs defaultValue="members" value={activeTab} className="w-full">
-                        <TabsList className="w-fit flex justify-start sm:rounded-md">
-                            <TabsTrigger value="members" className="flex items-center gap-2">
+                        <TabsList className="w-full flex justify-start sm:rounded-md">
+                            <TabsTrigger value="members" className="flex-1 flex items-center justify-center gap-2">
                                 <Users className="h-4 w-4 hidden sm:block" />
                                 Members
                             </TabsTrigger>
                             {isAdmin && (
-                                <TabsTrigger value="join-requests" className="flex items-center gap-2">
+                                <TabsTrigger value="join-requests" className="flex-1 flex items-center justify-center gap-2">
                                     <UserPlus className="h-4 w-4 hidden sm:block" />
                                     Requests
                                 </TabsTrigger>
                             )}
-                            <TabsTrigger value="voting" className="flex items-center gap-2">
+                            <TabsTrigger value="voting" className="flex-1 flex items-center justify-center gap-2">
                                 <CheckSquare className="h-4 w-4 hidden sm:block" />
                                 Voting
                             </TabsTrigger>
-                            <TabsTrigger value="settings" className="flex items-center gap-2">
+                            <TabsTrigger value="settings" className="flex-1 flex items-center justify-center gap-2">
                                 <Settings className="h-4 w-4 hidden sm:block" />
                                 Settings
                             </TabsTrigger>
@@ -247,22 +247,22 @@ export function GroupPageContent(
             </div>
 
             <Tabs defaultValue="members" value={displayActiveTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="w-fit flex justify-start sm:rounded-md">
-                    <TabsTrigger value="members" className="flex items-center gap-2">
+                <TabsList className="w-full flex justify-start sm:rounded-md">
+                    <TabsTrigger value="members" className="flex-1 flex items-center justify-center gap-2">
                         <Users className="h-4 w-4 hidden sm:block" />
                         Members
                     </TabsTrigger>
                     {isAdmin && (
-                        <TabsTrigger value="join-requests" className="flex items-center gap-2">
+                        <TabsTrigger value="join-requests" className="flex-1 flex items-center justify-center gap-2">
                             <UserPlus className="h-4 w-4 hidden sm:block" />
                             Requests
                         </TabsTrigger>
                     )}
-                    <TabsTrigger value="voting" className="flex items-center gap-2">
+                    <TabsTrigger value="voting" className="flex-1 flex items-center justify-center gap-2">
                         <CheckSquare className="h-4 w-4 hidden sm:block" />
                         Voting
                     </TabsTrigger>
-                    <TabsTrigger value="settings" className="flex items-center gap-2">
+                    <TabsTrigger value="settings" className="flex-1 flex items-center justify-center gap-2">
                         <Settings className="h-4 w-4 hidden sm:block" />
                         Settings
                     </TabsTrigger>
