@@ -344,13 +344,50 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
         roomId
       });
     },
+    onMutate: async (variables) => {
+      const { date, type, count } = variables;
+      
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['guest-meals', roomId] });
+      
+      // Snapshot previous value
+      const previousGuestMeals = queryClient.getQueryData(['guest-meals', roomId]);
+      
+      // Optimistically add guest meal
+      queryClient.setQueryData(['guest-meals', roomId], (old: GuestMeal[] | undefined) => {
+        if (!old) return old;
+        
+        const newGuestMeal: GuestMeal = {
+          id: `temp-${Date.now()}`,
+          date: format(date, 'yyyy-MM-dd'),
+          type,
+          count,
+          userId: session?.user?.id!,
+          roomId: roomId!,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          user: {
+            id: session?.user?.id!,
+            name: session?.user?.name || null,
+            image: session?.user?.image || null,
+          }
+        };
+        return [newGuestMeal, ...old];
+      });
+      
+      return { previousGuestMeals };
+    },
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousGuestMeals) {
+        queryClient.setQueryData(['guest-meals', roomId], context.previousGuestMeals);
+      }
+      console.error('Error adding guest meal:', error);
+      toast.error(error.response?.data?.message || 'Failed to add guest meal');
+    },
     onSuccess: (_, variables) => {
       router.refresh();
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
-    },
-    onError: (error: any) => {
-      console.error('Error adding guest meal:', error);
-      toast.error(error.response?.data?.message || 'Failed to add guest meal');
     }
   });
 
@@ -359,13 +396,36 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     mutationFn: async ({ guestMealId, count }: { guestMealId: string; count: number }) => {
       await axios.patch(`/api/meals/guest/${guestMealId}`, { count });
     },
+    onMutate: async (variables) => {
+      const { guestMealId, count } = variables;
+      
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['guest-meals', roomId] });
+      
+      // Snapshot previous value
+      const previousGuestMeals = queryClient.getQueryData(['guest-meals', roomId]);
+      
+      // Optimistically update count
+      queryClient.setQueryData(['guest-meals', roomId], (old: GuestMeal[] | undefined) => {
+        if (!old) return old;
+        return old.map(meal => 
+          meal.id === guestMealId ? { ...meal, count } : meal
+        );
+      });
+      
+      return { previousGuestMeals };
+    },
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousGuestMeals) {
+        queryClient.setQueryData(['guest-meals', roomId], context.previousGuestMeals);
+      }
+      console.error('Error updating guest meal:', error);
+      toast.error(error.response?.data?.message || 'Failed to update guest meal');
+    },
     onSuccess: () => {
       router.refresh();
       toast.success('Guest meal updated successfully');
-    },
-    onError: (error: any) => {
-      console.error('Error updating guest meal:', error);
-      toast.error(error.response?.data?.message || 'Failed to update guest meal');
     }
   });
 
@@ -374,13 +434,32 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     mutationFn: async (guestMealId: string) => {
       await axios.delete(`/api/meals/guest/${guestMealId}`);
     },
+    onMutate: async (guestMealId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['guest-meals', roomId] });
+      
+      // Snapshot previous value
+      const previousGuestMeals = queryClient.getQueryData(['guest-meals', roomId]);
+      
+      // Optimistically remove guest meal
+      queryClient.setQueryData(['guest-meals', roomId], (old: GuestMeal[] | undefined) => {
+        if (!old) return old;
+        return old.filter(meal => meal.id !== guestMealId);
+      });
+      
+      return { previousGuestMeals };
+    },
+    onError: (error: any, guestMealId, context) => {
+      // Rollback on error
+      if (context?.previousGuestMeals) {
+        queryClient.setQueryData(['guest-meals', roomId], context.previousGuestMeals);
+      }
+      console.error('Error deleting guest meal:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete guest meal');
+    },
     onSuccess: () => {
       router.refresh();
       toast.success('Guest meal deleted successfully');
-    },
-    onError: (error: any) => {
-      console.error('Error deleting guest meal:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete guest meal');
     }
   });
 

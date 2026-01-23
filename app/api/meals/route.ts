@@ -12,12 +12,6 @@ import { getMealsOptimized } from "@/lib/utils/query-helpers"
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   const { searchParams } = new URL(request.url)
   const roomId = searchParams.get("roomId")
   const startDate = searchParams.get("startDate")
@@ -27,52 +21,69 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
   }
 
-  // Check if user is a member of the room
-  const roomMember = await prisma.roomMember.findUnique({
-    where: {
-      userId_roomId: {
-        userId: session.user.id,
-        roomId: roomId,
-      },
-    },
-  })
-
-  if (!roomMember) {
-    return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
-  }
-
   try {
-    // Get period-aware where clause
-    const whereClause = await getPeriodAwareWhereClause(roomId, {
-      roomId: roomId,
+    // Parallel auth checks for faster response
+    const [session, currentPeriod] = await Promise.all([
+      getServerSession(authOptions),
+      getCurrentPeriod(roomId)
+    ])
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check room membership
+    const roomMember = await prisma.roomMember.findUnique({
+      where: {
+        userId_roomId: {
+          userId: session.user.id,
+          roomId: roomId,
+        },
+      },
+      select: { userId: true } // Only select what we need
     })
 
-    // If no active period, return empty array
-    if (whereClause.id === null) {
+    if (!roomMember) {
+      return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
+    }
+
+    // If no active period, return empty array immediately
+    if (!currentPeriod) {
       return NextResponse.json([])
     }
 
     // Generate cache key
-    const periodId = whereClause.periodId as string | undefined
+    const periodId = currentPeriod.id
     const cacheKey = getMealsCacheKey(roomId, periodId, startDate || undefined, endDate || undefined)
 
     // Try to get from cache or fetch fresh data
     const meals = await cacheGetOrSet(
       cacheKey,
       async () => {
-        // Add date filter if provided
-        const dateFilter: any = {}
-        if (startDate) dateFilter.gte = new Date(startDate)
-        if (endDate) dateFilter.lte = new Date(endDate)
-
-        const finalWhere = { ...whereClause }
-        if (Object.keys(dateFilter).length > 0) {
-          finalWhere.date = dateFilter
+        // Build optimized where clause
+        const whereClause: any = {
+          roomId,
+          periodId
         }
 
+        // Add date filter if provided
+        if (startDate || endDate) {
+          whereClause.date = {}
+          if (startDate) whereClause.date.gte = new Date(startDate)
+          if (endDate) whereClause.date.lte = new Date(endDate)
+        }
+
+        // Optimized query with select to reduce data transfer
         return await prisma.meal.findMany({
-          where: finalWhere,
-          include: {
+          where: whereClause,
+          select: {
+            id: true,
+            date: true,
+            type: true,
+            userId: true,
+            roomId: true,
+            createdAt: true,
+            updatedAt: true,
             user: {
               select: {
                 id: true,
@@ -89,14 +100,8 @@ export async function GET(request: Request) {
       { ttl: CACHE_TTL.MEALS_LIST }
     )
 
-    return NextResponse.json(meals, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
-      }
-    })
+    // Return with proper caching (remove conflicting headers)
+    return NextResponse.json(meals)
   } catch (error) {
     console.error("Error fetching meals:", error)
     return NextResponse.json({ error: "Failed to fetch meals" }, { status: 500 })
@@ -104,12 +109,6 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
   try {
     const body = await request.json()
     const { roomId, date, type } = body
@@ -118,69 +117,79 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Check if user is a member of the room
-    const roomMember = await prisma.roomMember.findUnique({
-      where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: roomId,
+    // Parallel auth and validation checks
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const [currentPeriod, roomMember] = await Promise.all([
+      getCurrentPeriod(roomId),
+      prisma.roomMember.findUnique({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId: roomId,
+          },
         },
-      },
-    })
+        select: { userId: true }
+      })
+    ])
 
     if (!roomMember) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
-    // Validate that there's an active period
-    try {
-      await validateActivePeriod(roomId)
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+    if (!currentPeriod) {
+      return NextResponse.json({ error: "No active period found" }, { status: 400 })
     }
 
-    // Check if meal already exists (within the current period)
-    const currentPeriod = await getCurrentPeriod(roomId)
-    const existingMeal = await prisma.meal.findFirst({
+    if (currentPeriod.isLocked) {
+      return NextResponse.json({ error: "This period is locked" }, { status: 400 })
+    }
+
+    // Use deleteMany + create pattern for faster toggle (single round trip)
+    const dateObj = new Date(date)
+    const deleted = await prisma.meal.deleteMany({
       where: {
         userId: session.user.id,
         roomId: roomId,
-        date: new Date(date),
+        date: dateObj,
         type: type,
-        periodId: currentPeriod?.id,
+        periodId: currentPeriod.id,
       },
     })
 
-    if (existingMeal) {
-      // If meal exists, delete it (toggle behavior)
-      await prisma.meal.delete({
-        where: {
-          id: existingMeal.id,
+    let result
+    if (deleted.count === 0) {
+      // Meal didn't exist, create it
+      result = await prisma.meal.create({
+        data: {
+          userId: session.user.id,
+          roomId: roomId,
+          date: dateObj,
+          type: type,
+          periodId: currentPeriod.id,
         },
+        select: {
+          id: true,
+          date: true,
+          type: true,
+          userId: true,
+          roomId: true,
+        }
       })
-
-      // Invalidate cache
-      await invalidateMealCache(roomId, currentPeriod?.id)
-
-      return NextResponse.json({ message: "Meal removed successfully" })
-    } else {
-      // Create new meal with period ID
-      const mealData = await addPeriodIdToData(roomId, {
-        userId: session.user.id,
-        roomId: roomId,
-        date: new Date(date),
-        type: type,
-      })
-
-      const meal = await prisma.meal.create({
-        data: mealData,
-      })
-
-      // Invalidate cache
-      await invalidateMealCache(roomId, currentPeriod?.id)
-
-      return NextResponse.json(meal)
     }
+
+    // Invalidate cache (async, don't wait)
+    invalidateMealCache(roomId, currentPeriod.id).catch(console.error)
+
+    return NextResponse.json(
+      deleted.count > 0 
+        ? { message: "Meal removed successfully", deleted: true }
+        : { ...result, deleted: false }
+    )
   } catch (error) {
     console.error("Error managing meal:", error)
     return NextResponse.json({ error: "Failed to manage meal" }, { status: 500 })
