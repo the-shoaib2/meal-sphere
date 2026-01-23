@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useDashboardContext } from '@/contexts/dashboard-context';
 import {
   Utensils,
   CreditCard,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { DashboardActivity } from '@/types/dashboard';
 
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -83,61 +83,20 @@ const formatTimestamp = (timestamp: string) => {
   } else if (diffInHours < 48) {
     return 'Yesterday';
   } else {
-    return date.toLocaleDateString();
+    // Explicit locale and options to prevent hydration mismatch
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
   }
 };
 
-export default function RecentActivities() {
-  const { activities, isLoading, error } = useDashboardContext();
+interface RecentActivitiesProps {
+  activities: DashboardActivity[] | undefined;
+}
 
-  if (isLoading) {
-    return (
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-3 sm:pb-4">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <Skeleton className="h-5 sm:h-6 w-24 sm:w-32" />
-          </div>
-          <Skeleton className="h-3 sm:h-4 w-36 sm:w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 sm:space-y-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center">
-                <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-full mr-2 sm:mr-3" />
-                <div className="space-y-1.5 sm:space-y-2 flex-1">
-                  <Skeleton className="h-3.5 sm:h-4 w-24 sm:w-32" />
-                  <Skeleton className="h-2.5 sm:h-3 w-20 sm:w-24" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-3 sm:pb-4">
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <CardTitle className="text-base sm:text-lg">Recent Activities</CardTitle>
-          </div>
-          <CardDescription className="text-xs sm:text-sm">Your recent meal and payment activities</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[250px] sm:h-[300px] border rounded-md bg-muted/20">
-            <div className="text-center">
-              <Activity className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-xs sm:text-sm text-muted-foreground">Failed to load activities</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+export default function RecentActivities({ activities }: RecentActivitiesProps) {
 
   if (!activities || activities.length === 0) {
     return (
@@ -183,7 +142,7 @@ export default function RecentActivities() {
       <CardContent className="p-0 flex-grow overflow-hidden">
         <ScrollArea className="h-full w-full">
           <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
-            {activities.map((activity) => {
+            {activities.map((activity: DashboardActivity) => {
               const IconComponent = getActivityIcon(activity.type);
               const iconColor = getActivityColor(activity.type);
               const badge = getActivityBadge(activity.type);

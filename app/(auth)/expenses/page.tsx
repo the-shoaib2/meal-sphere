@@ -32,6 +32,7 @@ export default async function ExpensesPage() {
         <PageHeader
           heading="Extra Expenses"
           text="Track additional expenses"
+          className="mb-0"
         />
         <NoGroupState />
       </div>
@@ -48,10 +49,11 @@ export default async function ExpensesPage() {
   if (!expensesData.currentPeriod) {
     const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="space-y-6">
         <PageHeader
           heading="Extra Expenses"
           text={`Track additional expenses for ${activeGroup.name}`}
+          className="mb-0"
         />
         <NoPeriodState
           isPrivileged={isPrivileged}

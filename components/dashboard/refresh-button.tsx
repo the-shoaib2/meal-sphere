@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useDashboardContext } from "@/contexts/dashboard-context";
 
-export function RefreshButton() {
-    // Consume context instead of local state
-    const { refresh, isRefreshing } = useDashboardContext();
+interface RefreshButtonProps {
+    refresh: () => void;
+    isRefreshing: boolean;
+}
 
+export function RefreshButton({ refresh, isRefreshing }: RefreshButtonProps) {
     return (
         <Button
             variant="outline"

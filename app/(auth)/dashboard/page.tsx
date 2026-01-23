@@ -15,7 +15,7 @@ import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { DashboardOverview } from '@/components/dashboard/dashboard-overview';
 import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 import { DashboardQuickActions } from '@/components/dashboard/dashboard-quick-actions';
-import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { Dashboard } from '@/components/dashboard/dashboard';
 import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
@@ -58,29 +58,21 @@ export default async function DashboardPage() {
     if (!data.summary.currentPeriod) {
         const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
         return (
-            <DashboardShell
-                header={
-                    <PageHeader heading="Dashboard" />
-                }
-            >
+            <Dashboard heading="Dashboard">
                 <NoPeriodState
                     isPrivileged={isPrivileged}
                     // For dashboard, we might want a slightly different description
                     title="No Active Period"
                     description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
                 />
-            </DashboardShell >
+            </Dashboard >
         );
     }
 
     // 4. Render UI
     return (
-        <DashboardShell
-            header={
-                <PageHeader heading="Dashboard">
-                    <RefreshButton />
-                </PageHeader>
-            }
+        <Dashboard
+            heading="Dashboard"
             activities={data.activities}
             chartData={data.chartData}
         >
@@ -89,7 +81,10 @@ export default async function DashboardPage() {
                 <DashboardOverview summaryData={data.summary} />
 
                 {/* Activity Section */}
-                <DashboardActivity />
+                <DashboardActivity
+                    activities={data.activities}
+                    chartData={data.chartData}
+                />
 
                 {/* Quick Actions Section */}
                 <DashboardQuickActions />
@@ -101,8 +96,9 @@ export default async function DashboardPage() {
                     monthlyExpenses={data.analytics.monthlyExpenses}
                     mealRateTrend={data.analytics.mealRateTrend}
                     roomStats={data.analytics.roomStats}
+                    chartData={data.chartData}
                 />
             </div>
-        </DashboardShell>
+        </Dashboard>
     );
 }

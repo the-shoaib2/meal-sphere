@@ -13,7 +13,7 @@ interface AnalyticsCardProps {
 
 export function AnalyticsCard({ title, description, icon: Icon, children, isLoading }: AnalyticsCardProps) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-primary" />

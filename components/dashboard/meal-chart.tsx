@@ -5,37 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useDashboardContext } from '@/contexts/dashboard-context';
 import { TrendingUp, Calendar, DollarSign, BarChart3, Info, Smartphone } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NumberTicker } from '@/components/ui/number-ticker';
+import { DashboardChartData } from '@/types/dashboard';
 
-export default function MealChart() {
-  const { chartData, isLoading, error } = useDashboardContext();
+interface MealChartProps {
+  chartData: DashboardChartData[] | undefined;
+}
+
+export default function MealChart({ chartData }: MealChartProps) {
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-
-  if (error) {
-    return (
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px]">
-        <CardHeader className="pb-3 sm:pb-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <CardTitle className="text-base sm:text-lg">Monthly Meal Summary</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[250px] sm:h-[300px] border rounded-md bg-muted/20">
-            <div className="text-center">
-              <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-2" />
-              <p className="text-xs sm:text-sm text-muted-foreground">Failed to load chart data</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (!chartData || chartData.length === 0) {
     return (

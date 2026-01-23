@@ -1,9 +1,14 @@
 import { Settings } from "lucide-react";
 import MealChart from "@/components/dashboard/meal-chart";
 import RecentActivities from "@/components/dashboard/recent-activities";
+import { DashboardActivity as DashboardActivityType, DashboardChartData } from '@/types/dashboard';
 
+interface DashboardActivityProps {
+    activities: DashboardActivityType[] | undefined;
+    chartData: DashboardChartData[] | undefined;
+}
 
-export function DashboardActivity() {
+export function DashboardActivity({ activities, chartData }: DashboardActivityProps) {
     return (
         <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center gap-2">
@@ -13,10 +18,10 @@ export function DashboardActivity() {
 
             <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
                 <div className="lg:col-span-4">
-                    <MealChart />
+                    <MealChart chartData={chartData} />
                 </div>
                 <div className="lg:col-span-3">
-                    <RecentActivities />
+                    <RecentActivities activities={activities} />
                 </div>
             </div>
         </div>

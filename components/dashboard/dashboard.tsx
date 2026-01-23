@@ -2,15 +2,15 @@
 
 import { ReactNode, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardContext } from '@/contexts/dashboard-context';
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
 import { useActiveGroup } from '@/contexts/group-context';
-
-// Types
+import { PageHeader } from '@/components/shared/page-header';
+import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { DashboardActivity, DashboardChartData } from '@/types/dashboard';
 
-interface DashboardShellProps {
-    header: ReactNode;
+interface DashboardProps {
+    heading?: string;
+    text?: string | ReactNode;
     children: ReactNode;
     // Data props from server
     activities?: DashboardActivity[];
@@ -18,15 +18,15 @@ interface DashboardShellProps {
 }
 
 /**
- * DashboardShell - Wrapper component that manages dashboard refresh state
- *                  AND provides unified dashboard data context.
+ * Dashboard - Wrapper component that manages dashboard refresh state
  */
-export function DashboardShell({
-    header,
+export function Dashboard({
+    heading,
+    text,
     children,
     activities,
     chartData
-}: DashboardShellProps) {
+}: DashboardProps) {
     const router = useRouter();
     const [isRefreshing, startTransition] = useTransition();
     const { isSwitchingGroup } = useActiveGroup();
@@ -41,23 +41,12 @@ export function DashboardShell({
     const isLoading = isRefreshing || isSwitchingGroup;
 
     return (
-        <DashboardContext.Provider
-            value={{
-                // Data
-                activities,
-                chartData,
-
-                // Status
-                isLoading,
-                error: null, // Basic error handling is done via error.tsx boundaries
-
-                // Refresh Logic
-                refresh,
-                isRefreshing
-            }}
-        >
-            {/* Keep header visible during refresh */}
-            {header}
+        <>
+            {heading && (
+                <PageHeader heading={heading} text={text}>
+                    <RefreshButton refresh={refresh} isRefreshing={isRefreshing} />
+                </PageHeader>
+            )}
 
             {/* Show skeleton during refresh or group switch, otherwise show actual content */}
             {isLoading ? (
@@ -65,6 +54,6 @@ export function DashboardShell({
             ) : (
                 children
             )}
-        </DashboardContext.Provider>
+        </>
     );
 }
