@@ -142,7 +142,6 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
   const header = (
     <PageHeader
       heading="Account Balances"
-      className="mb-0"
       text={
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <span>Manage all user balances and transactions.</span>
@@ -446,7 +445,6 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
     <div className="space-y-6">
       <PageHeader
         heading="Account Details"
-        className="mb-0"
         text={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2 h-8 px-2 text-muted-foreground hover:text-foreground">

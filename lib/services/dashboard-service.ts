@@ -70,40 +70,19 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
       const currentPeriod = await getCurrentPeriod(resolvedGroupId!);
       const periodId = currentPeriod?.id;
 
-      // Parallel queries matching the 4 API routes exactly
-      const [
-        activeGroupsCount,
-        
-        // Group Stats data
-        roomData,
-        groupBalanceSummary,
-        
-        // Activities data
-        meals,
-        payments,
-        expenses,
-        shopping,
-        activityLogs,
-        
-        // Charts data
-        mealsByDate,
-        expensesByDate,
-        
-        // Analytics data
-        mealDistributionRaw,
-        expenseDistributionRaw
-      ] = await Promise.all([
-        // === USER STATS ===
+      // Split parallel queries into batches to avoid "MaxClientsInSessionMode" error
+      // 1. Core Group Info
+      const [activeGroupsCount, roomData, groupBalanceSummary] = await Promise.all([
         prisma.roomMember.count({ where: { userId, isBanned: false } }),
-        
-        // === GROUP STATS ===
         prisma.room.findUnique({
           where: { id: resolvedGroupId },
           select: { name: true }
         }),
         getGroupBalanceSummary(resolvedGroupId!, true),
-        
-        // === ACTIVITIES ===
+      ]);
+
+      // 2. Activities (Batch 1)
+      const [meals, payments, expenses] = await Promise.all([
         prisma.meal.findMany({
           where: { roomId: resolvedGroupId, date: { gte: sevenDaysAgo } },
           select: { id: true, date: true, type: true, user: { select: { name: true, image: true } } },
@@ -122,6 +101,10 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
           orderBy: { date: 'desc' },
           take: 10
         }),
+      ]);
+
+      // 3. Activities (Batch 2) + Charts
+      const [shopping, activityLogs, mealsByDate, expensesByDate] = await Promise.all([
         prisma.shoppingItem.findMany({
           where: { roomId: resolvedGroupId, date: { gte: sevenDaysAgo } },
           select: { id: true, name: true, date: true, purchased: true, user: { select: { name: true, image: true } } },
@@ -134,8 +117,6 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
           orderBy: { createdAt: 'desc' },
           take: 10
         }),
-        
-        // === CHARTS ===
         prisma.meal.groupBy({
           by: ['date'],
           where: { roomId: resolvedGroupId, date: { gte: startOfMonth, lte: endOfMonth } },
@@ -146,15 +127,15 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
           where: { roomId: resolvedGroupId, date: { gte: startOfMonth, lte: endOfMonth } },
           _sum: { amount: true }
         }),
-        
-        // === ANALYTICS ===
-        // Meal distribution by type (current period only)
+      ]);
+
+      // 4. Analytics Data
+      const [mealDistributionRaw, expenseDistributionRaw] = await Promise.all([
         prisma.meal.groupBy({
           by: ['type'],
           where: { roomId: resolvedGroupId, periodId: periodId },
           _count: { type: true }
         }),
-        // Expense distribution by type (current period only)
         prisma.extraExpense.groupBy({
           by: ['type'],
           where: { roomId: resolvedGroupId, periodId: periodId },

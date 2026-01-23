@@ -215,33 +215,20 @@ export async function getGroupBalanceSummary(
       const currentPeriod = await getCurrentPeriod(roomId);
       const periodId = currentPeriod?.id;
 
-      // Parallelize all independent DB operations
-      const [
-        members,
-        balancesGrouped,
-        groupTotalResult,
-        mealsGrouped,
-        fetchedTotalExpenses
-      ] = await Promise.all([
-        // 1. Fetch Members
+      // Split into two smaller batches to avoid overwhelming connection pool in Session mode
+      const [members, balancesGrouped] = await Promise.all([
         prisma.roomMember.findMany({
           where: { roomId },
           include: { user: { select: { id: true, name: true, image: true, email: true } } },
         }),
-        
-        // 2. Calculate Balances
         prisma.accountTransaction.groupBy({
           by: ['targetUserId'],
-          where: {
-            roomId,
-            periodId: periodId,
-          },
-          _sum: {
-            amount: true
-          }
+          where: { roomId, periodId: periodId },
+          _sum: { amount: true }
         }),
+      ]);
 
-        // 3. Calculate Group Total (Self Transactions)
+      const [groupTotalResult, mealsGrouped, fetchedTotalExpenses] = await Promise.all([
         (prisma as any).$queryRaw`
           SELECT SUM(amount) as total 
           FROM "AccountTransaction" 
@@ -249,20 +236,11 @@ export async function getGroupBalanceSummary(
           AND "periodId" = ${periodId} 
           AND "userId" = "targetUserId"
         `,
-
-        // 4. Fetch Meal Counts
         prisma.meal.groupBy({
           by: ['userId'],
-          where: {
-            roomId,
-            periodId: periodId,
-          },
-          _count: {
-            id: true,
-          },
+          where: { roomId, periodId: periodId },
+          _count: { id: true },
         }),
-
-        // 5. Fetch Total Expenses (if needed)
         prefetchedData?.totalExpenses === undefined 
           ? calculateTotalExpenses(roomId, periodId)
           : Promise.resolve(prefetchedData.totalExpenses)
