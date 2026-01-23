@@ -1,4 +1,6 @@
 import { cacheDeletePattern, cacheInvalidateByTag } from './cache-service';
+import { revalidateTag as _revalidateTag } from 'next/cache';
+const revalidateTag = _revalidateTag as any;
 import {
   getDashboardCacheKey,
   getAnalyticsCacheKey,
@@ -34,6 +36,10 @@ export async function invalidateMealCache(
   ];
 
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
+  
+  // Revalidate Next.js cache tags
+  revalidateTag('meals');
+  revalidateTag(`group-${roomId}`);
   
   console.log(`🗑️  Invalidated meal cache for room ${roomId}`);
 }
@@ -159,6 +165,10 @@ export async function invalidateShoppingCache(
 export async function invalidateRoomCache(roomId: string): Promise<void> {
   const patterns = getRoomRelatedPatterns(roomId);
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
+  
+  // Revalidate Next.js cache tags
+  revalidateTag('rooms');
+  revalidateTag(`group-${roomId}`);
   
   console.log(`🗑️  Invalidated all caches for room ${roomId}`);
 }

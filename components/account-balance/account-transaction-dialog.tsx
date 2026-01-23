@@ -6,7 +6,8 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogFooter
+    DialogFooter,
+    DialogDescription
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -146,6 +147,9 @@ export function AccountTransactionDialog({
                     <DialogTitle>
                         {transaction ? 'Edit Transaction' : 'Add New Transaction'}
                     </DialogTitle>
+                    <div hidden id="dialog-description" aria-describedby="dialog-description">
+                        {transaction ? 'Make changes to the transaction details.' : 'Enter the details for the new transaction.'}
+                    </div>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">

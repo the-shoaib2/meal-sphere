@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import { useCurrentPeriod } from '@/hooks/use-periods';
@@ -128,8 +129,11 @@ export interface MealsPageData {
   meals: Meal[];
   guestMeals: GuestMeal[];
   settings: MealSettings | null;
+  mealSettings?: MealSettings | null; 
   autoSettings: AutoMealSettings | null;
+  autoMealSettings?: AutoMealSettings | null; 
   userStats: any;
+  userMealStats?: any; 
   currentPeriod: any;
   roomData: any;
   userRole: string | null;
@@ -180,51 +184,87 @@ interface UseMealReturn {
 export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFromProps?: string | null): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { data: currentPeriodFromHook } = useCurrentPeriod();
 
   // Priority: 1. Passed initialData, 2. Server-side currentPeriod
   const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData : null;
 
-  // Unified Query Hook
-  const { data: data, isLoading: isLoadingUnified, error: unifiedError } = useQuery({
-    queryKey: ['meal-data', roomId],
+  // 1. Fetch Meals
+  const { data: meals = [], isLoading: isLoadingMeals, error: mealsError } = useQuery<Meal[]>({
+    queryKey: ['meals', roomId],
     queryFn: async () => {
-      if (!roomId) return null;
-      // We pass the current userId via session, but API also derives it from session.
-      const response = await fetch(`/api/meals/unified?roomId=${roomId}`, { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch meal data');
-      }
-      return response.json();
+      if (!roomId) return [];
+      const res = await axios.get(`/api/meals?roomId=${roomId}`);
+      return res.data;
     },
-    // DISABLE client-side fetch if we have matching initialData
-    enabled: !!roomId && !!session?.user?.id,
-    initialData: effectiveInitialData,
-    staleTime: Infinity, // Rely on server/mutations
-    gcTime: 5 * 60 * 1000,
+    enabled: false, // Disabled - rely on SSR
+    initialData: effectiveInitialData?.meals,
+    staleTime: Infinity,
     refetchOnWindowFocus: false
   });
 
-  // Derived state from unified data
-  const meals: Meal[] = data?.meals || [];
-  const guestMeals: GuestMeal[] = data?.guestMeals || [];
-  const mealSettings: MealSettings | null = data?.settings || data?.mealSettings || null;
-  const autoMealSettings: AutoMealSettings | null = data?.autoSettings || data?.autoMealSettings || null;
-  const userMealStats: UserMealStats | null = data?.userStats || null;
-  const currentPeriod = data?.currentPeriod || currentPeriodFromHook;
-  const userRole = userRoleFromProps || data?.userRole || initialData?.userRole || null;
+  // 2. Fetch Guest Meals
+  const { data: guestMeals = [], isLoading: isLoadingGuestMeals, error: guestMealsError } = useQuery<GuestMeal[]>({
+    queryKey: ['guest-meals', roomId],
+    queryFn: async () => {
+      if (!roomId) return [];
+      const res = await axios.get(`/api/meals/guest?roomId=${roomId}`);
+      return res.data;
+    },
+    enabled: false, // Disabled - rely on SSR
+    initialData: effectiveInitialData?.guestMeals,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
 
-  // Loading states are now consolidated
-  const isLoading = isLoadingUnified;
-  const isLoadingUserStats = isLoadingUnified; // Stats come together now
-  const mealsError = unifiedError;
-  const guestMealsError = unifiedError;
+  // 3. Fetch Meal Settings
+  const { data: mealSettings = null, isLoading: isLoadingSettings } = useQuery<MealSettings | null>({
+    queryKey: ['meal-settings', roomId],
+    queryFn: async () => {
+      if (!roomId) return null;
+      const res = await axios.get(`/api/meals/settings?roomId=${roomId}`);
+      return res.data;
+    },
+    enabled: false, // Disabled - rely on SSR
+    initialData: effectiveInitialData?.settings || effectiveInitialData?.mealSettings,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
 
-  // Compatibility flags (unused in unified mode but kept for interface)
-  const isLoadingMeals = isLoadingUnified;
-  const isLoadingGuestMeals = isLoadingUnified;
-  const isLoadingSettings = isLoadingUnified;
-  const isLoadingAutoSettings = isLoadingUnified;
+  // 4. Fetch Auto Meal Settings
+  const { data: autoMealSettings = null, isLoading: isLoadingAutoSettings } = useQuery<AutoMealSettings | null>({
+    queryKey: ['auto-meal-settings', roomId, session?.user?.id],
+    queryFn: async () => {
+      if (!roomId || !session?.user?.id) return null;
+      const res = await axios.get(`/api/meals/auto-settings?roomId=${roomId}&userId=${session.user.id}`);
+      return res.data;
+    },
+    enabled: false, // Disabled - rely on SSR
+    initialData: effectiveInitialData?.autoSettings || effectiveInitialData?.autoMealSettings,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+
+  // 5. Fetch User Meal Stats
+  const { data: userMealStats = null, isLoading: isLoadingUserStats } = useQuery<UserMealStats | null>({
+    queryKey: ['user-meal-stats', roomId, session?.user?.id],
+    queryFn: async () => {
+      if (!roomId || !session?.user?.id) return null;
+      const res = await axios.get(`/api/meals/user-stats?roomId=${roomId}&userId=${session.user.id}`);
+      return res.data;
+    },
+    enabled: false, // Disabled - rely on SSR
+    initialData: effectiveInitialData?.userStats || effectiveInitialData?.userMealStats,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false
+  });
+
+  const currentPeriod = currentPeriodFromHook || effectiveInitialData?.currentPeriod;
+  const userRole = userRoleFromProps || effectiveInitialData?.userRole || null;
+
+  // Consolidated loading state
+  const isLoading = isLoadingMeals || isLoadingGuestMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats;
 
   // Toggle meal mutation
   const toggleMealMutation = useMutation({
@@ -236,19 +276,60 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
         roomId
       });
     },
-    onSuccess: (_, variables) => {
-      const { userId } = variables;
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
+    onMutate: async (variables) => {
+      const { date, type, userId } = variables;
+      
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['meals', roomId] });
+      
+      // Snapshot previous value
+      const previousMeals = queryClient.getQueryData(['meals', roomId]);
+      
+      // Optimistically update
+      queryClient.setQueryData(['meals', roomId], (old: Meal[] | undefined) => {
+        if (!old) return old;
+        
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const existingMealIndex = old.findIndex(
+          m => m.date.startsWith(dateStr) && m.type === type && m.userId === userId
+        );
+        
+        if (existingMealIndex >= 0) {
+          // Remove meal (toggle off)
+          return old.filter((_, i) => i !== existingMealIndex);
+        } else {
+          // Add meal (toggle on)
+          const newMeal: Meal = {
+            id: `temp-${Date.now()}`,
+            date: dateStr,
+            type,
+            userId,
+            roomId: roomId!,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            user: {
+              id: userId,
+              name: session?.user?.name || null,
+              image: session?.user?.image || null,
+            }
+          };
+          return [newMeal, ...old];
+        }
+      });
+      
+      return { previousMeals };
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousMeals) {
+        queryClient.setQueryData(['meals', roomId], context.previousMeals);
+      }
       console.error('Error toggling meal:', error);
       toast.error(error.response?.data?.message || 'Failed to update meal');
+    },
+    onSuccess: () => {
+      // Sync with SSR
+      router.refresh();
     }
   });
 
@@ -264,14 +345,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
       });
     },
     onSuccess: (_, variables) => {
-      const userId = session?.user?.id;
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
+      router.refresh();
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
     },
     onError: (error: any) => {
@@ -286,14 +360,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
       await axios.patch(`/api/meals/guest/${guestMealId}`, { count });
     },
     onSuccess: () => {
-      const userId = session?.user?.id;
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
+      router.refresh();
       toast.success('Guest meal updated successfully');
     },
     onError: (error: any) => {
@@ -308,14 +375,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
       await axios.delete(`/api/meals/guest/${guestMealId}`);
     },
     onSuccess: () => {
-      const userId = session?.user?.id;
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
+      router.refresh();
       toast.success('Guest meal deleted successfully');
     },
     onError: (error: any) => {
@@ -331,7 +391,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
       toast.success('Meal settings updated successfully');
     },
     onError: (error: any) => {
@@ -346,17 +406,13 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
       await axios.patch(`/api/meals/auto-settings?roomId=${roomId}&userId=${session?.user?.id}`, settings);
     },
     onMutate: async (newSettings) => {
-      await queryClient.cancelQueries({ queryKey: ['meal-data', roomId] });
-      const previousData = queryClient.getQueryData(['meal-data', roomId]);
+      const previousData = queryClient.getQueryData(['auto-meal-settings', roomId, session?.user?.id]);
 
-      queryClient.setQueryData(['meal-data', roomId], (old: any) => {
+      queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], (old: any) => {
         if (!old) return old;
         return {
           ...old,
-          autoSettings: {
-            ...old.autoSettings,
-            ...newSettings
-          }
+          ...newSettings
         };
       });
 
@@ -364,14 +420,13 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     },
     onError: (err, newSettings, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(['meal-data', roomId], context.previousData);
+        queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], context.previousData);
       }
       console.error('Error updating auto meal settings:', err);
       toast.error('Failed to update auto meal settings');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
     }
   });
 
@@ -385,7 +440,6 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
       toast.success('Auto meals processed successfully');
@@ -409,12 +463,12 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
 
   const useMealCount = useCallback((date: Date, type: MealType): number => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const regularMeals = meals.filter(meal =>
+    const regularMeals = meals.filter((meal: Meal) =>
       meal.date.startsWith(dateStr) && meal.type === type
     ).length;
-    const guestMealsCount = guestMeals.filter(meal =>
+    const guestMealsCount = guestMeals.filter((meal: GuestMeal) =>
       meal.date.startsWith(dateStr) && meal.type === type
-    ).reduce((sum, meal) => sum + meal.count, 0);
+    ).reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
     return regularMeals + guestMealsCount;
   }, [meals, guestMeals]);
 
@@ -448,7 +502,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
 
     if (!targetUserId) return false;
 
-    return meals.some(meal =>
+    return meals.some((meal: Meal) =>
       meal.date.startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
@@ -489,7 +543,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     if (!mealSettings) return true;
 
     const dateStr = format(date, 'yyyy-MM-dd');
-    const todayMeals = meals.filter(meal =>
+    const todayMeals = meals.filter((meal: Meal) =>
       meal.date.startsWith(dateStr) &&
       meal.userId === session?.user?.id
     ).length;
@@ -555,7 +609,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
 
     if (!targetUserId) return [];
 
-    return guestMeals.filter(meal =>
+    return guestMeals.filter((meal: GuestMeal) =>
       meal.date.startsWith(dateStr) &&
       meal.userId === targetUserId
     );
@@ -564,7 +618,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
   // Get total guest meals for a user on a specific date
   const getUserGuestMealCount = useCallback((date: Date, userId?: string): number => {
     const userGuestMeals = getUserGuestMeals(date, userId);
-    return userGuestMeals.reduce((sum, meal) => sum + meal.count, 0);
+    return userGuestMeals.reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
   }, [getUserGuestMeals]);
 
   // Get user's meal count for a specific date and type
@@ -574,17 +628,17 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
 
     if (!targetUserId) return 0;
 
-    const regularMeals = meals.filter(meal =>
+    const regularMeals = meals.filter((meal: Meal) =>
       meal.date.startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
     ).length;
 
-    const guestMealsCount = guestMeals.filter(meal =>
+    const guestMealsCount = guestMeals.filter((meal: GuestMeal) =>
       meal.date.startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
-    ).reduce((sum, meal) => sum + meal.count, 0);
+    ).reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
 
     return regularMeals + guestMealsCount;
   }, [meals, guestMeals, session?.user?.id]);

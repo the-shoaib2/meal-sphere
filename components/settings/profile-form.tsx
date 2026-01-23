@@ -13,10 +13,16 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "react-hot-toast"
 import { useProfileImage } from "@/hooks/use-profile-image"
-import { Pencil, X, Check, Camera } from "lucide-react"
+import { Pencil, X, Check, Camera, Info } from "lucide-react"
 import { ImagePicker } from "@/components/shared/image-picker"
 import { ImageViewDialog } from "@/components/shared/image-view-dialog"
 import { cn } from "@/lib/utils"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -32,9 +38,10 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 interface ProfileFormProps {
   user: User
+  isGoogleUser?: boolean
 }
 
-export function ProfileForm({ user }: ProfileFormProps) {
+export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -110,15 +117,38 @@ export function ProfileForm({ user }: ProfileFormProps) {
           </div>
           <div className="flex gap-2">
             {!isEditing ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="gap-2"
-              >
-                <Pencil className="h-4 w-4" />
-                Edit
-              </Button>
+              isGoogleUser ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          className="gap-2 opacity-50 cursor-not-allowed"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>You created your account with Google, so you cannot change your personal information.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="gap-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </Button>
+              )
             ) : (
               <>
                 <Button

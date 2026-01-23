@@ -45,7 +45,7 @@ export default function MealCalendar({ selected, onSelect, getMealCount }: MealC
   }, [selected])
 
   return (
-    <div className="w-full max-w-md mx-auto select-none bg-card rounded-2xl p-4 shadow-sm">
+    <div className="w-full max-w-md mx-auto select-none">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 px-1">
         <button

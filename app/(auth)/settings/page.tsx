@@ -23,6 +23,9 @@ export default async function SettingsPage() {
       where: {
         email: session.user.email,
       },
+      include: {
+        accounts: true,
+      },
     }),
     getAllActiveSessions(session.user.id)
   ])
@@ -30,6 +33,8 @@ export default async function SettingsPage() {
   if (!user) {
     redirect("/login")
   }
+
+  const isGoogleUser = user.accounts.some((account) => account.provider === "google")
 
   return (
     <div className="space-y-4">
@@ -41,7 +46,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        <ProfileForm user={user} />
+        <ProfileForm user={user} isGoogleUser={isGoogleUser} />
         <PrivacyForm user={user} />
         <AppearanceForm user={user} />
         <EmailVerificationCard user={user} />
