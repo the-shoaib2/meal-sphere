@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
@@ -11,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetAccountHistory, type HistoryRecord } from '@/hooks/use-account-balance';
 import { InsufficientPermissionsState } from '@/components/empty-states/insufficient-permissions-state';
+import { useInView } from 'react-intersection-observer';
+import { Loader2 } from 'lucide-react';
 
 interface TransactionHistoryProps {
     transactionId: string | null;
@@ -18,18 +21,33 @@ interface TransactionHistoryProps {
     roomId?: string;
     periodId?: string;
     onBack: () => void;
-    initialData?: HistoryRecord[];
+    initialData?: HistoryRecord[] | { pages: { items: HistoryRecord[], nextCursor?: string }[] };
 }
 
 export function TransactionHistory({ transactionId, userId, roomId, periodId, onBack, initialData }: TransactionHistoryProps) {
-    const isGlobal = transactionId === "ALL";
+    const { ref, inView } = useInView({
+        rootMargin: '200px',
+    });
 
-    const { data: history, isLoading, error } = useGetAccountHistory(
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        error
+    } = useGetAccountHistory(
         roomId || '',
         userId || '',
         periodId,
-        { groupId: roomId, history: initialData } as any
+        initialData
     );
+
+    useEffect(() => {
+        if (inView && hasNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, fetchNextPage, hasNextPage]);
 
     const isForbidden = (error as any)?.message?.includes('403');
 
@@ -42,6 +60,8 @@ export function TransactionHistory({ transactionId, userId, roomId, periodId, on
             />
         );
     }
+
+    const historyItems = data?.pages.flatMap((page: any) => page.items || page) || [];
 
     return (
         <Card>
@@ -61,11 +81,11 @@ export function TransactionHistory({ transactionId, userId, roomId, periodId, on
                             </div>
                         </div>
                     </div>
-                ) : history && history.length > 0 ? (
+                ) : historyItems.length > 0 ? (
                     <div className="rounded-md border overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                             <Table>
-                                <TableHeader>
+                                <TableHeader className="sticky top-0 bg-background z-10">
                                     <TableRow>
                                         <TableHead>Date</TableHead>
                                         <TableHead>Action</TableHead>
@@ -74,7 +94,7 @@ export function TransactionHistory({ transactionId, userId, roomId, periodId, on
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {history.map((record) => (
+                                    {historyItems.map((record: HistoryRecord) => (
                                         <TableRow key={record.id}>
                                             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                                                 {new Date(record.changedAt).toLocaleString()}
@@ -109,6 +129,18 @@ export function TransactionHistory({ transactionId, userId, roomId, periodId, on
                                             </TableCell>
                                         </TableRow>
                                     ))}
+                                    {isFetchingNextPage && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center py-4">
+                                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="p-0 border-0">
+                                            <div ref={ref} className="h-4 w-full" />
+                                        </TableCell>
+                                    </TableRow>
                                 </TableBody>
                             </Table>
                         </div>

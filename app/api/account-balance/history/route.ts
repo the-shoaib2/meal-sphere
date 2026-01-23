@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
+    const cursor = searchParams.get('cursor');
+    const limit = parseInt(searchParams.get('limit') || '10');
+
     const history = await prisma.transactionHistory.findMany({
       where: { 
         roomId: roomId,
@@ -56,10 +59,25 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: { changedAt: 'desc' },
-      take: 50 // Limit to last 50 actions for performance
+      take: limit + 1, // Fetch limit + 1 to detect if there's a next page
+      ...(cursor ? {
+        cursor: {
+          id: cursor
+        },
+        skip: 1 // Skip the cursor itself
+      } : {})
     });
 
-    return NextResponse.json(history);
+    let nextCursor: string | undefined = undefined;
+    if (history.length > limit) {
+      const nextItem = history.pop();
+      nextCursor = nextItem?.id;
+    }
+
+    return NextResponse.json({
+      items: history,
+      nextCursor
+    });
 
   } catch (error: any) {
     console.error('Error in GET /api/account-balance/history:', error);

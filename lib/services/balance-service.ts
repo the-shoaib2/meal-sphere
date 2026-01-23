@@ -538,7 +538,7 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
             }
           },
           orderBy: { changedAt: 'desc' },
-          take: 50
+          take: 10 // Limit to last 10 actions initially
         })
       ]);
 

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useActiveGroup } from '@/contexts/group-context';
 
@@ -163,23 +163,38 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
   });
 }
 
-export function useGetAccountHistory(roomId: string, userId: string, periodId?: string, initialData?: BalancePageData) {
-  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData.history : undefined;
 
-  return useQuery<HistoryRecord[]>({
+
+
+export function useGetAccountHistory(roomId: string, userId: string, periodId?: string, initialData?: HistoryRecord[] | { pages: any[] }) {
+  // Transform flat array (from SSR) into InfiniteData structure
+  const effectiveInitialData = Array.isArray(initialData) ? {
+    pages: [{
+        items: initialData,
+        nextCursor: initialData.length >= 10 ? initialData[initialData.length - 1].id : undefined
+    }],
+    pageParams: [undefined]
+  } : (initialData as any);
+
+
+  return useInfiniteQuery({
     queryKey: ['account-history', userId, roomId, periodId],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = undefined }) => {
       const url = new URL('/api/account-balance/history', window.location.origin);
       url.searchParams.set('userId', userId);
       url.searchParams.set('roomId', roomId);
       if (periodId) url.searchParams.set('periodId', periodId);
+      if (pageParam) url.searchParams.set('cursor', pageParam as string);
+      url.searchParams.set('limit', '10');
 
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error('Failed to fetch account history');
       return res.json();
     },
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage: { nextCursor?: string }) => lastPage.nextCursor,
     enabled: !!roomId && !!userId && !effectiveInitialData,
-    initialData: effectiveInitialData,
+    initialData: effectiveInitialData as any,
     staleTime: Infinity,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
