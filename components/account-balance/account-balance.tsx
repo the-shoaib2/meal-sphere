@@ -9,6 +9,7 @@ import { useCurrentPeriod } from '@/hooks/use-periods';
 import { PrivilegedView } from '@/components/account-balance/privileged-view';
 import { MemberView } from '@/components/account-balance/member-view';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PeriodNotFoundCard } from "@/components/periods/period-not-found-card"
 import { NoGroupState } from '@/components/empty-states/no-group-state';
@@ -168,7 +169,7 @@ const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
     {/* Stat Cards Skeleton - 2 rows of 4 cards each */}
 
     {/* Stat Cards Skeleton - 2 rows of 4 cards each */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
         <Card key={i}>
           <CardContent className="p-4 flex items-center gap-4">
@@ -181,7 +182,7 @@ const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
         </Card>
       ))}
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       {[...Array(3)].map((_, i) => (
         <Card key={i}>
           <CardContent className="p-4 flex items-center gap-4">
@@ -220,6 +221,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
   const router = useRouter();
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
+  const searchParams = useSearchParams();
 
   // State for Add/Edit Transaction Dialog
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = React.useState(false);
@@ -227,6 +229,13 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<string | null>(null);
   const [historyTransactionId, setHistoryTransactionId] = React.useState<string | null>(null);
+
+  // Sync dialog state with search params (Keep for bookmarks/direct links)
+  React.useEffect(() => {
+    if (searchParams?.get('add') === 'true' && !isTransactionDialogOpen) {
+      setIsTransactionDialogOpen(true);
+    }
+  }, [searchParams]);
 
   const userId = targetUserId;
 
@@ -323,6 +332,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
 
   return (
     <div className="space-y-6">
+
       <AccountInfoCard
         userBalance={userBalance}
         targetUserRole={targetUserRole}
@@ -392,6 +402,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
         onOpenChange={setIsTransactionDialogOpen}
         groupId={activeGroup?.id || ''}
         targetUserId={userId}
+        targetUser={userBalance?.user}
         transaction={editingTransaction}
         onSuccess={handleTransactionSuccess}
       />

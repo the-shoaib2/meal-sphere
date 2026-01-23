@@ -9,6 +9,7 @@ import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { InsufficientPermissionsState } from "@/components/empty-states/insufficient-permissions-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { canViewUserBalance, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
+
 import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -62,6 +63,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
 
   // 3. Fetch Initial Data for the target user in the active group
   const balanceData = await fetchAccountBalanceData(userId, activeGroup.id);
+  const isAdmin = activeMember.role === 'ADMIN';
 
   // 3. Handle No Period State server-side
   if (!balanceData.currentPeriod) {
@@ -96,7 +98,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
           </div>
         }
       >
-        {hasPrivilege && (
+        {isAdmin && (
           <Button size="sm" asChild className="w-full sm:w-auto shadow-sm transition-all hover:shadow-md active:scale-95">
             <Link href="?add=true">
               <Plus className="h-4 w-4 mr-2" /> Add Balance

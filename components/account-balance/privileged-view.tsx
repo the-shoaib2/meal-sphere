@@ -74,7 +74,7 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
     <div className="space-y-6">
 
       <div className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
           <StatCard icon={Users} title="Total Members" value={members.length} />
           <StatCard icon={TrendingUp} title="Active Balances" value={activeBalancesCount} />
           <StatCard
@@ -93,7 +93,7 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           icon={Receipt}
           title="Total Expenses"
