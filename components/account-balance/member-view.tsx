@@ -38,7 +38,7 @@ interface MemberViewProps {
   groupId?: string;
 }
 
-export default function MemberView({ balance, transactions, userRole, session, groupId }: MemberViewProps) {
+export function MemberView({ balance, transactions, userRole, session, groupId }: MemberViewProps) {
   const [historyView, setHistoryView] = React.useState<string | null>(null);
 
   const totalReceived = transactions

@@ -52,7 +52,7 @@ interface PrivilegedViewProps {
   userRole: string;
 }
 
-export default function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
+export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
   const { members, groupTotalBalance, totalExpenses, mealRate, totalMeals, netGroupBalance, currentPeriod } = groupData as any;
   const activeBalancesCount = members.filter((m: any) => m.balance !== 0).length;
   const router = useRouter();

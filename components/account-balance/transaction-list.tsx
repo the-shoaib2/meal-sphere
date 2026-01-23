@@ -101,12 +101,12 @@ export function TransactionList({
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger>
-                                                                    <span className="block sm:hidden">{new Date(t.createdAt).toLocaleDateString()}</span>
-                                                                    <span className="hidden sm:block">{new Date(t.createdAt).toLocaleString()}</span>
+                                                                    <span className="block sm:hidden">{new Date(t.createdAt).toLocaleDateString('en-US')}</span>
+                                                                    <span className="hidden sm:block">{new Date(t.createdAt).toLocaleString('en-US')}</span>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p>Created: {new Date(t.createdAt).toLocaleString()}</p>
-                                                                    {isEdited && <p>Updated: {new Date(t.updatedAt).toLocaleString()}</p>}
+                                                                    <p>Created: {new Date(t.createdAt).toLocaleString('en-US')}</p>
+                                                                    {isEdited && <p>Updated: {new Date(t.updatedAt).toLocaleString('en-US')}</p>}
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         </TooltipProvider>

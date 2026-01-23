@@ -8,7 +8,10 @@ import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { InsufficientPermissionsState } from "@/components/empty-states/insufficient-permissions-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { canViewUserBalance } from '@/lib/auth/balance-permissions';
+import { canViewUserBalance, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
+import { Button } from '@/components/ui/button';
+import { Plus, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +45,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
   }
 
   // 2. Permission Check: Can this user view the target user's balance?
+  const hasPrivilege = hasBalancePrivilege(activeMember.role);
   if (!canViewUserBalance(activeMember.role, session.user.id, userId)) {
     return (
       <div className="space-y-6">
@@ -61,7 +65,6 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
 
   // 3. Handle No Period State server-side
   if (!balanceData.currentPeriod) {
-    const isPrivileged = ['ADMIN', 'ACCOUNTANT', 'MANAGER'].includes(balanceData.userRole || '');
     return (
       <div className="space-y-6">
         <PageHeader
@@ -69,7 +72,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
           text={`Manage balances for ${activeGroup.name}`}
         />
         <NoPeriodState
-          isPrivileged={isPrivileged}
+          isPrivileged={hasPrivilege}
           periodMode={balanceData.summary?.roomData?.periodMode || 'MONTHLY'}
         />
       </div>
@@ -79,6 +82,28 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
   // 4. Render client component with initial data
   return (
     <div className="space-y-6">
+      <PageHeader
+        heading="Account Details"
+        text={
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild className="-ml-2 h-8 px-2 text-muted-foreground hover:text-foreground">
+              <Link href="/account-balance">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back
+              </Link>
+            </Button>
+            <span className="text-muted-foreground">|</span>
+            <span>View and manage specific user accounts</span>
+          </div>
+        }
+      >
+        {hasPrivilege && (
+          <Button size="sm" asChild className="w-full sm:w-auto shadow-sm transition-all hover:shadow-md active:scale-95">
+            <Link href="?add=true">
+              <Plus className="h-4 w-4 mr-2" /> Add Balance
+            </Link>
+          </Button>
+        )}
+      </PageHeader>
       <UserAccountBalanceDetail
         targetUserId={userId}
         initialData={{
@@ -88,4 +113,4 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
       />
     </div>
   );
-} 
+}

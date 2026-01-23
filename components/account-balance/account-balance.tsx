@@ -6,37 +6,17 @@ import { useRouter } from 'next/navigation';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupBalances, useGetBalance, useGetTransactions, type BalancePageData } from '@/hooks/use-account-balance';
 import { useCurrentPeriod } from '@/hooks/use-periods';
-import PrivilegedView from '@/components/account-balance/privileged-view';
-import MemberView from '@/components/account-balance/member-view';
+import { PrivilegedView } from '@/components/account-balance/privileged-view';
+import { MemberView } from '@/components/account-balance/member-view';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
-import { Badge } from '@/components/ui/badge';
+import { PeriodNotFoundCard } from "@/components/periods/period-not-found-card"
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useGroups } from '@/hooks/use-groups';
 import { PageHeader } from '@/components/shared/page-header';
-import { useParams, useSearchParams } from 'next/navigation';
-import {
-  Plus,
-  ArrowLeft,
-  Loader2,
-  Trash2,
-  History,
-  TrendingDown,
-  TrendingUp,
-  Receipt,
-  Utensils,
-  Calculator,
-  ArrowRight
-} from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,15 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   useAddTransaction,
   useUpdateTransaction,
@@ -66,17 +37,15 @@ import {
 import { TransactionHistory } from '@/components/account-balance/transaction-history';
 import { TransactionList } from '@/components/account-balance/transaction-list';
 import { AccountInfoCard } from '@/components/account-balance/account-info-card';
-import { Button } from '@/components/ui/button';
-import { BALANCE_PRIVILEGED_ROLES, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
+import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 import { InsufficientPermissionsState } from '@/components/empty-states/insufficient-permissions-state';
-
-const PRIVILEGED_ROLES = BALANCE_PRIVILEGED_ROLES;
+import { AccountTransactionDialog } from '@/components/account-balance/account-transaction-dialog';
 
 function isPrivileged(role?: string) {
   return hasBalancePrivilege(role);
 }
 
-export default function AccountBalancePanel({ initialData }: { initialData?: BalancePageData }) {
+export function AccountBalancePanel({ initialData }: { initialData?: BalancePageData }) {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
   const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
@@ -101,6 +70,16 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
   const { data: groupData, isLoading: isLoadingBalances, error: balancesError } = useGroupBalances(activeGroup?.id!, hasPrivilege, true, initialData);
   const { data: ownBalance, isLoading: isLoadingOwnBalance, error: ownBalanceError } = useGetBalance(activeGroup?.id!, session?.user?.id!, true, initialData);
   const { data: ownTransactions, isLoading: isLoadingTransactions, error: transactionsError } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id, initialData);
+
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+
+  // Sync dialog state with search params
+  const searchParams = useSearchParams();
+  React.useEffect(() => {
+    if (searchParams?.get('add') === 'true' && !isAddDialogOpen) {
+      setIsAddDialogOpen(true);
+    }
+  }, [searchParams]);
 
   const isForbidden = (balancesError as any)?.message?.includes('403') ||
     (ownBalanceError as any)?.message?.includes('403') ||
@@ -138,29 +117,6 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
     return <BalanceSkeleton hasPrivilege={false} />;
   }
 
-  // Header (always visible)
-  const header = (
-    <PageHeader
-      heading="Account Balances"
-      text={
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <span>Manage all user balances and transactions.</span>
-          {currentPeriod && (
-            <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit">
-              {currentPeriod.name} {currentPeriod.isLocked ? "(Locked)" : ""}
-            </Badge>
-          )}
-        </div>
-      }
-    >
-      <Badge
-        variant={hasPrivilege ? "default" : "outline"}
-        className={hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : ""}
-      >
-        {userRole ? userRole.replace('_', ' ') : 'MEMBER'}
-      </Badge>
-    </PageHeader>
-  );
 
   // Show PeriodNotFoundCard only if:
   // 1. No period from initialData AND
@@ -169,7 +125,6 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
   if (!currentPeriod && !isPeriodLoading) {
     return (
       <div className="space-y-6">
-        {header}
         <PeriodNotFoundCard
           userRole={userRole}
           isLoading={isPeriodLoading}
@@ -180,49 +135,37 @@ export default function AccountBalancePanel({ initialData }: { initialData?: Bal
     );
   }
 
-  if (isLoadingBalances || (hasPrivilege && !groupData) || (!hasPrivilege && (isLoadingOwnBalance || isLoadingTransactions))) {
-    return <BalanceSkeleton hasPrivilege={hasPrivilege} />;
-  }
-
   if (hasPrivilege) {
     return (
       <>
-        {header}
         <PrivilegedView
           groupData={groupData!}
           userRole={userRole!}
+        />
+        <AccountTransactionDialog
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          groupId={activeGroup.id}
+          members={groupData?.members || []}
         />
       </>
     );
   }
 
   return (
-    <>
-      {header}
-      <MemberView
-        balance={ownBalance}
-        transactions={ownTransactions || []}
-        userRole={userRole!}
-        session={session}
-        groupId={activeGroup?.id}
-      />
-    </>
+    <MemberView
+      balance={ownBalance}
+      transactions={ownTransactions || []}
+      userRole={userRole!}
+      session={session}
+      groupId={activeGroup?.id}
+    />
   );
 }
 
 const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
-  <div className="space-y-6">
-    {/* Header Skeleton */}
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-      <div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <Skeleton className="h-8 w-48 mb-2" /> {/* Title */}
-          <Skeleton className="h-5 w-32" /> {/* Period badge */}
-        </div>
-        <Skeleton className="h-4 w-64 mt-1" /> {/* Subtitle */}
-      </div>
-      <Skeleton className="h-6 w-20 rounded" /> {/* User role badge */}
-    </div>
+  <div className="space-y-6 pt-4">
+    {/* Stat Cards Skeleton - 2 rows of 4 cards each */}
 
     {/* Stat Cards Skeleton - 2 rows of 4 cards each */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -281,22 +224,11 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
   // State for Add/Edit Transaction Dialog
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = React.useState(false);
   const [editingTransaction, setEditingTransaction] = React.useState<AccountTransaction | null>(null);
-  const [transactionAmount, setTransactionAmount] = React.useState('');
-  const [transactionDescription, setTransactionDescription] = React.useState('');
-  const [transactionType, setTransactionType] = React.useState('ADJUSTMENT');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [transactionToDelete, setTransactionToDelete] = React.useState<string | null>(null);
   const [historyTransactionId, setHistoryTransactionId] = React.useState<string | null>(null);
 
   const userId = targetUserId;
-
-  // Sync dialog state with search params
-  const searchParams = useSearchParams();
-  React.useEffect(() => {
-    if (searchParams?.get('add') === 'true' && !isTransactionDialogOpen) {
-      openAddTransactionDialog();
-    }
-  }, [searchParams]);
 
   const { data: userBalance, isLoading: isLoadingBalance, refetch: refetchBalance, error: balanceError } = useGetBalance(activeGroup?.id || '', userId, true, initialData);
   const { data: transactions, isLoading: isLoadingTransactions, refetch: refetchTransactions, error: transactionsError } = useGetTransactions(activeGroup?.id || '', userId, initialData?.currentPeriod?.id, initialData);
@@ -348,27 +280,13 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
 
-  const openAddTransactionDialog = () => {
-    setEditingTransaction(null);
-    setTransactionAmount('');
-    setTransactionDescription('');
-    setTransactionType('ADJUSTMENT');
-    setIsTransactionDialogOpen(true);
-  };
-
   const openAddBalanceDialog = () => {
     setEditingTransaction(null);
-    setTransactionAmount('');
-    setTransactionDescription('');
-    setTransactionType('PAYMENT');
     setIsTransactionDialogOpen(true);
   };
 
   const openEditTransactionDialog = (transaction: AccountTransaction) => {
     setEditingTransaction(transaction);
-    setTransactionAmount(String(transaction.amount));
-    setTransactionDescription(transaction.description || '');
-    setTransactionType(transaction.type);
     setIsTransactionDialogOpen(true);
   };
 
@@ -377,47 +295,9 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
     setIsDeleteDialogOpen(true);
   };
 
-  const handleTransactionSubmit = async () => {
-    try {
-      if (!activeGroup?.id) return;
-      const amount = parseFloat(transactionAmount);
-      if (isNaN(amount) || amount <= 0) {
-        toast.error('Please enter a valid amount');
-        return;
-      }
-
-      let description = transactionDescription.trim();
-      if (!description) {
-        const typeLabel = transactionType.charAt(0).toUpperCase() + transactionType.slice(1).toLowerCase();
-        const formattedAmount = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'BDT' }).format(amount);
-        description = `${typeLabel} of ${formattedAmount}`;
-      }
-
-      if (editingTransaction) {
-        await updateTransactionMutation.mutateAsync({
-          id: editingTransaction.id,
-          amount,
-          description,
-          type: transactionType,
-        });
-        toast.success('Transaction updated successfully');
-      } else {
-        await addTransactionMutation.mutateAsync({
-          targetUserId: userId,
-          roomId: activeGroup.id,
-          amount,
-          description,
-          type: transactionType
-        });
-        toast.success('Transaction added successfully');
-      }
-
-      setIsTransactionDialogOpen(false);
-      refetchBalance();
-      refetchTransactions();
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to process transaction');
-    }
+  const handleTransactionSuccess = () => {
+    refetchBalance();
+    refetchTransactions();
   };
 
   const handleDeleteTransaction = async (transactionId: string) => {
@@ -443,25 +323,6 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        heading="Account Details"
-        text={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2 h-8 px-2 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
-            </Button>
-            <span className="text-muted-foreground">|</span>
-            <span>View and manage specific user accounts</span>
-          </div>
-        }
-      >
-        {hasPrivilege && (
-          <Button size="sm" onClick={openAddBalanceDialog} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" /> Add Balance
-          </Button>
-        )}
-      </PageHeader>
-
       <AccountInfoCard
         userBalance={userBalance}
         targetUserRole={targetUserRole}
@@ -526,73 +387,20 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (৳)</Label>
-              <Input id="amount" type="number" value={transactionAmount} onChange={e => setTransactionAmount(e.target.value)} placeholder="Enter amount" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input id="description" value={transactionDescription} onChange={e => setTransactionDescription(e.target.value)} placeholder="Transaction description" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Select value={transactionType} onValueChange={setTransactionType}>
-                <SelectTrigger id="type" className="w-full">
-                  <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PAYMENT">Payment</SelectItem>
-                  <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
-                  <SelectItem value="REFUND">Refund</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleTransactionSubmit} className="flex-1" disabled={updateTransactionMutation.isPending || addTransactionMutation.isPending}>
-              {editingTransaction ? (
-                updateTransactionMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : 'Save Changes'
-              ) : (
-                addTransactionMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Transaction
-                  </>
-                )
-              )}
-            </Button>
-            <Button variant="outline" onClick={() => setIsTransactionDialogOpen(false)}>Cancel</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AccountTransactionDialog
+        open={isTransactionDialogOpen}
+        onOpenChange={setIsTransactionDialogOpen}
+        groupId={activeGroup?.id || ''}
+        targetUserId={userId}
+        transaction={editingTransaction}
+        onSuccess={handleTransactionSuccess}
+      />
     </div>
   );
 }
 
 const UserBalanceSkeleton = () => (
-  <div className="space-y-6">
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-9 w-24" />
-        <Skeleton className="h-8 w-48" />
-      </div>
-      <Skeleton className="h-9 w-36" />
-    </div>
-
+  <div className="space-y-6 pt-4">
     <Card>
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
