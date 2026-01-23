@@ -1,7 +1,6 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +55,44 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
   const { members, groupTotalBalance, totalExpenses, mealRate, totalMeals, netGroupBalance, currentPeriod } = groupData as any;
   const activeBalancesCount = members.filter((m: any) => m.balance !== 0).length;
   const router = useRouter();
+
+  // Infinite scroll state
+  const [visibleCount, setVisibleCount] = useState(10);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Reset visible count when members change (e.g. searching/filtering if implemented later)
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [members.length]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 10, members.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [members.length]);
+
+
+
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a: any, b: any) => {
+      const dateA = new Date(a.joinedAt).getTime();
+      const dateB = new Date(b.joinedAt).getTime();
+      return dateA - dateB;
+    });
+  }, [members]);
+
+  const visibleMembers = sortedMembers.slice(0, visibleCount);
 
   const handleViewDetails = (userId: string) => {
     window.dispatchEvent(new CustomEvent('routeChangeStart'));
@@ -131,11 +168,11 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                     <TableHead className="text-right">Meals</TableHead>
                     <TableHead className="text-right">Spent</TableHead>
                     <TableHead className="text-right">Available</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {userRole === 'ADMIN' && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map((member: any) => (
+                  {visibleMembers.map((member: any) => (
                     <TableRow key={member.userId}>
                       <TableCell className="max-w-xs overflow-hidden">
                         <div className="flex items-center gap-3">
@@ -173,19 +210,30 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                           ৳{(member.availableBalance || 0).toFixed(2)}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-primary flex items-center gap-1 group overflow-hidden"
-                          onClick={() => handleViewDetails(member.userId)}
-                        >
-                          <span>Details</span>
-                          <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
-                        </Button>
-                      </TableCell>
+                      {userRole === 'ADMIN' && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-primary flex items-center gap-1 group overflow-hidden"
+                            onClick={() => handleViewDetails(member.userId)}
+                          >
+                            <span>Details</span>
+                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
+                          </Button>
+                        </TableCell>
+                      )}
+
                     </TableRow>
                   ))}
+                  {/* Sentinel element for infinite scroll */}
+                  {visibleCount < members.length && (
+                    <TableRow>
+                      <TableCell colSpan={userRole === 'ADMIN' ? 7 : 6} className="p-0 border-0">
+                        <div ref={observerTarget} className="h-4 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -193,7 +241,7 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
           </ScrollArea>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }
 

@@ -217,7 +217,7 @@ const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
   </div>
 );
 
-export function UserAccountBalanceDetail({ initialData, targetUserId }: { initialData?: BalancePageData, targetUserId: string }) {
+export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole }: { initialData?: BalancePageData, targetUserId: string, viewerRole?: string }) {
   const router = useRouter();
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
@@ -258,9 +258,9 @@ export function UserAccountBalanceDetail({ initialData, targetUserId }: { initia
   // Fetch current user's balance to get their role (for privilege check)
   const { data: currentUserBalance } = useGetBalance(activeGroup?.id || '', session?.user?.id || '', false, initialData);
 
-  // Get current user's role
+  // Get current user's role - PREFER SERVER PROP
   const currentUserMember = activeGroup?.members?.find(m => m.userId === session?.user?.id);
-  const userRole = currentUserBalance?.role || currentUserMember?.role || 'MEMBER';
+  const userRole = viewerRole || currentUserBalance?.role || currentUserMember?.role || 'MEMBER';
 
   // Get target user's role
   const targetUserRole = userBalance?.role ||

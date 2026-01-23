@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -22,7 +24,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Edit, Trash2, MoreHorizontal, Eye, X } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, InfoIcon, Eye, X } from 'lucide-react';
 import { type AccountTransaction } from '@/hooks/use-account-balance';
 
 interface TransactionListProps {
@@ -48,15 +50,25 @@ export function TransactionList({
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg sm:text-xl">Transaction Details</CardTitle>
-                <Button
-                    variant={isHistoryOpen ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => onViewHistory(isHistoryOpen ? null : "ALL")}
-                    className={isHistoryOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-muted-foreground hover:text-foreground"}
-                >
-                    {isHistoryOpen ? <X className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                    {isHistoryOpen ? "Close History" : "View History"}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant={isHistoryOpen ? "default" : "outline"}
+                                    size="icon"
+                                    onClick={() => onViewHistory(isHistoryOpen ? null : "ALL")}
+                                    className={`rounded-full h-8 w-8 ${isHistoryOpen ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-muted-foreground hover:text-foreground"}`}
+                                >
+                                    {isHistoryOpen ? <X className="h-4 w-4" /> : <InfoIcon className="h-4 w-4" />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{isHistoryOpen ? "Close History" : "View History"}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
             </CardHeader>
             <CardContent>
                 {transactions && transactions.length > 0 ? (
@@ -70,7 +82,7 @@ export function TransactionList({
                                         <TableHead className="min-w-[150px] hidden sm:table-cell">Description</TableHead>
                                         <TableHead className="min-w-[120px] hidden md:table-cell">Added By</TableHead>
                                         <TableHead className="min-w-[140px]">Date</TableHead>
-                                        {hasPrivilege && <TableHead className="text-right min-w-[80px]">Actions</TableHead>}
+                                        {isAdmin && <TableHead className="text-right min-w-[80px]">Actions</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -112,7 +124,7 @@ export function TransactionList({
                                                         </TooltipProvider>
                                                     </div>
                                                 </TableCell>
-                                                {hasPrivilege && (
+                                                {isAdmin && (
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>

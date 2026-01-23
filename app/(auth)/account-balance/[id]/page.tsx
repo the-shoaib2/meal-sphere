@@ -47,7 +47,11 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
 
   // 2. Permission Check: Can this user view the target user's balance?
   const hasPrivilege = hasBalancePrivilege(activeMember.role);
-  if (!canViewUserBalance(activeMember.role, session.user.id, userId)) {
+  const isAdmin = activeMember.role === 'ADMIN';
+  const isOwner = session.user.id === userId;
+
+  // STRICT ACCESS: Only Admin or Owner can view this page
+  if (!isAdmin && !isOwner) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -55,7 +59,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
           text="Security & Permissions"
         />
         <InsufficientPermissionsState
-          description="You don't have the required permissions to view this user's account details. Only admins, accountants, and the account owner can view this page."
+          description="You don't have the required permissions to view this user's account details. Only admins and the account owner can view this page."
         />
       </div>
     );
@@ -63,8 +67,6 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
 
   // 3. Fetch Initial Data for the target user in the active group
   const balanceData = await fetchAccountBalanceData(userId, activeGroup.id);
-  const isAdmin = activeMember.role === 'ADMIN';
-
   // 3. Handle No Period State server-side
   if (!balanceData.currentPeriod) {
     return (
@@ -108,6 +110,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
       </PageHeader>
       <UserAccountBalanceDetail
         targetUserId={userId}
+        viewerRole={activeMember.role}
         initialData={{
           ...balanceData,
           groupId: activeGroup.id
