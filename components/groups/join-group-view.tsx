@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
@@ -26,6 +26,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 // Update the join room form schema
 const joinRoomSchema = z.object({
   message: z.string().optional(),
+  password: z.string().optional(),
 });
 
 type JoinRoomFormValues = z.infer<typeof joinRoomSchema>;
@@ -124,6 +125,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   // Form handling
   const [formValues, setFormValues] = useState<JoinRoomFormValues>({
     message: '',
+    password: '',
   });
 
   // NOTE: removed useGroupAccess logic as data is now passed via props
@@ -251,7 +253,25 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       // Check if this is a public join or private request
       // If we have an invite token, it's a direct join even if private
       if (group?.isPrivate && !inviteToken) {
-        // Private Group Flow
+        // Check if user is trying to join with password
+        if (values.password && group.hasPassword) {
+          const response = await fetch(`/api/groups/${targetGroupId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: values.password })
+          });
+
+          if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || 'Failed to join group');
+          }
+
+          toast.success('Successfully joined the group!');
+          router.push(`/groups/${targetGroupId}`);
+          return;
+        }
+
+        // Otherwise Private Group Request Flow
         const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -270,7 +290,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         const response = await fetch(`/api/groups/${targetGroupId}/join`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ inviteToken: inviteToken || undefined })
+          body: JSON.stringify({ token: inviteToken || undefined })
         });
 
         if (!response.ok) {
@@ -299,6 +319,10 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
   // Handle join button click
   const handleJoinClick = useCallback(() => {
+    if (formValues.password) {
+      handleJoinRequest(formValues);
+      return;
+    }
     if (group?.isPrivate && !showMessageField) {
       setShowMessageField(true);
       return;
@@ -451,7 +475,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs sm:text-sm text-muted-foreground">Created At</p>
-                    <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'N/A'}</p>
+                    <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB') : 'N/A'}</p>
                   </div>
                   {group?.fineEnabled && (
                     <div className="space-y-1 sm:col-span-2">
@@ -477,6 +501,28 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
                 {/* Join Form */}
                 <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                  {group?.hasPassword && !inviteToken && (
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-sm">Group Password (Optional)</Label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          placeholder="Enter password to join immediately"
+                          disabled={isJoining}
+                          value={formValues.password || ''}
+                          onChange={handleInputChange}
+                          className="pl-9"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        If you know the group password, enter it here to join instantly. Otherwise, leave blank to request approval.
+                      </p>
+                    </div>
+                  )}
+
                   {group?.isPrivate && showMessageField && (
                     <div className="space-y-2">
                       <Label htmlFor="message" className="text-sm">Message to Admins (Optional)</Label>
@@ -509,8 +555,8 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                     </Button>
 
                     <Button
-                      type={showMessageField ? 'submit' : 'button'}
-                      onClick={!showMessageField ? handleJoinClick : undefined}
+                      type={showMessageField || formValues.password ? 'submit' : 'button'}
+                      onClick={(!showMessageField && !formValues.password) ? handleJoinClick : undefined}
                       disabled={isJoining}
                       className="w-full sm:w-auto"
                     >
@@ -521,17 +567,21 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                         </>
                       ) : (
                         <>
-                          {group?.isPrivate ? (
-                            <>
-                              <Lock className="h-4 w-4 mr-2" />
-                              {showMessageField ? 'Send Join Request' : 'Request to Join'}
-                            </>
-                          ) : (
-                            <>
-                              <Users className="h-4 w-4 mr-2" />
-                              Join Group
-                            </>
-                          )}
+                          <>
+                            {group?.isPrivate ? (
+                              <>
+                                <Lock className="h-4 w-4 mr-2" />
+                                {formValues.password
+                                  ? 'Join Group'
+                                  : (showMessageField ? 'Send Join Request' : 'Request to Join')}
+                              </>
+                            ) : (
+                              <>
+                                <Users className="h-4 w-4 mr-2" />
+                                Join Group
+                              </>
+                            )}
+                          </>
                         </>
                       )}
                     </Button>
@@ -630,7 +680,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs sm:text-sm text-muted-foreground">Created At</p>
-                  <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'N/A'}</p>
+                  <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB') : 'N/A'}</p>
                 </div>
                 {group?.fineEnabled && (
                   <div className="space-y-1 sm:col-span-2">

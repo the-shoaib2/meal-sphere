@@ -23,7 +23,7 @@ export function ImageViewDialog({ open, onOpenChange, imageSrc }: ImageViewDialo
                             alt="Group Avatar View"
                             width={600}
                             height={600}
-                            className="object-contain rounded-md"
+                            className="object-contain rounded-full"
                         />
                     )}
                 </div>

@@ -44,6 +44,7 @@ const createGroupSchema = z.object({
       .max(100, 'Maximum 100 members allowed')
       .nullable()
   ]).optional().transform(val => val === undefined ? null : val),
+  password: z.string().optional(),
 });
 
 type CreateGroupInput = z.infer<typeof createGroupSchema>;
@@ -237,6 +238,24 @@ export default function CreateGroupPage() {
                     onCheckedChange={handlePrivacyChange}
                   />
                 </div>
+
+                {isPrivate && (
+                  <div className="space-y-2 p-4 bg-muted/30 rounded-lg border border-dashed border-muted-foreground/20">
+                    <Label htmlFor="password">Group Password (Optional)</Label>
+                    <div className="relative">
+                      <Input
+                        type="password"
+                        placeholder="Set a password for immediate joining"
+                        {...register('password')}
+                        className="pl-10"
+                      />
+                      <LockKeyhole className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      If set, users can join immediately by entering this password. If left blank, they must request approval.
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
 
@@ -301,6 +320,6 @@ export default function CreateGroupPage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

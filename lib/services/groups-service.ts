@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/services/prisma';
+import * as bcrypt from 'bcryptjs';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
@@ -402,7 +403,11 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
             memberCount: true,
             bannerUrl: true,
             category: true,
-            createdBy: true
+            createdBy: true,
+            password: true,
+            maxMembers: true,
+            tags: true,
+            features: true
           }
         }),
         prisma.roomMember.findUnique({
@@ -452,6 +457,12 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
       const end = performance.now();
       const executionTime = end - start;
 
+      const groupWithExtras = {
+        ...group,
+        hasPassword: !!group.password,
+        password: undefined
+      };
+
       const result = {
         isMember,
         userRole,
@@ -460,7 +471,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
         isAdmin,
         isCreator,
         groupId,
-        group,
+        group: groupWithExtras,
         error: canAccess ? null : "Not a member of this private group",
         timestamp: new Date().toISOString(),
         executionTime
@@ -499,6 +510,7 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
             createdAt: true,
             fineEnabled: true,
             fineAmount: true,
+            password: true,
             createdByUser: {
               select: {
                 id: true,
@@ -544,7 +556,11 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
       const executionTime = end - start;
 
       const result = {
-        group,
+        group: {
+            ...group,
+            hasPassword: !!group?.password,
+            password: undefined
+        },
         isMember: !!membership && !membership.isBanned,
         membership,
         joinRequest: joinRequest ? {
@@ -672,10 +688,16 @@ export type CreateGroupData = {
   maxMembers?: number;
   bannerUrl?: string;
   userId: string;
+  password?: string;
 };
 
 export async function createGroup(data: CreateGroupData) {
-    const { name, description, isPrivate, maxMembers, bannerUrl, userId } = data;
+    const { name, description, isPrivate, maxMembers, bannerUrl, userId, password } = data;
+
+    let hashedPassword = null;
+    if (password) {
+        hashedPassword = await bcrypt.hash(password, 10);
+    }
 
     const group = await prisma.room.create({
       data: {
@@ -689,6 +711,7 @@ export async function createGroup(data: CreateGroupData) {
         createdBy: userId,
         periodMode: 'MONTHLY',
         memberCount: 1,
+        password: hashedPassword,
         bannerUrl: bannerUrl || '/images/9099ffd8-d09b-4883-bac1-04be1274bb82.png',
         features: {
           join_requests: isPrivate,
@@ -729,12 +752,25 @@ export type UpdateGroupData = {
     bannerUrl?: string | null;
     tags?: string[];
     features?: Record<string, boolean>;
+    password?: string | null;
 };
 
 export async function updateGroup(groupId: string, data: UpdateGroupData) {
+    const { password, ...otherData } = data;
+    
+    let updateData: any = { ...otherData };
+    
+    if (password !== undefined) {
+        if (password === null) {
+            updateData.password = null;
+        } else {
+             updateData.password = await bcrypt.hash(password, 10);
+        }
+    }
+
     const updatedGroup = await prisma.room.update({
         where: { id: groupId },
-        data: data,
+        data: updateData,
         include: {
           createdByUser: {
             select: {
@@ -825,7 +861,7 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
     const group = await prisma.room.findUnique({
         where: { id: groupId },
         select: {
-             id: true, isPrivate: true, maxMembers: true, 
+             id: true, isPrivate: true, maxMembers: true, password: true,
              members: { where: { userId }, select: { id: true } }
         }
     });
@@ -833,8 +869,20 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
     if (!group) throw new Error('Group not found');
     if (group.members.length > 0) throw new Error('Already a member');
     
-    // Allow private groups if a token is provided
-    if (group.isPrivate && !token) throw new Error('Private group: Request access instead');
+    
+    // Check password if private and no token
+    if (group.isPrivate && !token) {
+        if (group.password) {
+             if (password) {
+                 const isValid = await bcrypt.compare(password, group.password);
+                 if (!isValid) throw new Error('Invalid password');
+             } else {
+                 throw new Error('Password required');
+             }
+        } else {
+             throw new Error('Private group: Request access instead');
+        }
+    }
     
     let role = 'MEMBER';
     

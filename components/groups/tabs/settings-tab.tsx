@@ -135,6 +135,7 @@ const groupSettingsSchema = z.object({
       .max(100, 'Maximum 100 members allowed')
       .nullable()
   ]).optional(),
+  password: z.string().optional().nullable(),
   tags: z.array(z.string()).default([]),
   features: z.record(z.string(), z.boolean()).default({}),
 });
@@ -251,9 +252,9 @@ export function SettingsTab({
     maxMembers: number | null | undefined;
     tags: string[];
     features: Record<string, boolean>;
+    hasPassword?: boolean;
   };
 
-  // ... form setup ...
 
   // Update form values when group data changes
   useEffect(() => {
@@ -286,7 +287,6 @@ export function SettingsTab({
     }
   };
 
-  // ... notification logic ...
 
   const handleImageUpdate = async (url: string) => {
     try {
@@ -345,6 +345,7 @@ export function SettingsTab({
           : (data.maxMembers === null ? undefined : data.maxMembers),
         tags: data.tags,
         features: data.features,
+        password: data.password
       };
 
       const response = await fetch(`/api/groups/${groupId}`, {
@@ -793,59 +794,97 @@ export function SettingsTab({
                 <p className="text-sm text-destructive">{errors.description.message}</p>
               )}
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="maxMembers">Maximum Members</Label>
                 <Input
                   id="maxMembers"
                   type="number"
-                  {...register('maxMembers')}
-                  placeholder="Enter maximum number of members"
+                  min="2"
+                  max="100"
+                  placeholder="No limit"
                   disabled={!isEditing}
+                  {...register('maxMembers', {
+                    setValueAs: (v) => v === '' ? null : Number(v)
+                  })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Leave empty for unlimited members
+                </p>
                 {errors.maxMembers && (
                   <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Add a tag"
-                    disabled={!isEditing}
-                  />
-                  <Button type="button" onClick={handleAddTag} disabled={!isEditing}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {tagError && (
-                  <p className="text-sm text-destructive">{tagError}</p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formTags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                      <button
+              {group.isPrivate && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">
+                    Group Password
+                    {group.hasPassword && <Badge variant="secondary" className="ml-2 text-xs">Active</Badge>}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder={group.hasPassword ? "Enter new password to change" : "Set a password"}
+                      disabled={!isEditing}
+                      {...register('password')}
+                    />
+                    {isEditing && group.hasPassword && (
+                      <Button
                         type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className={`ml-1 hover:text-destructive ${!isEditing ? 'hidden' : ''}`}
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => setValue('password', null, { shouldDirty: true })}
+                        title="Remove Password"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {group.hasPassword
+                      ? "Leave blank to keep current password. Click delete to remove."
+                      : "Optional. Set a password to allow immediate joining."}
+                  </p>
                 </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add a tag"
+                  disabled={!isEditing}
+                />
+                <Button type="button" onClick={handleAddTag} disabled={!isEditing}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {tagError && (
+                <p className="text-sm text-destructive">{tagError}</p>
+              )}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formTags.map((tag) => (
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className={`ml-1 hover:text-destructive ${!isEditing ? 'hidden' : ''}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
               </div>
             </div>
 
-            {/* Button group moved to header */}
-
-            <div className="space-y-4">
+            <div className="space-y-2">
               <Label>Features</Label>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
@@ -1227,7 +1266,7 @@ export function SettingsTab({
           </AlertDialog>
 
         </form>
-      </CardContent>
+      </CardContent >
     </Card >
   );
 } 

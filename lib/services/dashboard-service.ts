@@ -70,7 +70,6 @@ export async function fetchDashboardData(userId: string, groupId?: string) {
       const currentPeriod = await getCurrentPeriod(resolvedGroupId!);
       const periodId = currentPeriod?.id;
 
-      // Split parallel queries into batches to avoid "MaxClientsInSessionMode" error
       // 1. Core Group Info
       const [activeGroupsCount, roomData, groupBalanceSummary] = await Promise.all([
         prisma.roomMember.count({ where: { userId, isBanned: false } }),
