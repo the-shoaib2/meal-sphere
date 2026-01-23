@@ -14,6 +14,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, ArrowRight } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
@@ -113,79 +114,81 @@ export default function PrivilegedView({ groupData, userRole }: PrivilegedViewPr
         />
       </div>
 
-      <Card>
+      <Card className="max-w-full">
         <CardHeader>
           <CardTitle>All Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="text-right">Meals</TableHead>
-                  <TableHead className="text-right">Spent</TableHead>
-                  <TableHead className="text-right">Available</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((member: any) => (
-                  <TableRow key={member.userId}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={member.user.image || ''} />
-                          <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{member.user.name}</p>
-                          <p className="text-sm text-muted-foreground">{member.user.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={getRoleBadgeVariant(member.role)}
-                        className={getRoleBadgeStyle(member.role)}
-                      >
-                        {member.role?.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      <span className={member.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        ৳{member.balance.toFixed(2)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {member.mealCount || 0}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ৳{(member.totalSpent || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      <span className={(member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        ৳{(member.availableBalance || 0).toFixed(2)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-primary flex items-center gap-1 group overflow-hidden"
-                        onClick={() => handleViewDetails(member.userId)}
-                      >
-                        <span>Details</span>
-                        <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
-                      </Button>
-                    </TableCell>
+          <ScrollArea className="h-[600px] w-full">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-right">Meals</TableHead>
+                    <TableHead className="text-right">Spent</TableHead>
+                    <TableHead className="text-right">Available</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {members.map((member: any) => (
+                    <TableRow key={member.userId}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={member.user.image || ''} />
+                            <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{member.user.name}</p>
+                            <p className="text-sm text-muted-foreground">{member.user.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={getRoleBadgeVariant(member.role)}
+                          className={getRoleBadgeStyle(member.role)}
+                        >
+                          {member.role?.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        <span className={member.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          ৳{member.balance.toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {member.mealCount || 0}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        ৳{(member.totalSpent || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        <span className={(member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          ৳{(member.availableBalance || 0).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-primary flex items-center gap-1 group overflow-hidden"
+                          onClick={() => handleViewDetails(member.userId)}
+                        >
+                          <span>Details</span>
+                          <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>
