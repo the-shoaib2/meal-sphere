@@ -495,7 +495,7 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
       const currentPeriod = await getCurrentPeriod(groupId);
       const periodId = currentPeriod?.id;
 
-      const [summary, roomData, membership, ownTransactions, history] = await Promise.all([
+      const [summary, roomData, membership, sentTransactions, receivedTransactions, history] = await Promise.all([
         getGroupBalanceSummary(groupId, true),
         prisma.room.findUnique({
           where: { id: groupId },
@@ -505,6 +505,22 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
           where: { userId_roomId: { userId, roomId: groupId } },
           select: { role: true }
         }),
+        // Fetch sent transactions
+        prisma.accountTransaction.findMany({
+          where: {
+            roomId: groupId,
+            userId: userId,
+            periodId: periodId
+          },
+          include: {
+            creator: { select: { id: true, name: true, image: true, email: true } },
+            targetUser: { select: { id: true, name: true, image: true, email: true } },
+            user: { select: { id: true, name: true, image: true, email: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        }),
+        // Fetch received transactions
         prisma.accountTransaction.findMany({
           where: {
             roomId: groupId,
@@ -513,10 +529,11 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
           },
           include: {
             creator: { select: { id: true, name: true, image: true, email: true } },
-            targetUser: { select: { id: true, name: true, image: true, email: true } }
+            targetUser: { select: { id: true, name: true, image: true, email: true } },
+            user: { select: { id: true, name: true, image: true, email: true } }
           },
           orderBy: { createdAt: 'desc' },
-          take: 50
+          take: 10
         }),
         prisma.transactionHistory.findMany({
           where: { 
@@ -541,6 +558,10 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
           take: 10 // Limit to last 10 actions initially
         })
       ]);
+
+      const ownTransactions = [...sentTransactions, ...receivedTransactions]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
 
       // Calculate own balance from summary or separately
       const ownMemberData = summary?.members?.find((m: any) => m.userId === userId);

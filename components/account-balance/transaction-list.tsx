@@ -27,6 +27,9 @@ import {
 import { Edit, Trash2, MoreHorizontal, InfoIcon, Eye, X } from 'lucide-react';
 import { type AccountTransaction } from '@/hooks/use-account-balance';
 
+import { useInView } from 'react-intersection-observer';
+import { useEffect } from 'react';
+
 interface TransactionListProps {
     transactions: AccountTransaction[];
     hasPrivilege: boolean;
@@ -35,6 +38,9 @@ interface TransactionListProps {
     onDelete: (transactionId: string) => void;
     onViewHistory: (transactionId: string | null) => void;
     isHistoryOpen?: boolean;
+    onFetchNextPage?: () => void;
+    hasNextPage?: boolean;
+    isFetchingNextPage?: boolean;
 }
 
 export function TransactionList({
@@ -44,8 +50,21 @@ export function TransactionList({
     onEdit,
     onDelete,
     onViewHistory,
-    isHistoryOpen = false
+    isHistoryOpen = false,
+    onFetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
 }: TransactionListProps) {
+    const { ref, inView } = useInView({
+        rootMargin: '200px',
+    });
+
+    useEffect(() => {
+        if (inView && hasNextPage && onFetchNextPage) {
+            onFetchNextPage();
+        }
+    }, [inView, hasNextPage, onFetchNextPage]);
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -73,9 +92,9 @@ export function TransactionList({
             <CardContent>
                 {transactions && transactions.length > 0 ? (
                     <div className="rounded-md border overflow-hidden">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                             <Table>
-                                <TableHeader>
+                                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                                     <TableRow>
                                         <TableHead className="min-w-[100px]">Amount</TableHead>
                                         <TableHead className="min-w-[100px]">Type</TableHead>
@@ -108,7 +127,7 @@ export function TransactionList({
                                                         {t.creator?.name || 'System'}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="whitespace-nowrap">
                                                     <div className="text-sm text-muted-foreground">
                                                         <TooltipProvider>
                                                             <Tooltip>
@@ -134,17 +153,14 @@ export function TransactionList({
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                {/* View History option for everyone */}
                                                                 <DropdownMenuItem onClick={() => onViewHistory(t.id)}>
                                                                     <Eye className="mr-2 h-4 w-4" />
                                                                     <span>View History</span>
                                                                 </DropdownMenuItem>
-                                                                {/* ADMIN and ACCOUNTANT can edit transactions */}
                                                                 <DropdownMenuItem onClick={() => onEdit(t)}>
                                                                     <Edit className="mr-2 h-4 w-4" />
                                                                     <span>Edit</span>
                                                                 </DropdownMenuItem>
-                                                                {/* Only ADMIN can delete transactions */}
                                                                 {isAdmin && (
                                                                     <DropdownMenuItem onClick={() => onDelete(t.id)} className="text-red-500 focus:text-red-500">
                                                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -158,6 +174,20 @@ export function TransactionList({
                                             </TableRow>
                                         );
                                     })}
+                                    {/* Loading Indicator / Intersection Sentinel */}
+                                    {(hasNextPage || isFetchingNextPage) && (
+                                        <TableRow>
+                                            <TableCell colSpan={isAdmin ? 6 : 5} className="p-0 border-0">
+                                                <div ref={ref} className="flex justify-center p-4">
+                                                    {isFetchingNextPage ? (
+                                                        <span className="text-sm text-muted-foreground animate-pulse">Loading more...</span>
+                                                    ) : (
+                                                        <span className="h-4 w-full block" />
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>

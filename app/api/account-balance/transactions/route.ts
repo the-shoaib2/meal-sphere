@@ -8,6 +8,7 @@ import { canViewUserBalance } from '@/lib/auth/balance-permissions';
 export const dynamic = 'force-dynamic';
 
 // GET: /api/account-balance/transactions?roomId=...&userId=...
+// GET: /api/account-balance/transactions?roomId=...&userId=...&cursor=...&limit=...
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
     const roomId = searchParams.get('roomId');
     const userId = searchParams.get('userId');
     const periodId = searchParams.get('periodId');
+    const cursor = searchParams.get('cursor'); // timestamp
+    const limit = parseInt(searchParams.get('limit') || '10');
 
     if (!roomId || !userId) {
       return NextResponse.json({ error: 'Room ID and User ID are required' }, { status: 400 });
@@ -47,59 +50,74 @@ export async function GET(request: NextRequest) {
     }
 
     // Use requested periodId or fallback to current active.
-    // Optimization: Allow fetching past period transactions too if periodId is passed
     const activePeriodId = periodId || currentPeriod?.id;
 
     // If no period context (no id passed and no active), return empty
     if (!activePeriodId) {
-      return NextResponse.json([]);
+      return NextResponse.json({ items: [], nextCursor: undefined });
     }
 
+    const dateFilter = cursor ? { createdAt: { lt: new Date(cursor) } } : {};
+
     // Optimization: Split complex OR query into two index-optimized queries
-    // Query 1: Transactions where user is SENDER (uses index [roomId, userId, periodId])
-    // Query 2: Transactions where user is RECEIVER (uses index [roomId, periodId, targetUserId])
-    
     const [sentTransactions, receivedTransactions] = await Promise.all([
         prisma.accountTransaction.findMany({
             where: {
                 roomId,
                 periodId: activePeriodId,
-                userId: targetUserId
+                userId: targetUserId,
+                ...dateFilter
             },
             include: {
                 user: { select: { id: true, name: true, image: true, email: true } },
                 targetUser: { select: { id: true, name: true, image: true, email: true } },
                 creator: { select: { id: true, name: true, image: true, email: true } },
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: limit + 1
         }),
         prisma.accountTransaction.findMany({
             where: {
                 roomId,
                 periodId: activePeriodId,
-                targetUserId: targetUserId
+                targetUserId: targetUserId,
+                ...dateFilter
             },
             include: {
                 user: { select: { id: true, name: true, image: true, email: true } },
                 targetUser: { select: { id: true, name: true, image: true, email: true } },
                 creator: { select: { id: true, name: true, image: true, email: true } },
             },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'desc' },
+            take: limit + 1
         })
     ]);
 
-    // Merge and sort in memory (much faster than DB OR scan)
-    const transactions = [...sentTransactions, ...receivedTransactions]
+    // Merge and sort in memory
+    const allTransactions = [...sentTransactions, ...receivedTransactions]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    // Cache shorter for active period, longer for past periods (if periodId was explicit)
-    const isHistorical = periodId && periodId !== currentPeriod?.id;
-    return NextResponse.json(transactions, {
+    let nextCursor: string | undefined = undefined;
+    
+    // We fetched (limit + 1) from BOTH, so we have potentially 2*(limit+1) items.
+    // We only need the top (limit + 1) to determine if there is a next page for the UI.
+    // Actually, we return 'limit' items, and if we have more, we set nextCursor.
+    
+    const hasNextPage = allTransactions.length > limit;
+    const items = allTransactions.slice(0, limit);
+    
+    if (hasNextPage) {
+        // The cursor for the next page is the createdAt of the last item in the current PAGE
+        // ensuring the next fetch gets items older than this one.
+        nextCursor = items[items.length - 1].createdAt.toISOString();
+    }
+
+    return NextResponse.json({
+        items,
+        nextCursor
+    }, {
       headers: { 
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
+        'Cache-Control': 'no-store',
       }
     });
 

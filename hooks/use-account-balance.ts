@@ -140,21 +140,45 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
   });
 }
 
-export function useGetTransactions(roomId: string, userId: string, periodId?: string, initialData?: BalancePageData) {
-  const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData.ownTransactions : undefined;
+export function useGetTransactions(roomId: string, userId: string, periodId?: string, initialData?: BalancePageData | { pages: any[] }) {
+  // Determine if initialData is the full BalancePageData or already formatted InfiniteData
+  let effectiveInitialData: any = undefined;
 
-  return useQuery<AccountTransaction[]>({
+  if (initialData) {
+      // Check if it's BalancePageData (has ownTransactions)
+      if ('ownTransactions' in initialData && Array.isArray((initialData as BalancePageData).ownTransactions)) {
+           // Verify it matches the context if possible, or just use it if provided
+           // We'll trust the caller provided relevant initialData
+           const transactions = (initialData as BalancePageData).ownTransactions;
+           effectiveInitialData = {
+              pages: [{
+                  items: transactions,
+                  nextCursor: transactions.length >= 10 ? transactions[transactions.length - 1].createdAt : undefined
+              }],
+              pageParams: [undefined]
+           };
+      } else if ('pages' in initialData) {
+          // Already in InfiniteData format
+          effectiveInitialData = initialData;
+      }
+  }
+
+  return useInfiniteQuery({
     queryKey: ['user-transactions', roomId, userId, periodId],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        roomId,
-        userId,
-        ...(periodId && { periodId }),
-      });
-      const res = await fetch(`/api/account-balance/transactions?${params}`, { cache: 'no-store' });
+    queryFn: async ({ pageParam = undefined }) => {
+      const url = new URL('/api/account-balance/transactions', window.location.origin);
+      url.searchParams.set('userId', userId);
+      url.searchParams.set('roomId', roomId);
+      if (periodId) url.searchParams.set('periodId', periodId);
+      if (pageParam) url.searchParams.set('cursor', pageParam as string);
+      url.searchParams.set('limit', '10');
+
+      const res = await fetch(url.toString(), { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch transactions');
       return res.json();
     },
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage: { nextCursor?: string }) => lastPage.nextCursor,
     enabled: !!roomId && !!userId && !effectiveInitialData,
     initialData: effectiveInitialData,
     staleTime: Infinity,

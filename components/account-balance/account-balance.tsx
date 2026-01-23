@@ -70,7 +70,19 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   // };
   const { data: groupData, isLoading: isLoadingBalances, error: balancesError } = useGroupBalances(activeGroup?.id!, hasPrivilege, true, initialData);
   const { data: ownBalance, isLoading: isLoadingOwnBalance, error: ownBalanceError } = useGetBalance(activeGroup?.id!, session?.user?.id!, true, initialData);
-  const { data: ownTransactions, isLoading: isLoadingTransactions, error: transactionsError } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id, initialData);
+  const {
+    data: ownTransactionsData,
+    fetchNextPage: fetchNextOwn,
+    hasNextPage: hasNextOwn,
+    isFetchingNextPage: isFetchingNextOwn,
+    isLoading: isLoadingTransactions,
+    error: transactionsError
+  } = useGetTransactions(activeGroup?.id!, session?.user?.id!, currentPeriod?.id, initialData);
+
+  const ownTransactions = React.useMemo(() =>
+    ownTransactionsData?.pages?.flatMap((p: any) => p.items as AccountTransaction[]) || [],
+    [ownTransactionsData]
+  );
 
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
@@ -160,6 +172,9 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
       userRole={userRole!}
       session={session}
       groupId={activeGroup?.id}
+      onFetchNextPage={fetchNextOwn}
+      hasNextPage={hasNextOwn}
+      isFetchingNextPage={isFetchingNextOwn}
     />
   );
 }
@@ -240,7 +255,20 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const userId = targetUserId;
 
   const { data: userBalance, isLoading: isLoadingBalance, refetch: refetchBalance, error: balanceError } = useGetBalance(activeGroup?.id || '', userId, true, initialData);
-  const { data: transactions, isLoading: isLoadingTransactions, refetch: refetchTransactions, error: transactionsError } = useGetTransactions(activeGroup?.id || '', userId, initialData?.currentPeriod?.id, initialData);
+  const {
+    data: transactionsData,
+    isLoading: isLoadingTransactions,
+    refetch: refetchTransactions,
+    error: transactionsError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useGetTransactions(activeGroup?.id || '', userId, initialData?.currentPeriod?.id, initialData);
+
+  const transactions = React.useMemo(() =>
+    transactionsData?.pages?.flatMap((p: any) => p.items as AccountTransaction[]) || [],
+    [transactionsData]
+  );
 
   // Handle 403 Forbidden errors
   const isForbidden = (balanceError as any)?.message?.includes('403') ||
@@ -359,6 +387,9 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
           }, 100);
         }}
         isHistoryOpen={!!historyTransactionId}
+        onFetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
       />
 
       {historyTransactionId && (

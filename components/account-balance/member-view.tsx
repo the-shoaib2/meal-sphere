@@ -30,16 +30,40 @@ import { NumberTicker } from "@/components/ui/number-ticker";
 
 import { Session } from 'next-auth';
 
+import { useInView } from 'react-intersection-observer';
+
 interface MemberViewProps {
   balance: UserBalance | undefined;
   transactions: AccountTransaction[];
   userRole: string;
   session: Session | null;
   groupId?: string;
+  onFetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
 }
 
-export function MemberView({ balance, transactions, userRole, session, groupId }: MemberViewProps) {
+export function MemberView({
+  balance,
+  transactions,
+  userRole,
+  session,
+  groupId,
+  onFetchNextPage,
+  hasNextPage,
+  isFetchingNextPage
+}: MemberViewProps) {
   const [historyView, setHistoryView] = React.useState<string | null>(null);
+
+  const { ref, inView } = useInView({
+    rootMargin: '200px',
+  });
+
+  React.useEffect(() => {
+    if (inView && hasNextPage && onFetchNextPage) {
+      onFetchNextPage();
+    }
+  }, [inView, hasNextPage, onFetchNextPage]);
 
   const totalReceived = transactions
     .filter(t => t.targetUserId === session?.user?.id)
@@ -172,26 +196,41 @@ export function MemberView({ balance, transactions, userRole, session, groupId }
           </CardHeader>
           <CardContent>
             {transactions.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.map((transaction) => (
-                      <TransactionRow
-                        key={transaction.id}
-                        transaction={transaction}
-                        currentUserId={session?.user?.id}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="rounded-md border overflow-hidden">
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+                      <TableRow>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((transaction) => (
+                        <TransactionRow
+                          key={transaction.id}
+                          transaction={transaction}
+                          currentUserId={session?.user?.id}
+                        />
+                      ))}
+                      {(hasNextPage || isFetchingNextPage) && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="p-0 border-0">
+                            <div ref={ref} className="flex justify-center p-4">
+                              {isFetchingNextPage ? (
+                                <span className="text-sm text-muted-foreground animate-pulse">Loading more...</span>
+                              ) : (
+                                <span className="h-4 w-full block" />
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
