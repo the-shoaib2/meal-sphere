@@ -11,17 +11,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Copy, Loader2, Lock, Mail, Share2, UserPlus, X, Check, AlertCircle, Users, Settings } from "lucide-react";
+import { Copy, Loader2, Lock, Mail, Share2, UserPlus, X, Check, AlertCircle, Users, Settings, Shield, UserCog, ChefHat, BadgeDollarSign, ShoppingCart, Scale, Ban } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Role } from "@prisma/client"; // Ensure this is available or use strict string types
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-// Actions import removed
+import { cn } from "@/lib/utils";
 
 
 interface InviteTokenData {
@@ -36,6 +34,7 @@ interface InviteCardProps {
   group?: any;
   className?: string;
   initialTokens?: any[];
+  canInvite?: boolean;
 }
 
 interface InviteStatus {
@@ -47,15 +46,63 @@ interface InviteStatus {
   };
 }
 
-const ROLE_OPTIONS: { value: string; label: string; description: string }[] = [
-  { value: 'MEMBER', label: 'Member', description: 'Can view and participate in group activities' },
-  { value: 'ADMIN', label: 'Admin', description: 'Full access to group settings and management' },
-  { value: 'MODERATOR', label: 'Moderator', description: 'Can manage members and content' },
-  { value: 'MANAGER', label: 'Manager', description: 'Can manage group operations' },
-  { value: 'LEADER', label: 'Leader', description: 'Can lead group activities' },
-  { value: 'MEAL_MANAGER', label: 'Meal Manager', description: 'Can manage group meals' },
-  { value: 'ACCOUNTANT', label: 'Accountant', description: 'Can manage group finances' },
-  { value: 'MARKET_MANAGER', label: 'Market Manager', description: 'Can manage group markets' }
+const ROLE_OPTIONS = [
+  {
+    value: 'MEMBER',
+    label: 'Member',
+    description: 'Can view and participate in group activities',
+    icon: Users,
+    color: 'text-blue-500'
+  },
+  {
+    value: 'ADMIN',
+    label: 'Admin',
+    description: 'Full access to group settings and management',
+    icon: Shield,
+    color: 'text-red-500'
+  },
+  {
+    value: 'MODERATOR',
+    label: 'Moderator',
+    description: 'Can manage members and content',
+    icon: UserCog,
+    color: 'text-amber-500'
+  },
+  {
+    value: 'MANAGER',
+    label: 'Manager',
+    description: 'Can manage group operations',
+    icon: Scale,
+    color: 'text-indigo-500'
+  },
+  {
+    value: 'LEADER',
+    label: 'Leader',
+    description: 'Can lead group activities',
+    icon: UserPlus,
+    color: 'text-emerald-500'
+  },
+  {
+    value: 'MEAL_MANAGER',
+    label: 'Meal Manager',
+    description: 'Can manage group meals',
+    icon: ChefHat,
+    color: 'text-orange-500'
+  },
+  {
+    value: 'ACCOUNTANT',
+    label: 'Accountant',
+    description: 'Can manage group finances',
+    icon: BadgeDollarSign,
+    color: 'text-green-500'
+  },
+  {
+    value: 'MARKET_MANAGER',
+    label: 'Market Manager',
+    description: 'Can manage group markets',
+    icon: ShoppingCart,
+    color: 'text-purple-500'
+  }
 ];
 
 const EXPIRATION_OPTIONS = [
@@ -73,7 +120,7 @@ const EXPIRATION_OPTIONS = [
 
 import { useGroups } from "@/hooks/use-groups";
 
-export function InviteCard({ groupId, group: initialGroup, className = '', initialTokens = [] }: InviteCardProps) {
+export function InviteCard({ groupId, group: initialGroup, className = '', initialTokens = [], canInvite = true }: InviteCardProps) {
   const { useGroupDetails } = useGroups();
   const { data: group, isLoading } = useGroupDetails(groupId, initialGroup);
 
@@ -126,7 +173,7 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
         token: data.token,
         expiresAt: data.expiresAt,
         role: data.role,
-        inviteUrl: data.inviteUrl
+        inviteUrl: data.url
       });
 
       uiToast({
@@ -272,7 +319,7 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
     );
   }
 
-  if (!group) return null;
+  if (!group || !canInvite) return null;
 
   const { name, isPrivate, memberCount, maxMembers } = group;
   const isGroupFull = maxMembers ? memberCount >= maxMembers : false;
@@ -421,18 +468,45 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                 <div className="space-y-2">
                   <Label htmlFor="custom-role" className="text-sm font-semibold">New Token Role</Label>
                   <Select value={selectedRole} onValueChange={(value: string) => setSelectedRole(value)}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{role.label}</span>
-                            <span className="text-[10px] text-muted-foreground leading-tight">{role.description}</span>
+                    <SelectTrigger className="h-10 bg-muted/30 hover:bg-muted/50 transition-colors rounded-md cursor-pointer">
+                      <SelectValue placeholder="Select role">
+                        {selectedRole && (
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const role = ROLE_OPTIONS.find(r => r.value === selectedRole);
+                              const Icon = role?.icon || Users;
+                              return <Icon className={cn("h-4 w-4", role?.color)} />;
+                            })()}
+                            <span className="text-sm">{ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}</span>
                           </div>
-                        </SelectItem>
-                      ))}
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      <div className="p-1">
+                        {ROLE_OPTIONS.map((role) => {
+                          const Icon = role.icon;
+                          return (
+                            <SelectItem
+                              key={role.value}
+                              value={role.value}
+                              className="focus:bg-primary/5 focus:text-primary rounded-sm py-2 px-2 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={cn("p-1 rounded-sm bg-muted", role.color.replace('text-', 'bg-').split(' ')[0] + '/10')}>
+                                  <Icon className={cn("h-3.5 w-3.5", role.color)} />
+                                </div>
+                                <div className="flex flex-col gap-0">
+                                  <span className="text-xs font-semibold">{role.label}</span>
+                                  <span className="text-[10px] text-muted-foreground leading-tight line-clamp-1">
+                                    {role.description}
+                                  </span>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </div>
                     </SelectContent>
                   </Select>
                 </div>
@@ -476,29 +550,35 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
               <div className="space-y-4">
                 <Label className="text-sm font-semibold">Current Active Token</Label>
                 {inviteToken ? (
-                  <div className="p-4 border rounded-xl bg-muted/30 space-y-4 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Lock className="h-12 w-12" />
+                  <div className="p-5 border rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 space-y-4 relative overflow-hidden group shadow-sm border-primary/10">
+                    <div className="absolute -top-6 -right-6 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity rotate-12">
+                      <Lock className="h-24 w-24" />
                     </div>
 
-                    <div className="space-y-3 relative z-10">
+                    <div className="space-y-4 relative z-10">
                       <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase">
-                          {inviteToken.role}
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const role = ROLE_OPTIONS.find(r => r.value === inviteToken.role);
+                            const Icon = role?.icon || Users;
+                            return (
+                              <div className={cn("p-1.5 rounded-lg bg-white dark:bg-zinc-800 shadow-sm", role?.color)}>
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                            );
+                          })()}
+                          <span className="text-xs font-bold uppercase tracking-wider">{ROLE_OPTIONS.find(r => r.value === inviteToken.role)?.label}</span>
+                        </div>
+                        <Badge variant="secondary" className="px-2 py-0 h-5 text-[10px] font-medium bg-primary/10 text-primary border-none">
+                          {inviteToken.expiresAt ? 'Temporary' : 'Permanent'}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground">
-                          {inviteToken.expiresAt ? 'Dynamic' : 'Permanent'}
-                        </span>
                       </div>
 
-                      <div className="grid gap-1.5">
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <Settings className="h-3 w-3 mr-1.5" />
-                          <span>Expires: {inviteToken.expiresAt ? new Date(inviteToken.expiresAt).toLocaleDateString() : 'Never'}</span>
-                        </div>
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <Mail className="h-3 w-3 mr-1.5" />
-                          <span>Role: {ROLE_OPTIONS.find(r => r.value === inviteToken.role)?.label}</span>
+                      <div className="grid gap-2 text-xs">
+                        <div className="flex items-center text-muted-foreground bg-white/50 dark:bg-black/20 p-2 rounded-lg">
+                          <Settings className="h-3.5 w-3.5 mr-2 text-primary" />
+                          <span className="font-medium">Expires:</span>
+                          <span className="ml-auto">{inviteToken.expiresAt ? new Date(inviteToken.expiresAt).toLocaleDateString() : 'Never'}</span>
                         </div>
                       </div>
 
@@ -506,19 +586,21 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                         <Button
                           type="button"
                           size="sm"
-                          variant="secondary"
                           onClick={handleCopyLink}
-                          className="h-8 flex-1 text-xs"
+                          className="h-9 flex-1 text-xs font-semibold shadow-sm"
                         >
-                          <Copy className="h-3.5 w-3.5 mr-1.5" />
-                          Copy Link
+                          {copied ? (
+                            <><Check className="h-3.5 w-3.5 mr-2" />Copied</>
+                          ) : (
+                            <><Copy className="h-3.5 w-3.5 mr-2" />Copy Link</>
+                          )}
                         </Button>
                         <Button
                           type="button"
                           size="sm"
-                          variant="secondary"
+                          variant="outline"
                           onClick={handleShare}
-                          className="h-8 px-3"
+                          className="h-9 w-9 p-0 hover:bg-primary/5 hover:text-primary transition-colors"
                         >
                           <Share2 className="h-3.5 w-3.5" />
                         </Button>
@@ -526,9 +608,15 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-[180px] p-4 text-center border-2 border-dashed rounded-xl bg-muted/10">
-                    <AlertCircle className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                    <p className="text-xs text-muted-foreground">No active token. Configure and generate one on the left.</p>
+                  <div className="relative flex flex-col items-center justify-center h-[200px] p-8 text-center border-2 border-dashed rounded-2xl bg-muted/5 group/placeholder overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover/placeholder:opacity-100 transition-opacity" />
+                    <div className="p-4 rounded-full bg-muted/50 mb-4 group-hover/placeholder:scale-110 transition-transform duration-300">
+                      <Lock className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                    <h4 className="text-sm font-semibold mb-1">No Active Token</h4>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[180px]">
+                      Configure a role and expiration time on the left to generate your custom invite token.
+                    </p>
                   </div>
                 )}
 

@@ -26,7 +26,7 @@ interface GroupPageContentProps {
     initialTab?: string;
 }
 
-import VotingSystem from '@/components/groups/voting/voting-system';
+import { VotingTab } from '@/components/groups/tabs/voting-tab';
 
 import { useGroups } from '@/hooks/use-groups';
 
@@ -64,6 +64,10 @@ export function GroupPageContent(
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    // Prevent hydration mismatch for components that use unique IDs (like Radix Tabs)
+    // by ensuring initial render matches server
+    const displayActiveTab = isMounted ? activeTab : 'members';
 
     useEffect(() => {
         let ticking = false;
@@ -135,7 +139,7 @@ export function GroupPageContent(
                         </div>
                     </div>
                     <Tabs defaultValue="members" value={activeTab} className="w-full">
-                        <TabsList className="grid grid-cols-4 sm:rounded-md">
+                        <TabsList className="w-fit flex justify-start sm:rounded-md">
                             <TabsTrigger value="members" className="flex items-center gap-2">
                                 <Users className="h-4 w-4 hidden sm:block" />
                                 Members
@@ -150,12 +154,10 @@ export function GroupPageContent(
                                 <CheckSquare className="h-4 w-4 hidden sm:block" />
                                 Voting
                             </TabsTrigger>
-                            {isAdmin && (
-                                <TabsTrigger value="settings" className="flex items-center gap-2">
-                                    <Settings className="h-4 w-4 hidden sm:block" />
-                                    Settings
-                                </TabsTrigger>
-                            )}
+                            <TabsTrigger value="settings" className="flex items-center gap-2">
+                                <Settings className="h-4 w-4 hidden sm:block" />
+                                Settings
+                            </TabsTrigger>
                         </TabsList>
                         <div className="mt-6">
                             <TabsContent value="members">
@@ -191,6 +193,7 @@ export function GroupPageContent(
     const tags: string[] = groupWithExtras.tags ?? [];
 
     const showActivityLog = isFeatureEnabled(features, 'activity_log', isAdmin);
+    const canInvite = isAdmin || !!features?.join_requests;
 
     const mappedMembers = Array.isArray(group.members)
         ? group.members.map((member: any) => ({
@@ -209,7 +212,7 @@ export function GroupPageContent(
                 name: member.user.name || '',
                 email: member.user.email || '',
                 image: member.user.image || '',
-                createdAt: new Date().toISOString()
+                createdAt: member.user.createdAt || new Date(0).toISOString()
             }
         }))
         : [];
@@ -243,8 +246,8 @@ export function GroupPageContent(
                 </div>
             </div>
 
-            <Tabs defaultValue="members" value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid grid-cols-4 sm:rounded-md">
+            <Tabs defaultValue="members" value={displayActiveTab} onValueChange={handleTabChange} className="w-full">
+                <TabsList className="w-fit flex justify-start sm:rounded-md">
                     <TabsTrigger value="members" className="flex items-center gap-2">
                         <Users className="h-4 w-4 hidden sm:block" />
                         Members
@@ -259,12 +262,10 @@ export function GroupPageContent(
                         <CheckSquare className="h-4 w-4 hidden sm:block" />
                         Voting
                     </TabsTrigger>
-                    {isAdmin && (
-                        <TabsTrigger value="settings" className="flex items-center gap-2">
-                            <Settings className="h-4 w-4 hidden sm:block" />
-                            Settings
-                        </TabsTrigger>
-                    )}
+                    <TabsTrigger value="settings" className="flex items-center gap-2">
+                        <Settings className="h-4 w-4 hidden sm:block" />
+                        Settings
+                    </TabsTrigger>
                 </TabsList>
 
                 <div className="mt-3">
@@ -278,20 +279,19 @@ export function GroupPageContent(
                             members={mappedMembers}
                             onMemberUpdate={() => refetch()}
                             initialInviteTokens={initialInviteTokens}
+                            canInvite={canInvite}
                         />
                     </TabsContent>
 
-                    {isAdmin && (
-                        <TabsContent value="settings" className="m-0">
-                            <SettingsTab
-                                groupId={groupId}
-                                group={group}
-                                isAdmin={isAdmin}
-                                isCreator={isCreator}
-                                onUpdate={() => refetch()}
-                            />
-                        </TabsContent>
-                    )}
+                    <TabsContent value="settings" className="m-0">
+                        <SettingsTab
+                            groupId={groupId}
+                            group={group}
+                            isAdmin={isAdmin}
+                            isCreator={isCreator}
+                            onUpdate={() => refetch()}
+                        />
+                    </TabsContent>
 
                     {isAdmin && (
                         <TabsContent value="join-requests" className="m-0">
@@ -304,8 +304,8 @@ export function GroupPageContent(
                     )}
 
                     <TabsContent value="voting" className="m-0">
-                        <VotingSystem
-                            activeGroup={group}
+                        <VotingTab
+                            group={group}
                             initialVotes={initialVotes}
                             currentUser={session?.user}
                         />

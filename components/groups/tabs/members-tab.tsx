@@ -53,6 +53,7 @@ interface MembersTabProps {
   members: Member[];
   onMemberUpdate: () => void;
   initialInviteTokens?: any[];
+  canInvite?: boolean;
 }
 
 export function MembersTab({
@@ -64,6 +65,7 @@ export function MembersTab({
   members,
   onMemberUpdate,
   initialInviteTokens = [],
+  canInvite = true,
 }: MembersTabProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -168,6 +170,7 @@ export function MembersTab({
               groupId={groupId}
               group={group}
               initialTokens={initialInviteTokens}
+              canInvite={canInvite}
             />
           </div>
 

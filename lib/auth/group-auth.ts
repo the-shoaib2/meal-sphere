@@ -16,6 +16,7 @@ export interface GroupAuthResult {
   groupId: string;
   userId: string | null;
   permissions?: any; // Custom permissions JSON
+  features?: Record<string, boolean>; // Group features
   error?: string;
 }
 
@@ -125,6 +126,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
       groupId,
       userId,
       permissions: member?.permissions,
+      features: group.features as Record<string, boolean>,
       error: canAccess ? undefined : "Not a member of this group"
     };
 
@@ -242,7 +244,8 @@ export async function validateGroupAccess(groupId: string) {
 
   return {
     success: true,
-    authResult
+    authResult,
+    group: authResult // For convenience, though authResult now has features
   };
 }
 

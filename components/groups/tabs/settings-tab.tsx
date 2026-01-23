@@ -570,158 +570,6 @@ export function SettingsTab({
     );
   }
 
-  type GroupWithExtras = typeof group & {
-    features?: Record<string, boolean>;
-    category?: string;
-    tags?: string[];
-  };
-  const groupWithExtras = group as GroupWithExtras;
-  const category = groupWithExtras.category ?? '';
-  const tags: string[] = groupWithExtras.tags ?? [];
-
-  if (isLoading) {
-    return (
-      <Card >
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold">Group Settings</CardTitle>
-          <CardDescription>Manage your group's settings and preferences</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* General Settings Section Skeleton */}
-          <div className="space-y-4">
-            <div>
-              <Skeleton className="h-6 w-48 mb-2" />
-              <Skeleton className="h-4 w-96" />
-            </div>
-            <div className="grid gap-8 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-4 w-64" />
-                </div>
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-64" />
-                  </div>
-                  <Skeleton className="h-6 w-12" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Group Features Section Skeleton */}
-          <div className="space-y-4">
-            <div>
-              <Skeleton className="h-6 w-48 mb-2" />
-              <Skeleton className="h-4 w-96" />
-            </div>
-            <div className="space-y-4">
-              {/* Membership Features Skeleton */}
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-48" />
-                      </div>
-                      <Skeleton className="h-6 w-12" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Communication Features Skeleton */}
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-48" />
-                      </div>
-                      <Skeleton className="h-6 w-12" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Meal Features Skeleton */}
-              <div>
-                <Skeleton className="h-4 w-32 mb-2" />
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-48" />
-                      </div>
-                      <Skeleton className="h-6 w-12" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Management Features Skeleton */}
-              <div>
-                <Skeleton className="h-4 w-24 mb-2" />
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {[1].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-48" />
-                      </div>
-                      <Skeleton className="h-6 w-12" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Danger Zone Section Skeleton */}
-          <div className="space-y-4 border-t pt-6">
-            <div>
-              <Skeleton className="h-6 w-32 mb-2" />
-              <Skeleton className="h-4 w-96" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-64" />
-                </div>
-                <Skeleton className="h-10 w-32" />
-              </div>
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-64" />
-                </div>
-                <Skeleton className="h-10 w-32" />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
@@ -730,30 +578,32 @@ export function SettingsTab({
           <CardDescription>Manage your group settings and preferences</CardDescription>
         </div>
         <div className="flex items-center gap-2">
-          {!isEditing ? (
-            <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" className='bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500' onClick={handleCancel} disabled={isLoading}>
-                Cancel
+          {isAdmin && (
+            !isEditing ? (
+              <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
               </Button>
-              <Button variant="outline" onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </>
-                )}
-              </Button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className='bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500' onClick={handleCancel} disabled={isLoading}>
+                  Cancel
+                </Button>
+                <Button variant="outline" onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+            )
           )}
         </div>
       </CardHeader>
@@ -770,53 +620,77 @@ export function SettingsTab({
 
             <div className="space-y-2">
               <Label htmlFor="name">Group Name</Label>
-              <Input
-                id="name"
-                {...register('name')}
-                placeholder="Enter group name"
-                disabled={!isEditing}
-              />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
+              {!isAdmin ? (
+                <div className="p-3 bg-muted/30 rounded-md text-sm font-medium">
+                  {group.name}
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="name"
+                    {...register('name')}
+                    placeholder="Enter group name"
+                    disabled={!isEditing}
+                  />
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name.message}</p>
+                  )}
+                </>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                {...register('description')}
-                placeholder="Enter group description"
-                className="max-h-32"
-                disabled={!isEditing}
-              />
-              {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
+              {!isAdmin ? (
+                <div className="p-3 bg-muted/30 rounded-md min-h-[4rem] text-sm whitespace-pre-wrap">
+                  {group.description || "No description provided."}
+                </div>
+              ) : (
+                <>
+                  <Textarea
+                    id="description"
+                    {...register('description')}
+                    placeholder="Enter group description"
+                    className="max-h-32"
+                    disabled={!isEditing}
+                  />
+                  {errors.description && (
+                    <p className="text-sm text-destructive">{errors.description.message}</p>
+                  )}
+                </>
               )}
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="maxMembers">Maximum Members</Label>
-                <Input
-                  id="maxMembers"
-                  type="number"
-                  min="2"
-                  max="100"
-                  placeholder="No limit"
-                  disabled={!isEditing}
-                  {...register('maxMembers', {
-                    setValueAs: (v) => v === '' ? null : Number(v)
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty for unlimited members
-                </p>
-                {errors.maxMembers && (
-                  <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
+                {!isAdmin ? (
+                  <div className="p-3 bg-muted/30 rounded-md text-sm">
+                    {group.maxMembers ? group.maxMembers : "No limit"}
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      id="maxMembers"
+                      type="number"
+                      min="2"
+                      max="100"
+                      placeholder="No limit"
+                      disabled={!isEditing}
+                      {...register('maxMembers', {
+                        setValueAs: (v) => v === '' ? null : Number(v)
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty for unlimited members
+                    </p>
+                    {errors.maxMembers && (
+                      <p className="text-sm text-destructive">{errors.maxMembers.message}</p>
+                    )}
+                  </>
                 )}
               </div>
 
-              {group.isPrivate && (
+              {group.isPrivate && (isAdmin || group.hasPassword) && (
                 <div className="space-y-2">
                   <Label htmlFor="password">
                     Group Password
@@ -826,11 +700,11 @@ export function SettingsTab({
                     <Input
                       id="password"
                       type="password"
-                      placeholder={group.hasPassword ? "Enter new password to change" : "Set a password"}
-                      disabled={!isEditing}
+                      placeholder={isAdmin ? (group.hasPassword ? "Enter new password to change" : "Set a password") : "••••••••"}
+                      disabled={!isEditing || !isAdmin}
                       {...register('password')}
                     />
-                    {isEditing && group.hasPassword && (
+                    {isEditing && isAdmin && group.hasPassword && (
                       <Button
                         type="button"
                         variant="destructive"
@@ -842,30 +716,34 @@ export function SettingsTab({
                       </Button>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {group.hasPassword
-                      ? "Leave blank to keep current password. Click delete to remove."
-                      : "Optional. Set a password to allow immediate joining."}
-                  </p>
+                  {isAdmin && (
+                    <p className="text-xs text-muted-foreground">
+                      {group.hasPassword
+                        ? "Leave blank to keep current password. Click delete to remove."
+                        : "Optional. Set a password to allow immediate joining."}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
               <Label>Tags</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Add a tag"
-                  disabled={!isEditing}
-                />
-                <Button type="button" onClick={handleAddTag} disabled={!isEditing}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {tagError && (
+              {isAdmin && (
+                <div className="flex gap-2">
+                  <Input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Add a tag"
+                    disabled={!isEditing}
+                  />
+                  <Button type="button" onClick={handleAddTag} disabled={!isEditing}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              {tagError && isAdmin && (
                 <p className="text-sm text-destructive">{tagError}</p>
               )}
               <div className="flex flex-wrap gap-2 mt-2">
@@ -875,125 +753,131 @@ export function SettingsTab({
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tag)}
-                      className={`ml-1 hover:text-destructive ${!isEditing ? 'hidden' : ''}`}
+                      className={`ml-1 hover:text-destructive ${!isEditing || !isAdmin ? 'hidden' : ''}`}
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 ))}
+                {!isAdmin && formTags.length === 0 && (
+                  <span className="text-sm text-muted-foreground">No tags specified</span>
+                )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Features</Label>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                  <div className="space-y-1">
-                    <Label htmlFor="isPrivate">Private Group</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Private groups require approval for new members to join
-                    </p>
-                  </div>
-                  <Switch
-                    id="isPrivate"
-                    checked={isPrivateForm}
-                    onCheckedChange={(checked) => {
-                      if (!isEditing) return;
-                      setValue('isPrivate', checked);
-                    }}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                {Object.entries(GROUP_FEATURES).map(([key, feature]) => (
-                  <div key={key} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Features</Label>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                     <div className="space-y-1">
-                      <Label htmlFor={key}>{feature.name}</Label>
+                      <Label htmlFor="isPrivate">Private Group</Label>
                       <p className="text-sm text-muted-foreground">
-                        {feature.description}
+                        Private groups require approval for new members to join
                       </p>
                     </div>
                     <Switch
-                      id={key}
-                      checked={formFeatures[key] ?? feature.defaultValue}
-                      onCheckedChange={(checked) => handleFeatureToggle(key, checked)}
+                      id="isPrivate"
+                      checked={isPrivateForm}
+                      onCheckedChange={(checked) => {
+                        if (!isEditing) return;
+                        setValue('isPrivate', checked);
+                      }}
                       disabled={!isEditing}
                     />
                   </div>
-                ))}
+
+                  {Object.entries(GROUP_FEATURES).map(([key, feature]) => (
+                    <div key={key} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                      <div className="space-y-1">
+                        <Label htmlFor={key}>{feature.name}</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {feature.description}
+                        </p>
+                      </div>
+                      <Switch
+                        id={key}
+                        checked={formFeatures[key] ?? feature.defaultValue}
+                        onCheckedChange={(checked) => handleFeatureToggle(key, checked)}
+                        disabled={!isEditing}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {isAdmin && (
+            <div className="space-y-4 border-t pt-6">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Data Management
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Overview of all group components and data management.
+                </p>
               </div>
 
-            </div>
-          </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="bg-muted/30 border-none shadow-none">
+                  <CardHeader className="p-4 pb-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Settings className="h-3 w-3" />
+                      Meals Recorded
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-2">
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.meals ?? 0}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-none shadow-none">
+                  <CardHeader className="p-4 pb-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Tag className="h-3 w-3" />
+                      Shopping Items
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-2">
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.shopping ?? 0}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-none shadow-none">
+                  <CardHeader className="p-4 pb-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Users className="h-3 w-3" />
+                      Total Members
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-2">
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.members ?? 0}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-none shadow-none">
+                  <CardHeader className="p-4 pb-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <FileSpreadsheet className="h-3 w-3" />
+                      Payments & Fees
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-2">
+                    <div className="text-2xl font-bold">
+                      {isLoadingStats ? <Skeleton className="h-8 w-12" /> : (stats?.payments ?? 0) + (stats?.expenses ?? 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-          <div className="space-y-4 border-t pt-6">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                Data Management
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Overview of all group components and data management.
-              </p>
+              <ExcelImportExport />
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card className="bg-muted/30 border-none shadow-none">
-                <CardHeader className="p-4 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Settings className="h-3 w-3" />
-                    Meals Recorded
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="text-2xl font-bold">
-                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.meals ?? 0}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/30 border-none shadow-none">
-                <CardHeader className="p-4 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Tag className="h-3 w-3" />
-                    Shopping Items
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="text-2xl font-bold">
-                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.shopping ?? 0}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/30 border-none shadow-none">
-                <CardHeader className="p-4 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Users className="h-3 w-3" />
-                    Total Members
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="text-2xl font-bold">
-                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.members ?? 0}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/30 border-none shadow-none">
-                <CardHeader className="p-4 pb-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <FileSpreadsheet className="h-3 w-3" />
-                    Payments & Fees
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="text-2xl font-bold">
-                    {isLoadingStats ? <Skeleton className="h-8 w-12" /> : (stats?.payments ?? 0) + (stats?.expenses ?? 0)}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <ExcelImportExport />
-          </div>
+          )}
 
           <div className="space-y-4 border-t pt-6">
             <div className="space-y-1">

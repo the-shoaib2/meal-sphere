@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth";
 import { prisma } from "@/lib/services/prisma";
-import { validateGroupAccess, canPerformAction, Permission } from "@/lib/auth/group-auth";
+import { validateGroupAccess, canPerformAction } from "@/lib/auth/group-auth";
+import { isFeatureEnabled } from "@/lib/utils/features";
 import { GroupInvitesService } from "@/lib/services/group-invites-service";
 import { z } from "zod";
 
@@ -34,10 +35,18 @@ export async function POST(
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const { authResult } = access;
+    const { authResult, group } = access;
     
+    // Check if Join Requests feature is enabled
+    const isJoinRequestsEnabled = isFeatureEnabled(group?.features, 'join_requests', true);
+
+    // Admins can always generate invites, members only if join requests are enabled
+    if (!authResult.isAdmin && !isJoinRequestsEnabled) {
+        return NextResponse.json({ error: 'Invitations are currently disabled for this group' }, { status: 403 });
+    }
+
     // Permission Logic:
-    // 1. If generating a MEMBER invite, any active member can do it (unless banned, which is checked in validateGroupAccess)
+    // 1. If generating a MEMBER invite, any active member can do it
     // 2. If generating an invite for ADMIN/MODERATOR/etc, user must have MANAGE_MEMBERS permission
 
     if (role !== "MEMBER") {
