@@ -29,30 +29,27 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount })
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid grid-cols-3 gap-2 sm:gap-4">
-          <div className="text-center space-y-1 p-2 sm:p-3 bg-orange-500/30 rounded-lg">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
+          <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-sm sm:text-base">🌅</span>
-              <span className="text-xs font-medium text-orange-500 hidden sm:inline">Breakfast</span>
-              <span className="text-xs font-medium text-orange-500 sm:hidden">B</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-orange-600 uppercase tracking-tighter sm:tracking-normal">Breakfast</span>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-orange-500">{breakfastCount}</div>
+            <div className="text-base sm:text-xl font-bold text-orange-700">{breakfastCount}</div>
           </div>
-          <div className="text-center space-y-1 p-2 sm:p-3 bg-yellow-500/30 rounded-lg border-x border-border">
+          <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-sm sm:text-base">☀️</span>
-              <span className="text-xs font-medium text-yellow-500 hidden sm:inline">Lunch</span>
-              <span className="text-xs font-medium text-yellow-500 sm:hidden">L</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-yellow-600 uppercase tracking-tighter sm:tracking-normal">Lunch</span>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-yellow-500">{lunchCount}</div>
+            <div className="text-base sm:text-xl font-bold text-yellow-700">{lunchCount}</div>
           </div>
-          <div className="text-center space-y-1 p-2 sm:p-3 bg-blue-500/30 rounded-lg">
+          <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-sm sm:text-base">🌙</span>
-              <span className="text-xs font-medium text-blue-500 hidden sm:inline">Dinner</span>
-              <span className="text-xs font-medium text-blue-500 sm:hidden">D</span>
+              <span className="text-[10px] sm:text-xs font-semibold text-blue-600 uppercase tracking-tighter sm:tracking-normal">Dinner</span>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-blue-500">{dinnerCount}</div>
+            <div className="text-base sm:text-xl font-bold text-blue-700">{dinnerCount}</div>
           </div>
         </div>
       </CardContent>

@@ -145,7 +145,8 @@ export async function GET(request: NextRequest) {
             meals,
             guestMeals,
             userStats,
-            period: targetPeriod
+            period: targetPeriod,
+            userRole: (await authPromise).role
         }, {
             headers: {
                 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

@@ -128,7 +128,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     triggerAutoMeals,
     shouldAutoAddMeal,
     isAutoMealTime
-  } = useMeal(roomId, initialData)
+  } = useMeal(roomId, initialData, userRole)
 
   // Memoized and callback hooks (must be before any early return)
   const mealsForDate = useMemo(() => useMealsByDate(selectedDate) as MealWithUser[], [useMealsByDate, selectedDate])
@@ -171,35 +171,37 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     <PageHeader
       heading="Meal Management"
       text={
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground">Manage meals for {groupName || "your group"}</span>
-          {userRole && (
-            <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1">
-              <ShieldCheck className="h-3 w-3" />
-              {userRole}
-            </Badge>
-          )}
-          {currentPeriod && (
-            <Badge
-              variant={isPeriodLocked(currentPeriod) ? "destructive" : "outline"}
-              className={cn(
-                "text-[10px] font-bold px-2 uppercase tracking-wider",
-                !isPeriodLocked(currentPeriod) && "border-green-500/50 text-green-600 bg-green-50"
-              )}
-            >
-              {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
-            </Badge>
-          )}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
+          <span className="text-muted-foreground block sm:inline">Manage meals for {groupName || "your group"}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {userRole && (
+              <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0">
+                <ShieldCheck className="h-3 w-3" />
+                {userRole}
+              </Badge>
+            )}
+            {currentPeriod && (
+              <Badge
+                variant={isPeriodLocked(currentPeriod) ? "destructive" : "outline"}
+                className={cn(
+                  "text-[10px] font-bold px-2 uppercase tracking-wider shrink-0",
+                  !isPeriodLocked(currentPeriod) && "border-green-500/50 text-green-600 bg-green-50"
+                )}
+              >
+                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
+              </Badge>
+            )}
+          </div>
         </div>
       }
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
         <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
         {canManageMealSettings && (
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
+            className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
             onClick={() => setSettingsOpen(true)}
             title="Meal Settings"
           >
@@ -209,7 +211,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         <Button
           variant="outline"
           size="icon"
-          className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
+          className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
           onClick={() => setAutoSettingsOpen(true)}
           title="Auto Meal Settings"
         >
@@ -247,47 +249,38 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   const canEditMeal = (type: MealType) => {
     if (!session?.user?.id) return false
 
-    // Check if period is locked
-    if (isPeriodLocked(currentPeriod)) {
-      return false
+    const now = new Date()
+    const targetDate = new Date(selectedDate)
+    const isToday = isSameDay(targetDate, now)
+
+    // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
+    if (isToday) {
+      if (!mealSettings) return true
+
+      // Get meal time for the specific type
+      let mealTimeStr = ''
+      if (type === 'BREAKFAST') mealTimeStr = mealSettings.breakfastTime || '08:00'
+      if (type === 'LUNCH') mealTimeStr = mealSettings.lunchTime || '13:00'
+      if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00'
+
+      // Parse meal time
+      const [hours, minutes] = mealTimeStr.split(':').map(Number)
+      const mealTime = new Date(targetDate)
+      mealTime.setHours(hours, minutes, 0, 0)
+
+      // If time passed, no one can add/toggle today
+      if (now >= mealTime) {
+        return false
+      }
     }
 
-    // Check if date is within current period
-    if (!canEditMealsForDate(selectedDate, currentPeriod)) {
-      return false
-    }
-
-    // Admin/Manager/Meal Manager can always edit
+    // Admin/Manager/Meal Manager can skip other restrictions (period lock, historical dates)
     const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
     if (privileged) return true
 
-    // For regular users, check if meal time has passed
-    const now = new Date()
-    const targetDate = new Date(selectedDate)
-
-    // Get meal time for the specific type
-    let mealTimeStr = ''
-    if (type === 'BREAKFAST') mealTimeStr = mealSettings?.breakfastTime || '08:00'
-    if (type === 'LUNCH') mealTimeStr = mealSettings?.lunchTime || '13:00'
-    if (type === 'DINNER') mealTimeStr = mealSettings?.dinnerTime || '20:00'
-
-    // Parse meal time
-    const [hours, minutes] = mealTimeStr.split(':').map(Number)
-    const mealTime = new Date(targetDate)
-    mealTime.setHours(hours, minutes, 0, 0)
-
-    // If the target date is today, check if meal time has passed
-    if (isSameDay(targetDate, now)) {
-      return now < mealTime
-    }
-
-    // For future dates, always allow
-    if (targetDate > now) {
-      return true
-    }
-
-    // For past dates, don't allow
-    return false
+    // For all other cases (past or future dates), allow editing
+    // This allows regular users to fix history/future logs.
+    return true
   }
 
 
@@ -461,9 +454,14 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               date={selectedDate}
               initialData={initialData}
               onUpdate={() => {
+                const userId = session?.user?.id;
+                queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
                 queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
                 queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-                queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session?.user?.id] });
+                queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
+                queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+                queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
+                queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
               }}
             />
           </div>

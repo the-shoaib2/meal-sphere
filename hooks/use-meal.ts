@@ -177,7 +177,7 @@ interface UseMealReturn {
   getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
 }
 
-export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealReturn {
+export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFromProps?: string | null): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const { data: currentPeriodFromHook } = useCurrentPeriod();
@@ -198,7 +198,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       return response.json();
     },
     // DISABLE client-side fetch if we have matching initialData
-    enabled: !!roomId && !!session?.user?.id && !effectiveInitialData,
+    enabled: !!roomId && !!session?.user?.id,
     initialData: effectiveInitialData,
     staleTime: Infinity, // Rely on server/mutations
     gcTime: 5 * 60 * 1000,
@@ -212,6 +212,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
   const autoMealSettings: AutoMealSettings | null = data?.autoSettings || data?.autoMealSettings || null;
   const userMealStats: UserMealStats | null = data?.userStats || null;
   const currentPeriod = data?.currentPeriod || currentPeriodFromHook;
+  const userRole = userRoleFromProps || data?.userRole || initialData?.userRole || null;
 
   // Loading states are now consolidated
   const isLoading = isLoadingUnified;
@@ -235,10 +236,15 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
         roomId
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      const { userId } = variables;
       queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meals', roomId] }); // Keep legacy for safety if used elsewhere
+      queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
     },
     onError: (error: any) => {
       console.error('Error toggling meal:', error);
@@ -258,9 +264,14 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       });
     },
     onSuccess: (_, variables) => {
+      const userId = session?.user?.id;
       queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] }); // Keep legacy
+      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
     },
     onError: (error: any) => {
@@ -275,9 +286,14 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       await axios.patch(`/api/meals/guest/${guestMealId}`, { count });
     },
     onSuccess: () => {
+      const userId = session?.user?.id;
       queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success('Guest meal updated successfully');
     },
     onError: (error: any) => {
@@ -292,9 +308,14 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       await axios.delete(`/api/meals/guest/${guestMealId}`);
     },
     onSuccess: () => {
+      const userId = session?.user?.id;
       queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
       queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
       queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success('Guest meal deleted successfully');
     },
     onError: (error: any) => {
@@ -435,6 +456,36 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
   }, [meals, session?.user?.id]);
 
   const canAddMeal = useCallback((date: Date, type: MealType): boolean => {
+    const isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
+    const now = new Date();
+    const targetDate = new Date(date);
+    const isToday = isSameDay(targetDate, now);
+
+    // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
+    // This satisfies "disable for current date Time Passed ... but individually those 3 meals"
+    if (isToday) {
+      if (!mealSettings) return true;
+
+      // Get meal time for the specific type
+      let mealTimeStr = '';
+      if (type === 'BREAKFAST') mealTimeStr = mealSettings.breakfastTime || '08:00';
+      if (type === 'LUNCH') mealTimeStr = mealSettings.lunchTime || '13:00';
+      if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00';
+
+      // Parse meal time
+      const [hours, minutes] = mealTimeStr.split(':').map(Number);
+      const mealTime = new Date(targetDate);
+      mealTime.setHours(hours, minutes, 0, 0);
+
+      // If time passed, no one can add/toggle today
+      if (now >= mealTime) {
+        return false;
+      }
+    }
+
+    // BYPASS: Admins, Managers, and Meal Managers can skip other checks (limits, past/future dates)
+    if (isPrivileged) return true;
+
     if (!mealSettings) return true;
 
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -448,34 +499,10 @@ export function useMeal(roomId?: string, initialData?: MealsPageData): UseMealRe
       return false;
     }
 
-    // Check if meal time has passed for the specific date
-    const now = new Date();
-    const targetDate = new Date(date);
-
-    // Get meal time for the specific type
-    let mealTimeStr = '';
-    if (type === 'BREAKFAST') mealTimeStr = mealSettings.breakfastTime || '08:00';
-    if (type === 'LUNCH') mealTimeStr = mealSettings.lunchTime || '13:00';
-    if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00';
-
-    // Parse meal time
-    const [hours, minutes] = mealTimeStr.split(':').map(Number);
-    const mealTime = new Date(targetDate);
-    mealTime.setHours(hours, minutes, 0, 0);
-
-    // If the target date is today, check if meal time has passed
-    if (isSameDay(targetDate, now)) {
-      return now < mealTime;
-    }
-
-    // For future dates, always allow
-    if (targetDate > now) {
-      return true;
-    }
-
-    // For past dates, don't allow
-    return false;
-  }, [mealSettings, meals, session?.user?.id]);
+    // For all other cases (past or future dates), allow adding meals
+    // This supports "always meal add button enable" for history and future.
+    return true;
+  }, [mealSettings, meals, session?.user?.id, userRole]);
 
   const isAutoMealTime = useCallback((date: Date, type: MealType): boolean => {
     // Check if auto meal system is enabled by admin

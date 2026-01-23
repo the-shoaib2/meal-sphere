@@ -2,7 +2,7 @@ import { prisma } from '@/lib/services/prisma';
 import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
-import { getCurrentPeriod, getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod } from '@/lib/utils/period-utils';
+import { getCurrentPeriod, getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getPeriodForDate } from '@/lib/utils/period-utils';
 import { createNotification } from "@/lib/utils/notification-utils";
 import { NotificationType, MealType } from "@prisma/client";
 import { invalidateMealCache } from "@/lib/cache/cache-invalidation";
@@ -295,10 +295,14 @@ export async function fetchMealStats(
 
 export async function fetchUnifiedMealSystem(userId: string, groupId: string) {
     // 1. Fetch Basic Data (Settings, Period)
-    const [settings, autoSettings, currentPeriod] = await Promise.all([
+    const [settings, autoSettings, currentPeriod, membership] = await Promise.all([
         prisma.mealSettings.findUnique({ where: { roomId: groupId } }),
         prisma.autoMealSettings.findUnique({ where: { userId_roomId: { userId, roomId: groupId } } }),
-        getCurrentPeriod(groupId)
+        getCurrentPeriod(groupId),
+        prisma.roomMember.findUnique({
+            where: { userId_roomId: { userId, roomId: groupId } },
+            select: { role: true }
+        })
     ]);
 
     let targetPeriod = currentPeriod;
@@ -417,7 +421,8 @@ export async function fetchUnifiedMealSystem(userId: string, groupId: string) {
         meals,
         guestMeals,
         userStats,
-        period: targetPeriod
+        period: targetPeriod,
+        userRole: membership?.role || null
     };
 }
 
@@ -425,8 +430,9 @@ export async function fetchUnifiedMealSystem(userId: string, groupId: string) {
 // --- Mutation Actions ---
 
 export async function toggleMeal(roomId: string, userId: string, date: Date, type: MealType) {
-    const currentPeriod = await getCurrentPeriod(roomId);
-    if (!currentPeriod) throw new Error("No active period found");
+    const targetPeriod = await getPeriodForDate(roomId, date);
+    if (!targetPeriod) throw new Error("No period found for this date");
+    if (targetPeriod.isLocked) throw new Error("This period is locked");
     
     // Check if meal exists
     const existingMeal = await prisma.meal.findFirst({
@@ -435,7 +441,7 @@ export async function toggleMeal(roomId: string, userId: string, date: Date, typ
             roomId,
             date,
             type,
-            periodId: currentPeriod.id
+            periodId: targetPeriod.id
         }
     });
 
@@ -448,7 +454,7 @@ export async function toggleMeal(roomId: string, userId: string, date: Date, typ
                 userId,
                 date,
                 type,
-                periodId: currentPeriod.id
+                periodId: targetPeriod.id
             }
         });
     }
@@ -471,7 +477,8 @@ export async function createGuestMeal(data: { roomId: string; userId: string; da
 
     if (totalToday + count > limit) throw new Error(`Limit exceeded. Remaining: ${limit - totalToday}`);
 
-    const currentPeriod = await getCurrentPeriod(roomId);
+    const targetPeriod = await getPeriodForDate(roomId, date);
+    if (targetPeriod?.isLocked) throw new Error("This period is locked");
 
     const guestMeal = await prisma.guestMeal.create({
         data: {
@@ -480,7 +487,7 @@ export async function createGuestMeal(data: { roomId: string; userId: string; da
             date,
             type,
             count,
-            periodId: currentPeriod?.id
+            periodId: targetPeriod?.id
         },
         include: { user: { select: { name: true } } }
     });

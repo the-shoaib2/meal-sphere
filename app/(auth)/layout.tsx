@@ -70,7 +70,7 @@ export default async function AuthLayout({
             <div className="flex flex-1 w-full">
               <AppSidebar />
               <main className="flex-1 bg-background overflow-auto">
-                <div className="w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 min-w-0">
+                <div className="w-full mx-auto px-4 sm:px-6 py-0 sm:py-2 min-w-0">
                   {children}
                 </div>
               </main>

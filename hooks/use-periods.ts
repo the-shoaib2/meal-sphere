@@ -132,7 +132,7 @@ export function usePeriod(periodId: string) {
       }
     },
     // DISABLE client-side fetch if we have initial data or we are during transition
-    enabled: Boolean(activeGroup?.id && periodId && isCorrectGroup && !initialData),
+    enabled: Boolean(activeGroup?.id && periodId),
     initialData,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
@@ -169,7 +169,7 @@ export function usePeriodSummary(periodId: string, initialData?: any, groupId?: 
       return (data.summary as PeriodSummary) || null;
     },
     // Strictly disable fetching if we have initial data (Dashboard pattern)
-    enabled: Boolean(targetGroupId && periodId && isCorrectGroup && !hasValidInitialData),
+    enabled: Boolean(targetGroupId && periodId),
     initialData: effectiveInitialData,
     staleTime: Infinity,
     refetchOnWindowFocus: false,

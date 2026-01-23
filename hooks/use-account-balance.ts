@@ -107,7 +107,7 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
       if (!res.ok) throw new Error('Failed to fetch group balances');
       return res.json();
     },
-    enabled: !!roomId && enabled && !effectiveInitialData,
+    enabled: !!roomId && enabled,
     initialData: effectiveInitialData,
     retry: (failureCount, error) => {
       // Don't retry on 403 errors (insufficient permissions)
@@ -132,7 +132,7 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
       if (!res.ok) throw new Error('Failed to fetch user balance');
       return res.json();
     },
-    enabled: !!roomId && !!userId && !effectiveInitialData,
+    enabled: !!roomId && !!userId,
     initialData: effectiveInitialData as UserBalance,
     staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
@@ -179,7 +179,7 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
     },
     initialPageParam: undefined,
     getNextPageParam: (lastPage: { nextCursor?: string }) => lastPage.nextCursor,
-    enabled: !!roomId && !!userId && !effectiveInitialData,
+    enabled: !!roomId && !!userId,
     initialData: effectiveInitialData,
     staleTime: Infinity,
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
@@ -217,7 +217,7 @@ export function useGetAccountHistory(roomId: string, userId: string, periodId?: 
     },
     initialPageParam: undefined,
     getNextPageParam: (lastPage: { nextCursor?: string }) => lastPage.nextCursor,
-    enabled: !!roomId && !!userId && !effectiveInitialData,
+    enabled: !!roomId && !!userId,
     initialData: effectiveInitialData as any,
     staleTime: Infinity,
     gcTime: 15 * 60 * 1000,

@@ -107,7 +107,7 @@ export function useGroupAccess({
         groupData,
       };
     },
-    enabled: !!groupId && status !== 'loading' && !initialData,
+    enabled: !!groupId && status !== 'loading',
     initialData: initialData && initialData.groupId === groupId ? initialData : undefined,
     staleTime: 10 * 60 * 1000, // 10 minutes - access permissions don't change frequently
     refetchOnWindowFocus: false,

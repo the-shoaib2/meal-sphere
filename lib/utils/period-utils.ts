@@ -26,6 +26,23 @@ export async function getCurrentPeriod(roomId: string) {
 }
 
 /**
+ * Get period for a specific date
+ */
+export async function getPeriodForDate(roomId: string, date: Date) {
+  return await prisma.mealPeriod.findFirst({
+    where: {
+      roomId,
+      startDate: { lte: date },
+      OR: [
+        { endDate: { gte: date } },
+        { endDate: null }
+      ]
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
+/**
  * Check if a room has an active period
  */
 export async function hasActivePeriod(roomId: string): Promise<boolean> {

@@ -55,10 +55,10 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
         <PageHeader
           heading="Meal Management"
           text={
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground">Track and manage your meals for {activeGroup.name}</span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
+              <span className="text-muted-foreground block sm:inline">Track and manage your meals for {activeGroup.name}</span>
               {accessData.userRole && (
-                <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1">
+                <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0">
                   <ShieldCheck className="h-3 w-3" />
                   {accessData.userRole}
                 </Badge>

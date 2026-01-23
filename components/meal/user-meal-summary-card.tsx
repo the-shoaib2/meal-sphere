@@ -51,55 +51,51 @@ const UserMealSummaryCard: React.FC<UserMealSummaryCardProps> = ({ userMealStats
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {/* Total Meals */}
-          <div className="text-center space-y-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+          <div className="text-center space-y-0.5 p-2 bg-blue-50/50 border border-blue-100 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-xs">📊</span>
-              <span className="text-xs font-medium text-blue-700 hidden sm:inline">Total</span>
-              <span className="text-xs font-medium text-blue-700 sm:hidden">T</span>
+              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-tight">Total</span>
             </div>
             <div className="text-lg font-bold text-blue-800">{totals.total}</div>
-            <div className="text-xs text-blue-600 hidden sm:block">
-              {totals.regularMeals} + {totals.guestMeals}
+            <div className="text-[10px] text-blue-600/70 font-medium">
+              {totals.regularMeals} Reg + {totals.guestMeals} Gst
             </div>
           </div>
 
           {/* Breakfast */}
-          <div className="text-center space-y-1 p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+          <div className="text-center space-y-0.5 p-2 bg-orange-50/50 border border-orange-100 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-xs">🌅</span>
-              <span className="text-xs font-medium text-orange-700 hidden sm:inline">Breakfast</span>
-              <span className="text-xs font-medium text-orange-700 sm:hidden">B</span>
+              <span className="text-[10px] font-bold text-orange-700 uppercase tracking-tight">Breakfast</span>
             </div>
             <div className="text-lg font-bold text-orange-800">{byType.breakfast.total}</div>
-            <div className="text-xs text-orange-600 hidden sm:block">
+            <div className="text-[10px] text-orange-600/70 font-medium">
               {byType.breakfast.regular} + {byType.breakfast.guest}
             </div>
           </div>
 
           {/* Lunch */}
-          <div className="text-center space-y-1 p-2 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg">
+          <div className="text-center space-y-0.5 p-2 bg-yellow-50/50 border border-yellow-100 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-xs">☀️</span>
-              <span className="text-xs font-medium text-yellow-700 hidden sm:inline">Lunch</span>
-              <span className="text-xs font-medium text-yellow-700 sm:hidden">L</span>
+              <span className="text-[10px] font-bold text-yellow-700 uppercase tracking-tight">Lunch</span>
             </div>
             <div className="text-lg font-bold text-yellow-800">{byType.lunch.total}</div>
-            <div className="text-xs text-yellow-600 hidden sm:block">
+            <div className="text-[10px] text-yellow-600/70 font-medium">
               {byType.lunch.regular} + {byType.lunch.guest}
             </div>
           </div>
 
           {/* Dinner */}
-          <div className="text-center space-y-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+          <div className="text-center space-y-0.5 p-2 bg-blue-50/50 border border-blue-100 rounded-lg">
             <div className="flex items-center justify-center gap-1">
               <span className="text-xs">🌙</span>
-              <span className="text-xs font-medium text-blue-700 hidden sm:inline">Dinner</span>
-              <span className="text-xs font-medium text-blue-700 sm:hidden">D</span>
+              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-tight">Dinner</span>
             </div>
             <div className="text-lg font-bold text-blue-800">{byType.dinner.total}</div>
-            <div className="text-xs text-blue-600 hidden sm:block">
+            <div className="text-[10px] text-blue-600/70 font-medium">
               {byType.dinner.regular} + {byType.dinner.guest}
             </div>
           </div>
