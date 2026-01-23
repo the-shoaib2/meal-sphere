@@ -19,6 +19,11 @@ export function Header() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (screenfull.isEnabled) {
@@ -64,13 +69,13 @@ export function Header() {
           </Sheet>
         </div>
 
-        {/* Title - Hidden instantly when search opens, smooth fade-in when search closes */}
+        {/* Title - Hidden when search is expanded on mobile */}
         <Link
           href="/"
-          className={`items-center gap-2 font-semibold ${isMobile && isSearchExpanded
-              ? 'hidden'
-              : 'flex animate-in fade-in-0 slide-in-from-left-4 duration-300'
-            } md:flex md:animate-none flex-shrink-0`}
+          className={`items-center gap-2 font-semibold ${isMounted && isMobile && isSearchExpanded
+            ? 'hidden'
+            : 'flex'
+            } md:flex flex-shrink-0`}
         >
           <Utensils className="h-6 w-6 hidden md:block" />
           <span className="text-xl">MealSphere</span>
@@ -86,14 +91,14 @@ export function Header() {
         </div>
 
         {/* Spacer for mobile when search is not expanded */}
-        {isMobile && !isSearchExpanded && <div className="flex-1" />}
+        {isMounted && isMobile && !isSearchExpanded && <div className="flex-1" />}
 
         {/* Search expanded on mobile - takes full width with animation */}
-        <div className={`transition-all duration-300 ease-out ${isMobile && isSearchExpanded
-          ? 'flex-1 opacity-100 translate-x-0'
-          : 'w-0 opacity-0 translate-x-4 overflow-hidden md:hidden'
+        <div className={`${isMounted ? 'transition-all duration-300 ease-out' : ''} ${isMounted && isMobile && isSearchExpanded
+          ? `flex-1 ${isMounted ? 'opacity-100 translate-x-0' : ''}`
+          : `w-0 ${isMounted ? 'opacity-0 translate-x-4' : ''} overflow-hidden md:hidden`
           } md:hidden`}>
-          {isMobile && isSearchExpanded && (
+          {isMounted && isMobile && isSearchExpanded && (
             <HeaderSearch
               isMobile={true}
               isExpanded={isSearchExpanded}
@@ -102,7 +107,10 @@ export function Header() {
           )}
         </div>
         {/* Right side actions - Always visible */}
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        <div
+          className="flex items-center gap-2 md:gap-4 flex-shrink-0"
+          style={{ visibility: isMounted ? 'visible' : 'hidden' }}
+        >
           {/* Fullscreen toggle - Desktop only */}
           <Button
             variant="ghost"
@@ -119,27 +127,17 @@ export function Header() {
             <span className="sr-only">{isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}</span>
           </Button>
 
-          {/* Search button - Mobile only, shown when not expanded with animation */}
-          <div className={`transition-all duration-300 ease-out ${isMobile && !isSearchExpanded
-            ? 'opacity-100 translate-x-0'
-            : 'opacity-0 translate-x-4 w-0 overflow-hidden pointer-events-none'
-            } md:hidden`}>
-            {isMobile && !isSearchExpanded && (
-              <HeaderSearch
-                isMobile={true}
-                isExpanded={false}
-                onToggleExpand={setIsSearchExpanded}
-              />
-            )}
-          </div>
+          {/* Search button - Mobile only, shown when not expanded */}
+          {isMounted && isMobile && !isSearchExpanded && (
+            <HeaderSearch
+              isMobile={true}
+              isExpanded={false}
+              onToggleExpand={setIsSearchExpanded}
+            />
+          )}
 
-          {/* Notification - Hidden on mobile when search is expanded with animation */}
-          <div className={`transition-all duration-300 ease-out ${isMobile && isSearchExpanded
-            ? 'opacity-0 translate-x-4 w-0 overflow-hidden pointer-events-none'
-            : 'opacity-100 translate-x-0'
-            }`}>
-            <NotificationBell />
-          </div>
+          {/* Notification - Always visible on desktop, hidden on mobile when search is expanded */}
+          {(!isMounted || !isMobile || !isSearchExpanded) && <NotificationBell />}
 
           {/* User Avatar - Always visible */}
           <UserAvatar user={session?.user} />

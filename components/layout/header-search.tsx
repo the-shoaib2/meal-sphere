@@ -107,7 +107,7 @@ export function HeaderSearch({ isMobile, isExpanded, onToggleExpand }: HeaderSea
     }
 
     return (
-        <div className={`relative w-full ${isMobile ? 'flex-1 animate-in fade-in-0 slide-in-from-right-4 duration-300' : 'max-w-[450px] md:w-[300px] lg:w-[450px]'}`} ref={inputRef as any}>
+        <div className={`relative w-full ${isMobile ? 'flex-1' : 'max-w-[450px] md:w-[300px] lg:w-[450px]'}`} ref={inputRef as any}>
             <form onSubmit={handleSubmit} className="relative w-full">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
