@@ -73,6 +73,7 @@ export default async function DashboardPage() {
     return (
         <Dashboard
             heading="Dashboard"
+            text="Overview of your group's meal activity and analytics."
             activities={data.activities}
             chartData={data.chartData}
         >
