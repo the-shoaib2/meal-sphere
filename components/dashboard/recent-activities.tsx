@@ -18,6 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { DashboardActivity } from '@/types/dashboard';
+import { SafeDate } from '@/components/shared/safe-date';
 
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -70,8 +71,7 @@ const getActivityBadge = (type: string) => {
   }
 };
 
-const formatTimestamp = (timestamp: string) => {
-  const date = new Date(timestamp);
+const formatActivityTimestamp = (date: Date) => {
   const now = new Date();
   const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
@@ -83,7 +83,6 @@ const formatTimestamp = (timestamp: string) => {
   } else if (diffInHours < 48) {
     return 'Yesterday';
   } else {
-    // Explicit locale and options to prevent hydration mismatch
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: '2-digit',
@@ -171,7 +170,10 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
                     </p>
                     <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground mt-1">
                       <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
-                      <span>{formatTimestamp(activity.timestamp)}</span>
+                      <SafeDate
+                        date={activity.timestamp}
+                        format={formatActivityTimestamp}
+                      />
                     </div>
                   </div>
                 </div>

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Edit, Trash2, MoreHorizontal, InfoIcon, Eye, X } from 'lucide-react';
 import { type AccountTransaction } from '@/hooks/use-account-balance';
+import { SafeDate } from '@/components/shared/safe-date';
 
 import { useInView } from 'react-intersection-observer';
 import { useEffect } from 'react';
@@ -132,12 +133,16 @@ export function TransactionList({
                                                         <TooltipProvider>
                                                             <Tooltip>
                                                                 <TooltipTrigger>
-                                                                    <span className="block sm:hidden">{new Date(t.createdAt).toLocaleDateString('en-US')}</span>
-                                                                    <span className="hidden sm:block">{new Date(t.createdAt).toLocaleString('en-US')}</span>
+                                                                    <span className="block sm:hidden">
+                                                                        <SafeDate date={t.createdAt} format={(d) => d.toLocaleDateString('en-US')} />
+                                                                    </span>
+                                                                    <span className="hidden sm:block">
+                                                                        <SafeDate date={t.createdAt} />
+                                                                    </span>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p>Created: {new Date(t.createdAt).toLocaleString('en-US')}</p>
-                                                                    {isEdited && <p>Updated: {new Date(t.updatedAt).toLocaleString('en-US')}</p>}
+                                                                    <p>Created: <SafeDate date={t.createdAt} /></p>
+                                                                    {isEdited && <p>Updated: <SafeDate date={t.updatedAt} /></p>}
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         </TooltipProvider>

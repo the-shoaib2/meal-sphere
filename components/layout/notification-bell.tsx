@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNotifications, type Notification } from "@/contexts/notification-context"
 import { formatDistanceToNow } from "date-fns"
+import { SafeDate } from "@/components/shared/safe-date"
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
@@ -106,7 +107,10 @@ export function NotificationBell() {
                       <div className="space-y-1 flex-1">
                         <p className="text-sm font-medium leading-none">{notification.message}</p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                          <SafeDate
+                            date={notification.createdAt}
+                            format={(date) => formatDistanceToNow(date, { addSuffix: true })}
+                          />
                         </p>
                       </div>
                       <Button
