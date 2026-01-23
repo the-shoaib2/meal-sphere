@@ -183,7 +183,7 @@ model Room {
   bannerUrl                 String?
   category                  String?
   tags                      String[]
-  features                  Json? 
+  features                  Json?
   periodMode                String                      @default("MONTHLY") // "MONTHLY" or "CUSTOM"
   createdByUser             User                        @relation("RoomCreator", fields: [createdBy], references: [id])
   members                   RoomMember[]
@@ -314,6 +314,7 @@ model Meal {
   @@index([roomId, date])
   @@index([roomId, periodId, date])
   @@index([userId, date])
+  @@index([userId, roomId, date, type, periodId])
 }
 
 /// GUEST MEAL MODEL
