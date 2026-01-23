@@ -15,7 +15,7 @@ import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { DashboardOverview } from '@/components/dashboard/dashboard-overview';
 import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 import { DashboardQuickActions } from '@/components/dashboard/dashboard-quick-actions';
-import { Dashboard } from '@/components/dashboard/dashboard';
+import { Dashboard } from '@/components/dashboard/dashboard-management';
 import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
