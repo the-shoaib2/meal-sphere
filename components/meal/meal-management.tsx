@@ -358,14 +358,14 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                         const mealTimePassed = isTodaySelected && now >= mealTime
 
                         return (
-                          <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
+                          <div key={mealType} className="flex items-center justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors gap-3 sm:gap-4">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}>
                                 <span className="text-base sm:text-lg">{mealTypeIcon}</span>
                               </div>
                               <div className="flex-1 min-w-0">
                                 <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
-                                <div className="flex items-center gap-1 mt-1">
+                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                   <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">{mealCount} total</Badge>
                                   {hasMealSelected && (
                                     <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0.5 h-5">
@@ -393,11 +393,11 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-end sm:justify-start">
+                            <div className="flex-shrink-0">
                               <Button
                                 variant={hasMealSelected ? 'destructive' : 'default'}
                                 size="sm"
-                                className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto"
+                                className="rounded-full px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-9"
                                 onClick={() => handleToggleMeal(mealType)}
                                 disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
                               >
