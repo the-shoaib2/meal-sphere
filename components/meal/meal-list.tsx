@@ -78,27 +78,27 @@ export default function MealList({ mealsForDate, guestMealsForDate, session, isL
 
             <div className="space-y-2">
               {typeMeals.map((meal: any) => (
-                <div key={meal.id} className="group flex items-center justify-between p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-8 h-8">
+                <div key={meal.id} className="group flex items-center justify-between p-2.5 sm:p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
                       <AvatarImage src={meal.user.image} alt={meal.user.name || undefined} />
-                      <AvatarFallback className="text-xs">
+                      <AvatarFallback className="text-[10px] sm:text-xs">
                         {meal.user.name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium text-sm">{meal.user.name}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{meal.user.name}</p>
                       {meal.count && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {meal.count} guest meal{meal.count > 1 ? 's' : ''}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     {meal.count && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5">
                         ×{meal.count}
                       </Badge>
                     )}
@@ -106,7 +106,7 @@ export default function MealList({ mealsForDate, guestMealsForDate, session, isL
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6 sm:h-7 sm:w-7 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleToggleMeal(type as MealType)}
                         disabled={isLoading}
                       >

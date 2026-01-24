@@ -71,13 +71,32 @@ export async function GET(request: Request) {
             continue
           }
 
+          // Normalize date to start of day for consistency
+          const todayDate = new Date()
+          todayDate.setHours(0, 0, 0, 0)
+
+          // Fetch period for this date to ensure record consistency
+          const targetPeriod = await prisma.mealPeriod.findFirst({
+            where: {
+              roomId: roomSettings.roomId,
+              startDate: { lte: todayDate },
+              OR: [
+                { endDate: { gte: todayDate } },
+                { endDate: null }
+              ]
+            },
+            orderBy: { createdAt: 'desc' }
+          })
+
+          if (!targetPeriod) continue // Skip if no period found
+
           // Check if meal already exists
           const existingMeal = await prisma.meal.findUnique({
             where: {
               userId_roomId_date_type: {
                 userId: autoSetting.userId,
                 roomId: roomSettings.roomId,
-                date: now,
+                date: todayDate,
                 type: mealType.type,
               },
             },
@@ -89,8 +108,9 @@ export async function GET(request: Request) {
               data: {
                 userId: autoSetting.userId,
                 roomId: roomSettings.roomId,
-                date: now,
+                date: todayDate,
                 type: mealType.type,
+                periodId: targetPeriod.id,
               },
             })
 

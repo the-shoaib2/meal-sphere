@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/services/prisma"
-import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod } from "@/lib/utils/period-utils"
+import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod, getPeriodForDate } from "@/lib/utils/period-utils"
 import { cacheGetOrSet } from "@/lib/cache/cache-service"
 import { getMealsCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys"
 import { invalidateMealCache } from "@/lib/cache/cache-invalidation"
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
   try {
     // Parallel auth checks for faster response
-    const [session, currentPeriod] = await Promise.all([
+    const [session, currentPeriodData] = await Promise.all([
       getServerSession(authOptions),
       getCurrentPeriod(roomId)
     ])
@@ -47,13 +47,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
-    // If no active period, return empty array immediately
-    if (!currentPeriod) {
+    // Resolve target period (override if date or periodId provided)
+    const queryPeriodId = searchParams.get('periodId')
+    const queryDate = searchParams.get('date')
+    
+    let targetPeriod = currentPeriodData
+    if (queryPeriodId) {
+      targetPeriod = await prisma.mealPeriod.findUnique({ where: { id: queryPeriodId } })
+    } else if (queryDate) {
+      targetPeriod = await getPeriodForDate(roomId, new Date(queryDate))
+    }
+
+    // If no period found, return empty array immediately
+    if (!targetPeriod) {
       return NextResponse.json([])
     }
 
     // Generate cache key
-    const periodId = currentPeriod.id
+    const periodId = targetPeriod.id
     const cacheKey = getMealsCacheKey(roomId, periodId, startDate || undefined, endDate || undefined)
 
     // Try to get from cache or fetch fresh data
@@ -100,8 +111,11 @@ export async function GET(request: Request) {
       { ttl: CACHE_TTL.MEALS_LIST }
     )
 
-    // Return with proper caching (remove conflicting headers)
-    return NextResponse.json(meals)
+    // Return with proper caching
+    return NextResponse.json({
+      meals,
+      period: targetPeriod
+    })
   } catch (error) {
     console.error("Error fetching meals:", error)
     return NextResponse.json({ error: "Failed to fetch meals" }, { status: 500 })
@@ -124,8 +138,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const [currentPeriod, roomMember] = await Promise.all([
-      getCurrentPeriod(roomId),
+    const [targetPeriod, roomMember] = await Promise.all([
+      getPeriodForDate(roomId, new Date(date)),
       prisma.roomMember.findUnique({
         where: {
           userId_roomId: {
@@ -141,26 +155,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
-    if (!currentPeriod) {
-      return NextResponse.json({ error: "No active period found" }, { status: 400 })
+    if (!targetPeriod) {
+      return NextResponse.json({ error: "No period found for this date. Please ensure a period covers this date." }, { status: 400 })
     }
 
-    if (currentPeriod.isLocked) {
+    if (targetPeriod.isLocked) {
       return NextResponse.json({ error: "This period is locked" }, { status: 400 })
     }
 
     // Use deleteMany + create pattern for faster toggle (single round trip)
+    // CRITICAL: Normalize date to start/end of day to be robust against legacy timestamps
     const dateObj = new Date(date)
+    const startOfDay = new Date(dateObj)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(dateObj)
+    endOfDay.setHours(23, 59, 59, 999)
+
     const deleted = await prisma.meal.deleteMany({
       where: {
         userId: session.user.id,
         roomId: roomId,
-        date: dateObj,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
         type: type,
-        periodId: currentPeriod.id,
+        // We don't filter by periodId here to ensure we clean up any legacy records 
+        // that might be associated with the wrong period but same date
       },
     })
-
+    
     let result
     if (deleted.count === 0) {
       // Meal didn't exist, create it
@@ -168,9 +192,9 @@ export async function POST(request: Request) {
         data: {
           userId: session.user.id,
           roomId: roomId,
-          date: dateObj,
+          date: startOfDay,
           type: type,
-          periodId: currentPeriod.id,
+          periodId: targetPeriod.id,
         },
         select: {
           id: true,
@@ -183,7 +207,7 @@ export async function POST(request: Request) {
     }
 
     // Invalidate cache (async, don't wait)
-    invalidateMealCache(roomId, currentPeriod.id).catch(console.error)
+    invalidateMealCache(roomId, targetPeriod.id).catch(console.error)
 
     return NextResponse.json(
       deleted.count > 0 

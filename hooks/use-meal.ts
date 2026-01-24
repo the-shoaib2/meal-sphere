@@ -179,9 +179,10 @@ interface UseMealReturn {
   getUserGuestMeals: (date: Date, userId?: string) => GuestMeal[];
   getUserGuestMealCount: (date: Date, userId?: string) => number;
   getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
+  currentPeriod: any;
 }
 
-export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFromProps?: string | null): UseMealReturn {
+export function useMeal(roomId?: string, selectedDate?: Date, initialData?: MealsPageData, userRoleFromProps?: string | null): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -190,19 +191,32 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
   // Priority: 1. Passed initialData, 2. Server-side currentPeriod
   const effectiveInitialData = initialData && initialData.groupId === roomId ? initialData : null;
 
-  // 1. Fetch Meals
-  const { data: meals = [], isLoading: isLoadingMeals, error: mealsError } = useQuery<Meal[]>({
-    queryKey: ['meals', roomId],
+  // 1. Fetch Meals and Period for the selected date
+  const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
+
+  const { data: mealSystem = { meals: [], period: null }, isLoading: isLoadingMeals } = useQuery<{ meals: Meal[], period: any }>({
+    queryKey: ['meals-system', roomId, selectedDateStr],
     queryFn: async () => {
-      if (!roomId) return [];
-      const res = await axios.get(`/api/meals?roomId=${roomId}`);
+      if (!roomId) return { meals: [], period: null };
+      const url = selectedDateStr 
+        ? `/api/meals?roomId=${roomId}&date=${selectedDateStr}`
+        : `/api/meals?roomId=${roomId}`;
+      const res = await axios.get(url);
       return res.data;
     },
-    enabled: false, // Disabled - rely on SSR
-    initialData: effectiveInitialData?.meals,
-    staleTime: Infinity,
+    enabled: !!roomId,
+    initialData: selectedDateStr === format(new Date(), 'yyyy-MM-dd') || !selectedDateStr
+      ? { 
+          meals: effectiveInitialData?.meals || [], 
+          period: effectiveInitialData?.currentPeriod || null 
+        }
+      : undefined,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
     refetchOnWindowFocus: false
   });
+
+  const meals = mealSystem.meals;
+  const targetPeriod = mealSystem.period;
 
   // 2. Fetch Guest Meals
   const { data: guestMeals = [], isLoading: isLoadingGuestMeals, error: guestMealsError } = useQuery<GuestMeal[]>({
@@ -260,7 +274,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     refetchOnWindowFocus: false
   });
 
-  const currentPeriod = currentPeriodFromHook || effectiveInitialData?.currentPeriod;
+  const currentPeriod = targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod;
   const userRole = userRoleFromProps || effectiveInitialData?.userRole || null;
 
   // Consolidated loading state
@@ -593,9 +607,13 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     const now = new Date();
     const targetDate = new Date(date);
     const isToday = isSameDay(targetDate, now);
+    const isPast = !isToday && targetDate < now;
+
+    // Check if period is locked
+    const { isPeriodLocked } = require('@/lib/utils/period-utils-shared');
+    if (isPeriodLocked(currentPeriod)) return false;
 
     // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
-    // This satisfies "disable for current date Time Passed ... but individually those 3 meals"
     if (isToday) {
       if (!mealSettings) return true;
 
@@ -771,7 +789,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     userMealStats,
     isLoading: isLoadingMeals || isLoadingGuestMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats,
     isLoadingUserStats,
-    error: mealsError || guestMealsError || null,
+    error: guestMealsError || null,
 
     // Queries
     useMealsByDate,
@@ -801,6 +819,7 @@ export function useMeal(roomId?: string, initialData?: MealsPageData, userRoleFr
     getUserGuestMeals,
     getUserGuestMealCount,
     getUserMealCount,
+    currentPeriod: targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod
   };
 }
 

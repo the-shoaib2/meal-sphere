@@ -434,25 +434,45 @@ export async function toggleMeal(roomId: string, userId: string, date: Date, typ
     if (!targetPeriod) throw new Error("No period found for this date");
     if (targetPeriod.isLocked) throw new Error("This period is locked");
     
-    // Check if meal exists
+    // CRITICAL: Normalize date to start of day for consistency
+    const normalizedDate = new Date(date)
+    const startOfDay = new Date(normalizedDate)
+    startOfDay.setHours(0, 0, 0, 0)
+    const endOfDay = new Date(normalizedDate)
+    endOfDay.setHours(23, 59, 59, 999)
+    
+    // Check if meal exists (using range to be robust against legacy timestamps)
     const existingMeal = await prisma.meal.findFirst({
         where: {
             userId,
             roomId,
-            date,
-            type,
-            periodId: targetPeriod.id
+            date: {
+                gte: startOfDay,
+                lte: endOfDay
+            },
+            type
         }
     });
 
     if (existingMeal) {
-        await prisma.meal.delete({ where: { id: existingMeal.id } });
+        // Delete all matching meals for this day/type to avoid duplicates
+        await prisma.meal.deleteMany({
+            where: {
+                userId,
+                roomId,
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay
+                },
+                type
+            }
+        });
     } else {
         await prisma.meal.create({
             data: {
                 roomId,
                 userId,
-                date,
+                date: startOfDay,
                 type,
                 periodId: targetPeriod.id
             }
@@ -465,26 +485,30 @@ export async function toggleMeal(roomId: string, userId: string, date: Date, typ
 export async function createGuestMeal(data: { roomId: string; userId: string; date: Date; type: MealType; count: number }) {
     const { roomId, userId, date, type, count } = data;
     
+    // CRITICAL: Normalize date to start of day for consistency
+    const normalizedDate = new Date(date)
+    normalizedDate.setHours(0, 0, 0, 0)
+    
     const settings = await prisma.mealSettings.findUnique({ where: { roomId } });
     if (settings && !settings.allowGuestMeals) throw new Error("Guest meals are not allowed");
     
     // Count limit check
     const todayGuestMeals = await prisma.guestMeal.findMany({
-        where: { userId, roomId, date }
+        where: { userId, roomId, date: normalizedDate }
     });
     const totalToday = todayGuestMeals.reduce((sum, m) => sum + m.count, 0);
     const limit = settings?.guestMealLimit || 5;
 
     if (totalToday + count > limit) throw new Error(`Limit exceeded. Remaining: ${limit - totalToday}`);
 
-    const targetPeriod = await getPeriodForDate(roomId, date);
+    const targetPeriod = await getPeriodForDate(roomId, normalizedDate);
     if (targetPeriod?.isLocked) throw new Error("This period is locked");
 
     const guestMeal = await prisma.guestMeal.create({
         data: {
             userId,
             roomId,
-            date,
+            date: normalizedDate,
             type,
             count,
             periodId: targetPeriod?.id

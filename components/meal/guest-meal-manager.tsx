@@ -31,7 +31,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData }
     deleteGuestMeal,
     mealSettings,
     isLoading
-  } = useMeal(roomId, initialData)
+  } = useMeal(roomId, date, initialData)
 
   const userGuestMeals = getUserGuestMeals(date)
   const guestMealLimit = mealSettings?.guestMealLimit || 10

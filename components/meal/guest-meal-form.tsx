@@ -35,7 +35,7 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
 
-  const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId, initialData)
+  const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId, undefined, initialData)
 
   const form = useForm<GuestMealFormData>({
     resolver: zodResolver(guestMealSchema),
@@ -124,7 +124,6 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
                         initialFocus
                       />
                     </PopoverContent>

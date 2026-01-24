@@ -127,8 +127,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     canAddMeal,
     triggerAutoMeals,
     shouldAutoAddMeal,
-    isAutoMealTime
-  } = useMeal(roomId, initialData, userRole)
+    isAutoMealTime,
+    currentPeriod: targetPeriodForDate
+  } = useMeal(roomId, selectedDate, initialData, userRole)
 
   // Memoized and callback hooks (must be before any early return)
   const mealsForDate = useMemo(() => useMealsByDate(selectedDate) as MealWithUser[], [useMealsByDate, selectedDate])
@@ -180,15 +181,15 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                 {userRole}
               </Badge>
             )}
-            {currentPeriod && (
+            {targetPeriodForDate && (
               <Badge
-                variant={isPeriodLocked(currentPeriod) ? "destructive" : "outline"}
+                variant={isPeriodLocked(targetPeriodForDate) ? "destructive" : "outline"}
                 className={cn(
                   "text-[10px] font-bold px-2 uppercase tracking-wider shrink-0",
-                  !isPeriodLocked(currentPeriod) && "border-green-500/50 text-green-600 bg-green-50"
+                  !isPeriodLocked(targetPeriodForDate) && "border-green-500/50 text-green-600 bg-green-50"
                 )}
               >
-                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
+                {targetPeriodForDate.name} {isPeriodLocked(targetPeriodForDate) ? "• Locked" : "• Active"}
               </Badge>
             )}
           </div>
@@ -252,6 +253,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     const now = new Date()
     const targetDate = new Date(selectedDate)
     const isToday = isSameDay(targetDate, now)
+    const isPast = !isToday && targetDate < now
+
+    // Check if period is locked
+    if (isPeriodLocked(targetPeriodForDate)) return false
 
     // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
     if (isToday) {
@@ -274,12 +279,12 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       }
     }
 
-    // Admin/Manager/Meal Manager can skip other restrictions (period lock, historical dates)
+    // Admin/Manager/Meal Manager can skip other restrictions (historical dates)
     const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
     if (privileged) return true
 
-    // For all other cases (past or future dates), allow editing
-    // This allows regular users to fix history/future logs.
+    // For all other cases (past or future dates), allow editing if period is not locked
+    // This allows regular users to fix history/future logs as long as the period is active.
     return true
   }
 
@@ -365,8 +370,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                               </div>
                               <div className="flex-1 min-w-0">
                                 <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">{mealCount} total</Badge>
+                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                  <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 py-0.5 h-4.5 sm:h-5">{mealCount} total</Badge>
                                   {hasMealSelected && (
                                     <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0.5 h-5">
                                       ✓ You're in
@@ -385,7 +390,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                                     </Badge>
                                   )}
                                   {mealTimePassed && (
-                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
+                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-[10px] sm:text-xs px-1.5 py-0.5 h-4.5 sm:h-5 flex items-center gap-0.5">
                                       <Clock className="h-2.5 w-2.5" />
                                       Time Passed
                                     </Badge>
@@ -393,11 +398,11 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-end sm:justify-start">
+                            <div className="flex items-center">
                               <Button
                                 variant={hasMealSelected ? 'destructive' : 'default'}
                                 size="sm"
-                                className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-8 sm:h-9 w-full sm:w-auto"
+                                className="rounded-full px-4 sm:px-6 text-xs sm:text-sm h-7 sm:h-9 w-full sm:w-auto mt-2 sm:mt-0"
                                 onClick={() => handleToggleMeal(mealType)}
                                 disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
                               >

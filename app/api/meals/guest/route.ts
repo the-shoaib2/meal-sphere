@@ -5,6 +5,7 @@ import prisma from "@/lib/services/prisma"
 import { z } from "zod"
 import { createNotification } from "@/lib/utils/notification-utils"
 import { NotificationType } from "@prisma/client"
+import { invalidateMealCache } from "@/lib/cache/cache-invalidation"
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -152,12 +153,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Guest meals are not allowed in this room" }, { status: 403 })
     }
 
+    // Normalize date to start of day
+    const dateObj = new Date(date)
+    dateObj.setHours(0, 0, 0, 0)
+
+    // Resolve period for the date
+    const targetPeriod = await prisma.mealPeriod.findFirst({
+      where: {
+        roomId: roomId,
+        startDate: { lte: dateObj },
+        OR: [
+          { endDate: { gte: dateObj } },
+          { endDate: null }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (!targetPeriod) {
+      return NextResponse.json({ error: "No period found for this date" }, { status: 400 })
+    }
+
+    if (targetPeriod.isLocked) {
+      return NextResponse.json({ error: "This period is locked" }, { status: 400 })
+    }
+
     // Check guest meal limit
     const todayGuestMeals = await prisma.guestMeal.findMany({
       where: {
         userId: session.user.id,
         roomId: roomId,
-        date: new Date(date),
+        date: dateObj,
+        periodId: targetPeriod.id,
       },
     })
 
@@ -175,9 +202,10 @@ export async function POST(request: Request) {
       data: {
         userId: session.user.id,
         roomId: roomId,
-        date: new Date(date),
+        date: dateObj,
         type: type,
         count: count,
+        periodId: targetPeriod.id,
       },
       include: {
         user: {
@@ -218,5 +246,74 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creating guest meal:", error)
     return NextResponse.json({ error: "Failed to create guest meal" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const roomId = searchParams.get("roomId")
+    const date = searchParams.get("date")
+    const type = searchParams.get("type")
+
+    if (!roomId || !date || !type) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    // Normalize date to start of day
+    const dateObj = new Date(date)
+    dateObj.setHours(0, 0, 0, 0)
+
+    // Resolve period for the date
+    const targetPeriod = await prisma.mealPeriod.findFirst({
+      where: {
+        roomId: roomId,
+        startDate: { lte: dateObj },
+        OR: [
+          { endDate: { gte: dateObj } },
+          { endDate: null }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    if (!targetPeriod) {
+      return NextResponse.json({ error: "No period found for this date" }, { status: 400 })
+    }
+
+    if (targetPeriod.isLocked) {
+      return NextResponse.json({ error: "This period is locked" }, { status: 400 })
+    }
+
+    // Delete the guest meal
+    const deleted = await prisma.guestMeal.deleteMany({
+      where: {
+        userId: session.user.id,
+        roomId: roomId,
+        date: dateObj,
+        type: type as any,
+        periodId: targetPeriod.id,
+      },
+    })
+
+    if (deleted.count > 0) {
+      // Invalidate cache
+      invalidateMealCache(roomId, targetPeriod.id).catch(console.error)
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: deleted.count > 0 ? "Guest meal removed" : "No guest meal found to remove",
+      deleted: deleted.count > 0 
+    })
+  } catch (error) {
+    console.error("Error deleting guest meal:", error)
+    return NextResponse.json({ error: "Failed to delete guest meal" }, { status: 500 })
   }
 }
