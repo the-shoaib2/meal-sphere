@@ -19,7 +19,7 @@ export async function GET() {
         text: "Learn More",
         href: "/about"
       },
-      backgroundImage: "/banner-v2.png"
+      backgroundImage: "/banner.jpg"
     }
 
     return NextResponse.json(heroData)

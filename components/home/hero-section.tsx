@@ -1,10 +1,12 @@
-"use client"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { usePublicData } from "@/hooks/use-public-data"
 import { useRouter } from "next/navigation"
 import { handleNavigation } from "@/lib/utils"
+// @ts-ignore
+import bannerImg from "@/public/banner.jpg"
 
 interface HeroData {
   title: string
@@ -27,7 +29,18 @@ export default function HeroSection() {
   if (error || !data) {
     return (
       <section className="w-full min-h-[calc(100vh-50px)] flex items-center py-2 pt-0 md:py-4 lg:py-6 xl:py-8 px-4 sm:px-6 relative">
-        <div className="absolute inset-0 z-0 bg-[url('/banner-v2.png')] bg-cover bg-center rounded-xl" />
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={bannerImg}
+            alt="Meal Sphere Banner"
+            fill
+            priority
+            placeholder="blur"
+            className="object-cover object-center rounded-xl"
+            sizes="100vw"
+            quality={85}
+          />
+        </div>
         <div className="absolute inset-0 z-10 bg-secondary/30 dark:bg-black/60" />
         <div className="relative z-20 max-w-7xl mx-auto w-full">
           <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px] items-center">
@@ -59,7 +72,18 @@ export default function HeroSection() {
 
   return (
     <section className="w-full min-h-[calc(100vh-50px)] flex items-center py-2 pt-0 md:py-4 lg:py-6 xl:py-8 px-4 sm:px-6 relative">
-      <div className="absolute inset-0 z-0 bg-[url('/banner-v2.png')] bg-cover bg-center rounded-xl" />
+      <div className="absolute inset-0 z-0">
+        <Image
+          src={bannerImg}
+          alt="Meal Sphere Banner"
+          fill
+          priority
+          placeholder="blur"
+          className="object-cover object-center rounded-xl"
+          sizes="100vw"
+          quality={85}
+        />
+      </div>
       <div className="absolute inset-0 z-10 bg-secondary/30 dark:bg-black/60" />
       <div className="relative z-20 max-w-7xl mx-auto w-full">
         <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px] items-center">

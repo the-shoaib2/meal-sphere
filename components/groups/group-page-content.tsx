@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,7 @@ export function GroupPageContent(
     // Use group details hook with initial data
     const { useGroupDetails } = useGroups();
     const { data: group, isLoading, error, refetch } = useGroupDetails(groupId, initialData);
+    const resolvedGroup = group || initialData;
 
     const [showActivityDialog, setShowActivityDialog] = useState(false);
 
@@ -65,9 +66,9 @@ export function GroupPageContent(
         setIsMounted(true);
     }, []);
 
-    // Prevent hydration mismatch for components that use unique IDs (like Radix Tabs)
-    // by ensuring initial render matches server
-    const displayActiveTab = isMounted ? activeTab : 'members';
+    // Use the actual activeTab state directly. It's initialized from initialTab prop
+    // which is consistent between server and client.
+    const displayActiveTab = activeTab;
 
     useEffect(() => {
         let ticking = false;
@@ -123,7 +124,8 @@ export function GroupPageContent(
     const { isAdmin } = initialAccessData;
     const { userRole, isCreator } = initialAccessData;
 
-    if (isLoading || !group) {
+    // Stabilize the loading state: if we have initialData, don't show skeleton during hydration
+    if ((isLoading || !group) && !initialData) {
         return (
             <div className="space-y-6">
                 <div className="flex flex-col gap-4 sm:gap-6">
@@ -187,7 +189,7 @@ export function GroupPageContent(
         category?: string;
         tags?: string[];
     };
-    const groupWithExtras = group as GroupWithExtras;
+    const groupWithExtras = resolvedGroup as GroupWithExtras;
     const features = groupWithExtras.features ?? {};
     const category = groupWithExtras.category ?? '';
     const tags: string[] = groupWithExtras.tags ?? [];
@@ -195,14 +197,16 @@ export function GroupPageContent(
     const showActivityLog = isFeatureEnabled(features, 'activity_log', isAdmin);
     const canInvite = isAdmin || !!features?.join_requests;
 
-    const mappedMembers = Array.isArray(group.members)
-        ? group.members.map((member: any) => ({
+    const mappedMembers = useMemo(() => {
+        if (!resolvedGroup?.members || !Array.isArray(resolvedGroup.members)) return [];
+        return resolvedGroup.members.map((member: any) => ({
             id: member.id,
             userId: member.userId,
             roomId: groupId,
             isCurrent: member.userId === session?.user?.id,
             isActive: true,
-            lastActive: new Date().toISOString(),
+            // Use member's lastActive or a stable epoch as a baseline to prevent hydration mismatch from new Date()
+            lastActive: member.lastActive || new Date(0).toISOString(),
             role: member.role as Role,
             joinedAt: member.joinedAt,
             mutedUntil: null,
@@ -214,8 +218,8 @@ export function GroupPageContent(
                 image: member.user.image || '',
                 createdAt: member.user.createdAt || new Date(0).toISOString()
             }
-        }))
-        : [];
+        }));
+    }, [group?.members, session?.user?.id, groupId]);
 
     return (
         <div className="flex flex-col gap-4">
@@ -226,9 +230,9 @@ export function GroupPageContent(
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{group.name}</h1>
-                    {group.description && (
-                        <p className="text-sm text-muted-foreground">{group.description}</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{resolvedGroup.name}</h1>
+                    {resolvedGroup.description && (
+                        <p className="text-sm text-muted-foreground">{resolvedGroup.description}</p>
                     )}
                     <div className="flex flex-wrap gap-1 mt-1">
                         {category && <Badge variant="secondary">{category}</Badge>}
@@ -272,7 +276,7 @@ export function GroupPageContent(
                     <TabsContent value="members" className="m-0">
                         <MembersTab
                             groupId={groupId}
-                            group={group}
+                            group={resolvedGroup}
                             isAdmin={isAdmin}
                             isCreator={isCreator}
                             currentUserId={session?.user?.id}
@@ -286,7 +290,7 @@ export function GroupPageContent(
                     <TabsContent value="settings" className="m-0">
                         <SettingsTab
                             groupId={groupId}
-                            group={group}
+                            group={resolvedGroup}
                             isAdmin={isAdmin}
                             isCreator={isCreator}
                             onUpdate={() => refetch()}
@@ -305,7 +309,7 @@ export function GroupPageContent(
 
                     <TabsContent value="voting" className="m-0">
                         <VotingTab
-                            group={group}
+                            group={resolvedGroup}
                             initialVotes={initialVotes}
                             currentUser={session?.user}
                         />
@@ -315,7 +319,7 @@ export function GroupPageContent(
 
             <ActivityDialog
                 groupId={groupId}
-                groupName={group.name}
+                groupName={resolvedGroup.name}
                 isOpen={showActivityDialog}
                 onOpenChange={setShowActivityDialog}
                 isAdmin={isAdmin}

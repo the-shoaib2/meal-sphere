@@ -2,21 +2,24 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 
 // Services
-import { fetchDashboardData } from '@/lib/services/dashboard-service';
+import { fetchDashboardSummary } from '@/lib/services/dashboard-service';
 import { fetchGroupAccessData } from '@/lib/services/groups-service';
 
 // UI Components
-import { RefreshButton } from '@/components/dashboard/refresh-button';
-import DetailedAnalytics from '@/components/dashboard/detailed-analytics';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { DashboardOverview } from '@/components/dashboard/dashboard-overview';
-import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 import { DashboardQuickActions } from '@/components/dashboard/dashboard-quick-actions';
 import { Dashboard } from '@/components/dashboard/dashboard';
 import { PageHeader } from '@/components/shared/page-header';
+
+// Wrappers & Skeletons
+import { ActivityWrapper } from '@/components/dashboard/wrappers/activity-wrapper';
+import { AnalyticsWrapper } from '@/components/dashboard/wrappers/analytics-wrapper';
+import { ActivitySkeleton, AnalyticsSkeleton } from '@/components/dashboard/wrappers/skeletons';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,21 +50,21 @@ export default async function DashboardPage() {
         );
     }
 
-    // 2. Fetch Data 
-    const [data, accessData] = await Promise.all([
-        fetchDashboardData(session.user.id, activeGroupId),
+    // 2. Fetch Initial Critical Data (Summary)
+    // We await this to ensure the basic dashboard shell and summary are consistent
+    // before streaming the heavy parts.
+    const [summaryData, accessData] = await Promise.all([
+        fetchDashboardSummary(session.user.id, activeGroupId),
         fetchGroupAccessData(activeGroupId, session.user.id)
     ]);
 
-    // 3. Handle No Period State server-side
-    // Using simple check for periodId in summary or similar
-    if (!data.summary.currentPeriod) {
+    // 3. Handle No Period State
+    if (!summaryData?.currentPeriod) {
         const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
         return (
             <Dashboard heading="Dashboard">
                 <NoPeriodState
                     isPrivileged={isPrivileged}
-                    // For dashboard, we might want a slightly different description
                     title="No Active Period"
                     description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
                 />
@@ -69,36 +72,35 @@ export default async function DashboardPage() {
         );
     }
 
-    // 4. Render UI
+    // 4. Render UI with Streaming
     return (
         <Dashboard
             heading="Dashboard"
             text="Overview of your group's meal activity and analytics."
-            activities={data.activities}
-            chartData={data.chartData}
+        // We no longer pass activities/chartData to the Shell if it doesn't use them directly (it passed them as children in original code? No, let's check Dashboard comopnent)
         >
             <div className="space-y-4 sm:space-y-6">
-                {/* Overview Section */}
-                <DashboardOverview summaryData={data.summary} />
+                {/* Overview Section - Loaded Instantly */}
+                <DashboardOverview summaryData={summaryData} />
 
-                {/* Activity Section */}
-                <DashboardActivity
-                    activities={data.activities}
-                    chartData={data.chartData}
-                />
+                {/* Activity Section - Streamed */}
+                <Suspense fallback={<ActivitySkeleton />}>
+                    <ActivityWrapper
+                        userId={session.user.id}
+                        groupId={activeGroupId}
+                    />
+                </Suspense>
 
-                {/* Quick Actions Section */}
+                {/* Quick Actions Section - Static */}
                 <DashboardQuickActions />
 
-                {/* Detailed Analytics Section */}
-                <DetailedAnalytics
-                    mealDistribution={data.analytics.mealDistribution}
-                    expenseDistribution={data.analytics.expenseDistribution}
-                    monthlyExpenses={data.analytics.monthlyExpenses}
-                    mealRateTrend={data.analytics.mealRateTrend}
-                    roomStats={data.analytics.roomStats}
-                    chartData={data.chartData}
-                />
+                {/* Detailed Analytics Section - Streamed */}
+                <Suspense fallback={<AnalyticsSkeleton />}>
+                    <AnalyticsWrapper
+                        userId={session.user.id}
+                        groupId={activeGroupId}
+                    />
+                </Suspense>
             </div>
         </Dashboard>
     );

@@ -12,7 +12,7 @@ const HERO_DATA = {
         text: "Learn More",
         href: "/about"
     },
-    backgroundImage: "/banner-v2.png"
+    backgroundImage: "/banner.jpg"
 };
 
 const FEATURES_DATA = {

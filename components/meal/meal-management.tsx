@@ -363,8 +363,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                         const mealTimePassed = isTodaySelected && now >= mealTime
 
                         return (
-                          <div key={mealType} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-0">
+                          <div key={mealType} className="flex items-center justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors gap-3 sm:gap-4">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}>
                                 <span className="text-base sm:text-lg">{mealTypeIcon}</span>
                               </div>
