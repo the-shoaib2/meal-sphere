@@ -4,10 +4,11 @@ import DashboardSummaryCards from "@/components/dashboard/summary-cards";
 import { DashboardSummary } from "@/types/dashboard";
 
 interface DashboardOverviewProps {
-    summaryData: DashboardSummary;
+    summaryData?: DashboardSummary;
+    isLoading?: boolean;
 }
 
-export function DashboardOverview({ summaryData }: DashboardOverviewProps) {
+export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewProps) {
     return (
         <div className="space-y-4 sm:space-y-5">
             <div className="flex items-center justify-between px-1">
@@ -27,12 +28,13 @@ export function DashboardOverview({ summaryData }: DashboardOverviewProps) {
             </div>
 
             <DashboardSummaryCards
-                totalMeals={summaryData.totalUserMeals}
-                currentRate={summaryData.currentRate}
-                myBalance={summaryData.currentBalance}
-                totalCost={summaryData.totalCost}
-                totalAllMeals={summaryData.totalAllMeals}
-                groupBalance={summaryData.groupBalance}
+                totalMeals={summaryData?.totalUserMeals}
+                currentRate={summaryData?.currentRate}
+                myBalance={summaryData?.currentBalance}
+                totalCost={summaryData?.totalCost}
+                totalAllMeals={summaryData?.totalAllMeals}
+                groupBalance={summaryData?.groupBalance}
+                isLoading={isLoading}
             />
         </div>
     );

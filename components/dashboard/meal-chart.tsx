@@ -12,11 +12,13 @@ import { useDashboardLoading } from '@/components/dashboard/dashboard';
 
 interface MealChartProps {
   chartData: DashboardChartData[] | undefined;
+  isLoading?: boolean;
 }
 
-export default function MealChart({ chartData }: MealChartProps) {
+export default function MealChart({ chartData, isLoading: propIsLoading }: MealChartProps) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const { isLoading } = useDashboardLoading();
+  const { isLoading: contextLoading } = useDashboardLoading();
+  const isLoading = propIsLoading || contextLoading;
 
   const totalMeals = chartData?.reduce((sum, day) => sum + day.meals, 0) || 0;
   const totalExpenses = chartData?.reduce((sum, day) => sum + day.expenses, 0) || 0;
@@ -26,8 +28,8 @@ export default function MealChart({ chartData }: MealChartProps) {
 
   if (!isLoading && (!chartData || chartData.length === 0)) {
     return (
-      <Card className="h-full min-h-[350px] sm:min-h-[400px] max-h-[500px] sm:max-h-[550px] lg:max-h-[600px] overflow-hidden shadow-sm bg-card">
-        <CardHeader>
+      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card border">
+        <CardHeader className="pb-3 sm:pb-4 px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -37,7 +39,7 @@ export default function MealChart({ chartData }: MealChartProps) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0 sm:px-2">
+        <CardContent className="p-4 pt-0 flex-grow">
           <div className="h-[250px] sm:h-[300px] lg:h-[350px] w-full px-4 sm:px-6 flex items-center justify-center bg-muted/20 border border-dashed border-border rounded-xl m-2">
             <div className="text-center space-y-2">
               <TrendingUp className="h-10 w-10 text-muted-foreground/30 mx-auto" />

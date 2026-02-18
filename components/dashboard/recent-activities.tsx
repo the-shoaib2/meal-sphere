@@ -67,23 +67,32 @@ const formatActivityTimestamp = (date: Date) => {
 
 interface RecentActivitiesProps {
   activities: DashboardActivity[] | undefined;
+  isLoading?: boolean;
 }
 
-export default function RecentActivities({ activities }: RecentActivitiesProps) {
-  const { isLoading } = useDashboardLoading();
+export default function RecentActivities({ activities, isLoading: propIsLoading }: RecentActivitiesProps) {
+  const { isLoading: contextLoading } = useDashboardLoading();
+  const isLoading = propIsLoading || contextLoading;
 
   if (!isLoading && (!activities || activities.length === 0)) {
     return (
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] border rounded-xl shadow-sm bg-card">
-        <CardHeader className="pb-3 px-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Activity className="h-4 w-4 text-primary" />
+      <Card className="overflow-hidden h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] flex flex-col shadow-sm bg-card border">
+        <CardHeader className="pb-3 sm:pb-4 px-6 sm:px-8 pt-6 sm:pt-8 z-10 bg-card">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-primary/10 text-primary">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Recent Activities</CardTitle>
+              </div>
             </div>
-            <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Recent Activities</CardTitle>
+            <Badge variant="secondary" className="bg-muted text-foreground border-0 rounded-full font-bold px-3 py-1 shadow-sm">
+              <NumberTicker value={0} />
+            </Badge>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 flex-grow overflow-hidden px-2 bg-card">
           <div className="flex items-center justify-center h-[200px] sm:h-[250px] rounded-xl bg-muted/20 border border-dashed border-border">
             <div className="text-center">
               <div className="p-3 rounded-2xl bg-muted/50 w-fit mx-auto mb-3">
@@ -119,14 +128,17 @@ export default function RecentActivities({ activities }: RecentActivitiesProps) 
           <div className="space-y-2 p-2 sm:p-4 pb-10">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-muted/30 transition-all duration-300 border border-border">
+                <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-card transition-all duration-300 border border-border/50">
                   <div className="flex-shrink-0">
-                    <Skeleton className="h-11 w-11 rounded-full bg-muted" />
+                    <Skeleton className="h-11 w-11 rounded-full bg-muted shadow-sm" />
                   </div>
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-1/3 bg-muted" />
-                    <Skeleton className="h-3 w-3/4 bg-muted/50" />
-                    <Skeleton className="h-3 w-1/4 bg-muted/30" />
+                    <div className="flex items-center justify-between gap-2">
+                      <Skeleton className="h-4 w-1/3 bg-muted" />
+                      <Skeleton className="h-4 w-12 rounded-full bg-muted/30" />
+                    </div>
+                    <Skeleton className="h-3 w-3/4 bg-muted/50 mt-1.5" />
+                    <Skeleton className="h-3 w-1/4 bg-muted/30 mt-2.5" />
                   </div>
                 </div>
               ))

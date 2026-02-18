@@ -12,11 +12,11 @@ export function RefreshButton({ refresh, isRefreshing }: RefreshButtonProps) {
   return (
     <Button
       variant="outline"
-      className="h-10 w-10 rounded-full flex items-center justify-center"
+      className="h-8 w-8 flex items-center justify-center"
       onClick={refresh}
       disabled={isRefreshing}
     >
-      <RefreshCw className={`h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
+      <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
     </Button>
 
   );

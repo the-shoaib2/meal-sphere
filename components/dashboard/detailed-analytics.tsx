@@ -34,23 +34,26 @@ import { useDashboardLoading } from "@/components/dashboard/dashboard"
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export interface DetailedAnalyticsProps {
-    roomStats: any[];
-    mealDistribution: { name: string; value: number }[];
-    expenseDistribution: { name: string; value: number }[];
-    monthlyExpenses: { name: string; value: number }[];
-    mealRateTrend: { name: string; value: number }[];
+    roomStats?: any[];
+    mealDistribution?: { name: string; value: number }[];
+    expenseDistribution?: { name: string; value: number }[];
+    monthlyExpenses?: { name: string; value: number }[];
+    mealRateTrend?: { name: string; value: number }[];
     chartData?: DashboardChartData[];
+    isLoading?: boolean;
 }
 
 export default function DetailedAnalytics({
-    roomStats,
-    mealDistribution,
-    expenseDistribution,
-    monthlyExpenses,
-    mealRateTrend,
-    chartData
+    roomStats = [],
+    mealDistribution = [],
+    expenseDistribution = [],
+    monthlyExpenses = [],
+    mealRateTrend = [],
+    chartData = [],
+    isLoading: propIsLoading
 }: DetailedAnalyticsProps) {
-    const { isLoading } = useDashboardLoading();
+    const { isLoading: contextLoading } = useDashboardLoading();
+    const isLoading = propIsLoading || contextLoading;
 
     // Always show the container, let individual cards handle empty states
 
@@ -185,8 +188,8 @@ export default function DetailedAnalytics({
                     </AnalyticsCard>
                 </div>
 
-                {/* 5. Room Statistics */}
-                {roomStats && roomStats.length > 0 && (
+                {/* 5. Room Statistics - Render during loading to prevent shift */}
+                {(isLoading || (roomStats && roomStats.length > 0)) && (
                     <div className="xl:col-span-3">
                         <AnalyticsCard title="Detailed Room Statistics" icon={Users} isLoading={isLoading} description="Comprehensive breakdown of performance by room.">
                             <RoomStatsTable data={roomStats} />

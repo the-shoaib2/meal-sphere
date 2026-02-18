@@ -64,7 +64,7 @@ const SingleSummaryCard = ({
       <CardContent className="px-3 sm:px-4 pb-4 pt-0">
         <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-1 h-8">
           {isLoading ? (
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-7 w-16" />
           ) : (
             children
           )}
