@@ -93,12 +93,12 @@ export default function RecentActivities({ activities, isLoading: propIsLoading 
           </div>
         </CardHeader>
         <CardContent className="p-0 flex-grow overflow-hidden px-2 bg-card">
-          <div className="flex items-center justify-center h-[200px] sm:h-[250px] rounded-xl bg-muted/20 border border-dashed border-border">
+          <div className="flex items-center justify-center h-[120px] sm:h-[150px] rounded-xl bg-muted/20 border border-dashed border-border m-2">
             <div className="text-center">
-              <div className="p-3 rounded-2xl bg-muted/50 w-fit mx-auto mb-3">
-                <Clock className="h-6 w-6 text-muted-foreground/30" />
+              <div className="p-2.5 rounded-2xl bg-muted/50 w-fit mx-auto mb-2">
+                <Clock className="h-5 w-5 text-muted-foreground/30" />
               </div>
-              <p className="text-xs font-semibold text-muted-foreground">No activities yet</p>
+              <p className="text-[10px] font-semibold text-muted-foreground">No activities yet</p>
             </div>
           </div>
         </CardContent>
@@ -128,17 +128,16 @@ export default function RecentActivities({ activities, isLoading: propIsLoading 
           <div className="space-y-2 p-2 sm:p-4 pb-10">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-card transition-all duration-300 border border-border/50">
+                <div key={i} className="flex items-start gap-3 p-2.5 rounded-xl bg-card transition-all duration-300 border border-border/50">
                   <div className="flex-shrink-0">
-                    <Skeleton className="h-11 w-11 rounded-full bg-muted shadow-sm" />
+                    <Skeleton className="h-8 w-8 rounded-full bg-muted shadow-sm" />
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
-                      <Skeleton className="h-4 w-1/3 bg-muted" />
-                      <Skeleton className="h-4 w-12 rounded-full bg-muted/30" />
+                      <Skeleton className="h-3.5 w-1/3 bg-muted" />
+                      <Skeleton className="h-3 w-10 rounded-full bg-muted/30" />
                     </div>
-                    <Skeleton className="h-3 w-3/4 bg-muted/50 mt-1.5" />
-                    <Skeleton className="h-3 w-1/4 bg-muted/30 mt-2.5" />
+                    <Skeleton className="h-2.5 w-3/4 bg-muted/50 mt-1" />
                   </div>
                 </div>
               ))
@@ -152,20 +151,20 @@ export default function RecentActivities({ activities, isLoading: propIsLoading 
               // We'll trust the helper classes.
 
               return (
-                <div key={activity.id} className="flex items-start gap-4 p-4 rounded-xl bg-card hover:bg-accent/50 transition-all duration-300 group hover:shadow-sm border border-border/50 hover:border-border">
+                <div key={activity.id} className="flex items-start gap-3 p-2.5 rounded-xl bg-card hover:bg-accent/50 transition-all duration-300 group hover:shadow-sm border border-border/50 hover:border-border">
                   <div className="flex-shrink-0">
-                    <div className={`p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform ${iconColor}`}>
-                      <IconComponent className="h-5 w-5" />
+                    <div className={`p-1.5 rounded-full shadow-sm group-hover:scale-110 transition-transform ${iconColor}`}>
+                      <IconComponent className="h-4 w-4" />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold leading-tight line-clamp-1 tracking-tight text-foreground">{activity.title}</p>
-                      <span className={`text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full ${badge.color}`}>{badge.text}</span>
+                      <p className="text-xs font-semibold leading-tight line-clamp-1 tracking-tight text-foreground">{activity.title}</p>
+                      <span className={`text-[8px] uppercase font-bold tracking-widest px-1.5 py-0 rounded-full ${badge.color}`}>{badge.text}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed font-medium opacity-80">{activity.description}</p>
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 mt-2.5 font-semibold uppercase tracking-wider">
-                      <Clock className="h-3 w-3" />
+                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1 leading-relaxed font-medium opacity-80">{activity.description}</p>
+                    <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground/40 mt-1 font-bold">
+                      <Clock className="h-2.5 w-2.5" />
                       <SafeDate date={activity.timestamp} format={formatActivityTimestamp} />
                     </div>
                   </div>
