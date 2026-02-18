@@ -56,18 +56,10 @@ const SingleSummaryCard = ({
       className
     )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-2 sm:p-3">
-        {isLoading ? (
-          <Skeleton className="h-3 w-16" />
-        ) : (
-          <CardTitle className="text-xs sm:text-sm font-bold tracking-tight text-muted-foreground">{title}</CardTitle>
-        )}
-        {isLoading ? (
-          <Skeleton className="h-8 w-8 rounded-full" />
-        ) : (
-          <div className={cn("p-1.5 rounded-full", iconBgClass)}>
-            <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", iconColorClass)} />
-          </div>
-        )}
+        <CardTitle className="text-xs sm:text-sm font-bold tracking-tight text-muted-foreground">{title}</CardTitle>
+        <div className={cn("p-1.5 rounded-full", iconBgClass)}>
+          <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", iconColorClass)} />
+        </div>
       </CardHeader>
       <CardContent className="px-3 sm:px-4 pb-4 pt-0">
         <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-1 h-8">

@@ -9,7 +9,7 @@ export function ActivitySkeleton() {
         <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                <Skeleton className="h-5 sm:h-6 w-36 sm:w-48 rounded-md" />
+                <h2 className="text-base sm:text-lg font-bold tracking-tight">Activity Overview</h2>
             </div>
 
             <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
@@ -18,8 +18,8 @@ export function ActivitySkeleton() {
                     <Card className="h-[400px]">
                         <CardHeader>
                             <div className="flex items-center gap-2">
-                                <Skeleton className="h-5 w-5" />
-                                <Skeleton className="h-6 w-32" />
+                                <TrendingUp className="h-5 w-5 text-primary" />
+                                <h3 className="text-base font-bold tracking-tight text-foreground">Monthly Meal Summary</h3>
                             </div>
                         </CardHeader>
                         <CardContent className="pl-2">
@@ -32,8 +32,8 @@ export function ActivitySkeleton() {
                 <div className="lg:col-span-3">
                     <Card className="h-[400px]">
                         <CardHeader>
-                            <Skeleton className="h-6 w-40" />
-                            <Skeleton className="h-4 w-56" />
+                            <h3 className="text-base font-bold tracking-tight">Recent Activities</h3>
+                            <p className="text-xs text-muted-foreground/60">Your group&apos;s latest updates</p>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -60,7 +60,7 @@ export function AnalyticsSkeleton() {
         <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                <Skeleton className="h-5 sm:h-6 w-36 sm:w-48 rounded-md" />
+                <h2 className="text-base sm:text-lg font-bold tracking-tight">Premium Analytics</h2>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                 <div className="xl:col-span-2">
