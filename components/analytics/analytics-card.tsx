@@ -17,14 +17,13 @@ export function AnalyticsCard({ title, description, icon: Icon, children, isLoad
       <CardHeader>
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-primary" />
-          <CardTitle>{title}</CardTitle>
+          <CardTitle className="text-base sm:text-lg font-bold tracking-tight">{title}</CardTitle>
         </div>
-        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-[250px] w-full" />
+          <div className="h-[300px] w-full bg-muted/40 rounded-xl animate-pulse flex items-center justify-center border border-dashed border-border">
+            <Skeleton className="h-12 w-12 rounded-full opacity-20" />
           </div>
         ) : (
           children

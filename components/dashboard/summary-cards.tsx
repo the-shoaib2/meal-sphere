@@ -3,214 +3,178 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Users,
   Utensils,
   DollarSign,
   Receipt,
   Calculator,
   Wallet,
-  CreditCard
+  LucideIcon,
 } from 'lucide-react';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { useSession } from 'next-auth/react';
 import { useActiveGroup } from '@/contexts/group-context';
+import { useDashboardLoading } from '@/components/dashboard/dashboard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface SummaryCardsProps {
-  totalMeals: number;
-  currentRate: number;
-  myBalance: number;
-  totalCost: number;
-  activeRooms: number;
-  totalMembers: number;
+  totalMeals?: number;
+  currentRate?: number;
+  myBalance?: number;
+  totalCost?: number;
+  activeRooms?: number;
+  totalMembers?: number;
   totalAllMeals?: number;
   availableBalance?: number;
   groupBalance?: GroupBalanceSummary | null;
+  isLoading?: boolean;
 }
 
-const PRIVILEGED_ROLES = ['ADMIN', 'MANAGER', 'MEAL_MANAGER', 'ACCOUNTANT'];
-
-function isPrivileged(role?: string) {
-  return !!role && PRIVILEGED_ROLES.includes(role);
+interface SingleSummaryCardProps {
+  title: string;
+  icon: LucideIcon;
+  iconColorClass: string;
+  iconBgClass: string;
+  children: React.ReactNode;
+  className?: string;
+  isLoading?: boolean;
 }
+
+const SingleSummaryCard = ({
+  title,
+  icon: Icon,
+  iconColorClass,
+  iconBgClass,
+  children,
+  className,
+  isLoading,
+}: SingleSummaryCardProps) => {
+  return (
+    <Card className={cn(
+      "rounded-lg border backdrop-blur-sm transition-all hover:bg-accent/50",
+      className
+    )}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 p-2 sm:p-3">
+        {isLoading ? (
+          <Skeleton className="h-3 w-16" />
+        ) : (
+          <CardTitle className="text-xs sm:text-sm font-bold tracking-tight text-muted-foreground">{title}</CardTitle>
+        )}
+        {isLoading ? (
+          <Skeleton className="h-8 w-8 rounded-full" />
+        ) : (
+          <div className={cn("p-1.5 rounded-full", iconBgClass)}>
+            <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", iconColorClass)} />
+          </div>
+        )}
+      </CardHeader>
+      <CardContent className="px-3 sm:px-4 pb-4 pt-0">
+        <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-1 h-8">
+          {isLoading ? (
+            <Skeleton className="h-8 w-20" />
+          ) : (
+            children
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function SummaryCards({
-  totalMeals,
-  currentRate,
-  myBalance,
-  totalCost,
-  activeRooms,
-  totalMembers,
+  totalMeals = 0,
+  currentRate = 0,
+  myBalance = 0,
+  totalCost = 0,
+  activeRooms = 0,
+  totalMembers = 0,
   totalAllMeals = 0,
   availableBalance = 0,
   groupBalance,
+  isLoading: propIsLoading,
 }: SummaryCardsProps) {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-
-  const member = activeGroup?.members?.find((m: any) => m.userId === session?.user?.id);
-  const userRole = (activeGroup as any)?.userRole || member?.role;
-
-  // Determine if we should show group stats
-  // We use the passed groupBalance presence as the main indicator, 
-  // but we can also double check role if needed.
-  // The unified API only returns groupBalance if privileged, so presence check is enough.
   const showGroupStats = !!groupBalance;
+  const { isLoading: hookIsLoading } = useDashboardLoading();
+  const isLoading = propIsLoading || hookIsLoading;
 
   return (
-    <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Total Meals</CardTitle>
-          <Utensils className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold">
-            <NumberTicker value={totalMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={totalAllMeals} className="text-lg sm:text-xl lg:text-2xl font-bold" />
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            My meals / Total meals
-          </p>
-        </CardContent>
-      </Card>
+    <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+      <SingleSummaryCard
+        title="Total Meals"
+        icon={Utensils}
+        iconBgClass="bg-amber-500/10 dark:bg-amber-500/20"
+        iconColorClass="text-amber-600 dark:text-amber-500"
+        isLoading={isLoading}
+      >
+        <NumberTicker value={totalMeals} className="text-xl sm:text-2xl font-bold" />
+        <span className="text-muted-foreground/30 font-medium">/</span>
+        <NumberTicker value={totalAllMeals} className="text-xl sm:text-2xl font-bold text-muted-foreground/50" />
+      </SingleSummaryCard>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Current Meal Rate</CardTitle>
-          <Calculator className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold">
-            ৳<NumberTicker value={currentRate} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold" />
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Average per meal
-          </p>
-        </CardContent>
-      </Card>
+      <SingleSummaryCard
+        title="Meal Rate"
+        icon={Calculator}
+        iconBgClass="bg-blue-500/10 dark:bg-blue-500/20"
+        iconColorClass="text-blue-600 dark:text-blue-500"
+        isLoading={isLoading}
+      >
+        <span className="text-blue-600 dark:text-blue-500">৳</span>
+        <NumberTicker value={currentRate} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
+      </SingleSummaryCard>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Current Balance</CardTitle>
-          <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-            ৳<NumberTicker value={myBalance} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Total money in account
-          </p>
-        </CardContent>
-      </Card>
+      <SingleSummaryCard
+        title="My Balance"
+        icon={Wallet}
+        iconBgClass="bg-indigo-500/10 dark:bg-indigo-500/20"
+        iconColorClass="text-indigo-600 dark:text-indigo-500"
+        isLoading={isLoading}
+      >
+        <span className="text-indigo-600 dark:text-indigo-500">৳</span>
+        <NumberTicker value={myBalance} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
+      </SingleSummaryCard>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Available Balance</CardTitle>
-          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            ৳<NumberTicker value={availableBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${availableBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            After meal expenses
-          </p>
-        </CardContent>
-      </Card>
+      <SingleSummaryCard
+        title="Total Spent"
+        icon={Receipt}
+        iconBgClass="bg-rose-500/10 dark:bg-rose-500/20"
+        iconColorClass="text-rose-600 dark:text-rose-500"
+        isLoading={isLoading}
+      >
+        <span className="text-rose-600 dark:text-rose-500">৳</span>
+        <NumberTicker value={totalCost} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
+      </SingleSummaryCard>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Total Spent on Meals</CardTitle>
-          <Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-            ৳<NumberTicker value={totalCost} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600" />
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Total meal expenses
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs sm:text-sm font-medium">Active Groups</CardTitle>
-          <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-lg sm:text-xl lg:text-2xl font-bold">
-            <NumberTicker value={activeRooms} className="text-lg sm:text-xl lg:text-2xl font-bold" /> / <NumberTicker value={activeRooms} className="text-lg sm:text-xl lg:text-2xl font-bold" />
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Active groups
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Only show group balance cards if groupBalance data is present */}
-      {showGroupStats && groupBalance && (
+      {(groupBalance || isLoading) && (
         <>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Group Total Balance</CardTitle>
-              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ৳<NumberTicker value={groupBalance.groupTotalBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.groupTotalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-              </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Group Balance
-              </p>
-            </CardContent>
-          </Card>
+          <SingleSummaryCard
+            title="Group Balance"
+            icon={DollarSign}
+            iconBgClass="bg-emerald-500/10 dark:bg-emerald-500/20"
+            iconColorClass="text-emerald-600 dark:text-emerald-500"
+            className={groupBalance && groupBalance.groupTotalBalance < 0 ? 'text-red-600 dark:text-red-500' : ''}
+            isLoading={isLoading}
+          >
+            <span className={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}>৳</span>
+            <NumberTicker
+              value={groupBalance?.groupTotalBalance ?? 0}
+              decimalPlaces={2}
+              className={cn("text-xl sm:text-2xl font-bold", groupBalance && groupBalance.groupTotalBalance < 0 && "text-red-600 dark:text-red-500")}
+            />
+          </SingleSummaryCard>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Group Expenses</CardTitle>
-              <Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600">
-                ৳<NumberTicker value={groupBalance.totalExpenses} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-red-600" />
-              </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                Total group expenses
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Group Meal Rate</CardTitle>
-              <Calculator className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600">
-                ৳<NumberTicker value={groupBalance.mealRate} decimalPlaces={2} className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600" />
-              </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                <NumberTicker value={groupBalance.totalMeals} className="text-[10px] sm:text-xs" /> total meals
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium">Net Group Balance</CardTitle>
-              <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`}>
-                ৳<NumberTicker value={groupBalance.netGroupBalance} decimalPlaces={2} className={`text-lg sm:text-xl lg:text-2xl font-bold ${groupBalance.netGroupBalance === 0 ? 'text-green-600' : 'text-orange-600'}`} />
-              </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                {groupBalance.netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
-              </p>
-            </CardContent>
-          </Card>
+          <SingleSummaryCard
+            title="Group Exp."
+            icon={Receipt}
+            iconBgClass="bg-orange-500/10 dark:bg-orange-500/20"
+            iconColorClass="text-orange-600 dark:text-orange-500"
+            isLoading={isLoading}
+          >
+            <span className="text-orange-600 dark:text-orange-500">৳</span>
+            <NumberTicker value={groupBalance?.totalExpenses ?? 0} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
+          </SingleSummaryCard>
         </>
       )}
     </div>

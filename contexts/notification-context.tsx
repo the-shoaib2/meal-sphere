@@ -9,13 +9,13 @@ import { Bell } from "lucide-react"
 export type Notification = {
   id: string
   type:
-    | "MEAL_REMINDER"
-    | "PAYMENT_DUE"
-    | "VOTE_STARTED"
-    | "VOTE_ENDED"
-    | "MANAGER_CHANGED"
-    | "SHOPPING_ADDED"
-    | "CUSTOM"
+  | "MEAL_REMINDER"
+  | "PAYMENT_DUE"
+  | "VOTE_STARTED"
+  | "VOTE_ENDED"
+  | "MANAGER_CHANGED"
+  | "SHOPPING_ADDED"
+  | "CUSTOM"
   message: string
   read: boolean
   createdAt: string
@@ -39,28 +39,35 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [lastFetched, setLastFetched] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchNotifications = async () => {
-    if (status === 'loading' || !session?.user) {
-      setIsLoading(false)
+  const fetchNotifications = async (signal?: AbortSignal) => {
+    if (status !== 'authenticated' || !session?.user) {
+      if (status !== 'loading') setIsLoading(false)
       return
     }
 
     try {
-      const response = await fetch("/api/notifications")
-      if (!response.ok) throw new Error("Failed to fetch notifications")
+      const response = await fetch("/api/notifications", { signal })
+      if (!response.ok) {
+        // Handle specific status codes if needed
+        if (response.status === 401) return;
+        throw new Error(`Failed to fetch notifications: ${response.status}`)
+      }
 
       const data = await response.json()
-      
+
       // Ensure unique notifications by ID to prevent React key errors
-      const uniqueNotifications = data.filter((notification: Notification, index: number, self: Notification[]) => 
-        index === self.findIndex((n) => n.id === notification.id)
-      )
-      
+      const uniqueNotifications = Array.isArray(data)
+        ? data.filter((notification: Notification, index: number, self: Notification[]) =>
+          index === self.findIndex((n) => n.id === notification.id)
+        )
+        : []
+
       setNotifications(uniqueNotifications)
       setUnreadCount(uniqueNotifications.filter((notif: Notification) => !notif.read).length)
       setLastFetched(new Date())
-    } catch (error) {
-      console.error("Error fetching notifications:", error)
+    } catch (error: any) {
+      if (error.name === 'AbortError') return
+      console.warn("Could not fetch notifications (possibly server restart):", error.message)
     }
   }
 
@@ -121,13 +128,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // Initial fetch when the component mounts and session is authenticated
   useEffect(() => {
     let isMounted = true;
-    
+    const controller = new AbortController();
+
     const fetchInitialNotifications = async () => {
       if (status === 'authenticated' && !initialFetchRef.current) {
         initialFetchRef.current = true;
         setIsLoading(true);
         try {
-          await fetchNotifications();
+          await fetchNotifications(controller.signal);
         } finally {
           if (isMounted) {
             setIsLoading(false);
@@ -141,12 +149,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     // Set up polling every 30 seconds
     const interval = setInterval(() => {
       if (status === 'authenticated') {
-        fetchNotifications();
+        fetchNotifications(controller.signal);
       }
     }, 30000);
 
     return () => {
       isMounted = false;
+      controller.abort();
       clearInterval(interval);
     };
   }, [status]); // Only depend on status, not session or notifications

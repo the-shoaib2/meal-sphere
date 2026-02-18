@@ -16,7 +16,7 @@ export function PageHeader({
     className,
 }: PageHeaderProps) {
     return (
-        <div className={cn("mb-4 space-y-1.5", className)}>
+        <div className={cn("mb-4", className)}>
             <div className="flex items-center justify-between gap-4">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                     {heading}

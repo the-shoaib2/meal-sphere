@@ -215,8 +215,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     refetchOnWindowFocus: false
   });
 
-  const meals = mealSystem.meals;
-  const targetPeriod = mealSystem.period;
+  const meals = mealSystem?.meals || [];
+  const targetPeriod = mealSystem?.period || null;
 
   // 2. Fetch Guest Meals
   const { data: guestMeals = [], isLoading: isLoadingGuestMeals, error: guestMealsError } = useQuery<GuestMeal[]>({

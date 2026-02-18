@@ -128,7 +128,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     triggerAutoMeals,
     shouldAutoAddMeal,
     isAutoMealTime
-  } = useMeal(roomId, initialData, userRole)
+  } = useMeal(roomId, selectedDate, initialData, userRole)
 
   // Memoized and callback hooks (must be before any early return)
   const mealsForDate = useMemo(() => useMealsByDate(selectedDate) as MealWithUser[], [useMealsByDate, selectedDate])
