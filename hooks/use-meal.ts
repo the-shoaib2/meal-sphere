@@ -138,6 +138,7 @@ export interface MealsPageData {
   roomData: any;
   userRole: string | null;
   groupId?: string;
+  timestamp?: string;
 }
 
 interface UseMealReturn {
@@ -211,20 +212,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
           period: effectiveInitialData.currentPeriod || null 
         }
       : undefined,
+    // Add initialDataUpdatedAt so React Query knows NOT to instantly overwrite fresh client data with stale SSR data
+    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     refetchOnWindowFocus: false
   });
-  // Sync SSR data with Query Cache when it updates (e.g. after router.refresh())
-  useEffect(() => {
-    if (effectiveInitialData?.meals && roomId && selectedDateStr) {
-      // Only update if the data corresponds to the currently viewed date
-      // We assume effectiveInitialData matches the URL/SSR state
-      queryClient.setQueryData(['meals-system', roomId, selectedDateStr], {
-        meals: effectiveInitialData.meals,
-        period: effectiveInitialData.currentPeriod
-      });
-    }
-  }, [effectiveInitialData, queryClient, roomId, selectedDateStr]);
+
 
   const meals = mealSystem?.meals || [];
   const targetPeriod = mealSystem?.period || null;
@@ -239,6 +232,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     enabled: false, // Disabled - rely on SSR
     initialData: effectiveInitialData?.guestMeals,
+    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
@@ -253,6 +247,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     enabled: false, // Disabled - rely on SSR
     initialData: effectiveInitialData?.settings || effectiveInitialData?.mealSettings,
+    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
@@ -267,6 +262,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     enabled: false, // Disabled - rely on SSR
     initialData: effectiveInitialData?.autoSettings || effectiveInitialData?.autoMealSettings,
+    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
@@ -281,16 +277,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     enabled: false, // Disabled - rely on SSR
     initialData: effectiveInitialData?.userStats || effectiveInitialData?.userMealStats,
+    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
-  
-  // Sync stats as well
-  useEffect(() => {
-     if (effectiveInitialData?.userMealStats && roomId && session?.user?.id) {
-         queryClient.setQueryData(['user-meal-stats', roomId, session.user.id], effectiveInitialData.userMealStats);
-     }
-  }, [effectiveInitialData, queryClient, roomId, session?.user?.id]);
 
 
   const currentPeriod = targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod;
@@ -374,10 +364,13 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.error(error.response?.data?.message || 'Failed to update meal');
     },
     onSettled: () => {
-      // We rely on router.refresh() to bring fresh data via SSR (initial data props)
-      // We do NOT invalidate queries here to avoid reducing double-fetching (API + SSR)
-      // The useEffect above will sync the new props to the cache
-      router.refresh(); 
+      // Invalidate queries to fetch fresh data from the server
+      const queryKey = ['meals-system', roomId, selectedDateStr];
+      queryClient.invalidateQueries({ queryKey });
+      if (session?.user?.id) {
+         queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session.user.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
     }
   });
 
@@ -434,7 +427,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.error(error.response?.data?.message || 'Failed to add guest meal');
     },
     onSuccess: (_, variables) => {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, selectedDateStr] });
+      if (session?.user?.id) {
+         queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session.user.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success(`Added ${variables.count} guest meal(s) successfully`);
     }
   });
@@ -472,7 +470,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.error(error.response?.data?.message || 'Failed to update guest meal');
     },
     onSuccess: () => {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, selectedDateStr] });
+      if (session?.user?.id) {
+         queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session.user.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success('Guest meal updated successfully');
     }
   });
@@ -506,7 +509,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.error(error.response?.data?.message || 'Failed to delete guest meal');
     },
     onSuccess: () => {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, selectedDateStr] });
+      if (session?.user?.id) {
+         queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session.user.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success('Guest meal deleted successfully');
     }
   });
@@ -517,7 +525,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       await axios.patch(`/api/meals/settings?roomId=${roomId}`, settings);
     },
     onSuccess: () => {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
       toast.success('Meal settings updated successfully');
     },
     onError: (error: any) => {
@@ -552,7 +560,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.error((err as any).response?.data?.message || 'Failed to update auto meal settings');
     },
     onSettled: () => {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
     }
   });
 
@@ -566,7 +574,11 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       });
     },
     onSuccess: () => {
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, selectedDateStr] });
+      if (session?.user?.id) {
+         queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, session.user.id] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
       toast.success('Auto meals processed successfully');
     },
     onError: (error: any) => {

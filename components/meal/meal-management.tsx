@@ -361,7 +361,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Select Date</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Select Date</CardTitle>
               </CardHeader>
               <CardContent>
                 <MealCalendar
