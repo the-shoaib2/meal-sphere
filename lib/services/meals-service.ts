@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/services/prisma';
-import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
-const revalidateTag = _revalidateTag as any;
+import { unstable_cache } from 'next/cache';
 import { encryptData, decryptData } from '@/lib/encryption';
 import { getCurrentPeriod, getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getPeriodForDate } from '@/lib/utils/period-utils';
 import { createNotification } from "@/lib/utils/notification-utils";
@@ -13,15 +12,37 @@ import { format, eachDayOfInterval } from 'date-fns';
  * Uses unstable_cache for caching and encrypts cached data for security
  * All queries run in parallel using Promise.all()
  */
-export async function fetchMealsData(userId: string, groupId: string) {
-  const cacheKey = `meals-data-${userId}-${groupId}`;
+export async function fetchMealsData(
+  userId: string, 
+  groupId: string,
+  options?: {
+    periodId?: string;
+    date?: Date;
+    startDate?: Date;
+    endDate?: Date;
+  }
+) {
+  const { periodId, date, startDate, endDate } = options || {};
+  
+  // Create a more specific cache key that includes period/date info
+  const cacheKey = `meals-data-${userId}-${groupId}-${periodId || 'current'}-${date?.toISOString() || 'no-date'}`;
   
   const cachedFn = unstable_cache(
     async () => {
       const start = performance.now();
       
-      // Get current period first
-      const currentPeriod = await getCurrentPeriod(groupId);
+      // 1. Resolve Target Period
+      let currentPeriod = null;
+      
+      if (periodId) {
+        currentPeriod = await prisma.mealPeriod.findUnique({
+          where: { id: periodId, roomId: groupId }
+        });
+      } else if (date) {
+        currentPeriod = await getPeriodForDate(groupId, date);
+      } else {
+        currentPeriod = await getCurrentPeriod(groupId);
+      }
       
       if (!currentPeriod) {
         // No active period - return empty data
@@ -56,7 +77,7 @@ export async function fetchMealsData(userId: string, groupId: string) {
         membership,
         userMealCount
       ] = await Promise.all([
-        // User meals for current period
+        // User meals for target period
         prisma.meal.findMany({
           where: {
             roomId: groupId,
@@ -76,7 +97,7 @@ export async function fetchMealsData(userId: string, groupId: string) {
           }
         }),
         
-        // Guest meals for current period
+        // Guest meals for target period
         prisma.guestMeal.findMany({
           where: {
             roomId: groupId,
@@ -113,7 +134,7 @@ export async function fetchMealsData(userId: string, groupId: string) {
           }
         }),
         
-        // Meal distribution by type (current period only)
+        // Meal distribution by type (target period only)
         prisma.meal.groupBy({
           by: ['type'],
           where: {
@@ -152,7 +173,7 @@ export async function fetchMealsData(userId: string, groupId: string) {
           }
         }),
         
-        // User's meal count for current period
+        // User's meal count for target period
         prisma.meal.groupBy({
           by: ['type'],
           where: {
@@ -437,9 +458,9 @@ export async function toggleMeal(roomId: string, userId: string, date: Date, typ
     // CRITICAL: Normalize date to start of day for consistency
     const normalizedDate = new Date(date)
     const startOfDay = new Date(normalizedDate)
-    startOfDay.setHours(0, 0, 0, 0)
+    startOfDay.setUTCHours(0, 0, 0, 0)
     const endOfDay = new Date(normalizedDate)
-    endOfDay.setHours(23, 59, 59, 999)
+    endOfDay.setUTCHours(23, 59, 59, 999)
     
     // Check if meal exists (using range to be robust against legacy timestamps)
     const existingMeal = await prisma.meal.findFirst({
@@ -487,7 +508,7 @@ export async function createGuestMeal(data: { roomId: string; userId: string; da
     
     // CRITICAL: Normalize date to start of day for consistency
     const normalizedDate = new Date(date)
-    normalizedDate.setHours(0, 0, 0, 0)
+    normalizedDate.setUTCHours(0, 0, 0, 0)
     
     const settings = await prisma.mealSettings.findUnique({ where: { roomId } });
     if (settings && !settings.allowGuestMeals) throw new Error("Guest meals are not allowed");

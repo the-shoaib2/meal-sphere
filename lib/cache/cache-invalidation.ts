@@ -25,7 +25,8 @@ import {
  */
 export async function invalidateMealCache(
   roomId: string,
-  periodId?: string
+  periodId?: string,
+  userId?: string
 ): Promise<void> {
   const patterns = [
     getMealsCacheKey(roomId, periodId),
@@ -38,10 +39,14 @@ export async function invalidateMealCache(
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
   // Revalidate Next.js cache tags
-  revalidateTag('meals');
-  revalidateTag(`group-${roomId}`);
+  revalidateTag('meals', 'max');
+  revalidateTag(`group-${roomId}`, 'max');
   
-  console.log(`🗑️  Invalidated meal cache for room ${roomId}`);
+  if (userId) {
+    revalidateTag(`user-${userId}`, 'max');
+  }
+  
+  console.log(`🗑️  Invalidated meal cache for room ${roomId}${userId ? ` and user ${userId}` : ''}`);
 }
 
 /**
@@ -167,8 +172,8 @@ export async function invalidateRoomCache(roomId: string): Promise<void> {
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
   // Revalidate Next.js cache tags
-  revalidateTag('rooms');
-  revalidateTag(`group-${roomId}`);
+  revalidateTag('rooms', 'max');
+  revalidateTag(`group-${roomId}`, 'max');
   
   console.log(`🗑️  Invalidated all caches for room ${roomId}`);
 }
@@ -220,7 +225,7 @@ export async function invalidateCacheForMutation(
   switch (type) {
     case 'meal':
       if (data.roomId) {
-        await invalidateMealCache(data.roomId, data.periodId);
+        await invalidateMealCache(data.roomId, data.periodId, data.userId);
       }
       break;
     

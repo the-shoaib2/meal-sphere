@@ -7,13 +7,14 @@ interface MealCalendarProps {
   selected: Date
   onSelect: (date: Date) => void
   getMealCount: (date: Date) => number
+  isLoading?: boolean
 }
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-export default function MealCalendar({ selected, onSelect, getMealCount }: MealCalendarProps) {
+export default function MealCalendar({ selected, onSelect, getMealCount, isLoading }: MealCalendarProps) {
   const [viewDate, setViewDate] = React.useState(() => startOfMonth(selected))
-  
+
   // Generate calendar grid
   const weeks = useMemo(() => {
     const start = startOfWeek(startOfMonth(viewDate))
@@ -105,8 +106,8 @@ export default function MealCalendar({ selected, onSelect, getMealCount }: MealC
                   "border-2 border-transparent",
                   isCurrentMonth ? "text-foreground" : "text-muted-foreground",
                   today && !isSelected && "text-primary border-primary/30 bg-primary/5 font-medium",
-                  isSelected 
-                    ? "bg-blue-800 text-white shadow-md scale-105" 
+                  isSelected
+                    ? "bg-blue-800 text-white shadow-md scale-105"
                     : "hover:bg-accent/50 hover:border-accent",
                   !isSelected && !today && isCurrentMonth && "hover:bg-accent/30"
                 )}
@@ -121,12 +122,14 @@ export default function MealCalendar({ selected, onSelect, getMealCount }: MealC
               {/* Meal count at bottom */}
               <div className={cn(
                 "mt-0.5 flex items-center justify-center w-5 h-5 rounded-full text-xs transition-all",
-                isSelected 
-                  ? "bg-primary-foreground/10 text-primary-foreground/80" 
+                isSelected
+                  ? "bg-primary-foreground/10 text-primary-foreground/80"
                   : "text-muted-foreground/70",
-                mealCount > 0 ? "opacity-100" : "opacity-0"
+                mealCount > 0 && !isLoading ? "opacity-100" : "opacity-0"
               )}>
-                {mealCount > 0 && (
+                {isLoading ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 animate-pulse" />
+                ) : mealCount > 0 && (
                   <>
                     <Utensils className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     <span className="text-[10px] font-medium ml-0.5">{mealCount}</span>

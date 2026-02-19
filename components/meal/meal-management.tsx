@@ -21,6 +21,7 @@ import GuestMealForm from "@/components/meal/guest-meal-form"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
 import MealCalendar from "@/components/meal/meal-calendar"
 import { Loader } from "@/components/ui/loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
@@ -59,7 +60,19 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   const queryClient = useQueryClient()
   const searchParams = propSearchParams || useSearchParams()
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const dateParam = typeof searchParams?.get === 'function'
+      ? searchParams.get('date')
+      : (searchParams as any)?.date;
+
+    if (dateParam) {
+      const date = new Date(dateParam);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+    return new Date();
+  });
 
   // Get the active tab from URL search params, default to 'calendar'
   const [activeTab, setActiveTab] = useState(() => {
@@ -95,7 +108,29 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     if (tabFromUrl && ['calendar', 'list'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
+
+    // Also sync date if it changes externally or on load
+    const dateFromUrl = typeof searchParams?.get === 'function' ? searchParams.get('date') : (searchParams as any)?.date;
+    if (dateFromUrl) {
+      const parsed = new Date(dateFromUrl);
+      if (!isNaN(parsed.getTime()) && !isSameDay(parsed, selectedDate)) {
+        setSelectedDate(parsed);
+      }
+    }
   }, [searchParams]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    setSelectedDate(date);
+
+    // Update URL
+    const currentParams = typeof searchParams?.get === 'function'
+      ? searchParams.toString()
+      : (searchParams || {});
+    const params = new URLSearchParams(currentParams as any);
+    params.set('date', format(date, 'yyyy-MM-dd'));
+    router.push(`/meals?${params.toString()}`, { scroll: false });
+  };
 
   // Check user permissions
   const { userRole, isMember, isLoading: isAccessLoading } = useGroupAccess({
@@ -108,6 +143,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
   // Check if user can manage meal settings (only when not loading)
   const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
+
+  // Check if user can manage AUTO meal settings (strictly ADMIN/OWNER only)
+  const canManageAutoMeals = !isAccessLoading && userRole && ['ADMIN'].includes(userRole)
 
   const {
     meals,
@@ -208,27 +246,23 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             <Settings className="h-4 w-4" />
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
-          onClick={() => setAutoSettingsOpen(true)}
-          title="Auto Meal Settings"
-        >
-          <Clock className="h-4 w-4" />
-        </Button>
+        {canManageAutoMeals && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
+            onClick={() => setAutoSettingsOpen(true)}
+            title="Auto Meal Settings"
+          >
+            <Clock className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </PageHeader>
   );
 
-  // Show loading state if access, period, or user stats is still loading
-  if (isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader size="lg" />
-      </div>
-    );
-  }
+  // Consolidated loading state
+  const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats;
 
 
 
@@ -261,7 +295,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
     if (privileged) return true
 
-    // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
+    // RESTRICTED: For today, check meal time cutoff
     if (isToday) {
       if (!mealSettings) return true
 
@@ -282,13 +316,24 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       }
     }
 
-    // For all other cases (past or future dates), allow editing
+    // RESTRICTED: Non-privileged users cannot edit past meals (before today)
+    const todayStart = new Date(now)
+    todayStart.setHours(0, 0, 0, 0)
+    if (targetDate < todayStart) {
+      return false
+    }
 
-    // For all other cases (past or future dates), allow editing
-    // This allows regular users to fix history/future logs.
+    // Allow future dates
     return true
   }
 
+
+  // Check if user can edit guest meals (same restriction: no past days unless privileged)
+  const isPrivileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const isPastDate = selectedDate < todayStart
+  const canEditGuestMeals = !!(isPrivileged || !isPastDate)
 
   return (
     <div className="space-y-6">
@@ -298,6 +343,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       <MealSummary
         selectedDate={selectedDate}
         useMealCount={useMealCount}
+        isLoading={isAnyLoading}
       />
 
 
@@ -320,8 +366,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               <CardContent>
                 <MealCalendar
                   selected={selectedDate}
-                  onSelect={setSelectedDate}
+                  onSelect={handleDateSelect}
                   getMealCount={(date: Date) => useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')}
+                  isLoading={isAnyLoading}
                 />
               </CardContent>
             </Card>
@@ -335,8 +382,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               <CardContent>
                 <div className="space-y-3 sm:space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                    {isLoading ? (
-                      <div className="flex items-center justify-center py-12">
+                    {isAnyLoading ? (
+                      <div className="flex justify-center items-center py-12">
                         <Loader />
                       </div>
                     ) : (
@@ -449,7 +496,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                   mealsForDate={mealsForDate}
                   guestMealsForDate={guestMealsForDate}
                   session={session}
-                  isLoading={isLoading}
+                  isLoading={isAnyLoading}
                   handleToggleMeal={handleToggleMeal}
                 />
               </CardContent>
@@ -458,6 +505,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               roomId={roomId}
               date={selectedDate}
               initialData={initialData}
+              isLoading={isAnyLoading}
+              canEdit={canEditGuestMeals}
               onUpdate={() => {
                 const userId = session?.user?.id;
                 queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });

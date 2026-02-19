@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Utensils, Minus } from "lucide-react";
@@ -30,6 +31,35 @@ interface MealListProps {
 
 export default function MealList({ mealsForDate, guestMealsForDate, session, isLoading, handleToggleMeal }: MealListProps) {
   const allMeals = [...mealsForDate, ...guestMealsForDate];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-3">
+            <div className="flex items-center gap-3 pb-2 border-b">
+              <Skeleton className="h-6 w-6 rounded-full" />
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="ml-auto h-5 w-16" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2].map((j) => (
+                <div key={j} className="flex items-center justify-between p-2.5 sm:p-3 border rounded-lg bg-card">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Skeleton className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-2 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   if (allMeals.length === 0) {
     return (

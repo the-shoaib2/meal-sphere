@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Plus, Minus, Trash2, Users, Save, Check } from "lucide-react"
@@ -16,9 +17,11 @@ interface GuestMealManagerProps {
   date: Date
   onUpdate?: () => void
   initialData?: any
+  isLoading?: boolean
+  canEdit?: boolean
 }
 
-export default function GuestMealManager({ roomId, date, onUpdate, initialData }: GuestMealManagerProps) {
+export default function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canEdit = true }: GuestMealManagerProps) {
   const { data: session } = useSession()
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [pendingChanges, setPendingChanges] = useState<Map<string, number>>(new Map())
@@ -30,7 +33,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData }
     updateGuestMeal,
     deleteGuestMeal,
     mealSettings,
-    isLoading
+    isLoading: isMealLoading
   } = useMeal(roomId, date, initialData)
 
   const userGuestMeals = getUserGuestMeals(date)
@@ -132,8 +135,22 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData }
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 rounded-full animate-spin"></div>
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between p-4 border rounded-xl bg-card">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-10 h-10 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-24 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : userGuestMeals.length === 0 ? (
           <div className="text-center py-8">
@@ -177,7 +194,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData }
                           size="icon"
                           className="h-8 w-8 rounded-full hover:bg-primary/10"
                           onClick={() => handleCountChange(guestMeal.id, currentCount - 1)}
-                          disabled={currentCount <= 1 || isUpdating === guestMeal.id}
+                          disabled={!canEdit || currentCount <= 1 || isUpdating === guestMeal.id}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
@@ -199,7 +216,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData }
                           size="icon"
                           className="h-8 w-8 rounded-full hover:bg-primary/10"
                           onClick={() => handleCountChange(guestMeal.id, currentCount + 1)}
-                          disabled={currentCount >= guestMealLimit || isUpdating === guestMeal.id}
+                          disabled={!canEdit || currentCount >= guestMealLimit || isUpdating === guestMeal.id}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -211,7 +228,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData }
                         size="icon"
                         className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleDelete(guestMeal.id)}
-                        disabled={isUpdating === guestMeal.id}
+                        disabled={!canEdit || isUpdating === guestMeal.id}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>

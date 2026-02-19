@@ -146,14 +146,19 @@ export async function POST(request: Request) {
           continue
         }
 
-        // Check if user has reached daily meal limit
+        // Check if user has reached daily meal limit using UTC day range
+        const startOfDayUTC = new Date(targetDate)
+        startOfDayUTC.setUTCHours(0, 0, 0, 0)
+        const endOfDayUTC = new Date(targetDate)
+        endOfDayUTC.setUTCHours(23, 59, 59, 999)
+
         const todayMeals = await prisma.meal.count({
           where: {
             userId: userId,
             roomId: roomId,
             date: {
-              gte: startOfDay(targetDate),
-              lte: endOfDay(targetDate),
+              gte: startOfDayUTC,
+              lte: endOfDayUTC,
             },
           },
         })
@@ -183,8 +188,8 @@ export async function POST(request: Request) {
               userId: userId,
               roomId: roomId,
               date: {
-                gte: startOfDay(targetDate),
-                lte: endOfDay(targetDate),
+                gte: startOfDayUTC,
+                lte: endOfDayUTC,
               },
             },
           })

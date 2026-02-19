@@ -153,9 +153,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Guest meals are not allowed in this room" }, { status: 403 })
     }
 
-    // Normalize date to start of day
+    // Normalize date to start of day in UTC
     const dateObj = new Date(date)
-    dateObj.setHours(0, 0, 0, 0)
+    dateObj.setUTCHours(0, 0, 0, 0)
 
     // Resolve period for the date
     const targetPeriod = await prisma.mealPeriod.findFirst({
@@ -266,9 +266,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Normalize date to start of day
+    // Normalize date to start of day in UTC
     const dateObj = new Date(date)
-    dateObj.setHours(0, 0, 0, 0)
+    dateObj.setUTCHours(0, 0, 0, 0)
 
     // Resolve period for the date
     const targetPeriod = await prisma.mealPeriod.findFirst({

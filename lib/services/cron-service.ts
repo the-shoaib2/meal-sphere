@@ -110,8 +110,10 @@ export async function processMealReminders() {
       },
     })
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Use string formatting to get local date, then create UTC date object
+    // This ensures we check for the meal corresponding to the local "today"
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    const today = new Date(todayStr) // UTC Midnight
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000)
 
     // For each user, check if they've already marked meals for today

@@ -42,8 +42,11 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
   }
 
   // 2. Fetch Initial Data for the active group
+  // Resolve date from search params to ensure we fetch data for the correct period
+  const dateParam = resolvedSearchParams?.date ? new Date(resolvedSearchParams.date) : undefined;
+
   const [mealsData, accessData] = await Promise.all([
-    fetchMealsData(session.user.id, activeGroup.id),
+    fetchMealsData(session.user.id, activeGroup.id, { date: dateParam }),
     fetchGroupAccessData(activeGroup.id, session.user.id)
   ]);
 

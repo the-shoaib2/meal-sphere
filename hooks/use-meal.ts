@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
@@ -205,15 +205,26 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       return res.data;
     },
     enabled: !!roomId,
-    initialData: selectedDateStr === format(new Date(), 'yyyy-MM-dd') || !selectedDateStr
+    initialData: effectiveInitialData
       ? { 
-          meals: effectiveInitialData?.meals || [], 
-          period: effectiveInitialData?.currentPeriod || null 
+          meals: effectiveInitialData.meals || [], 
+          period: effectiveInitialData.currentPeriod || null 
         }
       : undefined,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     refetchOnWindowFocus: false
   });
+  // Sync SSR data with Query Cache when it updates (e.g. after router.refresh())
+  useEffect(() => {
+    if (effectiveInitialData?.meals && roomId && selectedDateStr) {
+      // Only update if the data corresponds to the currently viewed date
+      // We assume effectiveInitialData matches the URL/SSR state
+      queryClient.setQueryData(['meals-system', roomId, selectedDateStr], {
+        meals: effectiveInitialData.meals,
+        period: effectiveInitialData.currentPeriod
+      });
+    }
+  }, [effectiveInitialData, queryClient, roomId, selectedDateStr]);
 
   const meals = mealSystem?.meals || [];
   const targetPeriod = mealSystem?.period || null;
@@ -273,6 +284,14 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     staleTime: Infinity,
     refetchOnWindowFocus: false
   });
+  
+  // Sync stats as well
+  useEffect(() => {
+     if (effectiveInitialData?.userMealStats && roomId && session?.user?.id) {
+         queryClient.setQueryData(['user-meal-stats', roomId, session.user.id], effectiveInitialData.userMealStats);
+     }
+  }, [effectiveInitialData, queryClient, roomId, session?.user?.id]);
+
 
   const currentPeriod = targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod;
   const userRole = userRoleFromProps || effectiveInitialData?.userRole || null;
@@ -282,40 +301,47 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
   // Toggle meal mutation
   const toggleMealMutation = useMutation({
-    mutationFn: async ({ date, type, userId }: { date: Date; type: MealType; userId: string }) => {
+    mutationFn: async ({ date, type, userId, action }: { date: Date; type: MealType; userId: string; action: 'add' | 'remove' }) => {
       const formattedDate = format(date, 'yyyy-MM-dd');
       await axios.post('/api/meals', {
         date: formattedDate,
         type,
-        roomId
+        roomId,
+        action
       });
     },
     onMutate: async (variables) => {
       const { date, type, userId } = variables;
-      
+      const dateString = format(date, 'yyyy-MM-dd');
+
+      // Target the specific query for the current view
+      // We use selectedDateStr from the hook scope because that's what the UI is currently displaying
+      const queryKey = ['meals-system', roomId, selectedDateStr];
+
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['meals', roomId] });
-      
+      await queryClient.cancelQueries({ queryKey });
+
       // Snapshot previous value
-      const previousMeals = queryClient.getQueryData(['meals', roomId]);
-      
+      const previousData = queryClient.getQueryData(queryKey);
+
       // Optimistically update
-      queryClient.setQueryData(['meals', roomId], (old: Meal[] | undefined) => {
+      queryClient.setQueryData(queryKey, (old: { meals: Meal[], period: any } | undefined) => {
         if (!old) return old;
-        
-        const dateStr = format(date, 'yyyy-MM-dd');
-        const existingMealIndex = old.findIndex(
-          m => m.date.startsWith(dateStr) && m.type === type && m.userId === userId
+
+        const existingMealIndex = old.meals.findIndex(
+          m => m.date.startsWith(dateString) && m.type === type && m.userId === userId
         );
-        
+
+        let newMeals = [...old.meals];
+
         if (existingMealIndex >= 0) {
           // Remove meal (toggle off)
-          return old.filter((_, i) => i !== existingMealIndex);
+          newMeals = newMeals.filter((_, i) => i !== existingMealIndex);
         } else {
           // Add meal (toggle on)
           const newMeal: Meal = {
             id: `temp-${Date.now()}`,
-            date: dateStr,
+            date: dateString,
             type,
             userId,
             roomId: roomId!,
@@ -325,25 +351,33 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
               id: userId,
               name: session?.user?.name || null,
               image: session?.user?.image || null,
-            }
+              email: session?.user?.email || null, // Best effort to match type
+            } as any // Cast to satisfy type if needed
           };
-          return [newMeal, ...old];
+          newMeals = [newMeal, ...newMeals];
         }
+
+        return {
+          ...old,
+          meals: newMeals
+        };
       });
-      
-      return { previousMeals };
+
+      return { previousData };
     },
-    onError: (error: any, variables, context) => {
+    onError: (error: any, variables, context: any) => {
       // Rollback on error
-      if (context?.previousMeals) {
-        queryClient.setQueryData(['meals', roomId], context.previousMeals);
+      if (context?.previousData) {
+        queryClient.setQueryData(['meals-system', roomId, selectedDateStr], context.previousData);
       }
       console.error('Error toggling meal:', error);
       toast.error(error.response?.data?.message || 'Failed to update meal');
     },
-    onSuccess: () => {
-      // Sync with SSR
-      router.refresh();
+    onSettled: () => {
+      // We rely on router.refresh() to bring fresh data via SSR (initial data props)
+      // We do NOT invalidate queries here to avoid reducing double-fetching (API + SSR)
+      // The useEffect above will sync the new props to the cache
+      router.refresh(); 
     }
   });
 
@@ -483,8 +517,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       await axios.patch(`/api/meals/settings?roomId=${roomId}`, settings);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
+      router.refresh();
       toast.success('Meal settings updated successfully');
     },
     onError: (error: any) => {
@@ -519,7 +552,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.error((err as any).response?.data?.message || 'Failed to update auto meal settings');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
+      router.refresh();
     }
   });
 
@@ -533,8 +566,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
+      router.refresh();
       toast.success('Auto meals processed successfully');
     },
     onError: (error: any) => {
@@ -753,8 +785,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
   // Mutation wrappers
   const toggleMeal = useCallback(async (date: Date, type: MealType, userId: string) => {
-    await toggleMealMutation.mutateAsync({ date, type, userId });
-  }, [toggleMealMutation]);
+    const exists = hasMeal(date, type, userId);
+    const action = exists ? 'remove' : 'add';
+    await toggleMealMutation.mutateAsync({ date, type, userId, action });
+  }, [toggleMealMutation, hasMeal]);
 
   const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {
     await addGuestMealMutation.mutateAsync({ date, type, count });

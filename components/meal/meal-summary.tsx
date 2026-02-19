@@ -4,12 +4,15 @@ import { Utensils } from "lucide-react";
 import React from "react";
 import type { MealType } from "@/hooks/use-meal";
 
+import { Skeleton } from "@/components/ui/skeleton";
+
 interface MealSummaryProps {
   selectedDate: Date;
   useMealCount: (date: Date, type: MealType) => number;
+  isLoading?: boolean;
 }
 
-const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount }) => {
+const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, isLoading }) => {
   const breakfastCount = useMealCount(selectedDate, 'BREAKFAST');
   const lunchCount = useMealCount(selectedDate, 'LUNCH');
   const dinnerCount = useMealCount(selectedDate, 'DINNER');
@@ -24,7 +27,7 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount })
           </div>
           Meal Summary
           <Badge variant="secondary" className="ml-auto text-xs">
-            {totalMeals} total
+            {isLoading ? <Skeleton className="h-4 w-8" /> : `${totalMeals} total`}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -35,21 +38,27 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount })
               <span className="text-sm sm:text-base">🌅</span>
               <span className="text-[9px] sm:text-xs font-semibold text-orange-600 uppercase tracking-tighter sm:tracking-normal">Breakfast</span>
             </div>
-            <div className="text-sm sm:text-xl font-bold text-orange-700">{breakfastCount}</div>
+            <div className="text-sm sm:text-xl font-bold text-orange-700 flex justify-center">
+              {isLoading ? <Skeleton className="h-6 w-8 bg-orange-500/20" /> : breakfastCount}
+            </div>
           </div>
           <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-yellow-500/10 border-2 border-yellow-500/40 rounded-lg">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
               <span className="text-sm sm:text-base">☀️</span>
               <span className="text-[9px] sm:text-xs font-semibold text-yellow-600 uppercase tracking-tighter sm:tracking-normal">Lunch</span>
             </div>
-            <div className="text-sm sm:text-xl font-bold text-yellow-700">{lunchCount}</div>
+            <div className="text-sm sm:text-xl font-bold text-yellow-700 flex justify-center">
+              {isLoading ? <Skeleton className="h-6 w-8 bg-yellow-500/20" /> : lunchCount}
+            </div>
           </div>
           <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-blue-500/10 border-2 border-blue-500/40 rounded-lg">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
               <span className="text-sm sm:text-base">🌙</span>
               <span className="text-[9px] sm:text-xs font-semibold text-blue-600 uppercase tracking-tighter sm:tracking-normal">Dinner</span>
             </div>
-            <div className="text-sm sm:text-xl font-bold text-blue-700">{dinnerCount}</div>
+            <div className="text-sm sm:text-xl font-bold text-blue-700 flex justify-center">
+              {isLoading ? <Skeleton className="h-6 w-8 bg-blue-500/20" /> : dinnerCount}
+            </div>
           </div>
         </div>
       </CardContent>
