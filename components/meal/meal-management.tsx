@@ -144,8 +144,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Check if user can manage meal settings (only when not loading)
   const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
 
-  // Check if user can manage AUTO meal settings (strictly ADMIN/OWNER only)
+  // Check if user can manage AUTO meal settings admin-level (turn on/off the whole system)
   const canManageAutoMeals = !isAccessLoading && userRole && ['ADMIN'].includes(userRole)
+
 
   const {
     meals,
@@ -165,17 +166,25 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     canAddMeal,
     triggerAutoMeals,
     shouldAutoAddMeal,
-    isAutoMealTime
+    isAutoMealTime,
+    deleteGuestMeal
   } = useMeal(roomId, selectedDate, initialData, userRole)
 
   // Memoized and callback hooks (must be before any early return)
   const mealsForDate = useMemo(() => useMealsByDate(selectedDate) as MealWithUser[], [useMealsByDate, selectedDate])
   const guestMealsForDate = useMemo(() => useGuestMealsByDate(selectedDate), [useGuestMealsByDate, selectedDate])
 
-  const handleToggleMeal = useCallback(async (type: MealType) => {
-    if (!session?.user?.id) return
+  // All members can access their personal Auto Meal Settings when admin has enabled the system
+  // Admins can always access it (to configure the system itself)
+  const canAccessAutoMealSettings = !isAccessLoading && userRole && (
+    ['ADMIN'].includes(userRole) || mealSettings?.autoMealEnabled
+  )
+
+  const handleToggleMeal = useCallback(async (type: MealType, userId?: string) => {
+    const targetUserId = userId || session?.user?.id
+    if (!targetUserId) return
     try {
-      await toggleMeal(selectedDate, type, session.user.id)
+      await toggleMeal(selectedDate, type, targetUserId)
     } catch (error) {
       console.error("Error toggling meal:", error)
       toast.error("Failed to update meal")
@@ -190,6 +199,15 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       toast.error("Failed to trigger auto meals")
     }
   }, [selectedDate, triggerAutoMeals])
+
+  const handleDeleteGuestMeal = useCallback(async (guestMealId: string) => {
+    try {
+      await deleteGuestMeal(guestMealId)
+    } catch (error) {
+      console.error("Error deleting guest meal:", error)
+      toast.error("Failed to delete guest meal")
+    }
+  }, [deleteGuestMeal])
 
   const userHasMeal = useCallback((type: MealType) => {
     if (!session?.user?.id) return false
@@ -207,7 +225,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   // Header (always visible)
   const header = (
     <PageHeader
-      heading="Meal Management"
+      heading="Meals"
       text={
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
           <span className="text-muted-foreground block sm:inline">Manage meals for {groupName || "your group"}</span>
@@ -238,7 +256,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         {canManageMealSettings && (
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
             onClick={() => setSettingsOpen(true)}
             title="Meal Settings"
@@ -246,10 +264,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             <Settings className="h-4 w-4" />
           </Button>
         )}
-        {canManageAutoMeals && (
+        {canAccessAutoMealSettings && (
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
             onClick={() => setAutoSettingsOpen(true)}
             title="Auto Meal Settings"
@@ -497,7 +515,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                   guestMealsForDate={guestMealsForDate}
                   session={session}
                   isLoading={isAnyLoading}
+                  userRole={userRole}
                   handleToggleMeal={handleToggleMeal}
+                  handleDeleteGuestMeal={handleDeleteGuestMeal}
                 />
               </CardContent>
             </Card>
@@ -509,13 +529,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               canEdit={canEditGuestMeals}
               onUpdate={() => {
                 const userId = session?.user?.id;
-                queryClient.invalidateQueries({ queryKey: ['meal-data', roomId] });
-                queryClient.invalidateQueries({ queryKey: ['guest-meals', roomId] });
-                queryClient.invalidateQueries({ queryKey: ['meal-summary', roomId] });
-                queryClient.invalidateQueries({ queryKey: ['user-meal-stats', roomId, userId] });
+                // Meal and guest meal syncing is now handled directly by useMeal hook mutations
+                // or by SSR page reloads on navigation.
                 queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
                 queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, userId] });
-                queryClient.invalidateQueries({ queryKey: ['dashboard-summary', roomId] });
               }}
             />
           </div>

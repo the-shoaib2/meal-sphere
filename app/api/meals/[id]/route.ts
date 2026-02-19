@@ -6,61 +6,7 @@ import prisma from '@/lib/services/prisma';
 type RouteParams = { id: string };
 type RouteContext = { params: Promise<RouteParams> };
 
-export async function GET(
-  request: NextRequest,
-  context: RouteContext
-) {
-  const { id } = await context.params;
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const meal = await prisma.meal.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-    });
-
-    if (!meal) {
-      return NextResponse.json({ error: 'Meal not found' }, { status: 404 });
-    }
-
-    // Check if user is a member of the room
-    const roomMember = await prisma.roomMember.findUnique({
-      where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: meal.roomId,
-        },
-      },
-    });
-
-    if (!roomMember) {
-      return NextResponse.json(
-        { error: 'You are not a member of this room' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json(meal);
-  } catch (error) {
-    console.error('Error fetching meal:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch meal' },
-      { status: 500 }
-    );
-  }
-}
+// GET is disabled. Use direct SSR fetching via prisma in the page component.
 
 export async function PUT(
   request: Request,

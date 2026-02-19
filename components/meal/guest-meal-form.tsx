@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Plus, Minus, Users } from "lucide-react"
+import { Calendar as CalendarIcon, Plus, Minus, UserPlus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -34,6 +34,7 @@ interface GuestMealFormProps {
 export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId, undefined, initialData)
 
@@ -47,6 +48,7 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
   })
 
   const onSubmit = async (data: GuestMealFormData) => {
+    setIsSubmitting(true)
     try {
       await addGuestMeal(data.date, data.type, guestCount)
       form.reset()
@@ -55,18 +57,22 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
       onSuccess?.()
     } catch (error) {
       console.error("Error adding guest meal:", error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleCountChange = (increment: boolean) => {
     const newCount = increment ? guestCount + 1 : guestCount - 1
-    if (newCount >= 1 && newCount <= (mealSettings?.guestMealLimit || 10)) {
+    if (newCount >= 1 && newCount <= guestMealLimit) {
       setGuestCount(newCount)
     }
   }
 
   const isGuestMealsAllowed = mealSettings?.allowGuestMeals ?? true
-  const guestMealLimit = mealSettings?.guestMealLimit ?? 10
+  // System-wide hard cap: max 10 guest meals per entry, regardless of settings
+  const SYSTEM_MAX_GUEST_MEALS = 10
+  const guestMealLimit = Math.min(mealSettings?.guestMealLimit ?? SYSTEM_MAX_GUEST_MEALS, SYSTEM_MAX_GUEST_MEALS)
 
   if (!isGuestMealsAllowed) {
     return (
@@ -79,8 +85,8 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full sm:w-auto">
-          <Users className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="sm" className="w-full sm:w-auto hover:bg-primary/5 hover:text-primary transition-colors">
+          <UserPlus className="mr-2 h-4 w-4" />
           Add Guest Meal
         </Button>
       </DialogTrigger>
@@ -210,8 +216,15 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Adding..." : `Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  `Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`
+                )}
               </Button>
             </DialogFooter>
           </form>

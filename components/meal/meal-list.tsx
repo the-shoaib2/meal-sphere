@@ -26,10 +26,12 @@ interface MealListProps {
   guestMealsForDate: any[];
   session: any;
   isLoading: boolean;
-  handleToggleMeal: (type: MealType) => void;
+  userRole: string | null;
+  handleToggleMeal: (type: MealType, userId: string) => void;
+  handleDeleteGuestMeal: (id: string) => Promise<void>;
 }
 
-export default function MealList({ mealsForDate, guestMealsForDate, session, isLoading, handleToggleMeal }: MealListProps) {
+export default function MealList({ mealsForDate, guestMealsForDate, session, isLoading, userRole, handleToggleMeal, handleDeleteGuestMeal }: MealListProps) {
   const allMeals = [...mealsForDate, ...guestMealsForDate];
 
   if (isLoading) {
@@ -132,12 +134,18 @@ export default function MealList({ mealsForDate, guestMealsForDate, session, isL
                         ×{meal.count}
                       </Badge>
                     )}
-                    {meal.userId === session?.user?.id && (
+                    {(meal.userId === session?.user?.id || ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole || '')) && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 sm:h-7 sm:w-7 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleToggleMeal(type as MealType)}
+                        onClick={() => {
+                          if (meal.count) {
+                            handleDeleteGuestMeal(meal.id);
+                          } else {
+                            handleToggleMeal(type as MealType, meal.userId);
+                          }
+                        }}
                         disabled={isLoading}
                       >
                         <Minus className="h-3 w-3" />

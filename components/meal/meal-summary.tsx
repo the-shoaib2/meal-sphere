@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Utensils } from "lucide-react";
 import React from "react";
 import type { MealType } from "@/hooks/use-meal";
-
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface MealSummaryProps {
@@ -12,14 +11,24 @@ interface MealSummaryProps {
   isLoading?: boolean;
 }
 
+const MEAL_TYPES = [
+  { type: "BREAKFAST" as MealType, label: "Breakfast", icon: "🌅", color: "orange" },
+  { type: "LUNCH" as MealType, label: "Lunch", icon: "☀️", color: "yellow" },
+  { type: "DINNER" as MealType, label: "Dinner", icon: "🌙", color: "blue" },
+] as const;
+
+const COLOR_MAP = {
+  orange: { bg: "bg-orange-500/10", text: "text-orange-600", bold: "text-orange-700", skeleton: "bg-orange-500/20" },
+  yellow: { bg: "bg-yellow-500/10", text: "text-yellow-600", bold: "text-yellow-700", skeleton: "bg-yellow-500/20" },
+  blue: { bg: "bg-blue-500/10", text: "text-blue-600", bold: "text-blue-700", skeleton: "bg-blue-500/20" },
+};
+
 const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, isLoading }) => {
-  const breakfastCount = useMealCount(selectedDate, 'BREAKFAST');
-  const lunchCount = useMealCount(selectedDate, 'LUNCH');
-  const dinnerCount = useMealCount(selectedDate, 'DINNER');
-  const totalMeals = breakfastCount + lunchCount + dinnerCount;
+  const counts = MEAL_TYPES.map(m => ({ ...m, count: useMealCount(selectedDate, m.type) }));
+  const total = counts.reduce((sum, m) => sum + m.count, 0);
 
   return (
-    <Card className="mb-4">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <div className="p-1.5 bg-primary/10 rounded-full">
@@ -27,43 +36,32 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, i
           </div>
           Meal Summary
           <Badge variant="secondary" className="ml-auto text-xs">
-            {isLoading ? <Skeleton className="h-4 w-8" /> : `${totalMeals} total`}
+            {isLoading ? <Skeleton className="h-4 w-8" /> : `${total} total`}
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mt-2">
-          <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-orange-500/10 border-2 border-orange-500/40 rounded-lg">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
-              <span className="text-sm sm:text-base">🌅</span>
-              <span className="text-[9px] sm:text-xs font-semibold text-orange-600 uppercase tracking-tighter sm:tracking-normal">Breakfast</span>
-            </div>
-            <div className="text-sm sm:text-xl font-bold text-orange-700 flex justify-center">
-              {isLoading ? <Skeleton className="h-6 w-8 bg-orange-500/20" /> : breakfastCount}
-            </div>
-          </div>
-          <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-yellow-500/10 border-2 border-yellow-500/40 rounded-lg">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
-              <span className="text-sm sm:text-base">☀️</span>
-              <span className="text-[9px] sm:text-xs font-semibold text-yellow-600 uppercase tracking-tighter sm:tracking-normal">Lunch</span>
-            </div>
-            <div className="text-sm sm:text-xl font-bold text-yellow-700 flex justify-center">
-              {isLoading ? <Skeleton className="h-6 w-8 bg-yellow-500/20" /> : lunchCount}
-            </div>
-          </div>
-          <div className="text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 bg-blue-500/10 border-2 border-blue-500/40 rounded-lg">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
-              <span className="text-sm sm:text-base">🌙</span>
-              <span className="text-[9px] sm:text-xs font-semibold text-blue-600 uppercase tracking-tighter sm:tracking-normal">Dinner</span>
-            </div>
-            <div className="text-sm sm:text-xl font-bold text-blue-700 flex justify-center">
-              {isLoading ? <Skeleton className="h-6 w-8 bg-blue-500/20" /> : dinnerCount}
-            </div>
-          </div>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
+          {counts.map(({ type, label, icon, color, count }) => {
+            const c = COLOR_MAP[color];
+            return (
+              <div key={type} className={`text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 rounded-lg ${c.bg}`}>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
+                  <span className="text-sm sm:text-base">{icon}</span>
+                  <span className={`text-[9px] sm:text-xs font-semibold uppercase tracking-tighter sm:tracking-normal ${c.text}`}>
+                    {label}
+                  </span>
+                </div>
+                <div className={`text-sm sm:text-xl font-bold flex justify-center ${c.bold}`}>
+                  {isLoading ? <Skeleton className={`h-6 w-8 ${c.skeleton}`} /> : count}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
   );
 };
 
-export default MealSummary; 
+export default MealSummary;

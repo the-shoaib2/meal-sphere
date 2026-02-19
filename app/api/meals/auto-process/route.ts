@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/services/prisma"
 import { format, parse, isBefore, isAfter, startOfDay, endOfDay } from 'date-fns'
+import { getPeriodForDate } from '@/lib/utils/period-utils';
 
 
 // Force dynamic rendering - don't pre-render during build
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
 
     const targetDate = new Date(date)
     const dateStr = format(targetDate, 'yyyy-MM-dd')
+    const period = await getPeriodForDate(roomId, targetDate)
     const currentTime = format(new Date(), 'HH:mm')
     
     let processedCount = 0
@@ -175,6 +177,7 @@ export async function POST(request: Request) {
             roomId: roomId,
             date: targetDate,
             type: mealType,
+            periodId: period?.id || null,
           },
         })
 
@@ -204,6 +207,7 @@ export async function POST(request: Request) {
                 date: targetDate,
                 type: mealType,
                 count: 1,
+                periodId: period?.id || null,
               },
             })
           }
@@ -224,37 +228,4 @@ export async function POST(request: Request) {
   }
 }
 
-// Manual trigger for testing
-export async function GET(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const { searchParams } = new URL(request.url)
-  const roomId = searchParams.get("roomId")
-  const date = searchParams.get("date") || format(new Date(), 'yyyy-MM-dd')
-
-  if (!roomId) {
-    return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
-  }
-
-  // This would typically be called by a cron job
-  // For now, we'll allow manual triggering for testing
-  try {
-    const response = await fetch(`${request.url}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ roomId, date }),
-    })
-
-    const result = await response.json()
-    return NextResponse.json(result)
-  } catch (error) {
-    console.error("Error triggering auto meal processing:", error)
-    return NextResponse.json({ error: "Failed to trigger auto meal processing" }, { status: 500 })
-  }
-} 
+// GET is disabled. Use POST only. 

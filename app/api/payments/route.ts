@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth/auth"
 import prisma from "@/lib/services/prisma"
+import { getPeriodForDate } from '@/lib/utils/period-utils';
 import { cacheGetOrSet } from "@/lib/cache/cache-service"
 import { getPaymentsCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys"
 import { invalidatePaymentCache } from "@/lib/cache/cache-invalidation"
@@ -96,6 +97,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
     }
 
+    // Get current period for the payment date
+    const targetDate = new Date();
+    const period = await getPeriodForDate(roomId, targetDate);
+
     // Create payment
     const payment = await prisma.payment.create({
       data: {
@@ -104,8 +109,9 @@ export async function POST(request: Request) {
         amount: Number.parseFloat(amount),
         method: method,
         description: description,
-        date: new Date(),
-        status: "COMPLETED", // For simplicity, assuming payment is completed
+        date: targetDate,
+        status: "COMPLETED",
+        periodId: period?.id || null,
       },
     })
 

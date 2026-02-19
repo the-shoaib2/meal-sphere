@@ -1,176 +1,186 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/services/prisma"
-import { getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getCurrentPeriod, getPeriodForDate } from "@/lib/utils/period-utils"
-import { cacheGetOrSet } from "@/lib/cache/cache-service"
-import { getMealsCacheKey, CACHE_TTL } from "@/lib/cache/cache-keys"
-import { invalidateMealCache } from "@/lib/cache/cache-invalidation"
-import { getMealsOptimized } from "@/lib/utils/query-helpers"
-import { fetchMealsData } from "@/lib/services/meals-service"
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/services/prisma';
+import { getPeriodForDate } from '@/lib/utils/period-utils';
+import { revalidateTag as _revalidateTag } from 'next/cache';
+const revalidateTag = _revalidateTag as any;
 
-// Force dynamic rendering - don't pre-render during build
-export const dynamic = 'force-dynamic';
+/**
+ * Normalize a date string or Date to UTC midnight to avoid timezone issues.
+ * Accepts 'yyyy-MM-dd' strings or Date objects.
+ */
+function normalizeToUTCMidnight(dateInput: string | Date): Date {
+  if (typeof dateInput === 'string') {
+    // 'yyyy-MM-dd' → UTC midnight
+    const [year, month, day] = dateInput.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  }
+  const d = new Date(dateInput);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+}
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const roomId = searchParams.get("roomId")
-  const startDate = searchParams.get("startDate")
-  const endDate = searchParams.get("endDate")
-  const periodId = searchParams.get("periodId")
-  const dateStr = searchParams.get("date")
+/**
+ * GET /api/meals?roomId=&date=yyyy-MM-dd
+ * Returns meals and guest meals for the period containing the given date.
+ */
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const roomId = searchParams.get('roomId');
+  const dateStr = searchParams.get('date');
 
   if (!roomId) {
-    return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
+    return NextResponse.json({ error: 'roomId is required' }, { status: 400 });
   }
 
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    const targetDate = dateStr ? normalizeToUTCMidnight(dateStr) : new Date();
+    const period = await getPeriodForDate(roomId, targetDate);
+
+    if (!period) {
+      return NextResponse.json({ meals: [], guestMeals: [], period: null });
     }
 
-    // Check room membership (fast check before heavy lifting)
-    const roomMember = await prisma.roomMember.findUnique({
-      where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: roomId,
+    const [meals, guestMeals] = await Promise.all([
+      prisma.meal.findMany({
+        where: { roomId, periodId: period.id },
+        include: {
+          user: { select: { id: true, name: true, image: true } }
         },
-      },
-      select: { userId: true }
-    })
+        orderBy: { date: 'desc' }
+      }),
+      prisma.guestMeal.findMany({
+        where: { roomId, periodId: period.id },
+        include: {
+          user: { select: { id: true, name: true, image: true } }
+        },
+        orderBy: { date: 'desc' }
+      })
+    ]);
 
-    if (!roomMember) {
-      return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
-    }
+    // Serialize dates to ISO strings for the client
+    const serializedMeals = meals.map(m => ({
+      ...m,
+      date: m.date.toISOString(),
+      createdAt: m.createdAt.toISOString(),
+      updatedAt: m.updatedAt.toISOString(),
+    }));
 
-    // Use unified service to fetch data
-    // This leverages the same cache as SSR
-    const data = await fetchMealsData(session.user.id, roomId, {
-      periodId: periodId || undefined,
-      date: dateStr ? new Date(dateStr) : undefined,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined
-    })
+    const serializedGuestMeals = guestMeals.map(m => ({
+      ...m,
+      date: m.date.toISOString(),
+      createdAt: m.createdAt.toISOString(),
+      updatedAt: m.updatedAt.toISOString(),
+    }));
 
-    // Return only what the API client expects (subset of full data)
     return NextResponse.json({
-      meals: data.meals,
-      period: data.currentPeriod
-    })
+      meals: serializedMeals,
+      guestMeals: serializedGuestMeals,
+      period
+    });
   } catch (error) {
-    console.error("Error fetching meals:", error)
-    return NextResponse.json({ error: "Failed to fetch meals" }, { status: 500 })
+    console.error('Error in GET /api/meals:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(request: Request) {
+/**
+ * POST /api/meals
+ * Body: { date: 'yyyy-MM-dd', type: MealType, roomId: string, action: 'add' | 'remove' }
+ */
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { date, type, roomId, action } = body;
+
+  if (!date || !type || !roomId || !action) {
+    return NextResponse.json({ error: 'Missing required fields: date, type, roomId, action' }, { status: 400 });
+  }
+
   try {
-    const body = await request.json()
-    const { roomId, date, type, action } = body
+    // Always normalize to UTC midnight to avoid timezone-driven mismatches
+    const targetDate = normalizeToUTCMidnight(date);
+    const period = await getPeriodForDate(roomId, targetDate);
 
-    if (!roomId || !date || !type) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
-    // Parallel auth and validation checks
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const [targetPeriod, roomMember] = await Promise.all([
-      getPeriodForDate(roomId, new Date(date)),
-      prisma.roomMember.findUnique({
-        where: {
-          userId_roomId: {
-            userId: session.user.id,
-            roomId: roomId,
-          },
-        },
-        select: { userId: true }
-      })
-    ])
-
-    if (!roomMember) {
-      return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
-    }
-
-    if (!targetPeriod) {
-      return NextResponse.json({ error: "No period found for this date. Please ensure a period covers this date." }, { status: 400 })
-    }
-
-    if (targetPeriod.isLocked) {
-      return NextResponse.json({ error: "This period is locked" }, { status: 400 })
-    }
-
-    // Use deleteMany + create pattern for faster toggle (single round trip)
-    // CRITICAL: Normalize date to start/end of day in UTC to avoid timezone shifts
-    // The date string typically comes as YYYY-MM-DD
-    const dateObj = new Date(date)
-    const startOfDay = new Date(dateObj)
-    startOfDay.setUTCHours(0, 0, 0, 0)
-    const endOfDay = new Date(dateObj)
-    endOfDay.setUTCHours(23, 59, 59, 999)
-
-    const deleted = await prisma.meal.deleteMany({
-      where: {
-        userId: session.user.id,
-        roomId: roomId,
-        date: {
-          gte: startOfDay,
-          lte: endOfDay
-        },
-        type: type,
-        // We don't filter by periodId here to ensure we clean up any legacy records 
-        // that might be associated with the wrong period but same date
-      },
-    })
-    
-    let shouldCreate = false;
     if (action === 'add') {
-        shouldCreate = true;
-    } else if (action === 'remove') {
-        shouldCreate = false;
-    } else {
-        // Legacy toggle behavior
-        shouldCreate = deleted.count === 0;
-    }
-
-    let result
-    if (shouldCreate) {
-      // Create meal
-      result = await prisma.meal.create({
-        data: {
-          userId: session.user.id,
-          roomId: roomId,
-          date: startOfDay,
-          type: type,
-          periodId: targetPeriod.id,
+      const meal = await prisma.meal.upsert({
+        where: {
+          userId_roomId_date_type: {
+            userId: session.user.id,
+            roomId,
+            date: targetDate,
+            type,
+          }
         },
-        select: {
-          id: true,
-          date: true,
-          type: true,
-          userId: true,
-          roomId: true,
+        create: {
+          date: targetDate,
+          type,
+          roomId,
+          userId: session.user.id,
+          periodId: period?.id || null,
+        },
+        update: {
+          periodId: period?.id || null,
+        },
+        include: {
+          user: { select: { id: true, name: true, image: true } }
         }
-      })
-    }
+      });
 
-    // Invalidate cache (await to ensure next fetch gets fresh data)
-    await invalidateMealCache(roomId, targetPeriod.id, session.user.id).catch(console.error)
+      // Bust the SSR cache so the next server render is fresh
+      revalidateTag('meals', 'max');
+      revalidateTag(`group-${roomId}`, 'max');
 
-    if (shouldCreate) {
-      return NextResponse.json({ ...result, message: "Meal added successfully", deleted: false })
+      // Serialize dates
+      return NextResponse.json({
+        meal: {
+          ...meal,
+          date: meal.date.toISOString(),
+          createdAt: meal.createdAt.toISOString(),
+          updatedAt: meal.updatedAt.toISOString(),
+        }
+      });
     } else {
-      return NextResponse.json({ message: "Meal removed successfully", deleted: true })
+      // Remove - use a date range to handle any timezone offset in stored data
+      const dayStart = new Date(targetDate);
+      const dayEnd = new Date(targetDate);
+      dayEnd.setUTCHours(23, 59, 59, 999);
+
+      const result = await prisma.meal.deleteMany({
+        where: {
+          userId: session.user.id,
+          roomId,
+          type,
+          date: {
+            gte: dayStart,
+            lte: dayEnd,
+          }
+        }
+      });
+
+      // Bust the SSR cache
+      revalidateTag('meals', 'max');
+      revalidateTag(`group-${roomId}`, 'max');
+
+      return NextResponse.json({ success: true, count: result.count });
     }
   } catch (error) {
-    console.error("Error managing meal:", error)
-    return NextResponse.json({ error: "Failed to manage meal" }, { status: 500 })
+    console.error('Error in POST /api/meals:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }

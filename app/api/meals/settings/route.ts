@@ -1,149 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/services/prisma"
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/services/prisma';
 
-
-// Force dynamic rendering - don't pre-render during build
-export const dynamic = 'force-dynamic';
-
-export async function GET(request: Request) {
-  const session = await getServerSession(authOptions)
-
+export async function PATCH(request: NextRequest) {
+  const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url)
-  const roomId = searchParams.get("roomId")
+  const { searchParams } = new URL(request.url);
+  const roomId = searchParams.get('roomId');
 
   if (!roomId) {
-    return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
+    return NextResponse.json({ error: 'Room ID is required' }, { status: 400 });
   }
 
-  // Check if user is a member of the room
+  // Check if user is admin/manager
   const roomMember = await prisma.roomMember.findUnique({
     where: {
-      userId_roomId: {
-        userId: session.user.id,
-        roomId: roomId,
-      },
-    },
-  })
+      userId_roomId: { userId: session.user.id, roomId: roomId }
+    }
+  });
 
-  if (!roomMember) {
-    return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
+  if (!roomMember || !['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(roomMember.role)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
-    // Get or create meal settings for the room
-    let mealSettings = await prisma.mealSettings.findUnique({
+    const body = await request.json();
+    const settings = await prisma.mealSettings.upsert({
       where: { roomId: roomId },
-    })
-
-    if (!mealSettings) {
-      // Create default meal settings
-      mealSettings = await prisma.mealSettings.create({
-        data: {
-          roomId: roomId,
-          breakfastTime: "08:00",
-          lunchTime: "13:00",
-          dinnerTime: "20:00",
-          autoMealEnabled: false,
-          mealCutoffTime: "22:00",
-          maxMealsPerDay: 3,
-          allowGuestMeals: true,
-          guestMealLimit: 5,
-        },
-      })
-    }
-
-    return NextResponse.json(mealSettings, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
+      update: body,
+      create: {
+        ...body,
+        roomId: roomId
       }
-    })
+    });
+    return NextResponse.json(settings);
   } catch (error) {
-    console.error("Error fetching meal settings:", error)
-    return NextResponse.json({ error: "Failed to fetch meal settings" }, { status: 500 })
+    console.error('Error in /api/meals/settings PATCH:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-
-export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  try {
-    const body = await request.json()
-    const { searchParams } = new URL(request.url)
-    const roomId = searchParams.get("roomId")
-
-    if (!roomId) {
-      return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
-    }
-
-    // Check if user is a member of the room
-    const roomMember = await prisma.roomMember.findUnique({
-      where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: roomId,
-        },
-      },
-    })
-
-    if (!roomMember) {
-      return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
-    }
-
-    // Check if user has permission to update meal settings
-    const canUpdateSettings = ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(roomMember.role)
-    if (!canUpdateSettings) {
-      return NextResponse.json({ error: "You don't have permission to update meal settings" }, { status: 403 })
-    }
-
-    // Get or create meal settings
-    let mealSettings = await prisma.mealSettings.findUnique({
-      where: { roomId: roomId },
-    })
-
-    if (!mealSettings) {
-      // Create default settings first
-      mealSettings = await prisma.mealSettings.create({
-        data: {
-          roomId: roomId,
-          breakfastTime: "08:00",
-          lunchTime: "13:00",
-          dinnerTime: "20:00",
-          autoMealEnabled: false,
-          mealCutoffTime: "22:00",
-          maxMealsPerDay: 3,
-          allowGuestMeals: true,
-          guestMealLimit: 5,
-        },
-      })
-    }
-
-    // Update the settings
-    const updatedSettings = await prisma.mealSettings.update({
-      where: {
-        id: mealSettings.id,
-      },
-      data: {
-        ...body,
-        updatedAt: new Date(),
-      },
-    })
-
-    return NextResponse.json(updatedSettings)
-  } catch (error) {
-    console.error("Error updating meal settings:", error)
-    return NextResponse.json({ error: "Failed to update meal settings" }, { status: 500 })
-  }
-} 

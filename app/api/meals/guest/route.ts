@@ -1,319 +1,66 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth/auth"
-import prisma from "@/lib/services/prisma"
-import { z } from "zod"
-import { createNotification } from "@/lib/utils/notification-utils"
-import { NotificationType } from "@prisma/client"
-import { invalidateMealCache } from "@/lib/cache/cache-invalidation"
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/services/prisma';
+import { getPeriodForDate } from '@/lib/utils/period-utils';
+import { revalidateTag as _revalidateTag } from 'next/cache';
 
+const revalidateTag = _revalidateTag as any;
 
-// Force dynamic rendering - don't pre-render during build
-export const dynamic = 'force-dynamic';
-
-const guestMealSchema = z.object({
-  roomId: z.string(),
-  date: z
-    .string()
-    .or(z.date())
-    .transform((val) => new Date(val)),
-  type: z.enum(["BREAKFAST", "LUNCH", "DINNER"]),
-  count: z.number().min(1).max(10),
-})
-
-export async function GET(request: Request) {
-  const session = await getServerSession(authOptions)
-
+/**
+ * POST /api/meals/guest
+ * Add a guest meal
+ */
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
   if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { searchParams } = new URL(request.url)
-  const roomId = searchParams.get("roomId")
-  const startDate = searchParams.get("startDate")
-  const endDate = searchParams.get("endDate")
+  const body = await request.json();
+  const { date, type, roomId, count = 1, periodId } = body;
 
-  if (!roomId) {
-    return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
-  }
-
-  // Check if user is a member of the room
-  const roomMember = await prisma.roomMember.findUnique({
-    where: {
-      userId_roomId: {
-        userId: session.user.id,
-        roomId: roomId,
-      },
-    },
-  })
-
-  if (!roomMember) {
-    return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
-  }
-
-  // Build query filters
-  const dateFilter: any = {}
-
-  if (startDate) {
-    dateFilter.gte = new Date(startDate)
-  }
-
-  if (endDate) {
-    dateFilter.lte = new Date(endDate)
-  }
-
-  const whereClause: any = {
-    roomId: roomId,
-  }
-
-  if (Object.keys(dateFilter).length > 0) {
-    whereClause.date = dateFilter
+  if (!date || !type || !roomId) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
   try {
-    // Get current period for filtering
-    const currentPeriod = await prisma.mealPeriod.findFirst({
-      where: { roomId, status: 'ACTIVE' }
-    });
+    // Normalize to UTC midnight
+    const [year, month, day] = String(date).split('-').map(Number);
+    const targetDate = new Date(Date.UTC(year, month - 1, day));
 
-    const whereClause: any = {
-      roomId: roomId,
-      ...(currentPeriod ? { periodId: currentPeriod.id } : {})
+    let finalPeriodId = periodId;
+    if (!finalPeriodId) {
+      const period = await getPeriodForDate(roomId, targetDate);
+      finalPeriodId = period?.id || null;
     }
 
-    if (Object.keys(dateFilter).length > 0) {
-      whereClause.date = dateFilter
-    }
-
-    const guestMeals = await prisma.guestMeal.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-      orderBy: {
-        date: "desc",
-      },
-    })
-
-    return NextResponse.json(guestMeals, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
-      }
-    })
-  } catch (error) {
-    console.error("Error fetching guest meals:", error)
-    return NextResponse.json({ error: "Failed to fetch guest meals" }, { status: 500 })
-  }
-}
-
-export async function POST(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  try {
-    const body = await request.json()
-    const { roomId, date, type, count = 1 } = body
-
-    if (!roomId || !date || !type) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
-    // Check if user is a member of the room
-    const roomMember = await prisma.roomMember.findUnique({
-      where: {
-        userId_roomId: {
-          userId: session.user.id,
-          roomId: roomId,
-        },
-      },
-    })
-
-    if (!roomMember) {
-      return NextResponse.json({ error: "You are not a member of this room" }, { status: 403 })
-    }
-
-    // Check meal settings to see if guest meals are allowed
-    const mealSettings = await prisma.mealSettings.findUnique({
-      where: { roomId: roomId },
-    })
-
-    if (mealSettings && !mealSettings.allowGuestMeals) {
-      return NextResponse.json({ error: "Guest meals are not allowed in this room" }, { status: 403 })
-    }
-
-    // Normalize date to start of day in UTC
-    const dateObj = new Date(date)
-    dateObj.setUTCHours(0, 0, 0, 0)
-
-    // Resolve period for the date
-    const targetPeriod = await prisma.mealPeriod.findFirst({
-      where: {
-        roomId: roomId,
-        startDate: { lte: dateObj },
-        OR: [
-          { endDate: { gte: dateObj } },
-          { endDate: null }
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    if (!targetPeriod) {
-      return NextResponse.json({ error: "No period found for this date" }, { status: 400 })
-    }
-
-    if (targetPeriod.isLocked) {
-      return NextResponse.json({ error: "This period is locked" }, { status: 400 })
-    }
-
-    // Check guest meal limit
-    const todayGuestMeals = await prisma.guestMeal.findMany({
-      where: {
-        userId: session.user.id,
-        roomId: roomId,
-        date: dateObj,
-        periodId: targetPeriod.id,
-      },
-    })
-
-    const totalGuestMeals = todayGuestMeals.reduce((sum, meal) => sum + meal.count, 0)
-    const guestMealLimit = mealSettings?.guestMealLimit || 5
-
-    if (totalGuestMeals + count > guestMealLimit) {
-      return NextResponse.json({
-        error: `Guest meal limit exceeded. You can only add ${guestMealLimit - totalGuestMeals} more guest meals today.`
-      }, { status: 400 })
-    }
-
-    // Create guest meal
     const guestMeal = await prisma.guestMeal.create({
       data: {
+        date: targetDate,
+        type,
+        roomId,
         userId: session.user.id,
-        roomId: roomId,
-        date: dateObj,
-        type: type,
-        count: count,
-        periodId: targetPeriod.id,
+        count,
+        periodId: finalPeriodId,
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-    })
+        user: { select: { id: true, name: true, image: true } }
+      }
+    });
 
-    // Get room details for notification
-    const room = await prisma.room.findUnique({
-      where: { id: roomId },
-    })
+    // Bust SSR cache
+    revalidateTag('meals', 'max');
+    revalidateTag(`group-${roomId}`, 'max');
 
-    // Create notification for room manager
-    const roomManagers = await prisma.roomMember.findMany({
-      where: {
-        roomId: roomId,
-        role: "MANAGER",
-      },
-      include: {
-        user: true,
-      },
-    })
-
-    for (const manager of roomManagers) {
-      await createNotification({
-        userId: manager.user.id,
-        type: NotificationType.MEAL_CREATED,
-        message: `${session.user.name} has requested ${count} guest meal(s) for ${type.toLowerCase()} on ${date.toLocaleDateString()} in ${room?.name}.`,
-      })
-    }
-
-    return NextResponse.json(guestMeal)
+    return NextResponse.json({
+      ...guestMeal,
+      date: guestMeal.date.toISOString(),
+      createdAt: guestMeal.createdAt.toISOString(),
+      updatedAt: guestMeal.updatedAt.toISOString(),
+    });
   } catch (error) {
-    console.error("Error creating guest meal:", error)
-    return NextResponse.json({ error: "Failed to create guest meal" }, { status: 500 })
-  }
-}
-
-export async function DELETE(request: Request) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  try {
-    const { searchParams } = new URL(request.url)
-    const roomId = searchParams.get("roomId")
-    const date = searchParams.get("date")
-    const type = searchParams.get("type")
-
-    if (!roomId || !date || !type) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
-    }
-
-    // Normalize date to start of day in UTC
-    const dateObj = new Date(date)
-    dateObj.setUTCHours(0, 0, 0, 0)
-
-    // Resolve period for the date
-    const targetPeriod = await prisma.mealPeriod.findFirst({
-      where: {
-        roomId: roomId,
-        startDate: { lte: dateObj },
-        OR: [
-          { endDate: { gte: dateObj } },
-          { endDate: null }
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    if (!targetPeriod) {
-      return NextResponse.json({ error: "No period found for this date" }, { status: 400 })
-    }
-
-    if (targetPeriod.isLocked) {
-      return NextResponse.json({ error: "This period is locked" }, { status: 400 })
-    }
-
-    // Delete the guest meal
-    const deleted = await prisma.guestMeal.deleteMany({
-      where: {
-        userId: session.user.id,
-        roomId: roomId,
-        date: dateObj,
-        type: type as any,
-        periodId: targetPeriod.id,
-      },
-    })
-
-    if (deleted.count > 0) {
-      // Invalidate cache
-      invalidateMealCache(roomId, targetPeriod.id).catch(console.error)
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      message: deleted.count > 0 ? "Guest meal removed" : "No guest meal found to remove",
-      deleted: deleted.count > 0 
-    })
-  } catch (error) {
-    console.error("Error deleting guest meal:", error)
-    return NextResponse.json({ error: "Failed to delete guest meal" }, { status: 500 })
+    console.error('Error in POST /api/meals/guest:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

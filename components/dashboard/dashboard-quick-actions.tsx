@@ -1,6 +1,5 @@
 "use client";
 
-
 import {
     Users,
     Utensils,
@@ -10,11 +9,13 @@ import {
 import { QuickActionCard } from "@/components/dashboard/quick-action-card";
 import { useRouter } from "next/navigation";
 import { useDashboardLoading } from "@/components/dashboard/dashboard";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useActiveGroup } from "@/contexts/group-context";
 
 export function DashboardQuickActions() {
     const router = useRouter();
     const { isLoading } = useDashboardLoading();
+    const { activeGroup } = useActiveGroup();
+    const groupId = activeGroup?.id;
 
     return (
         <div className="space-y-4 sm:space-y-5 px-1">
@@ -54,7 +55,7 @@ export function DashboardQuickActions() {
                     color="orange"
                     title="Group Settings"
                     desc="Manage group preferences"
-                    onClick={() => router.push("/settings")}
+                    onClick={() => router.push(`/groups/${groupId}/settings`)}
                     isLoading={isLoading}
                 />
             </div>

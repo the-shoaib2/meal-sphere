@@ -49,6 +49,7 @@ export function GroupSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
+          suppressHydrationWarning
           className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors outline-none cursor-pointer"
         >
           <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
