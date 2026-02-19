@@ -17,7 +17,7 @@ import { PeriodReportsSection } from '@/components/periods/period-reports-sectio
 import { PeriodOverviewSection } from '@/components/periods/period-overview-section';
 import { useSession } from 'next-auth/react';
 import { CurrentPeriodStatusCard } from '@/components/periods/current-period-status-card';
-import { PeriodManagementSkeleton } from '@/components/periods/period-management-skeleton';
+import { LoadingWrapper, Loader } from '@/components/ui/loader';
 import { usePeriodMode } from '@/hooks/use-periods';
 import { Calendar, Settings2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -126,123 +126,121 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
   };
 
   return (
-    <>
-      {isLoading ? (
-        <PeriodManagementSkeleton />
-      ) : (
-        <div className="space-y-6">
-          <PageHeader
-            heading="Period Management"
-            text="Manage your periods and their statuses"
-          >
-            {isPrivileged && (
-              <CreatePeriodDialog
-                open={showCreateDialog}
-                onOpenChange={setShowCreateDialog}
-                onSubmit={handleStartPeriod}
-                disabled={!!currentPeriod}
-                disabledReason={
-                  currentPeriod
-                    ? 'End the current period before starting a new one'
-                    : undefined
-                }
-                periodMode={periodMode}
-                onPeriodModeToggle={handlePeriodModeToggle}
-                periodModeLoading={periodModeLoading}
-                isUpdatingMode={isUpdating}
-                currentPeriodExists={!!currentPeriod}
-              />
-            )}
-          </PageHeader>
+    <LoadingWrapper isLoading={isLoading}>
 
-          {/* Current Period Summary (should be first) */}
-          <CurrentPeriodStatusCard
-            currentPeriod={currentPeriod}
-            activeGroup={activeGroup}
-            isPrivileged={isPrivileged}
-            showEndDialog={showEndDialog}
-            setShowEndDialog={setShowEndDialog}
-            handleEndPeriod={handleEndPeriod}
-            setUnlockTargetPeriod={setUnlockTargetPeriod}
-            setUnlockToActive={setUnlockToActive}
-            setShowUnlockDialog={setShowUnlockDialog}
-            handleLockPeriod={handleLockPeriod}
-          />
+      <div className="space-y-6">
+        <PageHeader
+          heading="Period Management"
+          text="Manage your periods and their statuses"
+        >
+          {isPrivileged && (
+            <CreatePeriodDialog
+              open={showCreateDialog}
+              onOpenChange={setShowCreateDialog}
+              onSubmit={handleStartPeriod}
+              disabled={!!currentPeriod}
+              disabledReason={
+                currentPeriod
+                  ? 'End the current period before starting a new one'
+                  : undefined
+              }
+              periodMode={periodMode}
+              onPeriodModeToggle={handlePeriodModeToggle}
+              periodModeLoading={periodModeLoading}
+              isUpdatingMode={isUpdating}
+              currentPeriodExists={!!currentPeriod}
+            />
+          )}
+        </PageHeader>
 
-          {/* Overview Cards */}
-          <PeriodOverviewSection
-            periods={periods}
-            currentPeriod={currentPeriod}
-            selectedPeriod={selectedPeriod}
-            periodSummary={periodSummary}
-            activeGroup={activeGroup}
-          />
+        {/* Current Period Summary (should be first) */}
+        <CurrentPeriodStatusCard
+          currentPeriod={currentPeriod}
+          activeGroup={activeGroup}
+          isPrivileged={isPrivileged}
+          showEndDialog={showEndDialog}
+          setShowEndDialog={setShowEndDialog}
+          handleEndPeriod={handleEndPeriod}
+          setUnlockTargetPeriod={setUnlockTargetPeriod}
+          setUnlockToActive={setUnlockToActive}
+          setShowUnlockDialog={setShowUnlockDialog}
+          handleLockPeriod={handleLockPeriod}
+        />
 
-          {/* Periods List Section */}
-          <PeriodsListSection
-            periods={periods}
-            activeGroup={activeGroup}
-            setSelectedPeriodId={setSelectedPeriodId}
-            handleLockPeriod={handleLockPeriod}
-            handleUnlockPeriod={handleUnlockPeriod}
-            setUnlockTargetPeriod={setUnlockTargetPeriod}
-            setUnlockToActive={setUnlockToActive}
-            setShowUnlockDialog={setShowUnlockDialog}
-            setPeriodToRestart={setPeriodToRestart}
-            setShowRestartDialog={setShowRestartDialog}
-            setShowCreateDialog={setShowCreateDialog}
-            setShowArchiveDialog={setShowArchiveDialog}
-            isPrivileged={isPrivileged}
-          />
+        {/* Overview Cards */}
+        <PeriodOverviewSection
+          periods={periods}
+          currentPeriod={currentPeriod}
+          selectedPeriod={selectedPeriod}
+          periodSummary={periodSummary}
+          activeGroup={activeGroup}
+        />
 
-          {/* Reports Section */}
-          <PeriodReportsSection groupName={activeGroup?.name ?? ''} />
+        {/* Periods List Section */}
+        <PeriodsListSection
+          periods={periods}
+          activeGroup={activeGroup}
+          setSelectedPeriodId={setSelectedPeriodId}
+          handleLockPeriod={handleLockPeriod}
+          handleUnlockPeriod={handleUnlockPeriod}
+          setUnlockTargetPeriod={setUnlockTargetPeriod}
+          setUnlockToActive={setUnlockToActive}
+          setShowUnlockDialog={setShowUnlockDialog}
+          setPeriodToRestart={setPeriodToRestart}
+          setShowRestartDialog={setShowRestartDialog}
+          setShowCreateDialog={setShowCreateDialog}
+          setShowArchiveDialog={setShowArchiveDialog}
+          isPrivileged={isPrivileged}
+        />
 
-          {/* Archive Dialog */}
-          <PeriodArchiveDialog
-            open={showArchiveDialog}
-            onOpenChange={setShowArchiveDialog}
-            onConfirm={handleArchivePeriod}
-            periodId={selectedPeriodId}
-            period={selectedPeriod}
-          />
+        {/* Reports Section */}
+        <PeriodReportsSection groupName={activeGroup?.name ?? ''} />
 
-          {/* Restart Dialog */}
-          <RestartPeriodDialog
-            open={showRestartDialog}
-            onOpenChange={setShowRestartDialog}
-            onConfirm={handleRestartPeriodWithDialog}
-            period={periodToRestart}
-            isLoading={restartPeriodMutation.isPending}
-          />
+        {/* Archive Dialog */}
+        <PeriodArchiveDialog
+          open={showArchiveDialog}
+          onOpenChange={setShowArchiveDialog}
+          onConfirm={handleArchivePeriod}
+          periodId={selectedPeriodId}
+          period={selectedPeriod}
+        />
 
-          {/* Unlock Dialog */}
-          <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
-            <DialogContent className="sm:max-w-[400px]">
-              <DialogHeader>
-                <DialogTitle>Unlock Period</DialogTitle>
-                <DialogDescription>
-                  Choose the status for the period after unlocking.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex items-center justify-between py-4">
-                <span className="font-medium">Status:</span>
-                <div className="flex items-center gap-2">
-                  <span className={unlockToActive ? 'text-green-600 font-semibold' : 'text-muted-foreground'}>Active</span>
-                  <Switch checked={unlockToActive} onCheckedChange={setUnlockToActive} />
-                  <span className={!unlockToActive ? 'text-yellow-600 font-semibold' : 'text-muted-foreground'}>Ended</span>
-                </div>
+        {/* Restart Dialog */}
+        <RestartPeriodDialog
+          open={showRestartDialog}
+          onOpenChange={setShowRestartDialog}
+          onConfirm={handleRestartPeriodWithDialog}
+          period={periodToRestart}
+          isLoading={restartPeriodMutation.isPending}
+        />
+
+        {/* Unlock Dialog */}
+        <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Unlock Period</DialogTitle>
+              <DialogDescription>
+                Choose the status for the period after unlocking.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center justify-between py-4">
+              <span className="font-medium">Status:</span>
+              <div className="flex items-center gap-2">
+                <span className={unlockToActive ? 'text-green-600 font-semibold' : 'text-muted-foreground'}>Active</span>
+                <Switch checked={unlockToActive} onCheckedChange={setUnlockToActive} />
+                <span className={!unlockToActive ? 'text-yellow-600 font-semibold' : 'text-muted-foreground'}>Ended</span>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
-                <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
-                  {unlockLoading ? 'Unlocking...' : 'Unlock & Set Status'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
-    </>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
+              <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
+                {unlockLoading ? 'Unlocking...' : 'Unlock & Set Status'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </LoadingWrapper>
+
   );
 }

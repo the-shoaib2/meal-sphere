@@ -5,7 +5,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { PeriodHistoryCard } from '@/components/periods/period-history-card';
-import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, Loader2, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { Loader } from '@/components/ui/loader';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 
@@ -46,8 +47,8 @@ export function PeriodsListSection({
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-          <p className="text-muted-foreground text-sm">Loading periods...</p>
+          <Loader size="lg" />
+          <p className="text-muted-foreground text-sm mt-4">Loading periods...</p>
         </div>
       </div>
     );
@@ -87,9 +88,9 @@ export function PeriodsListSection({
                           <span className="text-red-600 font-semibold">Locked</span>
                         ) : (
                           <span className={`${period.status === 'ACTIVE' ? 'text-green-600' :
-                              period.status === 'ENDED' ? 'text-yellow-600' :
-                                period.status === 'ARCHIVED' ? 'text-gray-500' :
-                                  'text-gray-600'
+                            period.status === 'ENDED' ? 'text-yellow-600' :
+                              period.status === 'ARCHIVED' ? 'text-gray-500' :
+                                'text-gray-600'
                             } font-semibold`}>
                             {period.status}
                           </span>
@@ -101,53 +102,17 @@ export function PeriodsListSection({
                       {isPrivileged && (
                         <TableCell>
                           <div className="flex items-center space-x-2">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => router.push(`/periods/${period.id}`)}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View
-                                </DropdownMenuItem>
-                                {!period.isLocked && (
-                                  <DropdownMenuItem onClick={() => handleLockPeriod(period.id)}>
-                                    <Lock className="h-4 w-4 mr-2" />
-                                    Lock Period
-                                  </DropdownMenuItem>
-                                )}
-                                {period.isLocked && (
-                                  <DropdownMenuItem onClick={() => {
-                                    setUnlockTargetPeriod(period);
-                                    setUnlockToActive(period.status === 'ACTIVE');
-                                    setShowUnlockDialog(true);
-                                  }}>
-                                    <Unlock className="h-4 w-4 mr-2" />
-                                    Unlock Period
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setPeriodToRestart(period);
-                                    setShowRestartDialog(true);
-                                  }}
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                  Restart Period
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedPeriodId(period.id);
-                                    setShowArchiveDialog(true);
-                                  }}
-                                >
-                                  <Archive className="h-4 w-4 mr-2" />
-                                  Archive Period
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <PeriodActions
+                              period={period}
+                              handleLockPeriod={handleLockPeriod}
+                              setUnlockTargetPeriod={setUnlockTargetPeriod}
+                              setUnlockToActive={setUnlockToActive}
+                              setShowUnlockDialog={setShowUnlockDialog}
+                              setPeriodToRestart={setPeriodToRestart}
+                              setShowRestartDialog={setShowRestartDialog}
+                              setSelectedPeriodId={setSelectedPeriodId}
+                              setShowArchiveDialog={setShowArchiveDialog}
+                            />
                           </div>
                         </TableCell>
                       )}
@@ -187,5 +152,92 @@ export function PeriodsListSection({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function PeriodActions({
+  period,
+  handleLockPeriod,
+  setUnlockTargetPeriod,
+  setUnlockToActive,
+  setShowUnlockDialog,
+  setPeriodToRestart,
+  setShowRestartDialog,
+  setSelectedPeriodId,
+  setShowArchiveDialog,
+}: {
+  period: MealPeriod;
+  handleLockPeriod: (id: string) => void;
+  setUnlockTargetPeriod: (period: MealPeriod) => void;
+  setUnlockToActive: (active: boolean) => void;
+  setShowUnlockDialog: (open: boolean) => void;
+  setPeriodToRestart: (period: MealPeriod) => void;
+  setShowRestartDialog: (open: boolean) => void;
+  setSelectedPeriodId: (id: string) => void;
+  setShowArchiveDialog: (open: boolean) => void;
+}) {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Button variant="outline" size="sm" className="w-full sm:w-auto opacity-50 cursor-not-allowed">
+        <MoreHorizontal className="h-4 w-4" />
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => router.push(`/periods/${period.id}`)}>
+          <Eye className="h-4 w-4 mr-2" />
+          View
+        </DropdownMenuItem>
+        {!period.isLocked && (
+          <DropdownMenuItem onClick={() => handleLockPeriod(period.id)}>
+            <Lock className="h-4 w-4 mr-2" />
+            Lock Period
+          </DropdownMenuItem>
+        )}
+        {period.isLocked && (
+          <DropdownMenuItem onClick={() => {
+            setUnlockTargetPeriod(period);
+            setUnlockToActive(period.status === 'ACTIVE');
+            setShowUnlockDialog(true);
+          }}>
+            <Unlock className="h-4 w-4 mr-2" />
+            Unlock Period
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onClick={() => {
+            setPeriodToRestart(period);
+            setShowRestartDialog(true);
+          }}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Restart Period
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedPeriodId(period.id);
+            setShowArchiveDialog(true);
+          }}
+        >
+          <Archive className="h-4 w-4 mr-2" />
+          Archive Period
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

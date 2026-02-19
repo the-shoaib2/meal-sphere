@@ -49,19 +49,20 @@ export function GroupSwitcher() {
     router.push('/groups/create')
   }
 
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm">
-  //       <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-  //       </div>
-  //       <div className="grid flex-1 text-left text-sm leading-tight">
-  //         <div className="h-4 w-24 bg-muted rounded animate-pulse mb-1"></div>
-  //         <div className="h-3 w-16 bg-muted rounded animate-pulse"></div>
-  //       </div>
-  //       <ChevronsUpDown className="ml-auto opacity-50 size-4" />
-  //     </div>
-  //   )
-  // }
+  if (!mounted) {
+    return (
+      <div className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm">
+        <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-muted/50">
+          <Loader className="size-4 animate-spin opacity-50" />
+        </div>
+        <div className="grid flex-1 gap-1 text-left text-sm leading-tight">
+          <div className="h-4 w-24 bg-muted/50 rounded animate-pulse" />
+          <div className="h-3 w-16 bg-muted/50 rounded animate-pulse" />
+        </div>
+        <ChevronsUpDown className="ml-auto opacity-50 size-4" />
+      </div>
+    )
+  }
 
   return (
     <DropdownMenu>

@@ -14,7 +14,7 @@ import { RestartPeriodDialog } from '@/components/periods/restart-period-dialog'
 import { PeriodReportsSection } from '@/components/periods/period-reports-section';
 import { PeriodOverviewSection } from '@/components/periods/period-overview-section';
 import { useSession } from 'next-auth/react';
-import { PeriodManagementSkeleton } from '@/components/periods/period-management-skeleton';
+import { LoadingWrapper, Loader } from '@/components/ui/loader';
 import { ArrowLeft, Lock, Unlock, Archive, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PeriodStatusCard } from '@/components/periods/period-status-card';
@@ -87,9 +87,7 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
         }
     };
 
-    if (isLoading) {
-        return <PeriodManagementSkeleton />;
-    }
+
 
     if (!selectedPeriod) {
         return (
@@ -101,101 +99,103 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header with Back Button */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/periods')}>
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold">{selectedPeriod.name}</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Period Details & Reports
-                        </p>
-                    </div>
-                </div>
-
-                {isPrivileged && (
+        <LoadingWrapper isLoading={isLoading}>
+            <div className="space-y-6">
+                {/* Header with Back Button */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-center gap-2">
-                        {/* Actions for this specific period */}
-                        {!selectedPeriod.isLocked && (
-                            <Button variant="outline" size="sm" onClick={() => handleLockPeriod(selectedPeriod.id)}>
-                                <Lock className="h-4 w-4 mr-2" />
-                                Lock
-                            </Button>
-                        )}
-                        {selectedPeriod.isLocked && (
-                            <Button variant="outline" size="sm" onClick={() => {
-                                setUnlockTargetPeriod(selectedPeriod);
-                                setUnlockToActive(false);
-                                setShowUnlockDialog(true);
-                            }}>
-                                <Unlock className="h-4 w-4 mr-2" />
-                                Unlock
-                            </Button>
-                        )}
-                        <Button variant="outline" size="sm" onClick={() => {
-                            setShowArchiveDialog(true);
-                        }}>
-                            <Archive className="h-4 w-4 mr-2" />
-                            Archive
+                        <Button variant="ghost" size="icon" onClick={() => router.push('/periods')}>
+                            <ArrowLeft className="h-4 w-4" />
                         </Button>
-                    </div>
-                )}
-            </div>
-
-            {/* Overview Cards for the SELECTED period */}
-            <div className="w-full">
-                <PeriodOverviewSection
-                    periods={periods}
-                    currentPeriod={currentPeriod}
-                    selectedPeriod={selectedPeriod}
-                    periodSummary={periodSummary}
-                    activeGroup={activeGroup}
-                />
-            </div>
-
-            {/* Reports Section */}
-            <PeriodReportsSection groupName={activeGroup?.name ?? ''} />
-
-            {/* Archive Dialog */}
-            <PeriodArchiveDialog
-                open={showArchiveDialog}
-                onOpenChange={setShowArchiveDialog}
-                onConfirm={async (id) => {
-                    await handleArchivePeriod(id);
-                    router.push('/periods'); // Go back after archiving
-                }}
-                periodId={selectedPeriodId}
-                period={selectedPeriod}
-            />
-
-            {/* Unlock Dialog */}
-            <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
-                <DialogContent className="sm:max-w-[400px]">
-                    <DialogHeader>
-                        <DialogTitle>Unlock Period</DialogTitle>
-                        <DialogDescription>
-                            Choose the status for the period after unlocking.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex items-center justify-between py-4">
-                        <span className="font-medium">Status:</span>
-                        <div className="flex items-center gap-2">
-                            <span className={unlockToActive ? 'text-green-600 font-semibold' : 'text-muted-foreground'}>Active</span>
-                            <Switch checked={unlockToActive} onCheckedChange={setUnlockToActive} />
-                            <span className={!unlockToActive ? 'text-yellow-600 font-semibold' : 'text-muted-foreground'}>Ended</span>
+                        <div>
+                            <h1 className="text-2xl font-bold">{selectedPeriod.name}</h1>
+                            <p className="text-sm text-muted-foreground">
+                                Period Details & Reports
+                            </p>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
-                        <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
-                            {unlockLoading ? 'Unlocking...' : 'Unlock & Set Status'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+
+                    {isPrivileged && (
+                        <div className="flex items-center gap-2">
+                            {/* Actions for this specific period */}
+                            {!selectedPeriod.isLocked && (
+                                <Button variant="outline" size="sm" onClick={() => handleLockPeriod(selectedPeriod.id)}>
+                                    <Lock className="h-4 w-4 mr-2" />
+                                    Lock
+                                </Button>
+                            )}
+                            {selectedPeriod.isLocked && (
+                                <Button variant="outline" size="sm" onClick={() => {
+                                    setUnlockTargetPeriod(selectedPeriod);
+                                    setUnlockToActive(false);
+                                    setShowUnlockDialog(true);
+                                }}>
+                                    <Unlock className="h-4 w-4 mr-2" />
+                                    Unlock
+                                </Button>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => {
+                                setShowArchiveDialog(true);
+                            }}>
+                                <Archive className="h-4 w-4 mr-2" />
+                                Archive
+                            </Button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Overview Cards for the SELECTED period */}
+                <div className="w-full">
+                    <PeriodOverviewSection
+                        periods={periods}
+                        currentPeriod={currentPeriod}
+                        selectedPeriod={selectedPeriod}
+                        periodSummary={periodSummary}
+                        activeGroup={activeGroup}
+                    />
+                </div>
+
+                {/* Reports Section */}
+                <PeriodReportsSection groupName={activeGroup?.name ?? ''} />
+
+                {/* Archive Dialog */}
+                <PeriodArchiveDialog
+                    open={showArchiveDialog}
+                    onOpenChange={setShowArchiveDialog}
+                    onConfirm={async (id) => {
+                        await handleArchivePeriod(id);
+                        router.push('/periods'); // Go back after archiving
+                    }}
+                    periodId={selectedPeriodId}
+                    period={selectedPeriod}
+                />
+
+                {/* Unlock Dialog */}
+                <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+                    <DialogContent className="sm:max-w-[400px]">
+                        <DialogHeader>
+                            <DialogTitle>Unlock Period</DialogTitle>
+                            <DialogDescription>
+                                Choose the status for the period after unlocking.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex items-center justify-between py-4">
+                            <span className="font-medium">Status:</span>
+                            <div className="flex items-center gap-2">
+                                <span className={unlockToActive ? 'text-green-600 font-semibold' : 'text-muted-foreground'}>Active</span>
+                                <Switch checked={unlockToActive} onCheckedChange={setUnlockToActive} />
+                                <span className={!unlockToActive ? 'text-yellow-600 font-semibold' : 'text-muted-foreground'}>Ended</span>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
+                            <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
+                                {unlockLoading ? 'Unlocking...' : 'Unlock & Set Status'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </LoadingWrapper>
     );
 }

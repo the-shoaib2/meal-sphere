@@ -14,7 +14,7 @@ import ActiveVoteCard from "./active-vote-card"
 import PastVoteCard from "./past-vote-card"
 import NoActiveVotesCard from "./no-active-votes-card"
 import PastVotesList from "./past-votes-list"
-import LoadingSkeletons from "./loading-skeletons"
+import { LoadingWrapper, Loader } from "@/components/ui/loader"
 import { Candidate, Vote as VoteType, ActiveVote, PastVote, Voter } from "./types"
 import { NoGroupState } from "@/components/empty-states/no-group-state"
 import { PageHeader } from "@/components/shared/page-header"
@@ -267,103 +267,100 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
     refreshVotes();
   };
 
-  // Only show loading skeleton if initialLoading or activeGroup is not loaded
-  if (initialLoading || !activeGroup) {
-    return <LoadingSkeletons />;
-  }
+
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-        <div className="flex items-center gap-2">
-          {isMember && (
-            <CreateVoteDialog
-              open={showCreateDialog}
-              onOpenChange={handleOpenChange}
-              selectedVoteType={selectedVoteType}
-              setSelectedVoteType={setSelectedVoteType}
-              customVoteType={customVoteType}
-              setCustomVoteType={setCustomVoteType}
-              description={description}
-              setDescription={setDescription}
-              candidateType={candidateType}
-              setCandidateType={setCandidateType}
-              customCandidates={customCandidates}
-              setCustomCandidates={setCustomCandidates}
-              selectedCandidateIds={selectedCandidateIds}
-              setSelectedCandidateIds={setSelectedCandidateIds}
-              nonAdminMembers={eligibleMembers}
-              availableMembers={availableMembers}
-              handleAddCandidate={handleAddCandidate}
-              handleRemoveCandidate={handleRemoveCandidate}
-              handleCandidateChange={handleCandidateChange}
-              startDate={startDate}
-              setStartDate={setStartDate}
-              startTimeStr={startTimeStr}
-              setStartTimeStr={setStartTimeStr}
-              endDate={endDate}
-              setEndDate={setEndDate}
-              endTimeStr={endTimeStr}
-              setEndTimeStr={setEndTimeStr}
-              handleCreateVote={handleCreateVote}
-              createVoteError={createVoteError}
+    <LoadingWrapper isLoading={initialLoading || !activeGroup}>
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div className="flex items-center gap-2">
+            {isMember && (
+              <CreateVoteDialog
+                open={showCreateDialog}
+                onOpenChange={handleOpenChange}
+                selectedVoteType={selectedVoteType}
+                setSelectedVoteType={setSelectedVoteType}
+                customVoteType={customVoteType}
+                setCustomVoteType={setCustomVoteType}
+                description={description}
+                setDescription={setDescription}
+                candidateType={candidateType}
+                setCandidateType={setCandidateType}
+                customCandidates={customCandidates}
+                setCustomCandidates={setCustomCandidates}
+                selectedCandidateIds={selectedCandidateIds}
+                setSelectedCandidateIds={setSelectedCandidateIds}
+                nonAdminMembers={eligibleMembers}
+                availableMembers={availableMembers}
+                handleAddCandidate={handleAddCandidate}
+                handleRemoveCandidate={handleRemoveCandidate}
+                handleCandidateChange={handleCandidateChange}
+                startDate={startDate}
+                setStartDate={setStartDate}
+                startTimeStr={startTimeStr}
+                setStartTimeStr={setStartTimeStr}
+                endDate={endDate}
+                setEndDate={setEndDate}
+                endTimeStr={endTimeStr}
+                setEndTimeStr={setEndTimeStr}
+                handleCreateVote={handleCreateVote}
+                createVoteError={createVoteError}
+                setShowCreateDialog={setShowCreateDialog}
+                activeVotesCount={activeVotes.length}
+                voteTypeOptions={VOTE_TYPE_OPTIONS}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {activeVotes.length > 0 ? (
+            activeVotes.map((voteRaw) => {
+              const vote = voteRaw as VoteType;
+              const totalMembers = activeGroup?.members?.length || 0;
+              const options: Candidate[] = Array.isArray((vote as any).options) ? (vote as any).options : [];
+              const results: Record<string, Voter[]> = (vote as any).results || {};
+              return (
+                <ActiveVoteCard
+                  key={vote.id}
+                  vote={vote}
+                  totalMembers={totalMembers}
+                  options={options}
+                  results={results}
+                  showVoteDialog={showVoteDialog}
+                  setShowVoteDialog={setShowVoteDialog}
+                  selectedCandidate={selectedCandidate}
+                  setSelectedCandidate={setSelectedCandidate}
+                  handleVote={handleVote}
+                  isSubmitting={isSubmitting}
+                  hasVoted={hasVoted}
+                  isAdmin={isAdmin}
+                  currentUserId={currentUserId}
+                  refreshVotes={handleRefreshVotes}
+                  candidateOptions={eligibleMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
+                  voteTypeOptions={FLAT_VOTE_TYPE_OPTIONS}
+                />
+              );
+            })
+          ) : pastVotes.length > 0 ? (
+            <PastVoteCard
+              key={pastVotes[0].id}
+              vote={pastVotes[0] as PastVote}
+              activeGroupMembersCount={activeGroup?.members?.length || 0}
+            />
+          ) : (
+            <NoActiveVotesCard
+              handleRefreshVotes={handleRefreshVotes}
+              isMember={isMember}
               setShowCreateDialog={setShowCreateDialog}
-              activeVotesCount={activeVotes.length}
-              voteTypeOptions={VOTE_TYPE_OPTIONS}
             />
           )}
         </div>
-      </div>
+        <PastVotesList
+          pastVotes={pastVotes as PastVote[]}
+        />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {initialLoading || !activeGroup ? (
-          <LoadingSkeletons />
-        ) : activeVotes.length > 0 ? (
-          activeVotes.map((voteRaw) => {
-            const vote = voteRaw as VoteType;
-            const totalMembers = activeGroup?.members?.length || 0;
-            const options: Candidate[] = Array.isArray((vote as any).options) ? (vote as any).options : [];
-            const results: Record<string, Voter[]> = (vote as any).results || {};
-            return (
-              <ActiveVoteCard
-                key={vote.id}
-                vote={vote}
-                totalMembers={totalMembers}
-                options={options}
-                results={results}
-                showVoteDialog={showVoteDialog}
-                setShowVoteDialog={setShowVoteDialog}
-                selectedCandidate={selectedCandidate}
-                setSelectedCandidate={setSelectedCandidate}
-                handleVote={handleVote}
-                isSubmitting={isSubmitting}
-                hasVoted={hasVoted}
-                isAdmin={isAdmin}
-                currentUserId={currentUserId}
-                refreshVotes={handleRefreshVotes}
-                candidateOptions={eligibleMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
-                voteTypeOptions={FLAT_VOTE_TYPE_OPTIONS}
-              />
-            );
-          })
-        ) : pastVotes.length > 0 ? (
-          <PastVoteCard
-            key={pastVotes[0].id}
-            vote={pastVotes[0] as PastVote}
-            activeGroupMembersCount={activeGroup?.members?.length || 0}
-          />
-        ) : (
-          <NoActiveVotesCard
-            handleRefreshVotes={handleRefreshVotes}
-            isMember={isMember}
-            setShowCreateDialog={setShowCreateDialog}
-          />
-        )}
       </div>
-      <PastVotesList
-        pastVotes={pastVotes as PastVote[]}
-      />
-
-    </div>
+    </LoadingWrapper>
   )
 }
