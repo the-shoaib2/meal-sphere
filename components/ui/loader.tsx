@@ -46,13 +46,15 @@ interface LoadingWrapperProps {
     children: React.ReactNode
     fallback?: React.ReactNode
     minDisplayTime?: number
+    className?: string
 }
 
 export function LoadingWrapper({
     isLoading,
     children,
     fallback,
-    minDisplayTime = 500
+    minDisplayTime = 500,
+    className
 }: LoadingWrapperProps) {
     const [showLoader, setShowLoader] = useState(isLoading)
     const [isFadingOut, setIsFadingOut] = useState(false)
@@ -89,7 +91,8 @@ export function LoadingWrapper({
             <div
                 className={cn(
                     "flex flex-col items-center justify-center min-h-[inherit] w-full transition-opacity duration-300 ease-in-out",
-                    isFadingOut ? "opacity-0" : "opacity-100"
+                    isFadingOut ? "opacity-0" : "opacity-100",
+                    className
                 )}
             >
                 {fallback || <Loader size="lg" />}

@@ -516,7 +516,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], context.previousData);
       }
       console.error('Error updating auto meal settings:', err);
-      toast.error('Failed to update auto meal settings');
+      toast.error((err as any).response?.data?.message || 'Failed to update auto meal settings');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });

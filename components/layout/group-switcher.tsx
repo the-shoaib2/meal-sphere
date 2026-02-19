@@ -22,16 +22,11 @@ import { useActiveGroup } from "@/contexts/group-context"
 import { useLoading } from "@/hooks/use-loading"
 
 export function GroupSwitcher() {
-  const [mounted, setMounted] = React.useState(false)
   const isMobile = useIsMobile()
   const router = useRouter()
   const { data: session } = useSession()
   const { activeGroup, setActiveGroup, isLoading, groups = [] } = useActiveGroup()
   const { startLoading } = useLoading()
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const hasGroups = groups.length > 0
 
@@ -49,20 +44,6 @@ export function GroupSwitcher() {
     router.push('/groups/create')
   }
 
-  if (!mounted) {
-    return (
-      <div className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm">
-        <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-muted/50">
-          <Loader className="size-4 animate-spin opacity-50" />
-        </div>
-        <div className="grid flex-1 gap-1 text-left text-sm leading-tight">
-          <div className="h-4 w-24 bg-muted/50 rounded animate-pulse" />
-          <div className="h-3 w-16 bg-muted/50 rounded animate-pulse" />
-        </div>
-        <ChevronsUpDown className="ml-auto opacity-50 size-4" />
-      </div>
-    )
-  }
 
   return (
     <DropdownMenu>
