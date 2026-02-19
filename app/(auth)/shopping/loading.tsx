@@ -1,5 +1,9 @@
-import { ShoppingManagementSkeleton } from "@/components/market/shopping-skeletons";
+import { Loader } from "@/components/ui/loader";
 
 export default function Loading() {
-    return <ShoppingManagementSkeleton />;
+    return (
+        <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+            <Loader size="lg" />
+        </div>
+    );
 }

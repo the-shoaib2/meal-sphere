@@ -8,7 +8,7 @@ import { useGroupBalances, useGetBalance, useGetTransactions, type BalancePageDa
 import { useCurrentPeriod } from '@/hooks/use-periods';
 import { PrivilegedView } from '@/components/account-balance/privileged-view';
 import { MemberView } from '@/components/account-balance/member-view';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingWrapper, Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PeriodNotFoundCard } from "@/components/periods/period-not-found-card"
@@ -126,9 +126,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
     );
   }
 
-  if (!activeGroup) {
-    return <BalanceSkeleton hasPrivilege={false} />;
-  }
+
 
 
   // Show PeriodNotFoundCard only if:
@@ -151,14 +149,16 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   if (hasPrivilege) {
     return (
       <>
-        <PrivilegedView
-          groupData={groupData!}
-          userRole={userRole!}
-        />
+        <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup}>
+          <PrivilegedView
+            groupData={groupData!}
+            userRole={userRole!}
+          />
+        </LoadingWrapper>
         <AccountTransactionDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
-          groupId={activeGroup.id}
+          groupId={activeGroup?.id || ''}
           members={groupData?.members || []}
         />
       </>
@@ -166,71 +166,22 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   }
 
   return (
-    <MemberView
-      balance={ownBalance}
-      transactions={ownTransactions || []}
-      userRole={userRole!}
-      session={session}
-      groupId={activeGroup?.id}
-      onFetchNextPage={fetchNextOwn}
-      hasNextPage={hasNextOwn}
-      isFetchingNextPage={isFetchingNextOwn}
-    />
+    <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup}>
+      <MemberView
+        balance={ownBalance}
+        transactions={ownTransactions || []}
+        userRole={userRole!}
+        session={session}
+        groupId={activeGroup?.id}
+        onFetchNextPage={fetchNextOwn}
+        hasNextPage={hasNextOwn}
+        isFetchingNextPage={isFetchingNextOwn}
+      />
+    </LoadingWrapper>
   );
 }
 
-const BalanceSkeleton = ({ hasPrivilege }: { hasPrivilege: boolean }) => (
-  <div className="space-y-6 pt-4">
-    {/* Stat Cards Skeleton - 2 rows of 4 cards each */}
 
-    {/* Stat Cards Skeleton - 2 rows of 4 cards each */}
-    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {[...Array(4)].map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
-            <Skeleton className="h-4 w-4 sm:h-6 sm:w-6 rounded-md mb-1 sm:mb-0" /> {/* Icon */}
-            <div className="flex flex-col items-center sm:items-start w-full">
-              <Skeleton className="h-2.5 sm:h-4 w-16 sm:w-24 mb-1" /> {/* Title */}
-              <Skeleton className="h-4 sm:h-6 w-12 sm:w-20" /> {/* Value */}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {[...Array(3)].map((_, i) => (
-        <Card key={i}>
-          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
-            <Skeleton className="h-4 w-4 sm:h-6 sm:w-6 rounded-md mb-1 sm:mb-0" />
-            <div className="flex flex-col items-center sm:items-start w-full">
-              <Skeleton className="h-2.5 sm:h-4 w-16 sm:w-24 mb-1" />
-              <Skeleton className="h-4 sm:h-6 w-12 sm:w-20" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-
-    {/* Table/List Skeleton */}
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-32 mb-2" /> {/* Table title */}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {[...Array(hasPrivilege ? 6 : 5)].map((_, i) => (
-          <div key={i} className="flex items-center gap-4 p-2 border rounded-md">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="flex-1">
-              <Skeleton className="h-4 w-32 mb-1" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-            <Skeleton className="h-6 w-16 rounded" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  </div>
-);
 
 export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole }: { initialData?: BalancePageData, targetUserId: string, viewerRole?: string }) {
   const router = useRouter();
@@ -349,9 +300,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
     }
   };
 
-  if (isLoadingBalance || isLoadingTransactions || !userBalance) {
-    return <UserBalanceSkeleton />;
-  }
+
 
   const totalReceived = allFilteredTransactions.filter(t => t.targetUserId === userId && t.amount > 0)?.reduce((sum, t) => sum + t.amount, 0) || 0;
   const totalSpent = allFilteredTransactions.filter(t => t.userId === userId && t.amount < 0)?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
@@ -359,120 +308,86 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const availableBalance = userBalance?.balance || 0;
 
   return (
-    <div className="space-y-6">
+    <LoadingWrapper isLoading={isLoadingBalance || isLoadingTransactions || !userBalance}>
+      <div className="space-y-6">
 
-      <AccountInfoCard
-        userBalance={userBalance}
-        targetUserRole={targetUserRole}
-        availableBalance={availableBalance}
-        totalSpent={totalSpent}
-        totalReceived={totalReceived}
-        totalTransactions={totalTransactions}
-      />
+        <AccountInfoCard
+          userBalance={userBalance}
+          targetUserRole={targetUserRole}
+          availableBalance={availableBalance}
+          totalSpent={totalSpent}
+          totalReceived={totalReceived}
+          totalTransactions={totalTransactions}
+        />
 
-      <TransactionList
-        transactions={filteredTransactions}
-        hasPrivilege={hasPrivilege}
-        isAdmin={isAdmin}
-        onEdit={openEditTransactionDialog}
-        onDelete={openDeleteDialog}
-        onViewHistory={(id) => {
-          if (!id) {
-            setHistoryTransactionId(null);
-            return;
-          }
-          setHistoryTransactionId(id);
-          setTimeout(() => {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-          }, 100);
-        }}
-        isHistoryOpen={!!historyTransactionId}
-        onFetchNextPage={fetchNextPage}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-      />
+        <TransactionList
+          transactions={filteredTransactions}
+          hasPrivilege={hasPrivilege}
+          isAdmin={isAdmin}
+          onEdit={openEditTransactionDialog}
+          onDelete={openDeleteDialog}
+          onViewHistory={(id) => {
+            if (!id) {
+              setHistoryTransactionId(null);
+              return;
+            }
+            setHistoryTransactionId(id);
+            setTimeout(() => {
+              window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 100);
+          }}
+          isHistoryOpen={!!historyTransactionId}
+          onFetchNextPage={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+        />
 
-      {historyTransactionId && (
-        <div className="mt-8 border-t pt-8">
-          <TransactionHistory
-            transactionId={historyTransactionId}
-            userId={userId}
-            roomId={activeGroup?.id}
-            periodId={initialData?.currentPeriod?.id}
-            onBack={() => setHistoryTransactionId(null)}
-            initialData={historyTransactionId === 'ALL' ? initialData?.history : undefined}
-          />
-        </div>
-      )}
+        {historyTransactionId && (
+          <div className="mt-8 border-t pt-8">
+            <TransactionHistory
+              transactionId={historyTransactionId}
+              userId={userId}
+              roomId={activeGroup?.id}
+              periodId={initialData?.currentPeriod?.id}
+              onBack={() => setHistoryTransactionId(null)}
+              initialData={historyTransactionId === 'ALL' ? initialData?.history : undefined}
+            />
+          </div>
+        )}
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this transaction?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the transaction.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={deleteTransactionMutation.isPending}
-              onClick={() => {
-                if (transactionToDelete) {
-                  handleDeleteTransaction(transactionToDelete);
-                }
-              }}
-            >
-              {deleteTransactionMutation.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AccountTransactionDialog
-        open={isTransactionDialogOpen}
-        onOpenChange={setIsTransactionDialogOpen}
-        groupId={activeGroup?.id || ''}
-        targetUserId={userId}
-        targetUser={userBalance?.user}
-        transaction={editingTransaction}
-        onSuccess={handleTransactionSuccess}
-      />
-    </div>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete this transaction?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the transaction.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setTransactionToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleteTransactionMutation.isPending}
+                onClick={() => {
+                  if (transactionToDelete) {
+                    handleDeleteTransaction(transactionToDelete);
+                  }
+                }}
+              >
+                {deleteTransactionMutation.isPending ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AccountTransactionDialog
+          open={isTransactionDialogOpen}
+          onOpenChange={setIsTransactionDialogOpen}
+          groupId={activeGroup?.id || ''}
+          targetUserId={userId}
+          targetUser={userBalance?.user}
+          transaction={editingTransaction}
+          onSuccess={handleTransactionSuccess}
+        />
+      </div>
+    </LoadingWrapper>
   );
 }
-
-const UserBalanceSkeleton = () => (
-  <div className="space-y-6 pt-4">
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-[150px]" />
-              <Skeleton className="h-4 w-[200px]" />
-            </div>
-          </div>
-        </div>
-        <Separator className="my-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-6 w-1/2" /></div>
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-6 w-1/2" /></div>
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-6 w-1/2" /></div>
-          <div className="bg-muted/30 rounded-lg p-3 space-y-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-6 w-1/2" /></div>
-        </div>
-      </CardContent>
-    </Card>
-
-    <Card>
-      <CardHeader><Skeleton className="h-7 w-1/3" /></CardHeader>
-      <CardContent className="space-y-3">
-        <div className="overflow-x-auto">
-          <div className="min-w-[600px]">
-            <Skeleton className="h-12 w-full mb-1" /><Skeleton className="h-12 w-full mb-1" /><Skeleton className="h-12 w-full mb-1" /><Skeleton className="h-12 w-full" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);

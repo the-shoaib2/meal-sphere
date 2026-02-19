@@ -613,7 +613,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     const { isPeriodLocked } = require('@/lib/utils/period-utils-shared');
     if (isPeriodLocked(currentPeriod)) return false;
 
-    // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
+    // BYPASS: Admins, Managers, and Meal Managers can skip other checks (limits, past/future dates, time restrictions)
+    if (isPrivileged) return true;
+
+    // RESTRICTED: For today, check meal time cutoff for regular members
     if (isToday) {
       if (!mealSettings) return true;
 
@@ -628,14 +631,11 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       const mealTime = new Date(targetDate);
       mealTime.setHours(hours, minutes, 0, 0);
 
-      // If time passed, no one can add/toggle today
+      // If time passed, member cannot add/toggle today
       if (now >= mealTime) {
         return false;
       }
     }
-
-    // BYPASS: Admins, Managers, and Meal Managers can skip other checks (limits, past/future dates)
-    if (isPrivileged) return true;
 
     if (!mealSettings) return true;
 

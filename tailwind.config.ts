@@ -85,11 +85,21 @@ const config: Config = {
 					to: {
 						height: '0'
 					}
-				}
+				},
+				dash: {
+					"0%": { strokeDasharray: "1, 200", strokeDashoffset: "0" },
+					"50%": { strokeDasharray: "89, 200", strokeDashoffset: "-35px" },
+					"100%": { strokeDasharray: "89, 200", strokeDashoffset: "-124px" },
+				},
+				rotate: {
+					"100%": { transform: "rotate(360deg)" },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				"dash": "dash 1.5s ease-in-out infinite",
+				"rotate": "rotate 2s linear infinite",
 			}
 		}
 	},

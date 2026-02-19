@@ -12,7 +12,7 @@ import { NoGroupState } from "@/components/empty-states/no-group-state"
 import { useGroups } from "@/hooks/use-groups"
 
 // Import separated components
-import CalculationsSkeleton from "@/components/calculations/calculations-skeleton"
+import { LoadingWrapper, Loader } from "@/components/ui/loader"
 import UserTableRow from "@/components/calculations/user-table-row"
 import CalculationsHeader from "@/components/calculations/calculations-header"
 import SummaryCards from "@/components/calculations/summary-cards"
@@ -104,10 +104,7 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
 
 
 
-  // Show loading skeleton if period or calculations are loading, or summary is not ready
-  if (periodLoading || isLoading || !summary) {
-    return <CalculationsSkeleton />
-  }
+
 
   // Show not-found card if there is no period after loading is done
   if (!periodToUse && !periodLoading) {
@@ -134,51 +131,53 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
   // Main content render
 
   return (
-    <div className="space-y-3">
-      <CalculationsHeader
-        isAdmin={isAdmin}
-        currentPeriod={currentPeriod}
-        selectedPeriodId={selectedPeriodId}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
-        hasPrevious={hasPrevious}
-        hasNext={hasNext}
-      />
+    <LoadingWrapper isLoading={periodLoading || isLoading || !summary}>
+      <div className="space-y-3">
+        <CalculationsHeader
+          isAdmin={isAdmin}
+          currentPeriod={currentPeriod}
+          selectedPeriodId={selectedPeriodId}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
+        />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-lg">Period Summary</CardTitle>
-            <CardDescription className="text-sm">
-              {periodDateRange}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <SummaryCards summary={summary} />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="text-lg">Period Summary</CardTitle>
+              <CardDescription className="text-sm">
+                {periodDateRange}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <SummaryCards summary={summary} />
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-sm">Member</TableHead>
-                  <TableHead className="text-right text-sm">Meals</TableHead>
-                  <TableHead className="text-right text-sm">Cost</TableHead>
-                  <TableHead className="text-right text-sm">Paid</TableHead>
-                  <TableHead className="text-right text-sm">Balance</TableHead>
-                  <TableHead className="text-center text-sm">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {userSummaries.map((user: any) => (
-                  <UserTableRow key={user.userId} user={user} />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-sm">Member</TableHead>
+                    <TableHead className="text-right text-sm">Meals</TableHead>
+                    <TableHead className="text-right text-sm">Cost</TableHead>
+                    <TableHead className="text-right text-sm">Paid</TableHead>
+                    <TableHead className="text-right text-sm">Balance</TableHead>
+                    <TableHead className="text-center text-sm">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {userSummaries.map((user: any) => (
+                    <UserTableRow key={user.userId} user={user} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </LoadingWrapper>
   )
 })
 

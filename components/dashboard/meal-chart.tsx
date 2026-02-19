@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Loader } from '@/components/ui/loader';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, Calendar, DollarSign, BarChart3, Info, Utensils } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,7 +32,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
         <CardHeader className="pb-3 sm:pb-4 px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-primary/10">
+              <div className="p-2 rounded-full bg-primary/10">
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <CardTitle className="text-base sm:text-lg font-bold tracking-tight">Monthly Meal Summary</CardTitle>
@@ -89,7 +89,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
                   <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">{stat.label}</span>
                   <span className="text-sm sm:text-base font-bold tracking-tight text-foreground">
                     {isLoading ? (
-                      <Skeleton className="h-5 w-12" />
+                      <span className="text-muted-foreground/50">...</span>
                     ) : (
                       <NumberTicker value={parseFloat(String(stat.value).replace('৳', '')) || 0} decimalPlaces={stat.label === 'Avg' || stat.label === 'Exp' ? 1 : 0} />
                     )}
@@ -101,10 +101,8 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
         </CardHeader>
         <CardContent className="p-4 pt-0 flex-grow">
           {isLoading ? (
-            <div className="h-[180px] sm:h-[220px] lg:h-[250px] xl:h-[280px] w-full flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-4">
-              {[...Array(30)].map((_, i) => (
-                <Skeleton key={i} className="flex-1 rounded-t-md" style={{ height: `${Math.random() * 40 + 20}%` }} />
-              ))}
+            <div className="h-[180px] sm:h-[220px] lg:h-[250px] xl:h-[280px] w-full flex items-center justify-center">
+              <Loader />
             </div>
           ) : chartData ? (
             <ScrollArea className="h-[180px] sm:h-[220px] lg:h-[250px] xl:h-[280px] w-full pr-2">

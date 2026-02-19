@@ -20,7 +20,7 @@ import { canEditMealsForDate, isPeriodLocked } from "@/lib/utils/period-utils-sh
 import GuestMealForm from "@/components/meal/guest-meal-form"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
 import MealCalendar from "@/components/meal/meal-calendar"
-import { MealCardSkeleton, MealManagementSkeleton } from "@/components/meal/meal-skeletons";
+import { Loader } from "@/components/ui/loader";
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
@@ -223,7 +223,11 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
   // Show loading state if access, period, or user stats is still loading
   if (isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats) {
-    return <MealManagementSkeleton />;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader size="lg" />
+      </div>
+    );
   }
 
 
@@ -253,6 +257,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     const targetDate = new Date(selectedDate)
     const isToday = isSameDay(targetDate, now)
 
+    // BYPASS: Admins, Managers, and Meal Managers can skip other checks (limits, past/future dates, time restrictions)
+    const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
+    if (privileged) return true
+
     // RESTRICTED: For today, always enforce individual meal time cutoff for EVERYONE (including Admins)
     if (isToday) {
       if (!mealSettings) return true
@@ -268,15 +276,13 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       const mealTime = new Date(targetDate)
       mealTime.setHours(hours, minutes, 0, 0)
 
-      // If time passed, no one can add/toggle today
+      // If time passed, member cannot add/toggle today
       if (now >= mealTime) {
-        return false
+        return false;
       }
     }
 
-    // Admin/Manager/Meal Manager can skip other restrictions (period lock, historical dates)
-    const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
-    if (privileged) return true
+    // For all other cases (past or future dates), allow editing
 
     // For all other cases (past or future dates), allow editing
     // This allows regular users to fix history/future logs.
@@ -330,10 +336,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                 <div className="space-y-3 sm:space-y-4">
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     {isLoading ? (
-                      // Skeleton for meal cards
-                      (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => (
-                        <MealCardSkeleton key={mealType} />
-                      ))
+                      <div className="flex items-center justify-center py-12">
+                        <Loader />
+                      </div>
                     ) : (
                       (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
                         const hasMealSelected = userHasMeal(mealType)
