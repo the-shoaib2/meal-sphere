@@ -1,10 +1,15 @@
+"use server";
+
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth";
 import { prisma } from '@/lib/services/prisma';
-import { unstable_cache } from 'next/cache';
 import { encryptData, decryptData } from '@/lib/encryption';
 import { getCurrentPeriod, getPeriodAwareWhereClause, addPeriodIdToData, validateActivePeriod, getPeriodForDate } from '@/lib/utils/period-utils';
 import { createNotification } from "@/lib/utils/notification-utils";
 import { NotificationType, MealType } from "@prisma/client";
 import { invalidateMealCache } from "@/lib/cache/cache-invalidation";
+import { cacheGetOrSet, cacheDeletePattern } from '@/lib/cache/cache-service';
+import { CACHE_TTL, CACHE_PREFIXES, getMealsCacheKey } from '@/lib/cache/cache-keys';
 import { format, eachDayOfInterval } from 'date-fns';
 
 /**
@@ -13,7 +18,7 @@ import { format, eachDayOfInterval } from 'date-fns';
  * All queries run in parallel using Promise.all()
  */
 export async function fetchMealsData(
-  userId: string, 
+  userId: string,
   groupId: string,
   options?: {
     periodId?: string;
@@ -22,51 +27,56 @@ export async function fetchMealsData(
     endDate?: Date;
   }
 ) {
-  const { periodId, date, startDate, endDate } = options || {};
-  
-  // Create a more specific cache key that includes period/date info
-  const cacheKey = `meals-data-${userId}-${groupId}-${periodId || 'current'}-${date?.toISOString() || 'no-date'}`;
-  
-  const cachedFn = unstable_cache(
-    async () => {
-      const start = performance.now();
-      
-      // 1. Resolve Target Period
-      let currentPeriod = null;
-      
-      if (periodId) {
-        currentPeriod = await prisma.mealPeriod.findUnique({
-          where: { id: periodId, roomId: groupId }
-        });
-      } else if (date) {
-        currentPeriod = await getPeriodForDate(groupId, date);
-      } else {
-        currentPeriod = await getCurrentPeriod(groupId);
-      }
-      
-      if (!currentPeriod) {
-        // No active period - return empty data
-        return encryptData({
-          meals: [],
-          guestMeals: [],
-          mealSettings: null,
-          autoMealSettings: null,
-          userMealStats: {
-            breakfast: 0,
-            lunch: 0,
-            dinner: 0,
-            total: 0
-          },
-          mealDistribution: [],
-          currentPeriod: null,
-          roomData: null,
-          userRole: null,
-          timestamp: new Date().toISOString(),
-          executionTime: 0
-        });
-      }
 
-      // Parallel queries for all meal-related data
+  const { periodId, date } = options || {};
+
+  const start = performance.now();
+
+  // 1. Resolve Target Period (getCurrentPeriod is Redis-cached; getPeriodForDate is cached below)
+  let currentPeriod = null;
+
+  if (periodId) {
+    currentPeriod = await prisma.mealPeriod.findUnique({
+      where: { id: periodId, roomId: groupId }
+    });
+  } else if (date) {
+    // Cache period-by-date lookups the same way getCurrentPeriod is cached
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const cacheKey = `period_for_date:${groupId}:${dateKey}`;
+    currentPeriod = await cacheGetOrSet(
+      cacheKey,
+      () => getPeriodForDate(groupId, date),
+      { ttl: CACHE_TTL.ACTIVE_PERIOD }
+    );
+  } else {
+    currentPeriod = await getCurrentPeriod(groupId);
+  }
+
+  if (!currentPeriod) {
+    return {
+      meals: [],
+      guestMeals: [],
+      settings: null,
+      autoSettings: null,
+      userStats: { breakfast: 0, lunch: 0, dinner: 0, total: 0 },
+      mealDistribution: [],
+      currentPeriod: null,
+      roomData: null,
+      userRole: null,
+      timestamp: new Date().toISOString(),
+      executionTime: 0
+    };
+  }
+
+  // 2. Cache the full data fetch keyed by (userId, groupId, periodId).
+  //    Mutations call invalidateMealCache which already deletes meals:* patterns, so
+  //    we just need to include the meals prefix in the key so it gets swept up.
+  const dataCacheKey = `${CACHE_PREFIXES.MEALS}:${groupId}:${currentPeriod.id}:${userId}`;
+
+  const result = await cacheGetOrSet(
+    dataCacheKey,
+    async () => {
+      // 3. All DB queries run in parallel — 8 round trips collapsed into one Promise.all
       const [
         meals,
         guestMeals,
@@ -77,117 +87,40 @@ export async function fetchMealsData(
         membership,
         userMealCount
       ] = await Promise.all([
-        // User meals for target period
         prisma.meal.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: {
-            date: 'desc'
-          }
+          where: { roomId: groupId, periodId: currentPeriod!.id },
+          include: { user: { select: { id: true, name: true, image: true } } },
+          orderBy: { date: 'desc' }
         }),
-        
-        // Guest meals for target period
         prisma.guestMeal.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: {
-            date: 'desc'
-          }
+          where: { roomId: groupId, periodId: currentPeriod!.id },
+          include: { user: { select: { id: true, name: true, image: true } } },
+          orderBy: { date: 'desc' }
         }),
-        
-        // Meal settings for the group
-        prisma.mealSettings.findUnique({
-          where: {
-            roomId: groupId
-          }
-        }),
-        
-        // Auto meal settings for the user in this group
+        prisma.mealSettings.findUnique({ where: { roomId: groupId } }),
         prisma.autoMealSettings.findUnique({
-          where: {
-            userId_roomId: {
-              userId: userId,
-              roomId: groupId
-            }
-          }
+          where: { userId_roomId: { userId, roomId: groupId } }
         }),
-        
-        // Meal distribution by type (target period only)
         prisma.meal.groupBy({
           by: ['type'],
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          _count: {
-            type: true
-          }
+          where: { roomId: groupId, periodId: currentPeriod!.id },
+          _count: { type: true }
         }),
-        
-        // Room data
         prisma.room.findUnique({
-          where: {
-            id: groupId
-          },
-          select: {
-            id: true,
-            name: true,
-            memberCount: true,
-            isPrivate: true
-          }
+          where: { id: groupId },
+          select: { id: true, name: true, memberCount: true, isPrivate: true, periodMode: true }
         }),
-        
-        // User membership and role
         prisma.roomMember.findUnique({
-          where: {
-            userId_roomId: {
-              userId: userId,
-              roomId: groupId
-            }
-          },
-          select: {
-            role: true,
-            isBanned: true
-          }
+          where: { userId_roomId: { userId, roomId: groupId } },
+          select: { role: true, isBanned: true }
         }),
-        
-        // User's meal count for target period
         prisma.meal.groupBy({
           by: ['type'],
-          where: {
-            userId: userId,
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          _count: {
-            type: true
-          }
+          where: { userId, roomId: groupId, periodId: currentPeriod!.id },
+          _count: { type: true }
         })
       ]);
 
-      // Calculate user meal stats
       const userMealStats = {
         breakfast: userMealCount.find(m => m.type === 'BREAKFAST')?._count.type || 0,
         lunch: userMealCount.find(m => m.type === 'LUNCH')?._count.type || 0,
@@ -195,38 +128,58 @@ export async function fetchMealsData(
         total: userMealCount.reduce((sum, m) => sum + m._count.type, 0)
       };
 
-      const end = performance.now();
-      const executionTime = end - start;
-
-      const result = {
-        meals,
-        guestMeals,
-        mealSettings,
-        autoMealSettings,
-        userMealStats,
-        mealDistribution: mealDistribution.map(m => ({
-          name: m.type,
-          value: m._count.type
+      return {
+        meals: meals.map(m => ({
+          ...m,
+          date: m.date.toISOString(),
+          createdAt: m.createdAt.toISOString(),
+          updatedAt: m.updatedAt.toISOString(),
         })),
-        currentPeriod,
-        roomData,
+        guestMeals: guestMeals.map(m => ({
+          ...m,
+          date: m.date.toISOString(),
+          createdAt: m.createdAt.toISOString(),
+          updatedAt: m.updatedAt.toISOString(),
+        })),
+        settings: mealSettings ? {
+          ...mealSettings,
+          createdAt: mealSettings.createdAt.toISOString(),
+          updatedAt: mealSettings.updatedAt.toISOString(),
+        } : null,
+        autoSettings: autoMealSettings ? {
+          ...autoMealSettings,
+          startDate: autoMealSettings.startDate.toISOString(),
+          endDate: autoMealSettings.endDate ? autoMealSettings.endDate.toISOString() : undefined,
+          createdAt: autoMealSettings.createdAt.toISOString(),
+          updatedAt: autoMealSettings.updatedAt.toISOString(),
+        } : null,
+        userStats: userMealStats,
+        mealDistribution: mealDistribution.map(m => ({ name: m.type, value: m._count.type })),
+        currentPeriod: {
+          ...currentPeriod,
+          startDate: new Date(currentPeriod!.startDate).toISOString(),
+          endDate: currentPeriod!.endDate ? new Date(currentPeriod!.endDate).toISOString() : undefined,
+          createdAt: new Date(currentPeriod!.createdAt).toISOString(),
+          updatedAt: new Date(currentPeriod!.updatedAt).toISOString(),
+        },
+        roomData: roomData ? {
+          ...roomData,
+          periodMode: roomData.periodMode as 'MONTHLY' | 'CUSTOM' | undefined
+        } : null,
         userRole: membership?.role || null,
         isBanned: membership?.isBanned || false,
-        timestamp: new Date().toISOString(),
-        executionTime
+        groupId,
       };
-
-      return encryptData(result);
     },
-    [cacheKey, 'meals-data'],
-    { 
-      revalidate: 30, 
-      tags: [`user-${userId}`, `group-${groupId}`, 'meals'] 
-    }
+    { ttl: CACHE_TTL.MEALS_LIST } // 2-minute TTL; mutations call invalidateMealCache which deletes meals:* keys
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  const end = performance.now();
+  return {
+    ...result,
+    timestamp: new Date().toISOString(),
+    executionTime: end - start,
+  };
 }
 
 /**
@@ -238,22 +191,21 @@ export async function fetchMealStats(
   startDate?: Date, 
   endDate?: Date
 ) {
-  const cacheKey = `meal-stats-${userId}-${groupId}-${startDate?.toISOString()}-${endDate?.toISOString()}`;
-  
-  const cachedFn = unstable_cache(
-    async () => {
-      const start = performance.now();
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+  const start = performance.now();
       
       const currentPeriod = await getCurrentPeriod(groupId);
       
       if (!currentPeriod) {
-        return encryptData({
+        return {
           totalMeals: 0,
           byType: {},
           byUser: [],
           timestamp: new Date().toISOString(),
           executionTime: 0
-        });
+        };
       }
 
       const whereClause: any = {
@@ -299,248 +251,132 @@ export async function fetchMealStats(
       };
 
       return encryptData(result);
-    },
-    [cacheKey, 'meal-stats'],
-    { 
-      revalidate: 60, 
-      tags: [`user-${userId}`, `group-${groupId}`, 'meals', 'stats'] 
-    }
-  );
-
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
 }
 
-
-// --- Unified Meal System ---
-
-export async function fetchUnifiedMealSystem(userId: string, groupId: string) {
-    // 1. Fetch Basic Data (Settings, Period)
-    const [settings, autoSettings, currentPeriod, membership] = await Promise.all([
-        prisma.mealSettings.findUnique({ where: { roomId: groupId } }),
-        prisma.autoMealSettings.findUnique({ where: { userId_roomId: { userId, roomId: groupId } } }),
-        getCurrentPeriod(groupId),
-        prisma.roomMember.findUnique({
-            where: { userId_roomId: { userId, roomId: groupId } },
-            select: { role: true }
-        })
-    ]);
-
-    let targetPeriod = currentPeriod;
-    if (!targetPeriod) {
-        // Fallback: get most recent period
-        targetPeriod = await prisma.mealPeriod.findFirst({
-            where: { roomId: groupId },
-            orderBy: { startDate: 'desc' }
-        });
-    }
-
-    if (!targetPeriod) {
-        // Return empty defaults
-        return {
-            settings: settings || await getOrCreateDefaultSettings(groupId),
-            autoSettings: autoSettings || await getOrCreateDefaultAutoSettings(userId, groupId),
-            meals: [],
-            guestMeals: [],
-            userStats: null,
-            period: null
-        }
-    }
-
-    const periodId = targetPeriod.id;
-    const [meals, guestMeals] = await Promise.all([
-        prisma.meal.findMany({
-            where: { roomId: groupId, periodId },
-            include: { user: { select: { id: true, name: true, image: true } } },
-            orderBy: { date: 'desc' }
-        }),
-        prisma.guestMeal.findMany({
-            where: { roomId: groupId, periodId },
-            include: { user: { select: { id: true, name: true, image: true } } },
-            orderBy: { date: 'desc' }
-        })
-    ]);
-
-    // Calculate In-Memory Stats
-    const userMeals: any[] = meals.filter(m => m.userId === userId);
-    const userGuestMeals: any[] = guestMeals.filter(m => m.userId === userId);
-
-    // Reuse helper logic
-    const calculateUserStats = (userMeals: any[], userGuestMeals: any[], period: any) => {
-         const totalRegularMeals = userMeals.length;
-         const totalGuestMeals = userGuestMeals.reduce((sum: number, meal: any) => sum + meal.count, 0);
-         const totalMeals = totalRegularMeals + totalGuestMeals;
-
-         const regularByType = {
-             breakfast: userMeals.filter(m => m.type === 'BREAKFAST').length,
-             lunch: userMeals.filter(m => m.type === 'LUNCH').length,
-             dinner: userMeals.filter(m => m.type === 'DINNER').length,
-         };
-         const guestByType = {
-             breakfast: userGuestMeals.filter(m => m.type === 'BREAKFAST').reduce((sum: number, m: any) => sum + m.count, 0),
-             lunch: userGuestMeals.filter(m => m.type === 'LUNCH').reduce((sum: number, m: any) => sum + m.count, 0),
-             dinner: userGuestMeals.filter(m => m.type === 'DINNER').reduce((sum: number, m: any) => sum + m.count, 0),
-         };
-
-         // Compute Daily Stats
-         const startDate = new Date(period.startDate);
-         const endDate = period.endDate ? new Date(period.endDate) : new Date();
-         if (endDate.getTime() - startDate.getTime() > 1000 * 60 * 60 * 24 * 365) {
-              startDate.setTime(endDate.getTime() - 1000 * 60 * 60 * 24 * 31);
-         }
-         if (startDate > endDate) endDate.setTime(startDate.getTime());
-         
-         const days = eachDayOfInterval({ start: startDate, end: endDate });
-        
-         const mealsByDate = new Map<string, any[]>();
-         const guestMealsByDate = new Map<string, any[]>();
-         
-         userMeals.forEach(meal => {
-             const d = format(new Date(meal.date), 'yyyy-MM-dd');
-             if (!mealsByDate.has(d)) mealsByDate.set(d, []);
-             mealsByDate.get(d)!.push(meal);
-         });
-         
-         userGuestMeals.forEach(meal => {
-             const d = format(new Date(meal.date), 'yyyy-MM-dd');
-             if (!guestMealsByDate.has(d)) guestMealsByDate.set(d, []);
-             guestMealsByDate.get(d)!.push(meal);
-         });
-
-         const daily = days.map(day => {
-            const dayStr = format(day, 'yyyy-MM-dd');
-            const dMeals = mealsByDate.get(dayStr) || [];
-            const dGuest = guestMealsByDate.get(dayStr) || [];
-            return {
-                date: dayStr,
-                breakfast: dMeals.filter(m => m.type === 'BREAKFAST').length,
-                lunch: dMeals.filter(m => m.type === 'LUNCH').length,
-                dinner: dMeals.filter(m => m.type === 'DINNER').length,
-                guestBreakfast: dGuest.filter(m => m.type === 'BREAKFAST').reduce((s: number, m: any) => s + m.count, 0),
-                guestLunch: dGuest.filter(m => m.type === 'LUNCH').reduce((s: number, m: any) => s + m.count, 0),
-                guestDinner: dGuest.filter(m => m.type === 'DINNER').reduce((s: number, m: any) => s + m.count, 0),
-                total: dMeals.length + dGuest.reduce((s: number, m: any) => s + m.count, 0)
-            };
-         });
-
-         return {
-             totals: { regularMeals: totalRegularMeals, guestMeals: totalGuestMeals, total: totalMeals },
-             byType: {
-                 breakfast: { regular: regularByType.breakfast, guest: guestByType.breakfast, total: regularByType.breakfast + guestByType.breakfast },
-                 lunch: { regular: regularByType.lunch, guest: guestByType.lunch, total: regularByType.lunch + guestByType.lunch },
-                 dinner: { regular: regularByType.dinner, guest: guestByType.dinner, total: regularByType.dinner + guestByType.dinner },
-             },
-             daily
-         };
-    };
-
-    const userStats = calculateUserStats(userMeals, userGuestMeals, targetPeriod);
-
-    return {
-        settings: settings || await getOrCreateDefaultSettings(groupId),
-        autoSettings: autoSettings || await getOrCreateDefaultAutoSettings(userId, groupId),
-        meals,
-        guestMeals,
-        userStats,
-        period: targetPeriod,
-        userRole: membership?.role || null
-    };
-}
 
 
 // --- Mutation Actions ---
 
-export async function toggleMeal(roomId: string, userId: string, date: Date, type: MealType) {
-    const targetPeriod = await getPeriodForDate(roomId, date);
-    if (!targetPeriod) throw new Error("No period found for this date");
-    if (targetPeriod.isLocked) throw new Error("This period is locked");
-    
-    // CRITICAL: Normalize date to start of day for consistency
-    const normalizedDate = new Date(date)
-    const startOfDay = new Date(normalizedDate)
-    startOfDay.setUTCHours(0, 0, 0, 0)
-    const endOfDay = new Date(normalizedDate)
-    endOfDay.setUTCHours(23, 59, 59, 999)
-    
-    // Check if meal exists (using range to be robust against legacy timestamps)
-    const existingMeal = await prisma.meal.findFirst({
-        where: {
-            userId,
-            roomId,
-            date: {
-                gte: startOfDay,
-                lte: endOfDay
-            },
-            type
-        }
-    });
+export async function toggleMeal(roomId: string, userId: string, dateStr: string, type: MealType, action: 'add' | 'remove', periodId?: string) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
 
-    if (existingMeal) {
-        // Delete all matching meals for this day/type to avoid duplicates
-        await prisma.meal.deleteMany({
-            where: {
-                userId,
-                roomId,
-                date: {
-                    gte: startOfDay,
-                    lte: endOfDay
-                },
-                type
-            }
-        });
-    } else {
-        await prisma.meal.create({
-            data: {
-                roomId,
-                userId,
-                date: startOfDay,
-                type,
-                periodId: targetPeriod.id
-            }
-        });
+    if (userId !== session.user.id) {
+        await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others meals");
     }
 
-    return !existingMeal; // Returns true if created (active), false if deleted
+    const startOfDay = new Date(dateStr);
+    startOfDay.setUTCHours(0, 0, 0, 0); 
+    let targetPeriodId = periodId;
+    if (!targetPeriodId) {
+        const targetPeriod = await getPeriodForDate(roomId, new Date(dateStr));
+        if (!targetPeriod) throw new Error("No period found for this date");
+        if (targetPeriod.isLocked) throw new Error("This period is locked");
+        targetPeriodId = targetPeriod.id;
+    }
+
+    if (action === 'remove') {
+        try {
+            await prisma.meal.delete({
+                where: {
+                    userId_roomId_date_type: {
+                        userId,
+                        roomId,
+                        date: startOfDay,
+                        type
+                    }
+                }
+            });
+        } catch (error) {
+        }
+        return false;
+    } else {
+        try {
+            const newMeal = await prisma.meal.create({
+                data: {
+                    roomId,
+                    userId,
+                    date: startOfDay,
+                    type,
+                    periodId: targetPeriodId
+                },
+                include: { user: { select: { id: true, name: true, image: true, email: true } } }
+            });
+            return newMeal;
+        } catch (error: any) {
+            if (error.code === 'P2002') return false;
+            throw error;
+        }
+    }
 }
 
-export async function createGuestMeal(data: { roomId: string; userId: string; date: Date; type: MealType; count: number }) {
-    const { roomId, userId, date, type, count } = data;
-    
-    // CRITICAL: Normalize date to start of day for consistency
-    const normalizedDate = new Date(date)
-    normalizedDate.setUTCHours(0, 0, 0, 0)
-    
-    const settings = await prisma.mealSettings.findUnique({ where: { roomId } });
-    if (settings && !settings.allowGuestMeals) throw new Error("Guest meals are not allowed");
-    
-    // Count limit check
-    const todayGuestMeals = await prisma.guestMeal.findMany({
-        where: { userId, roomId, date: normalizedDate }
-    });
-    const totalToday = todayGuestMeals.reduce((sum, m) => sum + m.count, 0);
+export async function patchGuestMeal(data: { roomId: string; userId: string; dateStr: string; type: MealType; count: number; periodId?: string }) {
+    const { roomId, userId, dateStr, type, count, periodId } = data;
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // Authorization check
+    if (userId !== session.user.id) {
+        await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others guest meals");
+    }
+
+    const normalizedDate = new Date(dateStr);
+    normalizedDate.setUTCHours(0, 0, 0, 0);
+
+    // Fetch dependencies in parallel
+    const [settings, todayGuestMeals] = await Promise.all([
+        prisma.mealSettings.findUnique({ where: { roomId } }),
+        prisma.guestMeal.findMany({ where: { userId, roomId, date: normalizedDate } })
+    ]);
+
+    if (settings && !settings.allowGuestMeals) {
+        return { error: "Guest meals are not allowed in this group" };
+    }
+
     const limit = settings?.guestMealLimit || 5;
+    const otherTypesTotal = todayGuestMeals
+        .filter(m => m.type !== type)
+        .reduce((sum, m) => sum + m.count, 0);
+    
+    // In patch, count is the new total for that type
+    if (otherTypesTotal + count > limit) {
+        const remaining = limit - otherTypesTotal;
+        return { error: `Limit exceeded. Remaining: ${remaining < 0 ? 0 : remaining}` };
+    }
 
-    if (totalToday + count > limit) throw new Error(`Limit exceeded. Remaining: ${limit - totalToday}`);
+    // Determine period and lock status
+    let targetPeriodId = periodId;
+    if (!targetPeriodId) {
+        const targetPeriod = await getPeriodForDate(roomId, normalizedDate);
+        if (targetPeriod?.isLocked) {
+            return { error: "This period is locked" };
+        }
+        targetPeriodId = targetPeriod?.id;
+    }
 
-    const targetPeriod = await getPeriodForDate(roomId, normalizedDate);
-    if (targetPeriod?.isLocked) throw new Error("This period is locked");
-
-    const guestMeal = await prisma.guestMeal.create({
-        data: {
+    const guestMeal = await prisma.guestMeal.upsert({
+        where: { guestMealIdentifier: { userId, roomId, date: normalizedDate, type } },
+        update: { count },
+        create: {
             userId,
             roomId,
             date: normalizedDate,
             type,
             count,
-            periodId: targetPeriod?.id
+            periodId: targetPeriodId
         },
-        include: { user: { select: { name: true } } }
+        include: { user: { select: { id: true, name: true, image: true } } }
     });
 
-    return guestMeal;
+    return { data: guestMeal };
 }
 
 export async function updateMealSettings(roomId: string, data: any) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    await assertAdminRights(session.user.id, roomId, "Unauthorized");
+
     let settings = await prisma.mealSettings.findUnique({ where: { roomId } });
     if (!settings) settings = await prisma.mealSettings.create({ data: { ...createDefaultSettings(), roomId } });
 
@@ -549,10 +385,16 @@ export async function updateMealSettings(roomId: string, data: any) {
         data: { ...data, updatedAt: new Date() }
     });
 
+    
     return updated;
 }
 
 export async function updateAutoMealSettings(roomId: string, userId: string, data: any) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    if (userId !== session.user.id) throw new Error("Unauthorized");
+
     let autoSettings = await prisma.autoMealSettings.findUnique({ where: { userId_roomId: { userId, roomId } } });
     if (!autoSettings) {
         autoSettings = await prisma.autoMealSettings.create({ 
@@ -565,6 +407,7 @@ export async function updateAutoMealSettings(roomId: string, userId: string, dat
         data: { ...data, updatedAt: new Date() }
     });
 
+    
     return updated;
 }
 
@@ -576,9 +419,6 @@ function createDefaultSettings() {
         allowGuestMeals: true, guestMealLimit: 5
     };
 }
-async function getOrCreateDefaultSettings(roomId: string) {
-    return { ...createDefaultSettings(), roomId, createdAt: new Date() };
-}
 function createDefaultAutoSettings(userId: string, roomId: string) {
     return {
         userId, roomId, isEnabled: false,
@@ -587,6 +427,172 @@ function createDefaultAutoSettings(userId: string, roomId: string) {
         excludedDates: [], excludedMealTypes: []
     };
 }
-async function getOrCreateDefaultAutoSettings(userId: string, roomId: string) {
-    return { ...createDefaultAutoSettings(userId, roomId), createdAt: new Date() };
+
+async function assertAdminRights(userId: string, roomId: string, customMessage = "Unauthorized") {
+    const membership = await prisma.roomMember.findUnique({ where: { userId_roomId: { userId, roomId } } });
+    if (!membership || !['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(membership.role)) {
+        throw new Error(customMessage);
+    }
+}
+
+
+
+export async function deleteGuestMeal(guestMealId: string, userId: string, periodId?: string) {
+    const guestMeal = await prisma.guestMeal.findUnique({
+        where: { id: guestMealId },
+    });
+
+    if (!guestMeal) throw new Error("Guest meal not found");
+
+    if (guestMeal.userId !== userId) {
+        await assertAdminRights(userId, guestMeal.roomId, "Unauthorized to edit others guest meals");
+    }
+
+    if (!periodId && !guestMeal.periodId) {
+        const targetPeriod = await getPeriodForDate(guestMeal.roomId, guestMeal.date);
+        if (targetPeriod?.isLocked) throw new Error("This period is locked");
+    }
+
+    await prisma.guestMeal.delete({
+        where: { id: guestMealId }
+    });
+
+    
+    return true;
+}
+
+export async function triggerAutoMeals(roomId: string, dateStr: string) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) throw new Error("Unauthorized");
+
+    await assertAdminRights(session.user.id, roomId, "You don't have permission to trigger auto meals");
+
+    const mealSettings = await prisma.mealSettings.findUnique({
+      where: { roomId: roomId },
+    })
+
+    if (!mealSettings?.autoMealEnabled) {
+      throw new Error("Auto meal system is not enabled for this room");
+    }
+
+    const autoMealSettingsList = await prisma.autoMealSettings.findMany({
+      where: { 
+        roomId: roomId,
+        isEnabled: true,
+      }
+    })
+
+    if (autoMealSettingsList.length === 0) {
+      return { message: "No users have auto meal settings enabled" }
+    }
+
+    const targetDate = new Date(dateStr)
+    const period = await getPeriodForDate(roomId, targetDate)
+    
+    let processedCount = 0
+    let skippedCount = 0
+
+    const startOfDayUTC = new Date(targetDate)
+    startOfDayUTC.setUTCHours(0, 0, 0, 0)
+    const endOfDayUTC = new Date(targetDate)
+    endOfDayUTC.setUTCHours(23, 59, 59, 999)
+    const [existingMeals, existingGuestMeals] = await Promise.all([
+      prisma.meal.findMany({
+        where: {
+          roomId: roomId,
+          date: { gte: startOfDayUTC, lte: endOfDayUTC }
+        }
+      }),
+      prisma.guestMeal.findMany({
+        where: {
+          roomId: roomId,
+          date: { gte: startOfDayUTC, lte: endOfDayUTC }
+        }
+      })
+    ]);
+    const existingMealsByUserAndType = new Map<string, typeof existingMeals>();
+    const mealCountByUser = new Map<string, number>();
+    const guestMealCountByUser = new Map<string, number>();
+
+    for (const m of existingMeals) {
+      const key = `${m.userId}-${m.type}`;
+      if (!existingMealsByUserAndType.has(key)) existingMealsByUserAndType.set(key, []);
+      existingMealsByUserAndType.get(key)!.push(m);
+      mealCountByUser.set(m.userId, (mealCountByUser.get(m.userId) || 0) + 1);
+    }
+
+    for (const gm of existingGuestMeals) {
+      guestMealCountByUser.set(gm.userId, (guestMealCountByUser.get(gm.userId) || 0) + gm.count);
+    }
+
+    const newMealsToCreate: any[] = [];
+    const newGuestMealsToCreate: any[] = [];
+
+    // Force processing regardless of time since this is a manual trigger
+    for (const autoSetting of autoMealSettingsList) {
+      const userId = autoSetting.userId
+
+      if (autoSetting.excludedDates.includes(dateStr)) {
+        skippedCount++
+        continue
+      }
+
+      const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER'] as const
+      
+      for (const mealType of mealTypes) {
+        const isEnabled = mealType === 'BREAKFAST' ? autoSetting.breakfastEnabled :
+                         mealType === 'LUNCH' ? autoSetting.lunchEnabled :
+                         autoSetting.dinnerEnabled
+
+        if (!isEnabled || autoSetting.excludedMealTypes.includes(mealType)) continue
+        const memKey = `${userId}-${mealType}`;
+        if (existingMealsByUserAndType.has(memKey)) {
+          continue
+        }
+        const currentCount = mealCountByUser.get(userId) || 0;
+        if (currentCount >= (mealSettings.maxMealsPerDay || 3)) {
+          continue
+        }
+        newMealsToCreate.push({
+          userId: userId,
+          roomId: roomId,
+          date: startOfDayUTC,
+          type: mealType,
+          periodId: period?.id || null,
+        });
+        mealCountByUser.set(userId, currentCount + 1);
+        processedCount++
+
+        if (autoSetting.guestMealEnabled) {
+          const currentGuestCount = guestMealCountByUser.get(userId) || 0;
+          
+          if (currentGuestCount < (mealSettings.guestMealLimit || 5)) {
+            newGuestMealsToCreate.push({
+              userId: userId,
+              roomId: roomId,
+              date: startOfDayUTC,
+              type: mealType,
+              count: 1,
+              periodId: period?.id || null,
+            });
+            guestMealCountByUser.set(userId, currentGuestCount + 1);
+          }
+        }
+      }
+    }
+    if (newMealsToCreate.length > 0) {
+      await prisma.meal.createMany({ data: newMealsToCreate, skipDuplicates: true });
+    }
+    
+    if (newGuestMealsToCreate.length > 0) {
+      await prisma.guestMeal.createMany({ data: newGuestMealsToCreate });
+    }
+
+    
+    return {
+      message: `Auto meals processed successfully`,
+      processed: processedCount,
+      skipped: skippedCount,
+      totalUsers: autoMealSettingsList.length,
+    }
 }

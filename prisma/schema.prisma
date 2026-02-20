@@ -310,7 +310,7 @@ model Meal {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
-  @@unique([userId, roomId, date, type])
+  @@unique([userId, roomId, date, type], name: "userId_roomId_date_type")
   @@index([roomId, date])
   @@index([roomId, periodId, date])
   @@index([userId, date])
@@ -333,6 +333,7 @@ model GuestMeal {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   period MealPeriod? @relation(fields: [periodId], references: [id])
 
+  @@unique([userId, roomId, date, type], name: "guestMealIdentifier")
   @@index([roomId, periodId])
   @@index([roomId, date])
   @@index([userId, date])

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
-import { Plus, Settings, Clock, Users, Utensils, Minus, Zap, ShieldCheck } from "lucide-react"
+import { Plus, Settings, Clock, Users, Minus, Zap, ShieldCheck } from "lucide-react"
 import { format, startOfMonth, endOfMonth, isToday, isSameDay, eachDayOfInterval } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
@@ -19,8 +19,9 @@ import { useCurrentPeriod } from "@/hooks/use-periods"
 import { isPeriodLocked } from "@/lib/utils/period-utils-shared"
 import GuestMealForm from "@/components/meal/guest-meal-form"
 import MealCalendar from "@/components/meal/meal-calendar"
+import MealList from "@/components/meal/meal-list"
+import GuestMealManager from "@/components/meal/guest-meal-manager"
 import { Loader } from "@/components/ui/loader";
-import { Skeleton } from "@/components/ui/skeleton";
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
@@ -138,7 +139,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     triggerAutoMeals,
     shouldAutoAddMeal,
     isAutoMealTime,
-    deleteGuestMeal
+    deleteGuestMeal,
+    isTogglingMeal
   } = useMeal(roomId, selectedDate, initialData, userRole)
 
   // Memoized and callback hooks (must be before any early return)
@@ -222,18 +224,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </div>
       }
     >
-      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-        {userRole === 'ADMIN' && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-2 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
-            onClick={() => router.push('/meals/list')}
-          >
-            <Utensils className="h-4 w-4" />
-            Admin Meal List
-          </Button>
-        )}
+      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end mt-2 sm:mt-0">
+        <div className="flex-1 sm:flex-none" />
         <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
 
         {canManageMealSettings && (
@@ -263,7 +255,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   );
 
   // Consolidated loading state
-  const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats;
+  const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats || isTogglingMeal;
 
 
 
@@ -352,8 +344,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       <div className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">Select Date</CardTitle>
+            <CardHeader className="pb-1">
             </CardHeader>
             <CardContent>
               <MealCalendar
@@ -382,6 +373,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                     (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
                       const hasMealSelected = userHasMeal(mealType)
                       const mealCount = getUserMealCount(selectedDate, mealType)
+                      const guestCount = getUserGuestMealCount(selectedDate, mealType)
                       const mealTypeIcon = mealType === 'BREAKFAST' ? '🌅' : mealType === 'LUNCH' ? '☀️' : '🌙'
                       const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' :
                         mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' :
@@ -416,6 +408,11 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                                     ✓ You're in
                                   </Badge>
                                 )}
+                                {guestCount > 0 && (
+                                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 h-5">
+                                    +{guestCount} guest
+                                  </Badge>
+                                )}
                                 {shouldAutoAdd && (
                                   <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
                                     <Zap className="h-2.5 w-2.5" />
@@ -443,7 +440,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                               size="sm"
                               className="rounded-full px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-9"
                               onClick={() => handleToggleMeal(mealType)}
-                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
+                              disabled={isLoading || isTogglingMeal || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
                             >
                               {hasMealSelected ? (
                                 <>
@@ -469,8 +466,43 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </div>
       </div>
 
-
-
+      {/* All Members' Meals — Admin/Manager only */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {isPrivileged && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="p-1.5 bg-primary/10 rounded-full">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+                All Meals — {format(selectedDate, 'MMMM d, yyyy')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MealList
+                mealsForDate={mealsForDate as any}
+                guestMealsForDate={guestMealsForDate}
+                session={session}
+                isLoading={isAnyLoading}
+                userRole={userRole}
+                handleToggleMeal={handleToggleMeal}
+                handleDeleteGuestMeal={handleDeleteGuestMeal}
+              />
+            </CardContent>
+          </Card>
+        )}
+        <GuestMealManager
+          roomId={roomId}
+          date={selectedDate}
+          initialData={initialData}
+          isLoading={isAnyLoading}
+          canEdit={canEditGuestMeals}
+          onUpdate={() => {
+            queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+            queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
+          }}
+        />
+      </div>
       {/* Meal Settings Dialog */}
       <MealSettingsDialog
         open={settingsOpen}

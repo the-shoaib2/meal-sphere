@@ -49,8 +49,8 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, getUserMealCoun
           <div className="p-1.5 bg-primary/10 rounded-full">
             <Utensils className="h-4 w-4 text-primary" />
           </div>
-          Meal Summary ({totalPersonal} + {totalGuest} Guest)
-          <Badge variant="secondary" className="ml-auto text-xs">
+          Meal Summary
+          <Badge variant="default" className="ml-auto text-xs">
             {isLoading ? <Skeleton className="h-4 w-8" /> : `${total} total`}
           </Badge>
         </CardTitle>
@@ -60,28 +60,30 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, getUserMealCoun
           {counts.map(({ type, label, icon, color, count, guestCount, totalCount }) => {
             const c = COLOR_MAP[color];
             return (
-              <div key={type} className={`text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 rounded-lg ${c.bg}`}>
+              <div key={type} className={`text-center space-y-1 p-1.5 sm:p-3 rounded-lg ${c.bg}`}>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1">
                   <span className="text-sm sm:text-base">{icon}</span>
                   <span className={`text-[9px] sm:text-xs font-semibold uppercase tracking-tighter sm:tracking-normal ${c.text}`}>
                     {label}
                   </span>
                 </div>
-                <div className="flex flex-col items-center gap-1 mt-1">
-                  <div className={`text-sm sm:text-xl font-bold flex justify-center ${c.bold}`}>
-                    {isLoading ? <Skeleton className={`h-6 w-8 ${c.skeleton}`} /> : totalCount}
-                  </div>
-                  {(!isLoading && guestCount > 0) && (
-                    <div className="text-[10px] text-muted-foreground">
-                      ({count} + {guestCount} guest)
-                    </div>
-                  )}
-                  {(!isLoading && guestCount === 0) && (
-                    <div className="text-[10px] text-muted-foreground opacity-0">
-                      -
-                    </div>
-                  )}
+                <div className={`text-sm sm:text-xl font-bold ${c.bold}`}>
+                  {isLoading ? <Skeleton className={`h-6 w-8 mx-auto ${c.skeleton}`} /> : totalCount}
                 </div>
+                {isLoading ? (
+                  <div className="flex flex-col items-center gap-1 mt-1">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1">
+                      <span className={`text-[9px] sm:text-[11px] font-medium px-1.5 py-0.5 rounded-full ${c.bg} ${c.text} border border-current/20`}>
+                        {guestCount} Guest
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

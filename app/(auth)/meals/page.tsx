@@ -71,7 +71,7 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
         />
         <NoPeriodState
           isPrivileged={isPrivileged}
-          periodMode={mealsData.roomData?.periodMode || 'MONTHLY'}
+          periodMode={(mealsData.roomData as any)?.periodMode || 'MONTHLY'}
         />
       </div>
     );

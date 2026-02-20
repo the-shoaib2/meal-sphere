@@ -24,13 +24,11 @@ interface GuestMealManagerProps {
 export default function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canEdit = true }: GuestMealManagerProps) {
   const { data: session } = useSession()
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
-  const [pendingChanges, setPendingChanges] = useState<Map<string, number>>(new Map())
-  const [savedStates, setSavedStates] = useState<Map<string, boolean>>(new Map())
 
   const {
     guestMeals,
     getUserGuestMeals,
-    updateGuestMeal,
+    patchGuestMeal,
     deleteGuestMeal,
     mealSettings,
     isLoading: isMealLoading
@@ -39,68 +37,24 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
   const userGuestMeals = getUserGuestMeals(date)
   const guestMealLimit = mealSettings?.guestMealLimit || 10
 
-  // Auto-save changes after a delay
-  useEffect(() => {
-    const timeouts = new Map<string, NodeJS.Timeout>()
 
-    pendingChanges.forEach((newCount, guestMealId) => {
-      // Clear existing timeout for this meal
-      if (timeouts.has(guestMealId)) {
-        clearTimeout(timeouts.get(guestMealId)!)
-      }
 
-      // Set new timeout
-      const timeout = setTimeout(async () => {
-        setIsUpdating(guestMealId)
-        try {
-          await updateGuestMeal(guestMealId, newCount)
-          setSavedStates(prev => new Map(prev).set(guestMealId, true))
-          onUpdate?.()
-
-          // Clear saved state after 2 seconds
-          setTimeout(() => {
-            setSavedStates(prev => {
-              const newMap = new Map(prev)
-              newMap.delete(guestMealId)
-              return newMap
-            })
-          }, 2000)
-        } catch (error) {
-          console.error("Error updating guest meal:", error)
-          toast.error("Failed to update guest meal")
-        } finally {
-          setIsUpdating(null)
-        }
-
-        // Remove from pending changes
-        setPendingChanges(prev => {
-          const newMap = new Map(prev)
-          newMap.delete(guestMealId)
-          return newMap
-        })
-      }, 1000) // 1 second delay
-
-      timeouts.set(guestMealId, timeout)
-    })
-
-    // Cleanup timeouts
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout))
-    }
-  }, [pendingChanges, updateGuestMeal, onUpdate])
-
-  const handleCountChange = (guestMealId: string, newCount: number) => {
+  const handleCountChange = async (type: string, currentCount: number, delta: number) => {
+    const newCount = currentCount + delta
     if (newCount < 1 || newCount > guestMealLimit) return
 
-    setPendingChanges(prev => new Map(prev).set(guestMealId, newCount))
-    setSavedStates(prev => new Map(prev).set(guestMealId, false))
+    try {
+      await patchGuestMeal(date, type as any, newCount)
+      onUpdate?.()
+    } catch (error) {
+      // Error handled in hook
+    }
   }
 
   const handleDelete = async (guestMealId: string) => {
     try {
       await deleteGuestMeal(guestMealId)
       onUpdate?.()
-      toast.success("Guest meal deleted successfully")
     } catch (error) {
       console.error("Error deleting guest meal:", error)
       toast.error("Failed to delete guest meal")
@@ -108,10 +62,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
   }
 
   const getTotalGuestMeals = () => {
-    return userGuestMeals.reduce((sum, meal) => {
-      const pendingCount = pendingChanges.get(meal.id)
-      return sum + (pendingCount !== undefined ? pendingCount : meal.count)
-    }, 0)
+    return userGuestMeals.reduce((sum, meal) => sum + meal.count, 0)
   }
 
   if (!session?.user?.id) {
@@ -163,10 +114,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
         ) : (
           <div className="space-y-3">
             {userGuestMeals.map((guestMeal) => {
-              const pendingCount = pendingChanges.get(guestMeal.id)
-              const currentCount = pendingCount !== undefined ? pendingCount : guestMeal.count
-              const isSaved = savedStates.get(guestMeal.id)
-              const isPending = pendingChanges.has(guestMeal.id)
+              const currentCount = guestMeal.count
 
               return (
                 <div key={guestMeal.id} className="group relative p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
@@ -193,30 +141,24 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-full hover:bg-primary/10"
-                          onClick={() => handleCountChange(guestMeal.id, currentCount - 1)}
-                          disabled={!canEdit || currentCount <= 1 || isUpdating === guestMeal.id}
+                          onClick={() => handleCountChange(guestMeal.type, currentCount, -1)}
+                          disabled={!canEdit || currentCount <= 1}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
 
                         <div className="flex items-center gap-1 min-w-[3rem] justify-center">
                           <span className="font-bold text-lg">
-                            {isUpdating === guestMeal.id ? "..." : currentCount}
+                            {currentCount}
                           </span>
-                          {isPending && (
-                            <Save className="h-3 w-3 text-muted-foreground animate-pulse" />
-                          )}
-                          {isSaved && (
-                            <Check className="h-3 w-3 text-green-500" />
-                          )}
                         </div>
 
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-full hover:bg-primary/10"
-                          onClick={() => handleCountChange(guestMeal.id, currentCount + 1)}
-                          disabled={!canEdit || currentCount >= guestMealLimit || isUpdating === guestMeal.id}
+                          onClick={() => handleCountChange(guestMeal.type, currentCount, 1)}
+                          disabled={!canEdit || currentCount >= guestMealLimit}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
@@ -235,12 +177,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
                     </div>
                   </div>
 
-                  {/* Status Indicator */}
-                  {isPending && (
-                    <div className="absolute top-2 right-2">
-                      <div className="w-2 h-2 0 rounded-full animate-pulse"></div>
-                    </div>
-                  )}
+
                 </div>
               )
             })}

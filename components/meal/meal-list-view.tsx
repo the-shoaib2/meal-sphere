@@ -1,5 +1,6 @@
 "use client"
 
+import { useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
@@ -7,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 import MealList from "@/components/meal/meal-list"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
-import { useCallback, useMemo } from "react"
 import { toast } from "react-hot-toast"
 
 interface MealListViewProps {
@@ -27,13 +27,16 @@ export default function MealListView({ roomId, selectedDate, userRole, initialDa
         useMealsByDate,
         useGuestMealsByDate,
         isLoading,
-        isLoadingUserStats
-    } = useMeal(roomId, selectedDate, initialData, userRole)
+        isLoadingUserStats,
+        isTogglingMeal,
+        isDeletingGuestMeal
+        // forceRefetch: always fetch fresh data on mount (bypasses stale client-side cache
+        // from /meals page when navigating via button click without a full page reload)
+    } = useMeal(roomId, selectedDate, initialData, userRole, true)
 
     const mealsForDate = useMemo(() => useMealsByDate(selectedDate), [useMealsByDate, selectedDate])
     const guestMealsForDate = useMemo(() => useGuestMealsByDate(selectedDate), [useGuestMealsByDate, selectedDate])
-
-    const isAnyLoading = isLoading || isLoadingUserStats
+    const isAnyLoading = isLoading || isLoadingUserStats || isTogglingMeal || isDeletingGuestMeal
 
     const handleToggleMeal = useCallback(async (type: MealType, userId?: string) => {
         const targetUserId = userId || session?.user?.id

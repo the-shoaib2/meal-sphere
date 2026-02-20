@@ -2,7 +2,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
-import { fetchMealsData } from '@/lib/services/meals-service';
 import { fetchGroupAccessData } from '@/lib/services/groups-service';
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from '@/components/ui/badge';
@@ -43,8 +42,10 @@ export default async function MealListPage({ searchParams }: { searchParams: Pro
     // 4. Resolve date from search params
     const dateParam = resolvedSearchParams?.date ? new Date(resolvedSearchParams.date) : new Date();
 
-    // 5. Fetch Meals Data
-    const mealsData = await fetchMealsData(session.user.id, activeGroup.id, { date: dateParam });
+    // 5. Fetch initial data for SSR hydration to avoid stale client cache
+    const initialData = await import('@/lib/services/meals-service').then(m =>
+        m.fetchMealsData(session.user.id, activeGroup.id, { date: dateParam })
+    );
 
     return (
         <div className="space-y-6">
@@ -53,12 +54,11 @@ export default async function MealListPage({ searchParams }: { searchParams: Pro
                 showBackButton
                 backHref="/meals"
                 text={
-
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
                         <span className="text-muted-foreground block sm:inline">Detailed meal view for {activeGroup.name}</span>
                         <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0">
                             <ShieldCheck className="h-3 w-3" />
-                            ADMIN VIEW
+                            ADMIN
                         </Badge>
                     </div>
                 }
@@ -68,10 +68,7 @@ export default async function MealListPage({ searchParams }: { searchParams: Pro
                 roomId={activeGroup.id}
                 selectedDate={dateParam}
                 userRole={userRole}
-                initialData={{
-                    ...mealsData,
-                    groupId: activeGroup.id
-                }}
+                initialData={initialData}
             />
         </div>
     );

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2, RotateCcw, Plus } from "lucide-react"
 
-import { useRouter } from "next/navigation" // Added useRouter
+import { useRouter } from "next/navigation"
 import { useVoting } from "@/hooks/use-voting"
 import { useGroups } from "@/hooks/use-groups"
 import { useActiveGroup } from "@/contexts/group-context"
