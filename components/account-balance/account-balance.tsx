@@ -15,7 +15,6 @@ import { PeriodNotFoundCard } from "@/components/periods/period-not-found-card"
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useGroups } from '@/hooks/use-groups';
 import { PageHeader } from '@/components/shared/page-header';
-import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -86,17 +85,12 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
 
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
-  // Sync dialog state with search params & custom events
-  const searchParams = useSearchParams();
+  // Sync dialog state with custom events
   React.useEffect(() => {
-    if (searchParams?.get('add') === 'true' && !isAddDialogOpen) {
-      setIsAddDialogOpen(true);
-    }
-
     const handleOpenDialog = () => setIsAddDialogOpen(true);
     window.addEventListener('open-add-transaction-dialog', handleOpenDialog);
     return () => window.removeEventListener('open-add-transaction-dialog', handleOpenDialog);
-  }, [searchParams, isAddDialogOpen]);
+  }, [isAddDialogOpen]);
 
   const isForbidden = (balancesError as any)?.message?.includes('403') ||
     (ownBalanceError as any)?.message?.includes('403') ||
@@ -190,7 +184,6 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const router = useRouter();
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  const searchParams = useSearchParams();
 
   // State for Add/Edit Transaction Dialog
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = React.useState(false);
@@ -199,19 +192,15 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const [transactionToDelete, setTransactionToDelete] = React.useState<string | null>(null);
   const [historyTransactionId, setHistoryTransactionId] = React.useState<string | null>(null);
 
-  // Sync dialog state with search params & custom events (Keep for bookmarks/direct links)
+  // Sync dialog state with custom events
   React.useEffect(() => {
-    if (searchParams?.get('add') === 'true' && !isTransactionDialogOpen) {
-      setIsTransactionDialogOpen(true);
-    }
-
     const handleOpenDialog = () => {
       setEditingTransaction(null);
       setIsTransactionDialogOpen(true);
     };
     window.addEventListener('open-add-transaction-dialog', handleOpenDialog);
     return () => window.removeEventListener('open-add-transaction-dialog', handleOpenDialog);
-  }, [searchParams, isTransactionDialogOpen]);
+  }, [isTransactionDialogOpen]);
 
   const userId = targetUserId;
 

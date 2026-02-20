@@ -99,14 +99,6 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
     router.push(`/account-balance/${userId}`);
   };
 
-  const handleAddTransaction = () => {
-    // Navigate to the first member or show a dialog (dialog is better but needs state)
-    // For now, let's just use the detail page navigation since that's where the logic lives
-    if (members.length > 0) {
-      router.push(`/account-balance/${members[0].userId}?add=true`);
-    }
-  };
-
   return (
     <div className="space-y-6">
 

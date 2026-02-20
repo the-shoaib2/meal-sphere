@@ -12,7 +12,7 @@ import { canViewUserBalance, hasBalancePrivilege } from '@/lib/auth/balance-perm
 
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import Link from 'next/link';
+import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,11 +93,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
         backHref="/account-balance"
       >
         {isAdmin && (
-          <Button size="sm" asChild className="w-full sm:w-auto shadow-sm transition-all hover:shadow-md active:scale-95">
-            <Link href="?add=true">
-              <Plus className="h-4 w-4 mr-2" /> Add Balance
-            </Link>
-          </Button>
+          <AddBalanceButton />
         )}
       </PageHeader>
       <UserAccountBalanceDetail
