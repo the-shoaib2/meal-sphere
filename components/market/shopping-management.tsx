@@ -143,7 +143,7 @@ export default function ShoppingManagement({ initialData, initialAccessData }: S
 
 
   return (
-    <LoadingWrapper isLoading={isLoading || isAccessLoading}>
+    <LoadingWrapper isLoading={isLoading || isAccessLoading} minHeight="70vh">
       <div className="space-y-6">
         <PageHeader
           heading="Shopping List"

@@ -1,4 +1,3 @@
-export { default as CalculationsSkeleton } from './calculations-skeleton'
 export { default as UserTableRow } from './user-table-row'
 export { default as CalculationsHeader } from './calculations-header'
 export { default as SummaryCards } from './summary-cards'

@@ -99,7 +99,7 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
     }
 
     return (
-        <LoadingWrapper isLoading={isLoading}>
+        <LoadingWrapper isLoading={isLoading} minHeight="70vh">
             <div className="space-y-6">
                 {/* Header with Back Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

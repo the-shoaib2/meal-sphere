@@ -126,7 +126,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
   };
 
   return (
-    <LoadingWrapper isLoading={isLoading}>
+    <LoadingWrapper isLoading={isLoading} minHeight="70vh">
 
       <div className="space-y-6">
         <PageHeader

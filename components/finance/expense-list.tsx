@@ -110,7 +110,7 @@ export function ExpenseList({ initialData }: ExpenseListProps) {
   const totalAmount = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <LoadingWrapper isLoading={isLoading || !activeGroup}>
+    <LoadingWrapper isLoading={isLoading || !activeGroup} minHeight="70vh">
       <div className="space-y-4">
         <Card>
           <CardHeader className="pb-3">
