@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Users, Settings, Activity, UserPlus, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Users, Settings, Activity, UserPlus, CheckSquare, LogIn } from 'lucide-react';
 import { Role } from '@prisma/client';
 import { isFeatureEnabled } from '@/lib/utils/features';
 import { Badge } from '@/components/ui/badge';
@@ -121,8 +121,7 @@ export function GroupPageContent(
         router.push(`/groups/${groupId}?${params.toString()}`, { scroll: false });
     };
 
-    const { isAdmin } = initialAccessData;
-    const { userRole, isCreator } = initialAccessData;
+    const { isMember, isAdmin, userRole, isCreator } = initialAccessData;
 
     // Stabilize the loading state: if we have initialData, don't show skeleton during hydration
     if ((isLoading || !group) && !initialData) {
@@ -241,81 +240,108 @@ export function GroupPageContent(
                         ))}
                     </div>
                 </div>
-                <div className="ml-auto">
-                    {showActivityLog && (
+                <div className="ml-auto flex items-center gap-2">
+                    {showActivityLog && isMember && (
                         <Button className="h-8 w-8 rounded-full" variant="outline" size="icon" onClick={() => setShowActivityDialog(true)}>
                             <Activity className="h-3.5 w-3.5" />
+                        </Button>
+                    )}
+                    {!isMember && (
+                        <Button
+                            className="bg-primary hover:bg-primary/90 text-white gap-2"
+                            onClick={() => router.push(`/groups/join/${groupId}`)}
+                        >
+                            <LogIn className="h-4 w-4" />
+                            Join Group
                         </Button>
                     )}
                 </div>
             </div>
 
-            <Tabs defaultValue="members" value={displayActiveTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="w-full flex justify-start sm:rounded-md">
-                    <TabsTrigger value="members" className="flex-1 flex items-center justify-center gap-2">
-                        <Users className="h-4 w-4 hidden sm:block" />
-                        Members
-                    </TabsTrigger>
-                    {isAdmin && (
-                        <TabsTrigger value="join-requests" className="flex-1 flex items-center justify-center gap-2">
-                            <UserPlus className="h-4 w-4 hidden sm:block" />
-                            Requests
+            {isMember ? (
+                <Tabs defaultValue="members" value={displayActiveTab} onValueChange={handleTabChange} className="w-full">
+                    <TabsList className="w-full flex justify-start sm:rounded-md">
+                        <TabsTrigger value="members" className="flex-1 flex items-center justify-center gap-2">
+                            <Users className="h-4 w-4 hidden sm:block" />
+                            Members
                         </TabsTrigger>
-                    )}
-                    <TabsTrigger value="voting" className="flex-1 flex items-center justify-center gap-2">
-                        <CheckSquare className="h-4 w-4 hidden sm:block" />
-                        Voting
-                    </TabsTrigger>
-                    <TabsTrigger value="settings" className="flex-1 flex items-center justify-center gap-2">
-                        <Settings className="h-4 w-4 hidden sm:block" />
-                        Settings
-                    </TabsTrigger>
-                </TabsList>
+                        {isAdmin && (
+                            <TabsTrigger value="join-requests" className="flex-1 flex items-center justify-center gap-2">
+                                <UserPlus className="h-4 w-4 hidden sm:block" />
+                                Requests
+                            </TabsTrigger>
+                        )}
+                        <TabsTrigger value="voting" className="flex-1 flex items-center justify-center gap-2">
+                            <CheckSquare className="h-4 w-4 hidden sm:block" />
+                            Voting
+                        </TabsTrigger>
+                        <TabsTrigger value="settings" className="flex-1 flex items-center justify-center gap-2">
+                            <Settings className="h-4 w-4 hidden sm:block" />
+                            Settings
+                        </TabsTrigger>
+                    </TabsList>
 
-                <div className="mt-3">
-                    <TabsContent value="members" className="m-0">
-                        <MembersTab
-                            groupId={groupId}
-                            group={resolvedGroup}
-                            isAdmin={isAdmin}
-                            isCreator={isCreator}
-                            currentUserId={session?.user?.id}
-                            members={mappedMembers}
-                            onMemberUpdate={() => refetch()}
-                            initialInviteTokens={initialInviteTokens}
-                            canInvite={canInvite}
-                        />
-                    </TabsContent>
-
-                    <TabsContent value="settings" className="m-0">
-                        <SettingsTab
-                            groupId={groupId}
-                            group={resolvedGroup}
-                            isAdmin={isAdmin}
-                            isCreator={isCreator}
-                            onUpdate={() => refetch()}
-                        />
-                    </TabsContent>
-
-                    {isAdmin && (
-                        <TabsContent value="join-requests" className="m-0">
-                            <JoinRequestsTab
+                    <div className="mt-3">
+                        <TabsContent value="members" className="m-0">
+                            <MembersTab
                                 groupId={groupId}
+                                group={resolvedGroup}
                                 isAdmin={isAdmin}
-                                initialRequests={joinRequests}
+                                isCreator={isCreator}
+                                isMember={isMember}
+                                currentUserId={session?.user?.id}
+                                members={mappedMembers}
+                                onMemberUpdate={() => refetch()}
+                                initialInviteTokens={initialInviteTokens}
+                                canInvite={canInvite}
                             />
                         </TabsContent>
-                    )}
 
-                    <TabsContent value="voting" className="m-0">
-                        <VotingTab
-                            group={resolvedGroup}
-                            initialVotes={initialVotes}
-                            currentUser={session?.user}
-                        />
-                    </TabsContent>
+                        <TabsContent value="settings" className="m-0">
+                            <SettingsTab
+                                groupId={groupId}
+                                group={resolvedGroup}
+                                isAdmin={isAdmin}
+                                isCreator={isCreator}
+                                onUpdate={() => refetch()}
+                            />
+                        </TabsContent>
+
+                        {isAdmin && (
+                            <TabsContent value="join-requests" className="m-0">
+                                <JoinRequestsTab
+                                    groupId={groupId}
+                                    isAdmin={isAdmin}
+                                    initialRequests={joinRequests}
+                                />
+                            </TabsContent>
+                        )}
+
+                        <TabsContent value="voting" className="m-0">
+                            <VotingTab
+                                group={resolvedGroup}
+                                initialVotes={initialVotes}
+                                currentUser={session?.user}
+                            />
+                        </TabsContent>
+                    </div>
+                </Tabs>
+            ) : (
+                <div className="mt-3">
+                    <MembersTab
+                        groupId={groupId}
+                        group={resolvedGroup}
+                        isAdmin={false}
+                        isCreator={false}
+                        isMember={false}
+                        currentUserId={session?.user?.id}
+                        members={mappedMembers}
+                        onMemberUpdate={() => { }}
+                        initialInviteTokens={[]}
+                        canInvite={false}
+                    />
                 </div>
-            </Tabs>
+            )}
 
             <ActivityDialog
                 groupId={groupId}

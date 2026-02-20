@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,10 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-// import { useGroups } from '@/hooks/use-groups';
-import { toast } from 'sonner';
-import { Loader2, Lock, ArrowLeft, Users, LockKeyhole, Hash, Info, Eye, EyeOff } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { Loader2, Lock, ArrowLeft, Users, LockKeyhole, Hash, Info, Eye, EyeOff, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { cn } from "@/lib/utils";
+import { useGroups } from '@/hooks/use-groups';
 
 import { GroupImageSelection } from '@/components/groups/group-image-selection';
 
@@ -53,13 +55,14 @@ type CreateGroupInput = z.infer<typeof createGroupSchema>;
 
 export default function CreateGroupPage() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
 
   const form = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema) as any,
     defaultValues: {
       isPrivate: false,
-      maxMembers: null,
+      maxMembers: 2,
       bannerUrl: "/images/9099ffd8-d09b-4883-bac1-04be1274bb82.png", // Default image
     },
     mode: 'onChange',
@@ -77,31 +80,22 @@ export default function CreateGroupPage() {
   const description = watch('description');
   const bannerUrl = watch('bannerUrl') || "/images/9099ffd8-d09b-4883-bac1-04be1274bb82.png";
 
+  const { createGroup } = useGroups();
+
   const onSubmit = async (data: CreateGroupInput) => {
     try {
-      const response = await fetch('/api/groups', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          maxMembers: data.maxMembers || undefined,
-          bannerUrl: data.bannerUrl,
-        }),
+      await createGroup.mutateAsync({
+        ...data,
+        maxMembers: data.maxMembers || undefined,
+        bannerUrl: data.bannerUrl,
       });
 
-      if (response.ok) {
-        toast.success('Group created successfully!');
-        router.refresh();
-        router.push('/groups');
-      } else {
-        const result = await response.json();
-        toast.error(result.error || 'Failed to create group');
-      }
+      toast.success('Group created successfully!');
+      router.refresh();
+      router.push('/groups');
     } catch (error: any) {
       console.error('Unexpected error:', error);
-      toast.error('An unexpected error occurred');
+      // toast.error is handled by the hook
     }
   };
 
@@ -124,8 +118,18 @@ export default function CreateGroupPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
+              <div className="relative p-1 rounded-full bg-primary/10 overflow-hidden h-10 w-10 flex items-center justify-center border-2 border-primary/20 shrink-0">
+                {bannerUrl ? (
+                  <Image
+                    src={bannerUrl}
+                    alt="Group preview"
+                    fill
+                    className="object-cover"
+                    sizes="40px"
+                  />
+                ) : (
+                  <Users className="h-5 w-5 text-primary" />
+                )}
               </div>
               <div>
                 <CardTitle className="text-2xl font-bold">Create a New Group</CardTitle>
@@ -139,7 +143,9 @@ export default function CreateGroupPage() {
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Group Name *</Label>
+                <Label htmlFor="name">
+                  Group Name <span className="text-destructive font-bold">*</span>
+                </Label>
                 <div className="relative">
                   <div className="relative">
                     <Input
@@ -149,7 +155,19 @@ export default function CreateGroupPage() {
                       error={errors.name?.message as string | undefined}
                       className="pl-10"
                     />
-                    <Users className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                    <div className="absolute left-3 top-2.5 h-5 w-5 rounded-sm overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                      {bannerUrl ? (
+                        <Image
+                          src={bannerUrl}
+                          alt="Thumbnail"
+                          fill
+                          className="object-cover"
+                          sizes="20px"
+                        />
+                      ) : (
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </div>
                   </div>
                 </div>
                 {errors.name && (
@@ -184,6 +202,7 @@ export default function CreateGroupPage() {
                 <GroupImageSelection
                   selectedImage={bannerUrl}
                   onSelect={(url) => setValue('bannerUrl', url, { shouldDirty: true })}
+                  isEditing={true}
                 />
               </div>
 
@@ -242,14 +261,25 @@ export default function CreateGroupPage() {
                 {isPrivate && (
                   <div className="space-y-2 p-4 bg-muted/30 rounded-lg border border-dashed border-muted-foreground/20">
                     <Label htmlFor="password">Group Password (Optional)</Label>
-                    <div className="relative">
+                    <div className="relative group/pass">
                       <Input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         placeholder="Set a password for immediate joining"
                         {...register('password')}
-                        className="pl-10"
+                        className="pl-10 pr-10"
                       />
                       <LockKeyhole className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       If set, users can join immediately by entering this password. If left blank, they must request approval.
@@ -279,7 +309,10 @@ export default function CreateGroupPage() {
                     Creating...
                   </>
                 ) : (
-                  'Create Group'
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Group
+                  </>
                 )}
               </Button>
             </CardFooter>

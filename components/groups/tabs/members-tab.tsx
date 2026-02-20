@@ -54,6 +54,7 @@ interface MembersTabProps {
   onMemberUpdate: () => void;
   initialInviteTokens?: any[];
   canInvite?: boolean;
+  isMember?: boolean;
 }
 
 export function MembersTab({
@@ -66,6 +67,7 @@ export function MembersTab({
   onMemberUpdate,
   initialInviteTokens = [],
   canInvite = true,
+  isMember = true,
 }: MembersTabProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -166,12 +168,14 @@ export function MembersTab({
                 {members.length} {members.length === 1 ? 'member' : 'members'} in this group
               </p>
             </div>
-            <InviteCard
-              groupId={groupId}
-              group={group}
-              initialTokens={initialInviteTokens}
-              canInvite={canInvite}
-            />
+            {isMember && (
+              <InviteCard
+                groupId={groupId}
+                group={group}
+                initialTokens={initialInviteTokens}
+                canInvite={canInvite}
+              />
+            )}
           </div>
 
           <div className="divide-y">

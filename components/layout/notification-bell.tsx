@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Bell, BellRing } from "lucide-react"
+import { Bell, BellRing, X, Trash2 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useNotifications, type Notification } from "@/contexts/notification-context"
 import { formatDistanceToNow } from "date-fns"
 import { SafeDate } from "@/components/shared/safe-date"
+import { cn } from "@/lib/utils"
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
@@ -29,39 +30,39 @@ export function NotificationBell() {
     switch (type) {
       case "MEAL_REMINDER":
         return (
-          <div className="rounded-full bg-blue-100 p-2 mr-3">
-            <Bell className="h-4 w-4 text-blue-600" />
+          <div className="rounded-full bg-blue-100 p-1.5 mr-2 group-hover:bg-blue-200 transition-colors">
+            <Bell className="h-3.5 w-3.5 text-blue-600" />
           </div>
         )
       case "PAYMENT_DUE":
         return (
-          <div className="rounded-full bg-red-100 p-2 mr-3">
-            <Bell className="h-4 w-4 text-red-600" />
+          <div className="rounded-full bg-red-100 p-1.5 mr-2 group-hover:bg-red-200 transition-colors">
+            <Bell className="h-3.5 w-3.5 text-red-600" />
           </div>
         )
       case "VOTE_STARTED":
       case "VOTE_ENDED":
         return (
-          <div className="rounded-full bg-green-100 p-2 mr-3">
-            <Bell className="h-4 w-4 text-green-600" />
+          <div className="rounded-full bg-green-100 p-1.5 mr-2 group-hover:bg-green-200 transition-colors">
+            <Bell className="h-3.5 w-3.5 text-green-600" />
           </div>
         )
       case "MANAGER_CHANGED":
         return (
-          <div className="rounded-full bg-purple-100 p-2 mr-3">
-            <Bell className="h-4 w-4 text-purple-600" />
+          <div className="rounded-full bg-purple-100 p-1.5 mr-2 group-hover:bg-purple-200 transition-colors">
+            <Bell className="h-3.5 w-3.5 text-purple-600" />
           </div>
         )
       case "SHOPPING_ADDED":
         return (
-          <div className="rounded-full bg-yellow-100 p-2 mr-3">
-            <Bell className="h-4 w-4 text-yellow-600" />
+          <div className="rounded-full bg-yellow-100 p-1.5 mr-2 group-hover:bg-yellow-200 transition-colors">
+            <Bell className="h-3.5 w-3.5 text-yellow-600" />
           </div>
         )
       default:
         return (
-          <div className="rounded-full bg-gray-100 p-2 mr-3">
-            <Bell className="h-4 w-4 text-gray-600" />
+          <div className="rounded-full bg-gray-100 p-1.5 mr-2 group-hover:bg-gray-200 transition-colors">
+            <Bell className="h-3.5 w-3.5 text-gray-600" />
           </div>
         )
     }
@@ -84,57 +85,64 @@ export function NotificationBell() {
           <span className="sr-only">Notifications</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <Card className="border-0">
-          <CardHeader className="pb-3">
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
+      <PopoverContent className="w-80 p-0 overflow-hidden" align="end" sideOffset={8}>
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="pb-3 relative">
+            <CardTitle className="text-lg">Notifications</CardTitle>
+            <CardDescription className="text-xs">
               {safeNotifications.length > 0
                 ? `You have ${safeNotifications.length} notification${safeNotifications.length !== 1 ? "s" : ""}`
                 : "No notifications"}
             </CardDescription>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-4 h-7 w-7 rounded-full hover:bg-muted"
+              onClick={() => setOpen(false)}
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+              <span className="sr-only">Close</span>
+            </Button>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[300px] px-4">
+            <ScrollArea className="h-[300px]">
               {safeNotifications.length > 0 ? (
-                <div className="space-y-4 py-2">
+                <div className="flex flex-col">
                   {safeNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`flex items-start ${!notification.read ? "bg-muted/50 -mx-2 p-2 rounded-md" : ""}`}
+                      className={cn(
+                        "group flex items-start gap-1 p-2.5 px-3 border-b last:border-0 transition-all duration-200 cursor-default hover:bg-muted/40",
+                        !notification.read && "bg-primary/5 hover:bg-primary/10"
+                      )}
                     >
                       {getNotificationIcon(notification.type)}
-                      <div className="space-y-1 flex-1">
-                        <p className="text-sm font-medium leading-none">{notification.message}</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="space-y-0.5 flex-1 min-w-0">
+                        <p className={cn(
+                          "text-sm leading-tight break-words",
+                          !notification.read ? "font-semibold text-foreground" : "text-muted-foreground"
+                        )}>{notification.message}</p>
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                           <SafeDate
                             date={notification.createdAt}
                             format={(date) => formatDistanceToNow(date, { addSuffix: true })}
                           />
+                          {!notification.read && (
+                            <span className="h-1 w-1 rounded-full bg-primary" />
+                          )}
                         </p>
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="ml-2 h-8 w-8 p-0"
-                        onClick={() => deleteNotification(notification.id)}
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 h-7 w-7 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification.id);
+                        }}
                       >
+                        <Trash2 className="h-3.5 w-3.5" />
                         <span className="sr-only">Delete</span>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="h-4 w-4"
-                        >
-                          <path d="M18 6 6 18" />
-                          <path d="m6 6 12 12" />
-                        </svg>
                       </Button>
                     </div>
                   ))}

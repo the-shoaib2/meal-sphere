@@ -40,11 +40,11 @@ interface UpdateGroupInput {
   name?: string;
   description?: string;
   isPrivate?: boolean;
-  password?: string;
+  password?: string | null;
   maxMembers?: number | null;
   tags?: string[];
   features?: Record<string, boolean>;
-  bannerUrl?: string;
+  bannerUrl?: string | null;
 }
 
 
@@ -255,16 +255,9 @@ export function useGroups(): UseGroupsReturn {
       // Optimistically add the new group to the cache
       queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => [data, ...old]);
 
-      // Optimistically update lists for immediate UI feedback
-      queryClient.setQueryData(['groups', 'my'], (old: Group[] = []) => [data, ...old]);
-      queryClient.setQueryData(['groups', 'all'], (old: Group[] = []) => [data, ...old]);
-      
-      if (!data.isPrivate) {
-          queryClient.setQueryData(['groups', 'public'], (old: Group[] = []) => [data, ...old]);
-      }
-
-      // No invalidation here - trust the optimistic update
-      // Let the calling component handle navigation and toast
+      // Invalidate all group lists to ensure server sync
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error creating group:', error);
@@ -318,9 +311,9 @@ export function useGroups(): UseGroupsReturn {
       // Update specific group details
       queryClient.setQueryData(['group', data.id], data);
 
-      // Invalidate to ensure consistency, but optimistic update handles immediate UI
-      queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
-      // queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] }); // No need to invalidate this one immediately if we trust optimistic
+      // Invalidate to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error updating group:', error);
@@ -470,6 +463,8 @@ export function useGroups(): UseGroupsReturn {
     },
     onSuccess: () => {
       toast.success('Group deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
       router.refresh();
       router.push('/groups');
     },

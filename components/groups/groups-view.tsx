@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/use-groups';
 import { Search, Plus, Users, ArrowRight, Compass } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -32,7 +32,22 @@ export function GroupsView({ initialData }: GroupsViewProps) {
     const { data: session } = useSession();
     const [searchQuery, setSearchQuery] = useState('');
 
-    // const { useGroupsList } = useGroups();
+    const { useGroupsList } = useGroups();
+
+    // Use dynamic queries for groups, hydrated with initialData
+    const {
+        data: myGroupsData,
+    } = useGroupsList({
+        filter: 'my',
+        initialData: initialData.myGroups
+    });
+
+    const {
+        data: publicGroupsData,
+    } = useGroupsList({
+        filter: 'public',
+        initialData: initialData.publicGroups
+    });
 
     // Get the active tab from URL search params, default to 'my-groups'
     const [activeTab, setActiveTab] = useState(() => {
@@ -42,13 +57,8 @@ export function GroupsView({ initialData }: GroupsViewProps) {
             : 'my-groups';
     });
 
-    // const { myGroups } = initialData;
-    // const { publicGroups } = initialData;
-    const myGroups = initialData.myGroups;
-    const publicGroups = initialData.publicGroups;
-
     // Determine which groups to show based on active tab
-    const groups = activeTab === 'my-groups' ? myGroups : publicGroups;
+    const groups = activeTab === 'my-groups' ? myGroupsData : publicGroupsData;
 
     // Update URL when tab changes
     const handleTabChange = (value: string) => {

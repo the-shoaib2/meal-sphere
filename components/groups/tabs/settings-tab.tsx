@@ -12,11 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell, FileSpreadsheet, Pencil } from 'lucide-react';
+import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, Tag, Settings, Bell, FileSpreadsheet, Pencil, Eye, EyeOff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-// import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/use-groups';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';
@@ -177,10 +177,8 @@ export function SettingsTab({
   const queryClient = useQueryClient();
   const { data: session } = useSession();
 
-  // const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
-  // const { data: group, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId);
-  const isLoadingGroup = false;
-  const refetch = () => router.refresh();
+  const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
+  const { data: groupDetails, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId, group);
 
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState('');
@@ -199,6 +197,7 @@ export function SettingsTab({
   const [stats, setStats] = useState<ComponentStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -226,13 +225,13 @@ export function SettingsTab({
   const form = useForm<GroupSettingsFormValues>({
     resolver: zodResolver(groupSettingsSchema),
     defaultValues: {
-      name: group?.name || '',
-      description: group?.description || '',
-      bannerUrl: group?.bannerUrl || '',
-      isPrivate: group?.isPrivate || false,
-      maxMembers: group?.maxMembers || undefined,
-      tags: (group as any)?.tags || [],
-      features: (group as any)?.features || {},
+      name: groupDetails?.name || group?.name || '',
+      description: groupDetails?.description || group?.description || '',
+      bannerUrl: groupDetails?.bannerUrl || group?.bannerUrl || '',
+      isPrivate: groupDetails?.isPrivate ?? group?.isPrivate ?? false,
+      maxMembers: groupDetails?.maxMembers ?? group?.maxMembers ?? undefined,
+      tags: groupDetails?.tags || group?.tags || [],
+      features: groupDetails?.features || group?.features || {},
     },
   });
 
@@ -257,19 +256,20 @@ export function SettingsTab({
 
   // Update form values when group data changes
   useEffect(() => {
-    if (group) {
-      if (!dirtyFields.name) setValue('name', group.name);
-      if (!dirtyFields.description) setValue('description', group.description || '');
+    const activeGroup = groupDetails || group;
+    if (activeGroup) {
+      if (!dirtyFields.name) setValue('name', activeGroup.name);
+      if (!dirtyFields.description) setValue('description', activeGroup.description || '');
       // Always update bannerUrl as it's handled separately or we want the latest
-      if (!dirtyFields.bannerUrl) setValue('bannerUrl', group.bannerUrl || '');
-      if (!dirtyFields.isPrivate) setValue('isPrivate', group.isPrivate);
-      if (!dirtyFields.maxMembers) setValue('maxMembers', group.maxMembers || undefined);
-      if (!dirtyFields.tags) setValue('tags', (group as any).tags || []);
+      if (!dirtyFields.bannerUrl) setValue('bannerUrl', activeGroup.bannerUrl || '');
+      if (!dirtyFields.isPrivate) setValue('isPrivate', activeGroup.isPrivate);
+      if (!dirtyFields.maxMembers) setValue('maxMembers', activeGroup.maxMembers || undefined);
+      if (!dirtyFields.tags) setValue('tags', (activeGroup as any).tags || []);
       // Assuming features update individually via switches usually.
-      setValue('features', (group as any).features || {});
+      setValue('features', (activeGroup as any).features || {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group, setValue]);
+  }, [groupDetails, group, setValue]);
 
   // Cancel editing handler
   const handleCancel = () => {
@@ -332,41 +332,25 @@ export function SettingsTab({
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
     try {
-      setIsLoading(true);
-
-      const updatePayload = {
-        name: data.name,
-        description: data.description,
-        bannerUrl: data.bannerUrl,
-        isPrivate: data.isPrivate,
-        maxMembers: typeof data.maxMembers === 'string'
-          ? (data.maxMembers === '' ? undefined : Number(data.maxMembers))
-          : (data.maxMembers === null ? undefined : data.maxMembers),
-        tags: data.tags,
-        features: data.features,
-        password: data.password
-      };
-
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatePayload),
+      await updateGroup.mutateAsync({
+        groupId,
+        data: {
+          name: data.name,
+          description: data.description,
+          bannerUrl: (data.bannerUrl || null) as string | null,
+          isPrivate: data.isPrivate,
+          maxMembers: data.maxMembers as number | null,
+          tags: data.tags,
+          features: data.features,
+          password: data.password
+        }
       });
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to update group');
-      }
-
-      const updatedGroup = await response.json();
-
-      // IMMEDIATE UPDATE: Update context and group switcher
+      // Update local context for immediate feedback
       updateGroupData(groupId, {
         name: data.name,
         description: data.description,
-        bannerUrl: data.bannerUrl,
+        bannerUrl: data.bannerUrl || undefined,
         isPrivate: data.isPrivate,
         maxMembers: typeof data.maxMembers === 'string'
           ? (data.maxMembers === '' ? null : Number(data.maxMembers))
@@ -375,19 +359,11 @@ export function SettingsTab({
         features: data.features,
       });
 
-      // Invalidate React Query cache to ensure all components update
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
-
-      router.refresh(); // Server revalidate
-      onUpdate(); // Trigger parent component update
-
       toast.success('Group settings updated successfully');
       setIsEditing(false); // Exit edit mode on success
+      onUpdate();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update group. Please try again.');
-    } finally {
-      setIsLoading(false);
+      // Error handled by mutation toast
     }
   };
 
@@ -436,21 +412,10 @@ export function SettingsTab({
 
     try {
       setIsLeaving(true);
-      const response = await fetch(`/api/groups/${groupId}/leave`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to leave group');
-      }
-
+      await leaveGroup.mutateAsync(groupId);
       setIsLeaveDialogOpen(false);
-      toast.success('You have left the group');
-      router.push('/groups');
     } catch (error) {
-      console.error('Error leaving group:', error);
-      toast.error('Failed to leave group. Please try again.');
+      // Error handled by mutation
     } finally {
       setIsLeaving(false);
     }
@@ -462,20 +427,10 @@ export function SettingsTab({
     if (!groupId || !isDeleteNameValid || isDeleting) return;
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to delete group');
-      }
-
-      setIsDeleteDialogOpen(false); // Only close after success
-      toast.success('Group deleted');
-      router.push('/groups');
+      await deleteGroup.mutateAsync({ groupId });
+      setIsDeleteDialogOpen(false);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete group');
+      // Error handled by mutation
     } finally {
       setIsDeleting(false);
     }
@@ -695,14 +650,30 @@ export function SettingsTab({
                     Group Password
                     {group.hasPassword && <Badge variant="secondary" className="ml-2 text-xs">Active</Badge>}
                   </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder={isAdmin ? (group.hasPassword ? "Enter new password to change" : "Set a password") : "••••••••"}
-                      disabled={!isEditing || !isAdmin}
-                      {...register('password')}
-                    />
+                  <div className="flex gap-2 w-full">
+                    <div className="relative flex-1">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder={isAdmin ? (group.hasPassword ? "Enter new password to change" : "Set a password") : "••••••••"}
+                        disabled={!isEditing || !isAdmin}
+                        {...register('password')}
+                        className="pr-10"
+                      />
+                      {isEditing && isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                     {isEditing && isAdmin && group.hasPassword && (
                       <Button
                         type="button"
@@ -985,29 +956,27 @@ export function SettingsTab({
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
-                <div className="space-y-1">
-                  <h4 className="font-medium text-destructive">Leave Group</h4>
-                  <p className="text-sm text-muted-foreground">
-                    You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
-                  </p>
+              {!isCreator && (
+                <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-destructive">Leave Group</h4>
+                    <p className="text-sm text-muted-foreground">
+                      You will no longer be a member of this group. You will lose access to all group content and will need to be invited back to rejoin.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      setIsLeaveDialogOpen(true);
+                    }}
+                    disabled={isLeaving}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Leave
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    if (isCreator) {
-                      toast.error('You must transfer the Admin role to another member before leaving the group.');
-                      return;
-                    }
-                    setIsLeaveDialogOpen(true);
-                  }}
-                  disabled={isLeaving}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Leave
-                </Button>
-              </div>
+              )}
 
               {isCreator && (
                 <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg">
@@ -1029,6 +998,7 @@ export function SettingsTab({
               )}
             </div>
           </div>
+
 
           <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
             <DialogContent>

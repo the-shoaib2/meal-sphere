@@ -4,7 +4,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
-import { cacheDelete } from '@/lib/cache/cache-service';
+import { cacheDelete, cacheDeletePattern } from '@/lib/cache/cache-service';
 import { Role, NotificationType } from '@prisma/client';
 import { sendGroupInviteEmail } from './email-utils';
 
@@ -738,8 +738,9 @@ export async function createGroup(data: CreateGroupData) {
 
     if (!group) throw new Error("Failed to create group");
 
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
+    await cacheDeletePattern('groups_list:*');
 
     return group;
 }
@@ -784,13 +785,14 @@ export async function updateGroup(groupId: string, data: UpdateGroupData) {
     });
 
     await Promise.all([
-      cacheDelete(`group_details:${groupId}:*`),
-      cacheDelete(`groups_list:*`),
-      cacheDelete(`group_with_members:${groupId}:*`)
+      cacheDeletePattern(`group_details:${groupId}:*`),
+      cacheDeletePattern(`groups_list:*`),
+      cacheDeletePattern(`group_with_members:${groupId}:*`)
     ]);
     
     // Also revalidate next tags
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag('groups');
 
     return updatedGroup;
 }
@@ -850,9 +852,10 @@ export async function deleteGroup(groupId: string, userId: string) {
 
     await prisma.room.delete({ where: { id: groupId } });
 
-    revalidateTag(`group-${groupId}`, 'max');
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
+    await cacheDeletePattern('groups_list:*');
 
     return true;
 }
@@ -934,9 +937,9 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
         });
     }
 
-    revalidateTag(`group-${groupId}`, 'max');
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     
     return result;
 }
@@ -997,7 +1000,7 @@ export async function leaveGroup(groupId: string, userId: string) {
         });
     }
 
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     return true;
 }
 
@@ -1337,8 +1340,8 @@ export async function setCurrentGroup(groupId: string, userId: string) {
         })
     ]);
 
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     
     return true;
 }
@@ -1420,7 +1423,7 @@ export async function updatePeriodMode(groupId: string, mode: 'MONTHLY' | 'CUSTO
         }
     }
 
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     
     return updatedRoom;
 }
@@ -1534,7 +1537,7 @@ export async function removeMemberFromGroup(groupId: string, adminUserId: string
         data: { memberCount: count }
     });
 
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     return true;
 }
 
@@ -1601,6 +1604,6 @@ async function _performRoleUpdate(groupId: string, adminId: string, targetMember
       }
     });
     
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     return updated;
 }
