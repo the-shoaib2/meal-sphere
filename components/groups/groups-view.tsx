@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
-import { Search, Plus, Users, ArrowRight, Compass } from 'lucide-react';
-import { format } from 'date-fns';
+import { Search, Plus, Users, Compass } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/components/shared/empty-state';
-import { Badge } from '@/components/ui/badge';
+import { GroupCard } from '@/components/groups/group-card';
 import type { Group } from '@/types/group';
 
 
@@ -189,132 +187,6 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                     )}
                 </TabsContent>
             </Tabs>
-        </>
-    );
-}
-
-interface GroupCardProps {
-    group: Group;
-    isOwner: boolean;
-}
-
-function GroupCard({ group, isOwner }: GroupCardProps) {
-
-    const displayedMembers = group.members?.slice(0, 3) || [];
-    const hasMoreMembers = (group.memberCount || 0) > 3;
-    const admin = group.members?.find(member => member.role === 'ADMIN') || group.members?.[0];
-
-    const router = useRouter();
-    const handleViewGroup = () => {
-        window.dispatchEvent(new CustomEvent('routeChangeStart'));
-        router.push(`/groups/${group.id}`);
-    };
-
-    return (
-        <>
-            <Card className="group hover:shadow-md transition-shadow flex flex-col h-full overflow-hidden">
-                <div className="relative h-32 w-full bg-muted">
-                    {group.bannerUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={group.bannerUrl}
-                            alt={group.name}
-                            className="object-cover w-full h-full"
-                        />
-                    ) : (
-                        <div className="flex items-center justify-center w-full h-full bg-primary/10">
-                            <Users className="h-10 w-10 text-primary/40" />
-                        </div>
-                    )}
-                    {isOwner && (
-                        <div className="absolute top-2 right-2">
-                            <Badge variant="secondary" className="text-xs bg-background/80 hover:bg-background/90 backdrop-blur-sm shadow-sm">
-                                Owner
-                            </Badge>
-                        </div>
-                    )}
-                </div>
-                <CardHeader className="pb-3 pt-4">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                {group.name}
-                            </CardTitle>
-                            <CardDescription className="mt-1 line-clamp-2">
-                                {group.description || 'No description provided.'}
-                            </CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="flex-1 space-y-4">
-                    {admin && (
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Admin</p>
-                            <div className="flex items-center gap-2">
-                                {admin.user.image ? (
-                                    <img
-                                        src={admin.user.image}
-                                        alt={admin.user.name || 'Admin'}
-                                        className="h-6 w-6 rounded-full"
-                                    />
-                                ) : (
-                                    <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
-                                        <Users className="h-3 w-3" />
-                                    </div>
-                                )}
-                                <span className="text-sm">{admin.user.name || 'Unknown User'}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-muted-foreground">
-                                Members ({group.memberCount || 0})
-                            </p>
-                        </div>
-                        <div className="flex -space-x-2">
-                            {displayedMembers.map((member) => (
-                                <div key={member.id} className="relative group/member">
-                                    {member.user.image ? (
-                                        <img
-                                            src={member.user.image}
-                                            alt={member.user.name || 'Member'}
-                                            className="h-8 w-8 rounded-full border-2 border-background"
-                                        />
-                                    ) : (
-                                        <div className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center">
-                                            <Users className="h-4 w-4" />
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                            {hasMoreMembers && (
-                                <div className="h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs">
-                                    +{group.memberCount - 3}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-between items-center pt-2 border-t">
-                    <div className="text-xs text-muted-foreground">
-                        Created {format(new Date(group.createdAt), 'MMM d, yyyy')}
-                    </div>
-                    <div className="flex gap-2">
-
-                        <Button
-                            size="sm"
-                            className="group/button flex items-center gap-1"
-                            onClick={handleViewGroup}
-                        >
-                            <span>View</span>
-                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover/button:translate-x-1" />
-                        </Button>
-                    </div>
-                </CardFooter>
-            </Card>
-
         </>
     );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useTransition } from 'react';
+import React, { createContext, useContext, useEffect, useState, useTransition, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,7 +29,15 @@ export function GroupProvider({
   initialGroups?: Group[];
   initialActiveGroup?: Group | null;
 }) {
-  const [isSwitchingGroup, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [isSwitchingGroup, setIsSwitchingGroup] = useState(false);
+
+  // Clear the switching state once the transition finishes
+  useEffect(() => {
+    if (!isPending && isSwitchingGroup) {
+      setIsSwitchingGroup(false);
+    }
+  }, [isPending, isSwitchingGroup]);
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeGroup, setActiveGroup] = useState<Group | null>(initialActiveGroup);
@@ -115,6 +123,9 @@ export function GroupProvider({
 
   // Handle setting active group
   const handleSetActiveGroup = async (group: Group | null) => {
+    // Show loader IMMEDIATELY — user sees it the instant they click
+    setIsSwitchingGroup(true);
+
     if (!group) {
       // Clear active group
       setActiveGroup(null);
@@ -123,6 +134,9 @@ export function GroupProvider({
       }
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['periods'] });
+      // Hand off to startTransition — isPending keeps isSwitchingGroup true
+      // until router.refresh() completes
+      setIsSwitchingGroup(false);
       startTransition(() => {
         router.refresh();
       });
@@ -142,7 +156,7 @@ export function GroupProvider({
         localStorage.setItem(ENC_KEY, encrypted);
       }
 
-      // Call API instead of Server Action
+      // Call API to persist the group switch on the server
       const response = await fetch('/api/groups/set-current', {
         method: 'POST',
         headers: {
@@ -156,14 +170,13 @@ export function GroupProvider({
         throw new Error(result.error || 'Failed to switch group');
       }
 
-      // Surgical invalidation (though Server Action does revalidatePath)
-      // Redundant but safe for react-query users
+      // Invalidate stale queries
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['periods'] });
 
-      // Router.refresh is handled by revalidatePath in the Server Action,
-      // but calling it here within startTransition ensures the UI stays "pending" 
-      // until the server render is complete.
+      // Hand off to startTransition — isPending keeps isSwitchingGroup true
+      // until router.refresh() completes, so the loader stays visible
+      setIsSwitchingGroup(false);
       startTransition(() => {
         router.refresh();
       });
@@ -184,6 +197,7 @@ export function GroupProvider({
           localStorage.removeItem(ENC_KEY);
         }
       }
+      setIsSwitchingGroup(false);
     }
   };
 
@@ -222,7 +236,7 @@ export function GroupProvider({
   const contextIsLoading = status === 'loading' || isLoading;
 
   return (
-    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, updateGroupData, isLoading: contextIsLoading, isSwitchingGroup, groups }}>
+    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, updateGroupData, isLoading: contextIsLoading, isSwitchingGroup: isSwitchingGroup || isPending, groups }}>
       {children}
     </GroupContext.Provider>
   );

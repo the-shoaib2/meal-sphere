@@ -145,49 +145,44 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
     );
   }
 
-  if (hasPrivilege) {
-    return (
-      <>
-        <LoadingWrapper
-          isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup || !groupData}
-          minHeight="60vh"
-        >
+  return (
+    <div>
+      <LoadingWrapper
+        isLoading={
+          isLoadingBalances ||
+          isLoadingOwnBalance ||
+          isLoadingTransactions ||
+          !activeGroup ||
+          (hasPrivilege ? !groupData : !ownBalance)
+        }
+        minHeight="60vh"
+      >
+        {hasPrivilege ? (
           <PrivilegedView
             groupData={groupData!}
             userRole={userRole!}
           />
-        </LoadingWrapper>
+        ) : (
+          <MemberView
+            balance={ownBalance}
+            transactions={ownTransactions || []}
+            userRole={userRole!}
+            session={session}
+            groupId={activeGroup?.id}
+            onFetchNextPage={fetchNextOwn}
+            hasNextPage={hasNextOwn}
+            isFetchingNextPage={isFetchingNextOwn}
+          />
+        )}
+      </LoadingWrapper>
+      {hasPrivilege && (
         <AccountTransactionDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
           groupId={activeGroup?.id || ''}
         />
-      </>
-    );
-  }
-
-  return (
-    <LoadingWrapper
-      isLoading={
-        isLoadingBalances ||
-        isLoadingOwnBalance ||
-        isLoadingTransactions ||
-        !activeGroup ||
-        !ownBalance
-      }
-      minHeight="60vh"
-    >
-      <MemberView
-        balance={ownBalance}
-        transactions={ownTransactions || []}
-        userRole={userRole!}
-        session={session}
-        groupId={activeGroup?.id}
-        onFetchNextPage={fetchNextOwn}
-        hasNextPage={hasNextOwn}
-        isFetchingNextPage={isFetchingNextOwn}
-      />
-    </LoadingWrapper>
+      )}
+    </div>
   );
 }
 

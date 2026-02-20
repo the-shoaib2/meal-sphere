@@ -109,7 +109,7 @@ export function LoadingWrapper({
 export function PageLoader({ className, size = "lg" }: LoaderProps) {
     return (
         <div className={cn(
-            "flex flex-col items-center justify-center flex-1 w-full min-h-[72vh] animate-in fade-in duration-500",
+            "flex flex-col items-center justify-center flex-1 w-full min-h-[50vh] animate-in fade-in duration-500",
             className
         )}>
             <div className="relative">

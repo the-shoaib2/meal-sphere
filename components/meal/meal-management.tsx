@@ -128,6 +128,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     useMealsByDate,
     useGuestMealsByDate,
     useMealCount,
+    getUserMealCount,
+    getUserGuestMealCount,
     toggleMeal,
     updateMealSettings,
     updateAutoMealSettings,
@@ -341,7 +343,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       {/* User Meal Summary */}
       <MealSummary
         selectedDate={selectedDate}
-        useMealCount={useMealCount}
+        getUserMealCount={getUserMealCount}
+        getUserGuestMealCount={getUserGuestMealCount}
         isLoading={isAnyLoading}
       />
 
@@ -378,7 +381,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                   ) : (
                     (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
                       const hasMealSelected = userHasMeal(mealType)
-                      const mealCount = useMealCount(selectedDate, mealType)
+                      const mealCount = getUserMealCount(selectedDate, mealType)
                       const mealTypeIcon = mealType === 'BREAKFAST' ? '🌅' : mealType === 'LUNCH' ? '☀️' : '🌙'
                       const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' :
                         mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' :

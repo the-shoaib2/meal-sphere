@@ -276,7 +276,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         date: formattedDate,
         type,
         roomId,
-        action
+        action,
+        userId
       });
       return res.data; // Return the new meal or success object
     },

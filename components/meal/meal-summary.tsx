@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface MealSummaryProps {
   selectedDate: Date;
-  useMealCount: (date: Date, type: MealType) => number;
+  getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
+  getUserGuestMealCount: (date: Date, type: MealType, userId?: string) => number;
   isLoading?: boolean;
 }
 
@@ -23,9 +24,23 @@ const COLOR_MAP = {
   blue: { bg: "bg-blue-500/10", text: "text-blue-600", bold: "text-blue-700", skeleton: "bg-blue-500/20" },
 };
 
-const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, isLoading }) => {
-  const counts = MEAL_TYPES.map(m => ({ ...m, count: useMealCount(selectedDate, m.type) }));
-  const total = counts.reduce((sum, m) => sum + m.count, 0);
+const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, getUserMealCount, getUserGuestMealCount, isLoading }) => {
+  const counts = MEAL_TYPES.map(m => {
+    // The total for the user in this meal type
+    const userTotal = getUserMealCount(selectedDate, m.type);
+
+    // Of that total, how many are guest meals
+    const guestCount = getUserGuestMealCount(selectedDate, m.type);
+
+    // The user's personal meal (will be 0 or 1)
+    const personalCount = userTotal - guestCount;
+
+    return { ...m, count: personalCount, guestCount, totalCount: userTotal };
+  });
+
+  const totalPersonal = counts.reduce((sum, m) => sum + m.count, 0);
+  const totalGuest = counts.reduce((sum, m) => sum + m.guestCount, 0);
+  const total = totalPersonal + totalGuest;
 
   return (
     <Card>
@@ -34,7 +49,7 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, i
           <div className="p-1.5 bg-primary/10 rounded-full">
             <Utensils className="h-4 w-4 text-primary" />
           </div>
-          Meal Summary
+          Meal Summary ({totalPersonal} + {totalGuest} Guest)
           <Badge variant="secondary" className="ml-auto text-xs">
             {isLoading ? <Skeleton className="h-4 w-8" /> : `${total} total`}
           </Badge>
@@ -42,7 +57,7 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, i
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
-          {counts.map(({ type, label, icon, color, count }) => {
+          {counts.map(({ type, label, icon, color, count, guestCount, totalCount }) => {
             const c = COLOR_MAP[color];
             return (
               <div key={type} className={`text-center space-y-0.5 sm:space-y-1 p-1.5 sm:p-3 rounded-lg ${c.bg}`}>
@@ -52,8 +67,20 @@ const MealSummary: React.FC<MealSummaryProps> = ({ selectedDate, useMealCount, i
                     {label}
                   </span>
                 </div>
-                <div className={`text-sm sm:text-xl font-bold flex justify-center ${c.bold}`}>
-                  {isLoading ? <Skeleton className={`h-6 w-8 ${c.skeleton}`} /> : count}
+                <div className="flex flex-col items-center gap-1 mt-1">
+                  <div className={`text-sm sm:text-xl font-bold flex justify-center ${c.bold}`}>
+                    {isLoading ? <Skeleton className={`h-6 w-8 ${c.skeleton}`} /> : totalCount}
+                  </div>
+                  {(!isLoading && guestCount > 0) && (
+                    <div className="text-[10px] text-muted-foreground">
+                      ({count} + {guestCount} guest)
+                    </div>
+                  )}
+                  {(!isLoading && guestCount === 0) && (
+                    <div className="text-[10px] text-muted-foreground opacity-0">
+                      -
+                    </div>
+                  )}
                 </div>
               </div>
             );

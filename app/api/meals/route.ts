@@ -113,13 +113,33 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { date, type, roomId, action } = body;
+  const { date, type, roomId, action, userId } = body;
 
   if (!date || !type || !roomId || !action) {
     return NextResponse.json({ error: 'Missing required fields: date, type, roomId, action' }, { status: 400 });
   }
 
+  const targetUserId = userId || session.user.id;
+
   try {
+    // If acting on behalf of another user, verify privileges
+    if (targetUserId !== session.user.id) {
+      const roomMember = await prisma.roomMember.findUnique({
+        where: {
+          userId_roomId: {
+            userId: session.user.id,
+            roomId,
+          },
+        },
+      });
+
+      if (!roomMember || !['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(roomMember.role)) {
+        return NextResponse.json(
+          { error: 'You do not have permission to manage meals for other users' },
+          { status: 403 }
+        );
+      }
+    }
     // Always normalize to UTC midnight to avoid timezone-driven mismatches
     const targetDate = normalizeToUTCMidnight(date);
     const period = await getPeriodForDate(roomId, targetDate);
@@ -128,7 +148,7 @@ export async function POST(request: NextRequest) {
       const meal = await prisma.meal.upsert({
         where: {
           userId_roomId_date_type: {
-            userId: session.user.id,
+            userId: targetUserId,
             roomId,
             date: targetDate,
             type,
@@ -138,7 +158,7 @@ export async function POST(request: NextRequest) {
           date: targetDate,
           type,
           roomId,
-          userId: session.user.id,
+          userId: targetUserId,
           periodId: period?.id || null,
         },
         update: {
@@ -170,7 +190,7 @@ export async function POST(request: NextRequest) {
 
       const result = await prisma.meal.deleteMany({
         where: {
-          userId: session.user.id,
+          userId: targetUserId,
           roomId,
           type,
           date: {
