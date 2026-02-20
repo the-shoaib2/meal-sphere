@@ -13,7 +13,7 @@ export function AddBalanceButton() {
         <Button
             size="sm"
             onClick={handleOpenDialog}
-            className="w-full sm:w-auto shadow-sm transition-all hover:shadow-md active:scale-95"
+            className="w-full sm:w-auto"
         >
             <Plus className="h-4 w-4 mr-2" /> Add Balance
         </Button>

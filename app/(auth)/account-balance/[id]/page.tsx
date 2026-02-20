@@ -91,11 +91,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
         text="View and manage specific user accounts"
         showBackButton
         backHref="/account-balance"
-      >
-        {isAdmin && (
-          <AddBalanceButton />
-        )}
-      </PageHeader>
+      />
       <UserAccountBalanceDetail
         targetUserId={userId}
         viewerRole={activeMember.role}

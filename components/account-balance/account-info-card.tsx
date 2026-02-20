@@ -5,12 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 interface AccountInfoCardProps {
-    userBalance: any; // Ideally this should be typed properly, e.g., from your hooks
+    userBalance: any;
     targetUserRole: string;
     availableBalance: number;
     totalSpent: number;
     totalReceived: number;
     totalTransactions: number;
+    headerAction?: React.ReactNode;
 }
 
 const getRoleBadgeVariant = (role: string) => {
@@ -23,7 +24,7 @@ const getRoleBadgeVariant = (role: string) => {
 
 const getRoleBadgeStyle = (role: string) => {
     switch (role) {
-        case 'ADMIN': return 'bg-blue-600 hover:bg-blue-700';
+        case 'ADMIN': return 'bg-primary hover:bg-primary/90';
         case 'ACCOUNTANT': return 'bg-green-600 hover:bg-green-700';
         default: return '';
     }
@@ -35,13 +36,13 @@ export function AccountInfoCard({
     availableBalance,
     totalSpent,
     totalReceived,
-    totalTransactions
+    totalTransactions,
+    headerAction
 }: AccountInfoCardProps) {
     return (
         <Card>
             <CardContent className="p-4">
-                {/* User Info */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12 border">
                             <AvatarImage src={userBalance?.user?.image} />
@@ -62,6 +63,11 @@ export function AccountInfoCard({
                             <p className="text-sm text-muted-foreground">{userBalance?.user?.email}</p>
                         </div>
                     </div>
+                    {headerAction && (
+                        <div className="flex-shrink-0">
+                            {headerAction}
+                        </div>
+                    )}
                 </div>
 
                 <Separator className="my-4" />

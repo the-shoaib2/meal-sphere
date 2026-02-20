@@ -40,6 +40,7 @@ import { AccountInfoCard } from '@/components/account-balance/account-info-card'
 import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 import { InsufficientPermissionsState } from '@/components/empty-states/insufficient-permissions-state';
 import { AccountTransactionDialog } from '@/components/account-balance/account-transaction-dialog';
+import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
 
 function isPrivileged(role?: string) {
   return hasBalancePrivilege(role);
@@ -320,7 +321,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
 
   return (
     <LoadingWrapper
-      isLoading={isLoadingBalance || isLoadingTransactions || !userBalance}
+      isLoading={isLoadingBalance || !userBalance}
       minHeight="60vh"
     >
       <div className="space-y-6">
@@ -332,6 +333,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
           totalSpent={totalSpent}
           totalReceived={totalReceived}
           totalTransactions={totalTransactions}
+          headerAction={isAdmin && <AddBalanceButton />}
         />
 
         <TransactionList
@@ -354,6 +356,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
           onFetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          isLoading={isLoadingTransactions}
         />
 
         {historyTransactionId && (
