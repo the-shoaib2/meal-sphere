@@ -40,7 +40,7 @@ const getRoleBadgeVariant = (role: string) => {
 
 const getRoleBadgeStyle = (role: string) => {
   switch (role) {
-    case 'ADMIN': return 'bg-blue-600 hover:bg-blue-700';
+    case 'ADMIN': return 'bg-primary hover:bg-primary/90';
     case 'ACCOUNTANT': return 'bg-green-600 hover:bg-green-700';
     default: return '';
   }
@@ -208,11 +208,11 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-blue-600 hover:text-white"
+                            className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-primary hover:text-primary-foreground"
                             onClick={() => handleViewDetails(member.userId)}
                           >
                             <span>Details</span>
-                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1 hover:text-white" />
+                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
                           </Button>
                         </TableCell>
                       )}

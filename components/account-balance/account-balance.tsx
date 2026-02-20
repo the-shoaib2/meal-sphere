@@ -8,7 +8,7 @@ import { useGroupBalances, useGetBalance, useGetTransactions, type BalancePageDa
 import { useCurrentPeriod } from '@/hooks/use-periods';
 import { PrivilegedView } from '@/components/account-balance/privileged-view';
 import { MemberView } from '@/components/account-balance/member-view';
-import { LoadingWrapper, Loader } from '@/components/ui/loader';
+import { LoadingWrapper, PageLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PeriodNotFoundCard } from "@/components/periods/period-not-found-card"
@@ -147,7 +147,10 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   if (hasPrivilege) {
     return (
       <>
-        <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup || !groupData}>
+        <LoadingWrapper
+          isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup || !groupData}
+          minHeight="60vh"
+        >
           <PrivilegedView
             groupData={groupData!}
             userRole={userRole!}
@@ -163,7 +166,16 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   }
 
   return (
-    <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup || !ownBalance}>
+    <LoadingWrapper
+      isLoading={
+        isLoadingBalances ||
+        isLoadingOwnBalance ||
+        isLoadingTransactions ||
+        !activeGroup ||
+        !ownBalance
+      }
+      minHeight="60vh"
+    >
       <MemberView
         balance={ownBalance}
         transactions={ownTransactions || []}
@@ -307,7 +319,10 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const availableBalance = userBalance?.balance || 0;
 
   return (
-    <LoadingWrapper isLoading={isLoadingBalance || isLoadingTransactions || !userBalance}>
+    <LoadingWrapper
+      isLoading={isLoadingBalance || isLoadingTransactions || !userBalance}
+      minHeight="60vh"
+    >
       <div className="space-y-6">
 
         <AccountInfoCard

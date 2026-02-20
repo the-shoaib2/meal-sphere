@@ -1,5 +1,5 @@
-import { PeriodDetailsSkeleton } from '@/components/periods/period-details-skeleton';
+import { PageLoader } from "@/components/ui/loader";
 
 export default function Loading() {
-    return <PeriodDetailsSkeleton />;
+    return <PageLoader />;
 }

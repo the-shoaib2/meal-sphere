@@ -19,7 +19,7 @@ export function Loader({ className, size = "md" }: LoaderProps) {
         <div className={cn("relative mx-auto animate-rotate", sizeClasses[size], className)}>
             <svg className="absolute inset-0 w-full h-full transform origin-center" viewBox="25 25 50 50">
                 <circle
-                    className="animate-dash stroke-blue-600"
+                    className="animate-dash stroke-primary"
                     cx="50"
                     cy="50"
                     r="20"
@@ -47,6 +47,7 @@ interface LoadingWrapperProps {
     fallback?: React.ReactNode
     minDisplayTime?: number
     className?: string
+    minHeight?: string
 }
 
 export function LoadingWrapper({
@@ -54,7 +55,8 @@ export function LoadingWrapper({
     children,
     fallback,
     minDisplayTime = 500,
-    className
+    className,
+    minHeight = "200px"
 }: LoadingWrapperProps) {
     const [showLoader, setShowLoader] = useState(isLoading)
     const [isFadingOut, setIsFadingOut] = useState(false)
@@ -90,10 +92,11 @@ export function LoadingWrapper({
         return (
             <div
                 className={cn(
-                    "flex flex-col items-center justify-center min-h-[inherit] w-full transition-opacity duration-300 ease-in-out",
+                    "flex flex-col items-center justify-center w-full transition-opacity duration-300 ease-in-out",
                     isFadingOut ? "opacity-0" : "opacity-100",
                     className
                 )}
+                style={{ minHeight }}
             >
                 {fallback || <Loader size="lg" />}
             </div>
@@ -101,4 +104,18 @@ export function LoadingWrapper({
     }
 
     return <div className="animate-in fade-in duration-300 w-full">{children}</div>
+}
+
+export function PageLoader({ className, size = "lg" }: LoaderProps) {
+    return (
+        <div className={cn(
+            "flex flex-col items-center justify-center flex-1 w-full min-h-[72vh] animate-in fade-in duration-500",
+            className
+        )}>
+            <div className="relative">
+                <Loader size={size} />
+                {/* Optional: Add a subtle text or brand element here if needed */}
+            </div>
+        </div>
+    );
 }
