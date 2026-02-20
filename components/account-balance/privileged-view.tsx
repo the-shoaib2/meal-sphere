@@ -215,11 +215,11 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-primary flex items-center gap-1 group overflow-hidden"
+                            className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-blue-600 hover:text-white"
                             onClick={() => handleViewDetails(member.userId)}
                           >
                             <span>Details</span>
-                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
+                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1 hover:text-white" />
                           </Button>
                         </TableCell>
                       )}

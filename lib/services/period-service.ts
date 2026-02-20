@@ -227,8 +227,8 @@ export async function startPeriod(
     },
   });
 
-  revalidateTag(`group-${roomId}`);
-  revalidateTag('periods');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag('periods', 'max');
 
   return {
     period,
@@ -285,9 +285,9 @@ export async function endPeriod(roomId: string, userId: string, endDate?: Date, 
     });
   }
 
-  revalidateTag(`group-${roomId}`);
-  revalidateTag(`period-${currentPeriod.id}`);
-  revalidateTag('periods');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag(`period-${currentPeriod.id}`, 'max');
+  revalidateTag('periods', 'max');
 
   return updatedPeriod;
 }
@@ -319,9 +319,9 @@ export async function lockPeriod(roomId: string, userId: string, periodId: strin
     },
   });
 
-  revalidateTag(`group-${roomId}`);
-  revalidateTag(`period-${periodId}`);
-  revalidateTag('periods');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag(`period-${periodId}`, 'max');
+  revalidateTag('periods', 'max');
 
   return updatedPeriod;
 }
@@ -353,9 +353,9 @@ export async function unlockPeriod(roomId: string, userId: string, periodId: str
     },
   });
 
-  revalidateTag(`group-${roomId}`);
-  revalidateTag(`period-${periodId}`);
-  revalidateTag('periods');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag(`period-${periodId}`, 'max');
+  revalidateTag('periods', 'max');
 
   return updatedPeriod;
 }
@@ -590,9 +590,9 @@ export async function archivePeriod(roomId: string, userId: string, periodId: st
     data: archiveData,
   });
 
-  revalidateTag(`group-${roomId}`);
-  revalidateTag(`period-${periodId}`);
-  revalidateTag('periods');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag(`period-${periodId}`, 'max');
+  revalidateTag('periods', 'max');
 
   return updatedPeriod;
 }
@@ -667,8 +667,8 @@ export async function restartPeriod(roomId: string, userId: string, periodId: st
       await copyPeriodData(originalPeriod.id, newPeriod.id);
     }
 
-    revalidateTag(`group-${roomId}`);
-    revalidateTag('periods');
+    revalidateTag(`group-${roomId}`, 'max');
+    revalidateTag('periods', 'max');
 
     return newPeriod;
   } catch (error) {

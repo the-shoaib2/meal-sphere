@@ -86,13 +86,17 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
 
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
-  // Sync dialog state with search params
+  // Sync dialog state with search params & custom events
   const searchParams = useSearchParams();
   React.useEffect(() => {
     if (searchParams?.get('add') === 'true' && !isAddDialogOpen) {
       setIsAddDialogOpen(true);
     }
-  }, [searchParams]);
+
+    const handleOpenDialog = () => setIsAddDialogOpen(true);
+    window.addEventListener('open-add-transaction-dialog', handleOpenDialog);
+    return () => window.removeEventListener('open-add-transaction-dialog', handleOpenDialog);
+  }, [searchParams, isAddDialogOpen]);
 
   const isForbidden = (balancesError as any)?.message?.includes('403') ||
     (ownBalanceError as any)?.message?.includes('403') ||
@@ -159,7 +163,6 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
           groupId={activeGroup?.id || ''}
-          members={groupData?.members || []}
         />
       </>
     );
@@ -196,12 +199,19 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const [transactionToDelete, setTransactionToDelete] = React.useState<string | null>(null);
   const [historyTransactionId, setHistoryTransactionId] = React.useState<string | null>(null);
 
-  // Sync dialog state with search params (Keep for bookmarks/direct links)
+  // Sync dialog state with search params & custom events (Keep for bookmarks/direct links)
   React.useEffect(() => {
     if (searchParams?.get('add') === 'true' && !isTransactionDialogOpen) {
       setIsTransactionDialogOpen(true);
     }
-  }, [searchParams]);
+
+    const handleOpenDialog = () => {
+      setEditingTransaction(null);
+      setIsTransactionDialogOpen(true);
+    };
+    window.addEventListener('open-add-transaction-dialog', handleOpenDialog);
+    return () => window.removeEventListener('open-add-transaction-dialog', handleOpenDialog);
+  }, [searchParams, isTransactionDialogOpen]);
 
   const userId = targetUserId;
 

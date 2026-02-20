@@ -11,7 +11,7 @@ import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import Link from 'next/link';
+import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,25 +76,21 @@ export default async function AccountBalancePage() {
                 {currentPeriod.name} {currentPeriod.isLocked ? "(Locked)" : ""}
               </Badge>
             )}
+            <Badge
+              variant={hasPrivilege ? "default" : "outline"}
+              className={hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : ""}
+            >
+              {activeMember.role ? activeMember.role.replace('_', ' ') : 'MEMBER'}
+            </Badge>
           </div>
         }
       >
-        <div className="flex items-center gap-2">
-          {hasPrivilege && (
-            <Button size="sm" asChild className="w-full sm:w-auto shadow-sm transition-all hover:shadow-md active:scale-95">
-              <Link href="?add=true">
-                <Plus className="h-4 w-4 mr-2" /> Add Balance
-              </Link>
-            </Button>
-          )}
-          <Badge
-            variant={hasPrivilege ? "default" : "outline"}
-            className={hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : ""}
-          >
-            {activeMember.role ? activeMember.role.replace('_', ' ') : 'MEMBER'}
-          </Badge>
-        </div>
+        {hasPrivilege && (
+          <AddBalanceButton />
+        )}
       </PageHeader>
+
+
       <AccountBalancePanel
         initialData={{
           ...balanceData,

@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { canViewUserBalance, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -88,17 +88,9 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
     <div className="space-y-6">
       <PageHeader
         heading="Account Details"
-        text={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild className="-ml-2 h-8 px-2 text-muted-foreground hover:text-foreground">
-              <Link href="/account-balance">
-                <ArrowLeft className="h-4 w-4 mr-1" /> Back
-              </Link>
-            </Button>
-            <span className="text-muted-foreground">|</span>
-            <span>View and manage specific user accounts</span>
-          </div>
-        }
+        text="View and manage specific user accounts"
+        showBackButton
+        backHref="/account-balance"
       >
         {isAdmin && (
           <Button size="sm" asChild className="w-full sm:w-auto shadow-sm transition-all hover:shadow-md active:scale-95">

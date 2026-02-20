@@ -160,7 +160,6 @@ interface SettingsTabProps {
   onUpdate: () => void;
 }
 
-// ... existing code ...
 
 export function SettingsTab({
   groupId,
@@ -317,7 +316,7 @@ export function SettingsTab({
 
       router.refresh();
       onUpdate();
-      toast.success('Group photo updated');
+      // toast.success('Group photo updated');
     } catch (error: any) {
       toast.error('Failed to update group photo');
       // Revert on failure?

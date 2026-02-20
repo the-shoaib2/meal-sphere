@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     });
 
     revalidatePath(`/groups/${groupId}`);
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest) {
     const result = await castVote(voteId, userId, candidateId);
 
     revalidatePath(`/groups/${groupId}`);
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     return NextResponse.json(result);
   } catch (error: any) {
@@ -107,7 +107,7 @@ export async function DELETE(req: NextRequest) {
     const result = await deleteVote(voteId, access.userId!, access.isAdmin);
 
     revalidatePath(`/groups/${groupId}`);
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     return NextResponse.json(result);
   } catch (error: any) {
@@ -147,7 +147,7 @@ export async function PUT(req: NextRequest) {
     });
 
     revalidatePath(`/groups/${groupId}`);
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     return NextResponse.json({ success: true, vote: updated });
   } catch (error: any) {

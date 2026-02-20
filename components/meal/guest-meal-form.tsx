@@ -164,12 +164,13 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
 
             <div className="space-y-2">
               <FormLabel>Guest Count</FormLabel>
-              <div className="flex items-center justify-between p-3 border rounded-md">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 border rounded-full p-1">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
+                    className="cursor-pointer rounded-full"
                     onClick={() => handleCountChange(false)}
                     disabled={guestCount <= 1}
                   >
@@ -177,12 +178,12 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
                   </Button>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold min-w-[2rem] text-center">{guestCount}</span>
-                    <Badge variant="secondary">guests</Badge>
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
+                    className="cursor-pointer rounded-full"
                     onClick={() => handleCountChange(true)}
                     disabled={guestCount >= guestMealLimit}
                   >

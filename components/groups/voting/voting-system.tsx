@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, RotateCcw } from "lucide-react"
+import { Loader2, RotateCcw, Plus } from "lucide-react"
+
 import { useRouter } from "next/navigation" // Added useRouter
 import { useVoting } from "@/hooks/use-voting"
 import { useGroups } from "@/hooks/use-groups"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
 import { format, addDays, isAfter, isBefore, startOfDay } from "date-fns"
-import CreateVoteDialog from "./create-vote-dialog"
+import CreateVoteForm from "./create-vote-form"
 import ActiveVoteCard from "./active-vote-card"
 import PastVoteCard from "./past-vote-card"
+
 import NoActiveVotesCard from "./no-active-votes-card"
 import PastVotesList from "./past-votes-list"
 import { LoadingWrapper, Loader } from "@/components/ui/loader"
@@ -83,7 +85,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   const [customVoteType, setCustomVoteType] = useState("")
   const [description, setDescription] = useState("")
   const [candidateType, setCandidateType] = useState<"member" | "custom">("member")
-  const [customCandidates, setCustomCandidates] = useState<string[]>([]) // List of custom candidate names
+  const [customCandidates, setCustomCandidates] = useState<string[]>([])
   const [showVoteDialog, setShowVoteDialog] = useState(false)
   const [selectedCandidate, setSelectedCandidate] = useState("")
   const [selectedRoom, setSelectedRoom] = useState(activeGroup?.id || "")
@@ -204,10 +206,14 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
         ? customVoteType
         : FLAT_VOTE_TYPE_OPTIONS.find(o => o.value === selectedVoteType)?.label || "Vote";
 
+      const backendType = selectedVoteType === "custom"
+        ? "CUSTOM"
+        : FLAT_VOTE_TYPE_OPTIONS.find(o => o.value === selectedVoteType)?.backend || "CUSTOM";
+
       const result = await createVote({
         title,
         description,
-        type: selectedVoteType === "custom" ? "custom" : selectedVoteType,
+        type: backendType,
         candidates,
         startDate: start.toISOString(),
         endDate: end.toISOString(),
@@ -271,47 +277,56 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
 
   return (
     <LoadingWrapper isLoading={initialLoading || !activeGroup}>
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div className="flex items-center gap-2">
-            {isMember && (
-              <CreateVoteDialog
-                open={showCreateDialog}
-                onOpenChange={handleOpenChange}
-                selectedVoteType={selectedVoteType}
-                setSelectedVoteType={setSelectedVoteType}
-                customVoteType={customVoteType}
-                setCustomVoteType={setCustomVoteType}
-                description={description}
-                setDescription={setDescription}
-                candidateType={candidateType}
-                setCandidateType={setCandidateType}
-                customCandidates={customCandidates}
-                setCustomCandidates={setCustomCandidates}
-                selectedCandidateIds={selectedCandidateIds}
-                setSelectedCandidateIds={setSelectedCandidateIds}
-                nonAdminMembers={eligibleMembers}
-                availableMembers={availableMembers}
-                handleAddCandidate={handleAddCandidate}
-                handleRemoveCandidate={handleRemoveCandidate}
-                handleCandidateChange={handleCandidateChange}
-                startDate={startDate}
-                setStartDate={setStartDate}
-                startTimeStr={startTimeStr}
-                setStartTimeStr={setStartTimeStr}
-                endDate={endDate}
-                setEndDate={setEndDate}
-                endTimeStr={endTimeStr}
-                setEndTimeStr={setEndTimeStr}
-                handleCreateVote={handleCreateVote}
-                createVoteError={createVoteError}
-                setShowCreateDialog={setShowCreateDialog}
-                activeVotesCount={activeVotes.length}
-                voteTypeOptions={VOTE_TYPE_OPTIONS}
-              />
-            )}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-xl font-bold">Voting System</h2>
+            <p className="text-sm text-muted-foreground">Manage and participate in group decisions.</p>
           </div>
+          {isMember && !showCreateDialog && (
+            <Button onClick={() => handleOpenChange(true)} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Vote
+            </Button>
+          )}
         </div>
+
+        {isMember && showCreateDialog && (
+          <CreateVoteForm
+            selectedVoteType={selectedVoteType}
+            setSelectedVoteType={setSelectedVoteType}
+            customVoteType={customVoteType}
+            setCustomVoteType={setCustomVoteType}
+            description={description}
+            setDescription={setDescription}
+            candidateType={candidateType}
+            setCandidateType={setCandidateType}
+            customCandidates={customCandidates}
+            setCustomCandidates={setCustomCandidates}
+            selectedCandidateIds={selectedCandidateIds}
+            setSelectedCandidateIds={setSelectedCandidateIds}
+            nonAdminMembers={eligibleMembers}
+            availableMembers={availableMembers}
+            handleAddCandidate={handleAddCandidate}
+            handleRemoveCandidate={handleRemoveCandidate}
+            handleCandidateChange={handleCandidateChange}
+            startDate={startDate}
+            setStartDate={setStartDate}
+            startTimeStr={startTimeStr}
+            setStartTimeStr={setStartTimeStr}
+            endDate={endDate}
+            setEndDate={setEndDate}
+            endTimeStr={endTimeStr}
+            setEndTimeStr={setEndTimeStr}
+            handleCreateVote={handleCreateVote}
+            createVoteError={createVoteError}
+            setShowCreateForm={(val) => handleOpenChange(val)}
+            activeVotesCount={activeVotes.length}
+            voteTypeOptions={VOTE_TYPE_OPTIONS}
+          />
+        )}
+
+
 
         <div className="grid gap-4 md:grid-cols-2">
           {activeVotes.length > 0 ? (

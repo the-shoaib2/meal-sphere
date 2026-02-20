@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       .filter(file => /\.(png|jpg|jpeg|gif|webp)$/i.test(file))
       .map(file => ({
         id: file,
-        src: `${baseUrl}/images/${file}`,
+        src: `/images/${file}`,
         alt: file.split('.')[0].replace(/-/g, ' '),
         category: 'All'
       }));

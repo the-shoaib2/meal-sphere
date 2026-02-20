@@ -208,9 +208,9 @@ export function MemberView({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {transactions.map((transaction) => (
+                      {transactions.map((transaction, index) => (
                         <TransactionRow
-                          key={transaction.id}
+                          key={`${transaction.id}-${index}`}
                           transaction={transaction}
                           currentUserId={session?.user?.id}
                         />

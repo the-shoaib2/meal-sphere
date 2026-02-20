@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { getPeriodForDate } from '@/lib/utils/period-utils';
-import { revalidateTag as _revalidateTag } from 'next/cache';
-const revalidateTag = _revalidateTag as any;
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 /**
  * Normalize a date string or Date to UTC midnight to avoid timezone issues.
@@ -46,41 +45,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ meals: [], guestMeals: [], period: null });
     }
 
-    const [meals, guestMeals] = await Promise.all([
-      prisma.meal.findMany({
-        where: { roomId, periodId: period.id },
-        include: {
-          user: { select: { id: true, name: true, image: true } }
-        },
-        orderBy: { date: 'desc' }
-      }),
-      prisma.guestMeal.findMany({
-        where: { roomId, periodId: period.id },
-        include: {
-          user: { select: { id: true, name: true, image: true } }
-        },
-        orderBy: { date: 'desc' }
-      })
-    ]);
+    // Use unstable_cache for high-speed performance
+    const getCachedData = unstable_cache(
+      async () => {
+        const [meals, guestMeals] = await Promise.all([
+          prisma.meal.findMany({
+            where: { roomId, periodId: period.id },
+            include: {
+              user: { select: { id: true, name: true, image: true } }
+            },
+            orderBy: { date: 'desc' }
+          }),
+          prisma.guestMeal.findMany({
+            where: { roomId, periodId: period.id },
+            include: {
+              user: { select: { id: true, name: true, image: true } }
+            },
+            orderBy: { date: 'desc' }
+          })
+        ]);
 
-    // Serialize dates to ISO strings for the client
-    const serializedMeals = meals.map(m => ({
-      ...m,
-      date: m.date.toISOString(),
-      createdAt: m.createdAt.toISOString(),
-      updatedAt: m.updatedAt.toISOString(),
-    }));
+        return {
+          meals: meals.map(m => ({
+            ...m,
+            date: m.date.toISOString(),
+            createdAt: m.createdAt.toISOString(),
+            updatedAt: m.updatedAt.toISOString(),
+          })),
+          guestMeals: guestMeals.map(m => ({
+            ...m,
+            date: m.date.toISOString(),
+            createdAt: m.createdAt.toISOString(),
+            updatedAt: m.updatedAt.toISOString(),
+          }))
+        };
+      },
+      [`meals-data-${roomId}-${period.id}`],
+      {
+        revalidate: 3600, // 1 hour backup revalidation
+        tags: ['meals', `group-${roomId}`]
+      }
+    );
 
-    const serializedGuestMeals = guestMeals.map(m => ({
-      ...m,
-      date: m.date.toISOString(),
-      createdAt: m.createdAt.toISOString(),
-      updatedAt: m.updatedAt.toISOString(),
-    }));
+    const data = await getCachedData();
 
     return NextResponse.json({
-      meals: serializedMeals,
-      guestMeals: serializedGuestMeals,
+      ...data,
       period
     });
   } catch (error) {

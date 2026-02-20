@@ -135,56 +135,56 @@ export function GroupProvider({
     // OPTIMISTIC UPDATE: Update UI immediately
     setActiveGroup(group);
 
-    startTransition(async () => {
-      try {
-        // Save to localStorage immediately for persistence on reload
-        const encrypted = encryptData(JSON.stringify(group));
+    try {
+      // Save to localStorage immediately for persistence on reload
+      const encrypted = encryptData(JSON.stringify(group));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(ENC_KEY, encrypted);
+      }
+
+      // Call API instead of Server Action
+      const response = await fetch('/api/groups/set-current', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ groupId: group.id }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to switch group');
+      }
+
+      // Surgical invalidation (though Server Action does revalidatePath)
+      // Redundant but safe for react-query users
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+
+      // Router.refresh is handled by revalidatePath in the Server Action,
+      // but calling it here within startTransition ensures the UI stays "pending" 
+      // until the server render is complete.
+      startTransition(() => {
+        router.refresh();
+      });
+
+    } catch (error) {
+      console.error('Failed to switch group:', error);
+      toast.error('Failed to switch group. Reverting...');
+
+      // ROLLBACK on error
+      setActiveGroup(previousGroup);
+      if (previousGroup) {
+        const encrypted = encryptData(JSON.stringify(previousGroup));
         if (typeof window !== 'undefined') {
           localStorage.setItem(ENC_KEY, encrypted);
         }
-
-        // Call API instead of Server Action
-        const response = await fetch('/api/groups/set-current', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ groupId: group.id }),
-        });
-
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || 'Failed to switch group');
-        }
-
-        // Surgical invalidation (though Server Action does revalidatePath)
-        // Redundant but safe for react-query users
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['periods'] });
-
-        // Router.refresh is handled by revalidatePath in the Server Action,
-        // but calling it here within startTransition ensures the UI stays "pending" 
-        // until the server render is complete.
-        router.refresh();
-
-      } catch (error) {
-        console.error('Failed to switch group:', error);
-        toast.error('Failed to switch group. Reverting...');
-
-        // ROLLBACK on error
-        setActiveGroup(previousGroup);
-        if (previousGroup) {
-          const encrypted = encryptData(JSON.stringify(previousGroup));
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(ENC_KEY, encrypted);
-          }
-        } else {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem(ENC_KEY);
-          }
+      } else {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(ENC_KEY);
         }
       }
-    });
+    }
   };
 
   const updateGroupData = (groupId: string, data: Partial<Group>) => {
