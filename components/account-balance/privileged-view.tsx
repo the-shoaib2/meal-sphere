@@ -52,6 +52,7 @@ interface PrivilegedViewProps {
 }
 
 export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
+  if (!groupData) return null;
   const { members, groupTotalBalance, totalExpenses, mealRate, totalMeals, netGroupBalance, currentPeriod } = groupData as any;
   const activeBalancesCount = members.filter((m: any) => m.balance !== 0).length;
   const router = useRouter();

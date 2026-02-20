@@ -147,7 +147,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   if (hasPrivilege) {
     return (
       <>
-        <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup}>
+        <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup || !groupData}>
           <PrivilegedView
             groupData={groupData!}
             userRole={userRole!}
@@ -163,7 +163,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   }
 
   return (
-    <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup}>
+    <LoadingWrapper isLoading={isLoadingBalances || isLoadingOwnBalance || isLoadingTransactions || !activeGroup || !ownBalance}>
       <MemberView
         balance={ownBalance}
         transactions={ownTransactions || []}
