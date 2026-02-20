@@ -54,21 +54,18 @@ export async function GET(req: NextRequest) {
 
     let allImages = getImagesRecursively(imagesDirectory, imagesDirectory);
 
+    // Get unique categories from ALL images BEFORE filtering, so tabs are always visible
+    const categories = ['All', ...new Set(allImages.map(img => img.category))];
+
     // Filter by category if requested
     if (categoryFilter.toLowerCase() !== 'all') {
       allImages = allImages.filter(img => img.category.toLowerCase() === categoryFilter.toLowerCase());
     }
-
-    // Sort by name or date if needed, for now just original order
-    
     // Pagination
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
     const paginatedImages = allImages.slice(startIndex, endIndex);
     const hasMore = endIndex < allImages.length;
-
-    // Get unique categories for the UI
-    const categories = ['All', ...new Set(allImages.map(img => img.category))];
 
     return NextResponse.json({
       images: paginatedImages,

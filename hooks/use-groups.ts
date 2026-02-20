@@ -135,8 +135,11 @@ export function useGroups(): UseGroupsReturn {
         }
       },
       enabled: !!session?.user?.id && !!filter,
-      initialData: initialData,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      // Use placeholderData instead of initialData so React Query always
+      // refetches fresh data on mount, while showing server data as placeholder
+      placeholderData: initialData,
+      staleTime: 0, // Always consider data stale so it refetches on mount
+      refetchOnMount: 'always', // Force refetch every time component mounts
       refetchOnWindowFocus: false
     });
 
@@ -251,13 +254,15 @@ export function useGroups(): UseGroupsReturn {
       const { data } = await axios.post<Group>('/api/groups', groupData);
       return data;
     },
-    onSuccess: (data: Group) => {
+    onSuccess: async (data: Group) => {
       // Optimistically add the new group to the cache
       queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => [data, ...old]);
 
-      // Invalidate all group lists to ensure server sync
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      // Invalidate all group lists and AWAIT to ensure cache is cleared before any navigation
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
+      ]);
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error creating group:', error);
@@ -302,7 +307,7 @@ export function useGroups(): UseGroupsReturn {
       const { data: updatedGroup } = await axios.patch<Group>(`/api/groups/${groupId}`, data);
       return updatedGroup;
     },
-    onSuccess: (data: Group) => {
+    onSuccess: async (data: Group) => {
       // Optimistically update the user-groups list
       queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => {
         return old.map(g => g.id === data.id ? { ...g, ...data } : g);
@@ -311,9 +316,11 @@ export function useGroups(): UseGroupsReturn {
       // Update specific group details
       queryClient.setQueryData(['group', data.id], data);
 
-      // Invalidate to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
+      // Invalidate and AWAIT to ensure consistency before any navigation
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
+      ]);
     },
     onError: (error: AxiosError<{ message: string }>) => {
       console.error('Error updating group:', error);
@@ -362,11 +369,13 @@ export function useGroups(): UseGroupsReturn {
 
       return { previousGroup, previousGroups };
     },
-    onSuccess: (_, groupId) => {
+    onSuccess: async (_, groupId) => {
       // Comprehensive cache invalidation and clearing
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['groups', 'my'] });
-      queryClient.invalidateQueries({ queryKey: ['groups', 'public'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['groups', 'my'] }),
+        queryClient.invalidateQueries({ queryKey: ['groups', 'public'] }),
+      ]);
 
       // Remove specific group data from cache
       queryClient.removeQueries({ queryKey: ['group', groupId] });
@@ -378,10 +387,7 @@ export function useGroups(): UseGroupsReturn {
       // Clear any join request status for this group
       queryClient.setQueryData(['join-request-status', groupId], null);
 
-
-
       toast.success('You have left the group successfully');
-      router.refresh();
       router.push('/groups');
     },
     onError: (error: AxiosError<{ message: string }>, groupId: string, context: LeaveGroupContext | undefined) => {
@@ -461,11 +467,12 @@ export function useGroups(): UseGroupsReturn {
 
       return { previousUserGroups, previousMyGroups, previousPublicGroups, previousAllGroups };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Group deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups'] });
-      router.refresh();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
+      ]);
       router.push('/groups');
     },
     onError: (error: AxiosError<{ message: string }>, variables, context) => {

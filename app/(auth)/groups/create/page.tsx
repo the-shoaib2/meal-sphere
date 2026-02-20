@@ -84,6 +84,7 @@ export default function CreateGroupPage() {
 
   const onSubmit = async (data: CreateGroupInput) => {
     try {
+      // mutateAsync now awaits invalidation internally before resolving
       await createGroup.mutateAsync({
         ...data,
         maxMembers: data.maxMembers || undefined,
@@ -91,7 +92,6 @@ export default function CreateGroupPage() {
       });
 
       toast.success('Group created successfully!');
-      router.refresh();
       router.push('/groups');
     } catch (error: any) {
       console.error('Unexpected error:', error);

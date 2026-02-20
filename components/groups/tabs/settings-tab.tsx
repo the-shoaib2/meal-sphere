@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -21,8 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';
 import { useActiveGroup } from '@/contexts/group-context';
-import { useQueryClient } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
 
@@ -168,14 +167,10 @@ export function SettingsTab({
   isAdmin = false,
   isCreator = false,
 }: SettingsTabProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
-  const router = useRouter();
   const { updateGroupData } = useActiveGroup();
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
 
   const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   const { data: groupDetails, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId, group);
@@ -219,8 +214,7 @@ export function SettingsTab({
       fetchStats();
     }
   }, [groupId]);
-  // Store previous group values for comparison
-  const prevGroupRef = useState<PreviousGroupSettings | null>(null);
+
 
   const form = useForm<GroupSettingsFormValues>({
     resolver: zodResolver(groupSettingsSchema),
@@ -274,60 +268,24 @@ export function SettingsTab({
   // Cancel editing handler
   const handleCancel = () => {
     setIsEditing(false);
-    // Reset form to original values
-    if (group) {
-      setValue('name', group.name);
-      setValue('description', group.description || '');
-      setValue('bannerUrl', group.bannerUrl || '');
-      setValue('isPrivate', group.isPrivate);
-      setValue('maxMembers', group.maxMembers || undefined);
-      setValue('tags', (group as any).tags || []);
-      setValue('features', (group as any).features || {});
+    // Reset form from latest data (groupDetails or fallback to group prop)
+    const source = groupDetails || group;
+    if (source) {
+      setValue('name', source.name);
+      setValue('description', source.description || '');
+      setValue('bannerUrl', source.bannerUrl || '');
+      setValue('isPrivate', source.isPrivate);
+      setValue('maxMembers', source.maxMembers || undefined);
+      setValue('tags', (source as any).tags || []);
+      setValue('features', (source as any).features || {});
     }
   };
 
 
-  const handleImageUpdate = async (url: string) => {
-    try {
-      // Optimistically update form
-      setValue('bannerUrl', url, { shouldDirty: true });
-      // Updates context immediately for Group Switcher and others
-      updateGroupData(groupId, { bannerUrl: url });
-
-      // No need to save immediately, wait for Save Changes? 
-      // Actually image upload is usually instant. Let's keep it instant for now
-      // but maybe only if isEditing? Or allow image change anytime? 
-      // Requirement says "when edit button click then from can edit and camara icon click".
-      // So fetch should happen.
-
-      setIsLoading(true);
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ bannerUrl: url }),
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to update group photo');
-      }
-
-      router.refresh();
-      onUpdate();
-      // toast.success('Group photo updated');
-    } catch (error: any) {
-      toast.error('Failed to update group photo');
-      // Revert on failure?
-      if (group?.bannerUrl) {
-        setValue('bannerUrl', group.bannerUrl);
-        // Revert context?
-        updateGroupData(groupId, { bannerUrl: group.bannerUrl });
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  const handleImageUpdate = (url: string) => {
+    // Only update form for local preview, don't update global context or backend yet
+    // Both update in onSubmit
+    setValue('bannerUrl', url, { shouldDirty: true });
   };
 
   const onSubmit = async (data: GroupSettingsFormValues) => {
@@ -359,7 +317,7 @@ export function SettingsTab({
         features: data.features,
       });
 
-      toast.success('Group settings updated successfully');
+      // toast.success('Group settings updated successfully');
       setIsEditing(false); // Exit edit mode on success
       onUpdate();
     } catch (error: any) {
@@ -375,27 +333,14 @@ export function SettingsTab({
       const newFeatures = { ...formFeatures, [featureId]: checked };
       setValue(`features.${featureId}`, checked);
 
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ features: newFeatures }),
+      // Use the mutation for proper cache invalidation
+      await updateGroup.mutateAsync({
+        groupId,
+        data: { features: newFeatures },
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update feature');
-      }
-
-      // IMMEDIATE UPDATE: Update context with new features
+      // Update context for immediate feedback
       updateGroupData(groupId, { features: newFeatures } as any);
-
-      // Invalidate React Query cache
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
-
-      router.refresh();
       onUpdate();
       toast.success(`${GROUP_FEATURES[featureId].name} ${checked ? 'enabled' : 'disabled'}`);
     } catch (error: any) {
@@ -540,11 +485,12 @@ export function SettingsTab({
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button type="button" variant="outline" className='bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500' onClick={handleCancel} disabled={isLoading}>
+                <Button type="button" variant="outline" className='bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500' onClick={handleCancel} disabled={updateGroup.isPending}>
+                  <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button variant="outline" onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-                  {isLoading ? (
+                <Button variant="outline" onClick={form.handleSubmit(onSubmit)} disabled={updateGroup.isPending}>
+                  {updateGroup.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Saving...
@@ -704,7 +650,7 @@ export function SettingsTab({
                   <Input
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyPress}
                     placeholder="Add a tag"
                     disabled={!isEditing}
                   />

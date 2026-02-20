@@ -296,15 +296,17 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
               select: {
                 id: true,
                 name: true,
-                // Only disclose creator email to members/admins later if needed, 
-                // but usually public view might strictly hide it.
-                // Keeping it for now but we'll sanitize the return.
                 email: true,
                 image: true
               }
             },
             members: {
-              include: {
+              select: {
+                id: true,
+                role: true,
+                joinedAt: true,
+                userId: true,
+                isBanned: true,
                 user: {
                   select: {
                     id: true,
@@ -361,7 +363,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         email: canViewSensitive ? group.createdByUser.email : null
       };
 
-      const result = {
+      return {
         group: {
             ...group,
             createdByUser: sanitizedCreator,
@@ -370,8 +372,6 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         timestamp: new Date().toISOString(),
         executionTime: performance.now() - start
       };
-
-      return encryptData(result);
     },
     [cacheKey, 'v1-group-details'],
     { 
@@ -380,9 +380,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  if (!encrypted) return null;
-  return decryptData(encrypted);
+  return await cachedFn();
 }
 export async function fetchGroupAccessData(groupId: string, userId: string) {
   const cacheKey = `group-access-${groupId}-${userId}`;

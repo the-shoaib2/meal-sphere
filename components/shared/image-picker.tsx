@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import axios from "axios";
 import { LoadingWrapper, Loader } from "@/components/ui/loader";
 
@@ -123,27 +122,36 @@ export function ImagePicker({
                     </div>
                 </DialogHeader>
 
-                <div className="border-b bg-card px-5 py-2">
-                    <Tabs value={activeCategory} onValueChange={handleCategoryChange} className="w-full">
-                        <TabsList className="w-full justify-start h-9 bg-muted/50 p-1">
+                <div className="border-b bg-card px-1">
+                    <LoadingWrapper isLoading={isLoading && categories.length <= 1} minHeight="44px">
+                        <div className="flex w-full">
                             {categories.map((cat) => (
-                                <TabsTrigger
+                                <button
                                     key={cat}
-                                    value={cat}
-                                    className="text-xs px-4 h-7 transition-all data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                                    type="button"
+                                    onClick={() => handleCategoryChange(cat)}
+                                    className={cn(
+                                        "relative flex-1 text-sm font-medium py-2.5 px-3 transition-colors duration-200",
+                                        activeCategory === cat
+                                            ? "text-primary"
+                                            : "text-muted-foreground hover:text-foreground"
+                                    )}
                                 >
                                     {cat}
-                                </TabsTrigger>
+                                    {activeCategory === cat && (
+                                        <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-[3px] rounded-full bg-primary" />
+                                    )}
+                                </button>
                             ))}
-                        </TabsList>
-                    </Tabs>
+                        </div>
+                    </LoadingWrapper>
                 </div>
 
                 <div className="flex-1 overflow-hidden flex flex-col bg-muted/5">
                     <ScrollArea className="flex-1 p-5">
                         <LoadingWrapper isLoading={isLoading && images.length === 0} minHeight="400px">
                             {images.length > 0 ? (
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                                <div className="grid p-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                     {images.map((image, index) => {
                                         const isLast = index === images.length - 1;
                                         const isSelected = tempSelected === image.src;
@@ -153,29 +161,24 @@ export function ImagePicker({
                                                 ref={isLast ? lastImageRef : null}
                                                 onClick={() => setTempSelected(image.src)}
                                                 className={cn(
-                                                    "group relative aspect-square cursor-pointer overflow-hidden rounded-2xl border-2 transition-all duration-300",
+                                                    "group relative aspect-square cursor-pointer overflow-hidden rounded-full border-4 transition-all duration-200",
                                                     isSelected
-                                                        ? "border-primary ring-4 ring-primary/10 ring-offset-0"
-                                                        : "border-transparent hover:border-primary/30 hover:shadow-lg"
+                                                        ? "border-primary ring-4 ring-primary/20 shadow-lg"
+                                                        : "border-transparent hover:border-muted-foreground/30"
                                                 )}
                                             >
                                                 <Image
                                                     src={image.src}
                                                     alt={image.alt}
                                                     fill
-                                                    className={cn(
-                                                        "object-cover transition-transform duration-500 group-hover:scale-110",
-                                                        isSelected && "scale-105"
-                                                    )}
-                                                    sizes="(max-width: 640px) 33vw, 120px"
+                                                    className="object-cover"
+                                                    sizes="(max-width: 640px) 25vw, 80px"
                                                 />
-                                                <div className={cn(
-                                                    "absolute inset-0 bg-black/0 transition-colors duration-300",
-                                                    isSelected ? "bg-black/20" : "group-hover:bg-black/10"
-                                                )} />
                                                 {isSelected && (
-                                                    <div className="absolute top-2 right-2 bg-primary text-white p-1 rounded-full shadow-lg animate-in zoom-in-50 duration-300">
-                                                        <Check className="h-3 w-3" />
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-primary/40 backdrop-blur-[1px]">
+                                                        <div className="bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                                                            <Check className="h-5 w-5 font-bold" />
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
