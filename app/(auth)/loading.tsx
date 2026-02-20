@@ -1,5 +1,5 @@
 import { PageLoader } from '@/components/ui/loader';
 
-export default function DashboardLoading() {
+export default function AuthLoading() {
     return <PageLoader />;
 }

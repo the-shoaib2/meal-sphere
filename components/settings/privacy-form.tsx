@@ -84,8 +84,8 @@ export function PrivacyForm({ user }: PrivacyFormProps) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg">Privacy Settings</CardTitle>
+                <CardDescription className="text-sm">
                     Manage how others see your profile and interact with you.
                 </CardDescription>
             </CardHeader>

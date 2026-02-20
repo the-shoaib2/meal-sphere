@@ -25,16 +25,18 @@ const NoActiveVotesCard: React.FC<NoActiveVotesCardProps> = ({ handleRefreshVote
         )}
       </p>
       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-        <Button variant="outline" onClick={handleRefreshVotes} className="w-full sm:w-auto">
-          <RotateCcw className="mr-2 h-4 w-4" />
+```tsx
+        <Button variant="outline" onClick={handleRefreshVotes} className="w-full sm:w-auto group">
+          <RotateCcw className="mr-2 h-4 w-4 group-active:animate-spin" />
           Refresh
         </Button>
-        {isMember && (
+```
+        {/* {isMember && (
           <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Create Vote
           </Button>
-        )}
+        )} */}
       </div>
     </CardContent>
   </Card>
