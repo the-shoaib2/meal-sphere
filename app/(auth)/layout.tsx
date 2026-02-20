@@ -11,6 +11,7 @@ import { Group } from "@/types/group";
 import { PeriodProvider } from "@/contexts/period-context"
 import { fetchPeriodsData } from "@/lib/services/period-service"
 import { PeriodsPageData } from "@/hooks/use-periods"
+import { GroupSwitchLoader } from "@/components/layout/group-switch-loader"
 
 export default async function AuthLayout({
   children,
@@ -71,7 +72,9 @@ export default async function AuthLayout({
               <AppSidebar />
               <main className="flex-1 bg-background overflow-auto h-full flex flex-col">
                 <div className="w-full mx-auto px-4 sm:px-6 py-4 min-w-0 flex flex-col flex-1">
-                  {children}
+                  <GroupSwitchLoader>
+                    {children}
+                  </GroupSwitchLoader>
                 </div>
               </main>
             </div>

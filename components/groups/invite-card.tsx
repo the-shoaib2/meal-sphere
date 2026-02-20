@@ -321,8 +321,10 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
 
   if (!group || !canInvite) return null;
 
-  const { name, isPrivate, memberCount, maxMembers } = group;
-  const isGroupFull = maxMembers ? memberCount >= maxMembers : false;
+  const { name, isPrivate, memberCount, maxMembers, members } = group;
+  const currentCount = Array.isArray(members) ? members.length : memberCount;
+  const isGroupFull = maxMembers ? currentCount >= maxMembers : false;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

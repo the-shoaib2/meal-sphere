@@ -108,8 +108,8 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <div>
-                            <h1 className="text-2xl font-bold">{selectedPeriod.name}</h1>
-                            <p className="text-sm text-muted-foreground">
+                            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{selectedPeriod.name}</h1>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                                 Period Details & Reports
                             </p>
                         </div>

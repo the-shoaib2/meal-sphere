@@ -229,9 +229,9 @@ export function GroupPageContent(
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{resolvedGroup.name}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{resolvedGroup.name}</h1>
                     {resolvedGroup.description && (
-                        <p className="text-sm text-muted-foreground">{resolvedGroup.description}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{resolvedGroup.description}</p>
                     )}
                     <div className="flex flex-wrap gap-1 mt-1">
                         {category && <Badge variant="secondary">{category}</Badge>}

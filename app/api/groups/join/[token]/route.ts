@@ -301,6 +301,17 @@ export async function POST(
       }
     });
 
+    // CRITICAL: Update memberCount sync
+    const newCount = await prisma.roomMember.count({
+      where: { roomId: inviteToken.roomId }
+    });
+    
+    await prisma.room.update({
+      where: { id: inviteToken.roomId },
+      data: { memberCount: newCount }
+    });
+
+
 
 
     // Note: We don't delete the invite token anymore to allow multiple joins

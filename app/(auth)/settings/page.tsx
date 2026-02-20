@@ -10,6 +10,7 @@ import { ChangePasswordCard } from "@/components/settings/change-password-card"
 import { PrivacyForm } from "@/components/settings/privacy-form"
 import { NotificationsSettingsCard } from "@/components/settings/notifications-settings-card"
 import { getAllActiveSessions } from "@/lib/auth/session-manager"
+import { PageHeader } from "@/components/shared/page-header"
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -38,12 +39,10 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage your account settings and preferences
-        </p>
-      </div>
+      <PageHeader
+        heading="Settings"
+        text="Manage your account settings and preferences"
+      />
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <ProfileForm user={user} isGoogleUser={isGoogleUser} />

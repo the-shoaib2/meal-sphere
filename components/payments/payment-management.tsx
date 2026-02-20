@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CreditCard, Receipt, FileText } from 'lucide-react';
+import { PageHeader } from '@/components/shared/page-header';
 import { createManualPayment } from '@/lib/services/payments-service';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -93,6 +94,10 @@ export function PaymentManagement({ initialData, initialAccessData }: PaymentMan
 
     return (
         <div className="space-y-6">
+            <PageHeader
+                heading="Payments"
+                text="Track and manage group payments"
+            />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
                     <TabsList>

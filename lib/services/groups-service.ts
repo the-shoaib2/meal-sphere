@@ -920,10 +920,13 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
         }
     });
 
+    // Update count robustly
+    const newCount = await prisma.roomMember.count({ where: { roomId: groupId } });
     await prisma.room.update({
         where: { id: groupId },
-        data: { memberCount: memberCount + 1 }
+        data: { memberCount: newCount }
     });
+
     
     // If it was a token join, update the token as used? 
     // The InviteToken model has usedAt but it's not unique per user. 

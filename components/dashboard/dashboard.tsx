@@ -2,7 +2,6 @@
 
 import { ReactNode, useTransition, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
-import { useActiveGroup } from '@/contexts/group-context';
 import { PageHeader } from '@/components/shared/page-header';
 import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { DashboardActivity, DashboardChartData } from '@/types/dashboard';
@@ -22,6 +21,7 @@ interface DashboardProps {
 
 /**
  * Dashboard - Wrapper component that manages dashboard refresh state
+ * Note: Group switching loading is handled globally by GroupSwitchLoader in the auth layout.
  */
 export function Dashboard({
     heading,
@@ -30,7 +30,6 @@ export function Dashboard({
 }: DashboardProps) {
     const router = useRouter();
     const [isRefreshing, startTransition] = useTransition();
-    const { isSwitchingGroup } = useActiveGroup();
 
     const refresh = () => {
         startTransition(() => {
@@ -38,8 +37,8 @@ export function Dashboard({
         });
     };
 
-    // Granular loading state
-    const isLoading = isRefreshing || isSwitchingGroup;
+    // Loading state for dashboard-specific refresh only
+    const isLoading = isRefreshing;
 
     return (
         <DashboardLoadingContext.Provider value={{ isLoading }}>
