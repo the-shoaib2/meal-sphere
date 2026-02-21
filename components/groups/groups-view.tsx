@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGroups } from '@/hooks/use-groups';
-import { Search, Plus, Users, Compass } from 'lucide-react';
+import { Search, Plus, Users, Compass, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/components/shared/empty-state';
 import { GroupCard } from '@/components/groups/group-card';
@@ -107,6 +107,12 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
+                        <Button variant="outline" asChild>
+                            <Link href="/groups/join">
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Join Group
+                            </Link>
+                        </Button>
                         <Button asChild>
                             <Link href="/groups/create">
                                 <Plus className="mr-2 h-4 w-4" />

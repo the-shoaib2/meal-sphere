@@ -26,12 +26,9 @@ export default async function JoinGroupPage(props: { params: Promise<{ id: strin
   let finalGroupId = params.id;
   let inviteToken: string | null = null;
 
-  // Check if params.id is an invite token (10 chars, uppercase)
-  if (params.id.length === 10 && /^[A-Z]+$/.test(params.id)) {
-    const invite = await resolveInviteToken(params.id);
-    if (!invite) {
-      notFound();
-    }
+  // First check if params.id is a valid invite token
+  const invite = await resolveInviteToken(params.id);
+  if (invite) {
     finalGroupId = invite.roomId;
     inviteToken = params.id;
   }
@@ -43,9 +40,15 @@ export default async function JoinGroupPage(props: { params: Promise<{ id: strin
     notFound();
   }
 
+  // Pass inviter from token if available
+  const initialGroup = {
+    ...data.group,
+    inviter: invite?.createdByUser || null
+  };
+
   return (
     <JoinGroupView
-      initialGroup={data.group as any}
+      initialGroup={initialGroup as any}
       initialIsMember={data.isMember}
       initialRequestStatus={data.joinRequest?.status || null}
       groupId={finalGroupId}

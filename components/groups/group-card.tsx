@@ -5,7 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, ArrowRight } from 'lucide-react';
+import { Users, ArrowRight, Lock, UserPlus } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
 import type { Group } from '@/types/group';
 
@@ -26,14 +27,21 @@ function getInitials(name: string | null | undefined): string {
 
 export function GroupCard({ group, isOwner }: GroupCardProps) {
     const router = useRouter();
+    const { data: session } = useSession();
 
     const displayedMembers = group.members?.slice(0, 3) || [];
     const hasMoreMembers = (group.memberCount || 0) > 3;
     const admin = group.members?.find(member => member.role === 'ADMIN') || group.members?.[0];
 
-    const handleViewGroup = () => {
+    const isMember = group.userRole || group.members?.some(m => m.userId === session?.user?.id) || isOwner;
+
+    const handleAction = () => {
         window.dispatchEvent(new CustomEvent('routeChangeStart'));
-        router.push(`/groups/${group.id}`);
+        if (isMember) {
+            router.push(`/groups/${group.id}`);
+        } else {
+            router.push(`/groups/join/${group.id}`);
+        }
     };
 
     return (
@@ -51,13 +59,20 @@ export function GroupCard({ group, isOwner }: GroupCardProps) {
                         <Users className="h-10 w-10 text-primary/40" />
                     </div>
                 )}
-                {isOwner && (
-                    <div className="absolute top-2 right-2">
-                        <Badge variant="secondary" className="text-xs bg-background/80 hover:bg-background/90 backdrop-blur-sm shadow-sm">
+                <div className="absolute top-2 right-2 flex gap-1.5">
+                    <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-background/80 hover:bg-background/90 backdrop-blur-sm shadow-sm border-none">
+                        {group.isPrivate ? (
+                            <div className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</div>
+                        ) : (
+                            <div className="flex items-center gap-1"><Users className="h-3 w-3" /> Public</div>
+                        )}
+                    </Badge>
+                    {isOwner && (
+                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 backdrop-blur-sm shadow-sm border-primary/20">
                             Owner
                         </Badge>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
             <CardHeader className="pb-3 pt-4">
                 <div className="flex items-start justify-between">
@@ -116,12 +131,21 @@ export function GroupCard({ group, isOwner }: GroupCardProps) {
                 </div>
                 <div className="flex gap-2">
                     <Button
-
+                        variant={isMember ? "default" : "outline"}
                         className="group/button flex items-center gap-1"
-                        onClick={handleViewGroup}
+                        onClick={handleAction}
                     >
-                        <span>View</span>
-                        <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover/button:translate-x-1" />
+                        {isMember ? (
+                            <>
+                                <span>View</span>
+                                <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover/button:translate-x-1" />
+                            </>
+                        ) : (
+                            <>
+                                <UserPlus className="h-4 w-4 mr-1" />
+                                <span>Join</span>
+                            </>
+                        )}
                     </Button>
                 </div>
             </CardFooter>

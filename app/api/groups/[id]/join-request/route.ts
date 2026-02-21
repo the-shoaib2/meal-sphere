@@ -22,16 +22,27 @@ export async function POST(
     const { id } = await params;
     const { message } = await request.json();
 
-    // Check if group exists and user can access it
-    const validation = await validateGroupAccess(id);
-    if (!validation.success || !validation.authResult) {
-      return NextResponse.json({ error: validation.error }, { status: validation.status });
+    // Check if group exists and user isn't banned
+    const group = await prisma.room.findUnique({
+        where: { id },
+        include: {
+            members: {
+                where: { userId: session.user.id }
+            }
+        }
+    });
+
+    if (!group) {
+        return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    const { authResult } = validation;
+    const membership = group.members[0];
+    if (membership?.isBanned) {
+        return NextResponse.json({ error: 'You are banned from this group' }, { status: 403 });
+    }
 
     // Check if user is already a member
-    if (authResult.isMember) {
+    if (membership && !membership.isBanned) {
       return NextResponse.json({ error: 'You are already a member of this group' }, { status: 400 });
     }
 
@@ -143,6 +154,55 @@ export async function GET(
     console.error('Error fetching join requests:', error);
     return NextResponse.json(
       { error: 'Failed to fetch join requests' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/groups/[id]/join-request - Cancel a join request
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { id: groupId } = await params;
+
+    // Find the request
+    const existingRequest = await prisma.joinRequest.findUnique({
+      where: {
+        userId_roomId: {
+          userId: session.user.id,
+          roomId: groupId
+        }
+      }
+    });
+
+    if (!existingRequest) {
+      return NextResponse.json({ error: 'Join request not found' }, { status: 404 });
+    }
+
+    // Don't allow deleting approved requests via this endpoint (they should leave the group instead)
+    if (existingRequest.status === 'APPROVED') {
+       return NextResponse.json({ error: 'Cannot cancel an approved request. Please leave the group instead.' }, { status: 400 });
+    }
+
+    // Delete the request
+    await prisma.joinRequest.delete({
+      where: {
+        id: existingRequest.id
+      }
+    });
+
+    return NextResponse.json({ message: 'Join request cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling join request:', error);
+    return NextResponse.json(
+      { error: 'Failed to cancel join request' },
       { status: 500 }
     );
   }

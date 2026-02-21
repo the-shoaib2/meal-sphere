@@ -28,9 +28,17 @@ export async function POST(
 
     const result = await joinGroup(groupId, session.user.id, password, token);
 
+    if (result.requestCreated) {
+      return NextResponse.json({
+        message: 'Join request sent successfully. Waiting for admin approval.',
+        requestCreated: true,
+        joinRequest: result.joinRequest
+      });
+    }
+
     return NextResponse.json({
       message: 'Successfully joined the group',
-      membership: result
+      membership: result.membership
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

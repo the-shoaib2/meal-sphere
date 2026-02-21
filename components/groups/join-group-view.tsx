@@ -8,19 +8,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
 import { Role } from '@prisma/client';
+import { useSession } from 'next-auth/react';
 // import { useGroups } from '@/hooks/use-groups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert, KeyRound } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert, KeyRound, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
 import { isValidId } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { RoleBadge } from '@/components/shared/role-badge';
+import { PageHeader } from '@/components/shared/page-header';
 // Actions import removed
 
 // Update the join room form schema
@@ -57,6 +60,7 @@ interface ExtendedGroup extends Group {
   isMember?: boolean;
   hasPassword?: boolean;
   requiresPassword?: boolean;
+  members?: { userId: string; role: string }[];
   joinRequest?: {
     status: 'pending' | 'approved' | 'rejected';
     message?: string;
@@ -113,6 +117,8 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams?.get('code') || inviteToken;
+
+  const { data: session } = useSession();
 
   // State
   const [error, setError] = useState<string | null>(null);
@@ -187,6 +193,30 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       setIsCheckingStatus(false);
     }
   }, [router]);
+
+  const handleCancelRequest = useCallback(async () => {
+    if (!groupId) return;
+
+    try {
+      setIsJoining(true);
+      const response = await fetch(`/api/groups/${groupId}/join-request`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to cancel request');
+      }
+
+      toast.success('Join request cancelled');
+      setRequestStatus(null);
+    } catch (error: any) {
+      console.error('Error cancelling request:', error);
+      toast.error(error.message || 'Failed to cancel request');
+    } finally {
+      setIsJoining(false);
+    }
+  }, [groupId]);
 
 
   // Handle sending a new request after rejection
@@ -266,6 +296,15 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
             throw new Error(result.error || 'Failed to join group');
           }
 
+          const result = await response.json();
+          if (result.requestCreated) {
+            setRequestStatus('pending');
+            toast('Join request sent, waiting for admin approval...', {
+              icon: <AlertCircle className="h-4 w-4" />,
+            });
+            return;
+          }
+
           toast.success('Successfully joined the group!');
           router.push(`/groups/${targetGroupId}`);
           return;
@@ -296,6 +335,16 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         if (!response.ok) {
           const result = await response.json();
           throw new Error(result.error || 'Failed to join group');
+        }
+
+        const result = await response.json();
+
+        if (result.requestCreated) {
+          setRequestStatus('pending');
+          toast('Join request sent, waiting for admin approval...', {
+            icon: <AlertCircle className="h-4 w-4" />,
+          });
+          return;
         }
 
         toast.success('Successfully joined the group!');
@@ -348,28 +397,31 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   // If user is already a member, show success state
   if (initialIsMember) {
     return (
-      <div className="flex items-center justify-center  p-4">
-        <div className="w-full max-w-2xl">
-          <Button variant="ghost" asChild className="mb-6">
-            <Link href="/groups">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Groups
-            </Link>
-          </Button>
-          <Card>
+      <div className="space-y-4">
+        <PageHeader
+          heading={group?.name || "Group"}
+          description="Already a member of this group"
+          showBackButton
+          backHref="/groups"
+          badges={<RoleBadge role={group?.members?.find(m => m.userId === session?.user?.id)?.role as any} />}
+          badgesNextToTitle={true}
+          collapsible={false}
+        />
+        <div className="flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl">
             <CardHeader>
               <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                 <CheckCircle2 className="h-5 w-5" />
-                <CardTitle>Already a Member</CardTitle>
+                <CardTitle>Welcome Back</CardTitle>
               </div>
               <CardDescription>
-                You are already a member of this group. Redirecting you to the group page...
+                You are already a member of this group. You can access all group features.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
                 onClick={() => router.push(`/groups/${groupId}`)}
-                className="mt-4 w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 Go to Group
               </Button>
@@ -423,25 +475,20 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   // Show join form if no status or if user wants to send new request
   if (!requestStatus) {
     return (
-      <div className="flex items-center justify-center  p-4">
-        <div className="w-full max-w-2xl">
-          <Button variant="ghost" asChild className="mb-6">
-            <Link href="/groups">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Groups
-            </Link>
-          </Button>
+      <div className="space-y-4">
+        <PageHeader
+          heading={group?.name}
+          description={group?.description || 'Join this group to share meals and expenses'}
+          showBackButton
+          backHref="/groups"
+          collapsible={false}
+        />
 
-          <Card>
+        <div className="flex items-center justify-center p-4">
+          <Card className="w-full">
             <CardHeader className="pb-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <CardTitle className="text-lg sm:text-xl">{group?.name}</CardTitle>
-                  <CardDescription className="text-sm">
-                    {group?.description || 'No description provided'}
-                  </CardDescription>
-                </div>
-              </div>
+              <CardTitle className="text-lg">Group Invitation</CardTitle>
+              <CardDescription>Review group details before joining</CardDescription>
             </CardHeader>
 
             <CardContent>
@@ -518,7 +565,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        If you know the group password, enter it here to join instantly. Otherwise, leave blank to request approval.
+                        Enter the group password to verify your invitation and submit a join request.
                       </p>
                     </div>
                   )}
@@ -543,22 +590,10 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <Button
-                      type="button"
-                      variant="outline"
-                      asChild
-                      disabled={isJoining}
-                      className="w-full sm:w-auto"
-                    >
-                      <Link href="/groups">
-                        Cancel
-                      </Link>
-                    </Button>
-
-                    <Button
                       type={showMessageField || formValues.password ? 'submit' : 'button'}
                       onClick={(!showMessageField && !formValues.password) ? handleJoinClick : undefined}
                       disabled={isJoining}
-                      className="w-full sm:w-auto"
+                      className="w-full"
                     >
                       {isJoining ? (
                         <>
@@ -567,21 +602,19 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                         </>
                       ) : (
                         <>
-                          <>
-                            {group?.isPrivate ? (
-                              <>
-                                <Lock className="h-4 w-4 mr-2" />
-                                {formValues.password
-                                  ? 'Join Group'
-                                  : (showMessageField ? 'Send Join Request' : 'Request to Join')}
-                              </>
-                            ) : (
-                              <>
-                                <Users className="h-4 w-4 mr-2" />
-                                Join Group
-                              </>
-                            )}
-                          </>
+                          {group?.isPrivate ? (
+                            <>
+                              <Lock className="h-4 w-4 mr-2" />
+                              {formValues.password
+                                ? 'Join Group'
+                                : (showMessageField ? 'Send Join Request' : 'Request to Join')}
+                            </>
+                          ) : (
+                            <>
+                              <Users className="h-4 w-4 mr-2" />
+                              Join Group
+                            </>
+                          )}
                         </>
                       )}
                     </Button>
@@ -596,40 +629,37 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   }
 
   return (
-    <div className="flex items-center justify-center  p-4">
-      <div className="w-full max-w-2xl">
-        <Button variant="ghost" asChild className="mb-6">
-          <Link href="/groups">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Groups
-          </Link>
-        </Button>
+    <div className="space-y-4">
+      <PageHeader
+        heading={group?.name || 'Group'}
+        description={group?.description || 'Join this group to share meals and expenses'}
+        showBackButton
+        backHref="/groups"
+        collapsible={false}
+        badges={
+          <div className="flex items-center gap-2">
+            {requestStatus === 'pending' && (
+              <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Pending
+              </Badge>
+            )}
+            {requestStatus === 'rejected' && (
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Rejected
+              </Badge>
+            )}
+          </div>
+        }
+        badgesNextToTitle={true}
+      />
 
-        <Card>
+      <div className="flex items-center justify-center p-4">
+        <Card className="w-full">
           <CardHeader className="pb-2">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <CardTitle className="text-lg sm:text-xl">{group?.name}</CardTitle>
-                <CardDescription className="text-sm">
-                  {group?.description || 'No description provided'}
-                </CardDescription>
-              </div>
-              {/* Status Badge */}
-              <div className="flex items-center gap-2">
-                {requestStatus === 'pending' && (
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Pending
-                  </Badge>
-                )}
-                {requestStatus === 'rejected' && (
-                  <Badge variant="destructive" className="text-xs">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    Rejected
-                  </Badge>
-                )}
-              </div>
-            </div>
+            <CardTitle className="text-lg">Request Status</CardTitle>
+            <CardDescription>Track the status of your join request</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -705,52 +735,59 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
               )}
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                <Button
-                  onClick={() => router.push('/groups')}
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                >
-                  Back to Groups
-                </Button>
-
+              <div className="flex flex-col gap-2 pt-2">
                 {requestStatus === 'pending' && (
-                  <Button
-                    onClick={() => {
-                      if (groupId) {
-                        checkJoinRequestStatus(groupId);
-                      }
-                    }}
-                    disabled={isCheckingStatus}
-                    variant="default"
-                    className="w-full sm:w-auto"
-                  >
-                    {isCheckingStatus ? (
-                      <>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      onClick={() => {
+                        if (groupId) {
+                          checkJoinRequestStatus(groupId);
+                        }
+                      }}
+                      disabled={isCheckingStatus}
+                      variant="default"
+                      className="flex-1"
+                    >
+                      {isCheckingStatus ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Checking Status...
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Check Status
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleCancelRequest}
+                      disabled={isJoining}
+                      variant="outline"
+                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      {isJoining ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Checking Status...
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Check Status
-                      </>
-                    )}
-                  </Button>
+                      ) : (
+                        <XCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Cancel Request
+                    </Button>
+                  </div>
                 )}
 
                 {requestStatus === 'rejected' && (
-                  <>
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
                       onClick={() => handleNewRequest(formValues)}
                       disabled={isJoining}
                       variant="default"
-                      className="w-full sm:w-auto"
+                      className="flex-1"
                     >
                       {isJoining ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending Request...
+                          Sending...
                         </>
                       ) : (
                         <>
@@ -760,28 +797,19 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                       )}
                     </Button>
                     <Button
-                      onClick={() => {
-                        if (groupId) {
-                          checkJoinRequestStatus(groupId);
-                        }
-                      }}
-                      disabled={isCheckingStatus}
+                      onClick={handleCancelRequest}
+                      disabled={isJoining}
                       variant="outline"
-                      className="w-full sm:w-auto"
+                      className="flex-1"
                     >
-                      {isCheckingStatus ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Checking...
-                        </>
+                      {isJoining ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 mr-2" />
-                          Check Status
-                        </>
+                        <XCircle className="h-4 w-4 mr-2" />
                       )}
+                      Clear Request
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

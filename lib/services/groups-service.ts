@@ -551,15 +551,18 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
       const end = performance.now();
       const executionTime = end - start;
 
+      const isMember = !!membership && !membership.isBanned;
+
       const result = {
-        group: {
+        group: group ? {
             ...group,
+            inviter: null, // Removed default group.createdByUser
             hasPassword: !!group?.password,
             password: undefined
-        },
-        isMember: !!membership && !membership.isBanned,
+        } : null,
+        isMember,
         membership,
-        joinRequest: joinRequest ? {
+        joinRequest: (joinRequest && !(joinRequest.status === 'APPROVED' && !isMember)) ? {
           ...joinRequest,
           status: joinRequest.status.toLowerCase() as 'pending' | 'approved' | 'rejected'
         } : null,
@@ -660,7 +663,15 @@ export async function resolveInviteToken(token: string) {
     select: {
       roomId: true,
       expiresAt: true,
-      role: true
+      role: true,
+      createdByUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        }
+      }
     }
   });
 
@@ -857,17 +868,22 @@ export async function deleteGroup(groupId: string, userId: string) {
 }
 
 export async function joinGroup(groupId: string, userId: string, password?: string, token?: string) {
-    const group = await prisma.room.findUnique({
-        where: { id: groupId },
-        select: {
-             id: true, isPrivate: true, maxMembers: true, password: true,
-             members: { where: { userId }, select: { id: true } }
-        }
-    });
+    const [group, invite] = await Promise.all([
+        prisma.room.findUnique({
+            where: { id: groupId },
+            select: {
+                 id: true, isPrivate: true, maxMembers: true, password: true, memberCount: true,
+                 members: { where: { userId }, select: { id: true } }
+            }
+        }),
+        token ? prisma.inviteToken.findUnique({
+            where: { token },
+            select: { roomId: true, role: true, expiresAt: true }
+        }) : Promise.resolve(null)
+    ]);
 
     if (!group) throw new Error('Group not found');
     if (group.members.length > 0) throw new Error('Already a member');
-    
     
     // Check password if private and no token
     if (group.isPrivate && !token) {
@@ -887,11 +903,6 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
     
     // Validate token if provided
     if (token) {
-        const invite = await prisma.inviteToken.findUnique({
-            where: { token },
-            select: { roomId: true, role: true, expiresAt: true }
-        });
-        
         if (!invite || invite.roomId !== groupId) {
             throw new Error('Invalid or expired invite token');
         }
@@ -903,44 +914,92 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
         role = invite.role;
     }
     
-    const memberCount = await prisma.roomMember.count({ where: { roomId: groupId } });
-    if (group.maxMembers && memberCount >= group.maxMembers) throw new Error('Group is full');
+    if (group.maxMembers && group.memberCount >= group.maxMembers) throw new Error('Group is full');
 
-    const result = await prisma.roomMember.create({
-        data: {
-            userId,
-            roomId: groupId,
-            role: role as Role,
-            isCurrent: true // Set as current group when joining via invite
-        },
-        include: {
-            user: { select: { id: true, name: true, image: true } }
+    // SECURITY FIX: If group is private, ALWAYS create a join request instead of joining immediately
+    // This ensures admin approval is required as stated in the UI.
+    if (group.isPrivate) {
+        let message = token ? "Invited via token" : "Joined with password";
+        
+        const mutations: any[] = [
+            prisma.joinRequest.upsert({
+                where: {
+                    userId_roomId: {
+                        userId,
+                        roomId: groupId
+                    }
+                },
+                update: {
+                    status: 'PENDING',
+                    message,
+                    updatedAt: new Date()
+                },
+                create: {
+                    roomId: groupId,
+                    userId,
+                    message,
+                    status: 'PENDING'
+                }
+            })
+        ];
+
+        if (token) {
+            mutations.push(
+                prisma.inviteToken.update({
+                    where: { token },
+                    data: { usedAt: new Date() }
+                })
+            );
         }
-    });
 
-    // Update count robustly
-    const newCount = await prisma.roomMember.count({ where: { roomId: groupId } });
-    await prisma.room.update({
-        where: { id: groupId },
-        data: { memberCount: newCount }
-    });
+        const [joinRequest] = await prisma.$transaction(mutations);
 
-    
-    // If it was a token join, update the token as used? 
-    // The InviteToken model has usedAt but it's not unique per user. 
-    // For simplicity, we just leave it or could update usedAt.
-    if (token) {
-        await prisma.inviteToken.update({
-            where: { token },
-            data: { usedAt: new Date() }
-        });
+        revalidateTag(`group-${groupId}`);
+        revalidateTag(`user-${userId}`);
+
+        return {
+            requestCreated: true,
+            joinRequest
+        };
     }
+
+    const mutations: any[] = [
+        prisma.roomMember.create({
+            data: {
+                userId,
+                roomId: groupId,
+                role: role as Role,
+                isCurrent: true 
+            },
+            include: {
+                user: { select: { id: true, name: true, image: true } }
+            }
+        }),
+        prisma.room.update({
+            where: { id: groupId },
+            data: { memberCount: { increment: 1 } }
+        })
+    ];
+
+    if (token) {
+        mutations.push(
+            prisma.inviteToken.update({
+                where: { token },
+                data: { usedAt: new Date() }
+            })
+        );
+    }
+
+    const [result] = await prisma.$transaction(mutations);
 
     revalidateTag(`group-${groupId}`);
     revalidateTag(`user-${userId}`);
     revalidateTag('groups');
     
-    return result;
+    return {
+        requestCreated: false,
+        membership: result
+    };
 }
 
 export async function leaveGroup(groupId: string, userId: string) {
@@ -1024,8 +1083,28 @@ export async function createJoinRequest(groupId: string, userId: string, message
             roomId: groupId,
             message,
             status: 'PENDING'
+        },
+        include: {
+            room: { select: { name: true } },
+            user: { select: { name: true } }
         }
     });
+
+    // Notify Group Admins
+    const admins = await prisma.roomMember.findMany({
+        where: { roomId: groupId, role: 'ADMIN' },
+        select: { userId: true }
+    });
+
+    if (admins.length > 0) {
+        await prisma.notification.createMany({
+            data: admins.map(admin => ({
+                userId: admin.userId,
+                type: NotificationType.GENERAL,
+                message: `${request.user.name || 'A user'} has requested to join your group "${request.room.name}".`
+            }))
+        });
+    }
     
     return request;
 }

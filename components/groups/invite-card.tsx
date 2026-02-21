@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Copy, Loader2, Lock, Mail, Share2, UserPlus, X, Check, AlertCircle, Users, Settings, Shield, UserCog, ChefHat, BadgeDollarSign, ShoppingCart, Scale, Ban } from "lucide-react";
+import { Copy, Loader2, Lock, Mail, Share2, UserPlus, X, Check, AlertCircle, Users, Settings, Shield, UserCog, ChefHat, BadgeDollarSign, ShoppingCart, Scale, Ban, RefreshCw } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { QRCodeSVG } from "qrcode.react";
@@ -377,15 +377,13 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                         id="invite-link"
                         value={inviteToken?.inviteUrl || ''}
                         readOnly
-                        className="h-10 text-xs px-3 bg-muted/30 border-dashed"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         onClick={handleCopyLink}
-                        className="h-10 text-xs font-semibold"
                         disabled={loading || !inviteToken}
                       >
                         {copied ? (
@@ -396,9 +394,8 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                       </Button>
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant="outline"
                         onClick={handleShare}
-                        className="h-10 text-xs font-semibold"
                         disabled={loading || !inviteToken}
                       >
                         <Share2 className="h-4 w-4 mr-2" />
@@ -423,14 +420,13 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
 
                     <Button
                       type="button"
-                      variant="ghost"
-
+                      variant="default"
                       onClick={generateInviteToken}
                       disabled={loading}
-                      className="w-full text-xs hover:bg-muted/50 text-muted-foreground"
+                      className="w-full"
                     >
-                      <Settings className="h-3 w-3 mr-2" />
-                      Regenerate Default Link
+                      <RefreshCw className={cn("h-3 w-3 mr-2", loading && "animate-spin")} />
+                      Regenerate Link
                     </Button>
                   </div>
                 </div>
@@ -535,23 +531,15 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                   </div>
 
                   <Button
-                    type="button"
-                    onClick={generateInviteToken}
-                    disabled={loading || !selectedRole || customExpiry === undefined}
-                    className="w-full mt-2"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Settings className="mr-2 h-4 w-4" />
-                        {inviteToken ? 'Regenerate Token' : 'Generate Token'}
-                      </>
-                    )}
-                  </Button>
+                      type="button"
+                      variant="default"
+                      onClick={generateInviteToken}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      <RefreshCw className={cn("h-3 w-3 mr-2", loading && "animate-spin")} />
+                      Regenerate
+                    </Button>
                 </div>
 
                 <div className="space-y-4">
