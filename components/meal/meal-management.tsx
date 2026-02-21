@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
 import { Settings, Clock, ShieldCheck } from "lucide-react"
@@ -23,10 +22,9 @@ import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
 import AutoMealSettingsDialog from "@/components/meal/auto-meal-settings-dialog";
 import { PageHeader } from "@/components/shared/page-header";
-
-import MealCalendarCard from "./meal-calendar-card"
-import DailyMealManagerCard from "./daily-meal-manager-card"
-import AllMealsCard from "./all-meals-card"
+import MealCalendarCard from "@/components/meal/meal-calendar-card"
+import DailyMealManagerCard from "@/components/meal/daily-meal-manager-card"
+import AllMealsCard from "@/components/meal/all-meals-card"
 
 
 
@@ -204,23 +202,31 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     <PageHeader
       heading="Meals"
       text={
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
-          <span className="text-muted-foreground block sm:inline">Manage meals for {groupName || "your group"}</span>
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+          <span className="text-muted-foreground/90 font-medium text-sm">
+            Manage meals for <span className="text-foreground font-semibold">{groupName || "your group"}</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
             {userRole && (
-              <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0">
-                <ShieldCheck className="h-3 w-3" />
+              <Badge
+                variant="outline"
+                className="bg-red-50 text-red-600 border-red-200/60 shadow-sm transition-all hover:bg-red-100 uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+              >
+                <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                 {userRole}
               </Badge>
             )}
             {currentPeriod && (
               <Badge
-                variant={isPeriodLocked(currentPeriod) ? "destructive" : "outline"}
+                variant="outline"
                 className={cn(
-                  "text-[10px] font-bold px-2 uppercase tracking-wider shrink-0",
-                  !isPeriodLocked(currentPeriod) && "border-green-500/50 text-green-600 bg-green-50"
+                  "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5",
+                  isPeriodLocked(currentPeriod)
+                    ? "bg-stone-50 text-stone-600 border-stone-200"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200/60 hover:bg-emerald-100"
                 )}
               >
+                {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
                 {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
               </Badge>
             )}
@@ -228,8 +234,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </div>
       }
     >
-      <div className="flex items-center gap-2 sm:w-auto justify-end mt-0">
-        <div className="hidden sm:block sm:flex-none" />
+      <div className="flex items-center gap-2 w-auto justify-end mt-0">
         <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
 
         {canManageMealSettings && (

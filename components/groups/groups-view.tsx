@@ -110,7 +110,7 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                         <Button asChild>
                             <Link href="/groups/create">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Create
+                                Create Group
                             </Link>
                         </Button>
                     </div>
@@ -138,6 +138,7 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                                             handleTabChange('discover');
                                             setSearchQuery('');
                                         }}
+                                        size="sm"
                                     >
                                         Browse Public Groups
                                     </Button>

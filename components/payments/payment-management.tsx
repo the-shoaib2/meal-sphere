@@ -97,24 +97,16 @@ export function PaymentManagement({ initialData, initialAccessData }: PaymentMan
             <PageHeader
                 heading="Payments"
                 text="Track and manage group payments"
-            />
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-                    <TabsList>
-                        <TabsTrigger value="history">History</TabsTrigger>
-                        <TabsTrigger value="methods">Methods</TabsTrigger>
-                    </TabsList>
-                </Tabs>
-
+            >
                 <div className="flex items-center gap-2">
-                    <Button onClick={() => router.push('/payments/bkash')}>
+                    <Button size="sm" onClick={() => router.push('/payments/bkash')}>
                         <CreditCard className="mr-2 h-4 w-4" />
                         Bkash Pay
                     </Button>
                     {isPrivileged && (
                         <Dialog open={showAddPaymentDialog} onOpenChange={setShowAddPaymentDialog}>
                             <DialogTrigger asChild>
-                                <Button variant="default">
+                                <Button size="sm" variant="default">
                                     <Plus className="mr-2 h-4 w-4" />
                                     Record Payment
                                 </Button>
@@ -157,6 +149,14 @@ export function PaymentManagement({ initialData, initialAccessData }: PaymentMan
                         </Dialog>
                     )}
                 </div>
+            </PageHeader >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+                    <TabsList>
+                        <TabsTrigger value="history">History</TabsTrigger>
+                        <TabsTrigger value="methods">Methods</TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
             <Card>
@@ -210,6 +210,6 @@ export function PaymentManagement({ initialData, initialAccessData }: PaymentMan
                     )}
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 }

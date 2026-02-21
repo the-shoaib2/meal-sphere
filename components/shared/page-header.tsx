@@ -26,39 +26,39 @@ export function PageHeader({
     const router = useRouter()
 
     return (
-        <div className={cn("mb-4", className)}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-2 w-full sm:w-auto">
-                    {showBackButton && (
-                        <Button
-                            onClick={() => backHref ? router.push(backHref) : router.back()}
-                            variant="ghost"
-                            size="icon"
-                            title="Go back"
-                            className="group h-9 w-9 shrink-0 mt-0.5 sm:mt-0 rounded-full bg-muted/80 hover:bg-blue-600 hover:shadow-sm transition-all duration-300 ease-in-out"
-                        >
-                            <ArrowLeft className="h-[22px] w-[22px] stroke-[2.5] text-blue-600 group-hover:text-white transition-colors duration-300 ease-in-out" />
-                        </Button>
-                    )}
-                    <div className="flex flex-col min-w-0">
-                        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
+        <div className={cn("mb-6", className)}>
+            <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex flex-row items-center justify-between gap-4 w-full">
+                    <div className="flex items-center gap-3 min-w-0">
+                        {showBackButton && (
+                            <Button
+                                onClick={() => backHref ? router.push(backHref) : router.back()}
+                                variant="ghost"
+                                size="icon"
+                                title="Go back"
+                                className="group h-9 w-9 shrink-0 rounded-full bg-muted/80 hover:bg-blue-600 hover:shadow-sm transition-all duration-300 ease-in-out"
+                            >
+                                <ArrowLeft className="h-[22px] w-[22px] stroke-[2.5] text-blue-600 group-hover:text-white transition-colors duration-300 ease-in-out" />
+                            </Button>
+                        )}
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
                             {heading}
                         </h1>
-                        {text && (
-                            <div className="text-muted-foreground text-xs sm:text-sm max-w-2xl break-words">
-                                {text}
-                            </div>
-                        )}
                     </div>
+
+                    {children && (
+                        <div className="flex items-center gap-2 shrink-0 justify-end">
+                            {children}
+                        </div>
+                    )}
                 </div>
 
-                {children && (
-                    <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-start sm:justify-end overflow-x-auto pb-1 sm:pb-0">
-                        {children}
+                {text && (
+                    <div className="text-muted-foreground text-sm max-w-2xl break-words pl-0.5">
+                        {text}
                     </div>
                 )}
             </div>
-
         </div>
     )
 }

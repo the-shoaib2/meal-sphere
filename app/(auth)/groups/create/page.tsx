@@ -12,12 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { toast } from 'react-hot-toast';
-import { Loader2, Lock, ArrowLeft, Users, LockKeyhole, Hash, Info, Eye, EyeOff, Plus } from 'lucide-react';
+import { Loader2, Lock, Users, LockKeyhole, Hash, Info, Eye, EyeOff, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from "@/lib/utils";
 import { useGroups } from '@/hooks/use-groups';
 
 import { GroupImageSelection } from '@/components/groups/group-image-selection';
+import { PageHeader } from '@/components/shared/page-header';
 
 const createGroupSchema = z.object({
   name: z.string()
@@ -51,7 +52,7 @@ const createGroupSchema = z.object({
 
 type CreateGroupInput = z.infer<typeof createGroupSchema>;
 
-// Actions import removed
+
 
 export default function CreateGroupPage() {
   const router = useRouter();
@@ -105,15 +106,12 @@ export default function CreateGroupPage() {
 
   return (
     <div className="space-y-6">
-      <div className="max-w-2xl mx-auto">
-        <Button
-          variant="ghost"
-          className="mb-6 pl-0"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Groups
-        </Button>
+      <PageHeader
+        heading="Create Group"
+        text="Set up your group with a name, description, and privacy settings."
+        showBackButton
+        backHref="/groups"
+      />
 
         <Card>
           <CardHeader>
@@ -131,12 +129,7 @@ export default function CreateGroupPage() {
                   <Users className="h-5 w-5 text-primary" />
                 )}
               </div>
-              <div>
-                <CardTitle className="text-2xl font-bold">Create a New Group</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Set up your group with a name, description, and privacy settings.
-                </CardDescription>
-              </div>
+              <CardTitle className="text-xl font-bold"> {watch('name') || 'Create a New Group'}</CardTitle> 
             </div>
           </CardHeader>
 
@@ -353,6 +346,5 @@ export default function CreateGroupPage() {
           </div>
         </div>
       </div>
-    </div >
   );
 }

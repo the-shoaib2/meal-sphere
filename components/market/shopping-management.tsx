@@ -162,7 +162,7 @@ export default function ShoppingManagement({ initialData, initialAccessData }: S
             }}
           >
             <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
+              <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" /> Add Item
               </Button>
             </DialogTrigger>

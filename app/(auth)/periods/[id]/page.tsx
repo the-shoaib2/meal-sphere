@@ -34,7 +34,7 @@ export default async function PeriodDetailsPage({
             return (
                 <div className="space-y-6">
                     <PageHeader
-                        heading="Period Management"
+                        heading="Periods"
                         text="Manage your group's meal periods"
                     />
                     <NoGroupState />

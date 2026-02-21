@@ -87,9 +87,9 @@ function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full sm:w-auto hover:bg-primary/5 hover:text-primary transition-colors">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add Guest Meal
+        <Button variant="outline" size="sm" className="h-9 w-auto px-3 hover:bg-primary/5 hover:text-primary transition-all active:scale-95 shrink-0">
+          <UserPlus className="h-4 w-4 mr-2" />
+          <span className="inline">Add Guest Meal</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] rounded-lg">

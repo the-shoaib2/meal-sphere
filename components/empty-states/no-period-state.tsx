@@ -71,7 +71,7 @@ export function NoPeriodState({
                     <div className="flex flex-col items-center gap-4 mt-6">
                         <Button
                             onClick={onCreatePeriod}
-                            size="lg"
+                            size="sm"
                             className="w-full max-w-xs"
                         >
                             <Plus className="h-5 w-5 mr-2" />

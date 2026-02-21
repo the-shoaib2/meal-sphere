@@ -123,7 +123,11 @@ export function ImagePicker({
                 </DialogHeader>
 
                 <div className="border-b bg-card px-1">
-                    <LoadingWrapper isLoading={isLoading && categories.length <= 1} minHeight="44px">
+                    {isLoading && categories.length <= 1 ? (
+                        <div className="flex justify-center items-center py-2.5">
+                            <Loader />
+                        </div>
+                    ) : (
                         <div className="flex w-full">
                             {categories.map((cat) => (
                                 <button
@@ -144,54 +148,56 @@ export function ImagePicker({
                                 </button>
                             ))}
                         </div>
-                    </LoadingWrapper>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-hidden flex flex-col bg-muted/5">
                     <ScrollArea className="flex-1 p-5">
-                        <LoadingWrapper isLoading={isLoading && images.length === 0} minHeight="400px">
-                            {images.length > 0 ? (
-                                <div className="grid p-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                    {images.map((image, index) => {
-                                        const isLast = index === images.length - 1;
-                                        const isSelected = tempSelected === image.src;
-                                        return (
-                                            <div
-                                                key={image.id + index}
-                                                ref={isLast ? lastImageRef : null}
-                                                onClick={() => setTempSelected(image.src)}
-                                                className={cn(
-                                                    "group relative aspect-square cursor-pointer overflow-hidden rounded-full border-4 transition-all duration-200",
-                                                    isSelected
-                                                        ? "border-primary ring-4 ring-primary/20 shadow-lg"
-                                                        : "border-transparent hover:border-muted-foreground/30"
-                                                )}
-                                            >
-                                                <Image
-                                                    src={image.src}
-                                                    alt={image.alt}
-                                                    fill
-                                                    className="object-cover"
-                                                    sizes="(max-width: 640px) 25vw, 80px"
-                                                />
-                                                {isSelected && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-primary/40 backdrop-blur-[1px]">
-                                                        <div className="bg-primary text-primary-foreground rounded-full p-1 shadow-md">
-                                                            <Check className="h-5 w-5 font-bold" />
-                                                        </div>
+                        {isLoading && images.length === 0 ? (
+                            <div className="flex justify-center items-center h-[350px]">
+                                <Loader />
+                            </div>
+                        ) : images.length > 0 ? (
+                            <div className="grid p-1 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                {images.map((image, index) => {
+                                    const isLast = index === images.length - 1;
+                                    const isSelected = tempSelected === image.src;
+                                    return (
+                                        <div
+                                            key={image.id + index}
+                                            ref={isLast ? lastImageRef : null}
+                                            onClick={() => setTempSelected(image.src)}
+                                            className={cn(
+                                                "group relative aspect-square cursor-pointer overflow-hidden rounded-full border-4 transition-all duration-200",
+                                                isSelected
+                                                    ? "border-primary ring-4 ring-primary/20 shadow-lg"
+                                                    : "border-transparent hover:border-muted-foreground/30"
+                                            )}
+                                        >
+                                            <Image
+                                                src={image.src}
+                                                alt={image.alt}
+                                                fill
+                                                className="object-cover"
+                                                sizes="(max-width: 640px) 25vw, 80px"
+                                            />
+                                            {isSelected && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-primary/40 backdrop-blur-[1px]">
+                                                    <div className="bg-primary text-primary-foreground rounded-full p-1 shadow-md">
+                                                        <Check className="h-5 w-5 font-bold" />
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : !isLoading && (
-                                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground gap-3">
-                                    <ImageIcon className="h-12 w-12 opacity-20" />
-                                    <p className="text-sm">No images found in this category</p>
-                                </div>
-                            )}
-                        </LoadingWrapper>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : !isLoading && (
+                            <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground gap-3">
+                                <ImageIcon className="h-12 w-12 opacity-20" />
+                                <p className="text-sm">No images found in this category</p>
+                            </div>
+                        )}
                         {isLoading && images.length > 0 && (
                             <div className="py-8 flex justify-center w-full">
                                 <Loader />
