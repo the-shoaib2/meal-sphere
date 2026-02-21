@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
-import { Settings, Clock, ShieldCheck, Zap, Shield } from "lucide-react"
+import { Settings, Clock, ShieldCheck, Zap } from "lucide-react"
+import { RoleBadge } from "@/components/shared/role-badge"
 import { format, isToday, isSameDay } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
@@ -235,20 +236,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       }
       badges={
         <div className="flex items-center gap-2">
-          {userRole && (
-            <Badge
-              variant="outline"
-              className={cn(
-                "shadow-sm transition-all uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0 cursor-default",
-                userRole === 'ADMIN'
-                  ? "bg-[#EA4335]/10 text-[#EA4335] border-[#EA4335]/20"
-                  : "bg-primary/10 text-primary border-primary/20"
-              )}
-            >
-              <Shield className={cn("h-3 w-3", userRole === 'ADMIN' ? "fill-[#EA4335]" : "fill-primary")} />
-              {userRole}
-            </Badge>
-          )}
+          <RoleBadge role={userRole} />
           <div className="hidden sm:flex items-center gap-2">
             {mealSettings?.autoMealEnabled && (
               <Badge

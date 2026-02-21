@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CreditCard, Receipt, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
+import { RoleBadge } from '@/components/shared/role-badge';
 import { createManualPayment } from '@/lib/services/payments-service';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -96,7 +97,10 @@ export function PaymentManagement({ initialData, initialAccessData }: PaymentMan
         <div className="space-y-6">
             <PageHeader
                 heading="Payments"
-                text="Track and manage group payments"
+                description="Track and manage group payments"
+                badges={<RoleBadge role={initialAccessData?.userRole} />}
+                badgesNextToTitle={true}
+                collapsible={false}
             />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">

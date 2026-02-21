@@ -112,6 +112,7 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
       <div className="space-y-3">
         <CalculationsHeader
           isAdmin={isAdmin}
+          userRole={userRole ?? null}
           currentPeriod={currentPeriod}
           selectedPeriodId={selectedPeriodId}
           onPrevious={handlePrevious}
@@ -135,6 +136,7 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
       <div className="space-y-3">
         <CalculationsHeader
           isAdmin={isAdmin}
+          userRole={userRole ?? null}
           currentPeriod={currentPeriod}
           selectedPeriodId={selectedPeriodId}
           onPrevious={handlePrevious}

@@ -9,10 +9,8 @@ import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
-import { cn } from '@/lib/utils';
+import { RoleBadge } from '@/components/shared/role-badge';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,21 +67,31 @@ export default async function AccountBalancePage() {
     <div className="space-y-2">
       <PageHeader
         heading="Account Balances"
-        description="Manage all user balances and transactions."
-        badges={
-          <>
+        description={
+          <div className="flex flex-col gap-1.5">
+            <div className="flex sm:hidden flex-wrap items-center gap-1.5 mb-1">
+              {currentPeriod && (
+                <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm">
+                  {currentPeriod.name} {currentPeriod.isLocked ? " Locked" : " Active"}
+                </Badge>
+              )}
+            </div>
+            <span className="text-muted-foreground/90 font-medium text-sm">
+              Manage all user balances and transactions.
+            </span>
+          </div>
+        }
+        badgesNextToTitle={true}
+        collapsible={false}
+        badges={  
+          <div className="flex items-center gap-2">
+            <RoleBadge role={activeMember.role} />
             {currentPeriod && (
-              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit shadow-sm">
-                {currentPeriod.name} {currentPeriod.isLocked ? " (Locked)" : ""}
+              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="hidden sm:flex text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm">
+                {currentPeriod.name} {currentPeriod.isLocked ? " Locked" : " Active"}
               </Badge>
             )}
-            <Badge
-              variant={hasPrivilege ? "default" : "outline"}
-              className={cn("shadow-sm", hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : "")}
-            >
-              {activeMember.role ? activeMember.role.replace('_', ' ') : 'MEMBER'}
-            </Badge>
-          </>
+          </div>
         }
       >
         {hasPrivilege && (

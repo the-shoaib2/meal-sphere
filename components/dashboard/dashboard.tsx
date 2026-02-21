@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/shared/page-header';
 import { RefreshButton } from '@/components/dashboard/refresh-button';
 import { DashboardActivity, DashboardChartData } from '@/types/dashboard';
+import { useGroupAccess } from '@/hooks/use-group-access';
+import { RoleBadge } from '@/components/shared/role-badge';
+import { useActiveGroup } from '@/contexts/group-context';
 
 // Context to share loading state with dashboard components
 const DashboardLoadingContext = createContext<{ isLoading: boolean }>({ isLoading: false });
@@ -29,6 +32,8 @@ export function Dashboard({
     children,
 }: DashboardProps) {
     const router = useRouter();
+    const { activeGroup } = useActiveGroup();
+    const { userRole } = useGroupAccess({ groupId: activeGroup?.id || '' });
     const [isRefreshing, startTransition] = useTransition();
 
     const refresh = () => {
@@ -43,7 +48,13 @@ export function Dashboard({
     return (
         <DashboardLoadingContext.Provider value={{ isLoading }}>
             {heading && (
-                <PageHeader heading={heading} description={text}>
+                <PageHeader
+                    heading={heading}
+                    description={text}
+                    badges={<RoleBadge role={userRole} />}
+                    badgesNextToTitle={true}
+                    collapsible={false}
+                >
                     <RefreshButton refresh={refresh} isRefreshing={isRefreshing} />
                 </PageHeader>
             )}

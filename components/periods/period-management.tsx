@@ -25,6 +25,7 @@ import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupAccess } from '@/hooks/use-group-access';
 import { PageHeader } from '@/components/shared/page-header';
+import { RoleBadge } from '@/components/shared/role-badge';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 // Define minimal type for initial data to avoid circular dependencies or strict type issues if not shared perfectly
@@ -147,6 +148,9 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
         <PageHeader
           heading="Periods"
           description="Manage your periods and their statuses"
+          badges={<RoleBadge role={userRole} />}
+          badgesNextToTitle={true}
+          collapsible={false}
         >
           {isPrivileged && !currentPeriod && (
             <CreatePeriodDialog

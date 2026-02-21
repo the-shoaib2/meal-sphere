@@ -27,6 +27,7 @@ import { LoadingWrapper, Loader } from "@/components/ui/loader"
 import { useCurrentPeriod } from "@/hooks/use-periods";
 import { useGroupAccess } from "@/hooks/use-group-access";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoleBadge } from "@/components/shared/role-badge";
 
 interface ShoppingManagementProps {
   initialData?: ShoppingPageData;
@@ -148,6 +149,9 @@ export default function ShoppingManagement({ initialData, initialAccessData }: S
         <PageHeader
           heading="Shopping List"
           description={`Manage your shopping items for ${activeGroup?.name || "your group"}`}
+          badges={<RoleBadge role={userRole} />}
+          badgesNextToTitle={true}
+          collapsible={false}
         >
           <Dialog
             open={showAddDialog}

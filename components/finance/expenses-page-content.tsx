@@ -11,6 +11,7 @@ import { useSession } from "next-auth/react"
 import { type ExpensesPageData } from "@/hooks/use-expense"
 import { useGroupAccess } from "@/hooks/use-group-access"
 import { PageHeader } from "@/components/shared/page-header"
+import { RoleBadge } from "@/components/shared/role-badge"
 
 interface ExpensesPageContentProps {
     activeGroup: any;
@@ -40,6 +41,9 @@ export function ExpensesPageContent({ activeGroup, userRole: propUserRole, initi
             <PageHeader
                 heading="Extra Expenses"
                 description={`Track additional expenses like utilities, rent, internet, and more for ${activeGroup?.name}.`}
+                badges={<RoleBadge role={userRole} />}
+                badgesNextToTitle={true}
+                collapsible={false}
             >
                 <div className="flex items-center gap-2">
                     <Button

@@ -16,6 +16,7 @@ import { JoinRequestsTab } from '@/components/groups/tabs/join-requests-tab';
 import { ActivityDialog } from '@/components/groups/activity-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/shared/page-header';
+import { RoleBadge } from '@/components/shared/role-badge';
 
 interface GroupPageContentProps {
     groupId: string;
@@ -203,14 +204,31 @@ export function GroupPageContent(
                 heading={resolvedGroup.name}
                 showBackButton
                 backHref="/groups"
-                description={resolvedGroup.description}
+                description={
+                    <div className="flex flex-col gap-1.5">
+                        <div className="flex sm:hidden flex-wrap items-center gap-1.5 mb-1">
+                            {category && <Badge variant="secondary" className="shadow-sm text-[10px] px-2 py-0.5">{category}</Badge>}
+                            {tags.length > 0 && tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline" className="shadow-sm text-[10px] px-2 py-0.5">{tag}</Badge>
+                            ))}
+                        </div>
+                        <span className="text-muted-foreground/90 font-medium text-sm">
+                            {resolvedGroup.description}
+                        </span>
+                    </div>
+                }
+                badgesNextToTitle={true}
+                collapsible={false}
                 badges={
-                    <>
-                        {category && <Badge variant="secondary" className="shadow-sm">{category}</Badge>}
-                        {tags.length > 0 && tags.map((tag: string) => (
-                            <Badge key={tag} variant="outline" className="shadow-sm">{tag}</Badge>
-                        ))}
-                    </>
+                    <div className="flex items-center gap-2">
+                        <RoleBadge role={userRole} />
+                        <div className="hidden sm:flex items-center gap-2">
+                            {category && <Badge variant="secondary" className="shadow-sm">{category}</Badge>}
+                            {tags.length > 0 && tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline" className="shadow-sm">{tag}</Badge>
+                            ))}
+                        </div>
+                    </div>
                 }
             >
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
