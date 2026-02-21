@@ -133,17 +133,11 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
           heading="Periods"
           text="Manage your periods and their statuses"
         >
-          {isPrivileged && (
+          {isPrivileged && !currentPeriod && (
             <CreatePeriodDialog
               open={showCreateDialog}
               onOpenChange={setShowCreateDialog}
               onSubmit={handleStartPeriod}
-              disabled={!!currentPeriod}
-              disabledReason={
-                currentPeriod
-                  ? 'End the current period before starting a new one'
-                  : undefined
-              }
               periodMode={periodMode}
               onPeriodModeToggle={handlePeriodModeToggle}
               periodModeLoading={periodModeLoading}
