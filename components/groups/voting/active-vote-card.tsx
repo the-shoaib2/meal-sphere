@@ -44,6 +44,7 @@ interface ActiveVoteCardProps {
   isAdmin?: boolean;
   currentUserId?: string;
   refreshVotes?: () => void;
+  deleteVote?: (voteId: string) => Promise<{ success: boolean; error?: string }>;
   candidateOptions: Candidate[];
   voteTypeOptions: { value: string; label: string; backend: string }[];
 }
@@ -63,6 +64,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
   isAdmin = false,
   currentUserId,
   refreshVotes,
+  deleteVote,
   candidateOptions,
   voteTypeOptions,
 }) => {
@@ -131,17 +133,27 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
   const handleDelete = async () => {
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/groups/${vote.roomId}/votes`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voteId: vote.id })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Vote deleted.");
-        refreshVotes && refreshVotes();
+      if (deleteVote) {
+        const result = await deleteVote(vote.id);
+        if (result.success) {
+          // toast is handled in mutation onSuccess
+        } else {
+          toast.error(result.error || "Failed to delete vote.");
+        }
       } else {
-        toast.error(data.error || "Failed to delete vote.");
+        // Fallback if not provided
+        const res = await fetch(`/api/groups/${vote.roomId}/votes`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voteId: vote.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          toast.success("Vote deleted.");
+          refreshVotes && refreshVotes();
+        } else {
+          toast.error(data.error || "Failed to delete vote.");
+        }
       }
     } catch (err) {
       toast.error("Failed to delete vote.");

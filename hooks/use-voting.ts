@@ -143,6 +143,46 @@ export function useVoting(options?: {
     },
   });
 
+  // Delete vote mutation
+  const deleteVoteMutation = useMutation({
+    mutationFn: async (voteId: string) => {
+      assertOnline();
+      if (!groupId) throw new Error('No active group');
+
+      const res = await axios.delete(`/api/groups/${groupId}/votes`, {
+        data: { voteId }
+      });
+      return res.data;
+    },
+    onMutate: async (deletedVoteId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['votes', groupId] });
+
+      // Snapshot the previous value
+      const previousVotes = queryClient.getQueryData<Vote[]>(['votes', groupId]);
+
+      // Optimistically update to the new value
+      if (previousVotes) {
+        queryClient.setQueryData<Vote[]>(['votes', groupId], previousVotes.filter((v: Vote) => v.id !== deletedVoteId));
+      }
+
+      return { previousVotes };
+    },
+    onError: (err: any, deletedVoteId, context) => {
+      if (context?.previousVotes) {
+        queryClient.setQueryData<Vote[]>(['votes', groupId], context.previousVotes);
+      }
+      toast({
+        title: "Failed to delete vote",
+        description: err?.response?.data?.error || 'Failed to delete vote.',
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['votes', groupId] });
+    },
+  });
+
   const createVote = useCallback(
     async (voteData: Partial<Vote> & { candidates: Candidate[]; startDate?: string; endDate?: string }) => {
       try {
@@ -176,14 +216,27 @@ export function useVoting(options?: {
     queryClient.invalidateQueries({ queryKey: ['votes', groupId] });
   }, [queryClient, groupId]);
 
+  const deleteVote = useCallback(
+    async (voteId: string) => {
+      try {
+        await deleteVoteMutation.mutateAsync(voteId);
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, error: error?.response?.data?.error || 'Failed to delete vote.' };
+      }
+    },
+    [deleteVoteMutation]
+  );
+
   return {
     activeVotes,
     pastVotes,
-    loading: createVoteMutation.isPending || castVoteMutation.isPending,
+    loading: createVoteMutation.isPending || castVoteMutation.isPending || deleteVoteMutation.isPending,
     initialLoading,
     isSubmitting: castVoteMutation.isPending,
     createVote,
     castVote,
+    deleteVote,
     hasVoted,
     group: contextGroup || (options?.groupId ? { id: options.groupId } : null),
     refreshVotes,

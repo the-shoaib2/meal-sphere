@@ -71,6 +71,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
     isSubmitting,
     createVote,
     castVote,
+    deleteVote,
     hasVoted,
     refreshVotes
   } = useVoting({
@@ -360,6 +361,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
                   isAdmin={isAdmin}
                   currentUserId={currentUserId}
                   refreshVotes={handleRefreshVotes}
+                  deleteVote={deleteVote}
                   candidateOptions={eligibleMembers.map((m: any) => ({ id: m.userId, name: m.user.name || "Unnamed", image: m.user.image }))}
                   voteTypeOptions={FLAT_VOTE_TYPE_OPTIONS}
                 />
