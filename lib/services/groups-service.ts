@@ -38,8 +38,7 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
                   description: true,
                   isPrivate: true,
                   createdAt: true,
-                  bannerUrl: true,
-                  memberCount: true,
+                  _count: { select: { members: true } },
                   createdByUser: {
                     select: { id: true, name: true, image: true }
                   },
@@ -64,7 +63,7 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
                   isPrivate: true,
                   createdAt: true,
                   bannerUrl: true,
-                  memberCount: true,
+                  _count: { select: { members: true } },
                   createdByUser: {
                     select: { id: true, name: true, image: true }
                   },

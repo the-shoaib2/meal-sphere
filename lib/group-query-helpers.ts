@@ -43,13 +43,11 @@ export async function getUserGroups(userId: string, includeMembers = false) {
                 },
               },
               memberCount: true,
-              /*
               _count: {
                 select: {
                   members: true
                 }
               },
-              */
               ...(includeMembers && {
                 members: {
                   select: {
@@ -83,7 +81,7 @@ export async function getUserGroups(userId: string, includeMembers = false) {
         permissions: ROLE_PERMISSIONS[member.role as Role] || [],
         joinedAt: member.joinedAt,
         isCurrent: member.isCurrent,
-        memberCount: member.room.memberCount,
+        memberCount: member.room._count?.members ?? member.room.memberCount,
         isCurrentMember: true,
       }));
     },
@@ -148,7 +146,12 @@ export async function getGroupWithMembers(groupId: string, userId?: string) {
             where: userId ? undefined : { isBanned: false },
             orderBy: { joinedAt: 'asc' }
           },
-          memberCount: true
+          memberCount: true,
+          _count: {
+            select: {
+              members: true
+            }
+          }
         },
       });
 
@@ -170,7 +173,7 @@ export async function getGroupWithMembers(groupId: string, userId?: string) {
         userRole,
         permissions: userRole ? (ROLE_PERMISSIONS[userRole as Role] || []) : [],
         joinedAt: userJoinedAt,
-        memberCount: group.memberCount,
+        memberCount: group._count?.members ?? group.memberCount,
         isCurrentMember: !!userRole,
       };
     },
@@ -210,14 +213,11 @@ export async function getPublicGroups(limit = 50, userId?: string) {
               image: true,
             },
           },
-          memberCount: true,
-          /*
           _count: {
             select: {
               members: true
             }
           },
-          */
           /*
           ...(userId && {
             members: {
@@ -260,7 +260,7 @@ export async function getPublicGroups(limit = 50, userId?: string) {
           userRole: membership?.role || null,
           permissions: membership?.role ? (ROLE_PERMISSIONS[membership.role as Role] || []) : [],
           joinedAt: membership?.joinedAt || null,
-          memberCount: group.memberCount,
+          memberCount: group._count?.members ?? 0,
           isCurrentMember: !!membership,
           members: [] // Don't expose full member list
         };

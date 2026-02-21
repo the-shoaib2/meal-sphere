@@ -33,6 +33,7 @@ export function GroupSwitcher() {
 
 
   const handleGroupSelect = (group: Group) => {
+    if (activeGroup?.id === group.id) return
     setActiveGroup(group)
     if (isMobile) {
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))

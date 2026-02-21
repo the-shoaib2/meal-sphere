@@ -114,7 +114,6 @@ export function PageLoader({ className, size = "lg" }: LoaderProps) {
         )}>
             <div className="relative">
                 <Loader size={size} />
-                {/* Optional: Add a subtle text or brand element here if needed */}
             </div>
         </div>
     );

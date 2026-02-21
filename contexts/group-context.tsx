@@ -30,14 +30,19 @@ export function GroupProvider({
   initialActiveGroup?: Group | null;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [isSwitchingGroup, setIsSwitchingGroup] = useState(false);
+  const [isApiLoading, setIsApiLoading] = useState(false);
+  const [switchingToId, setSwitchingToId] = useState<string | null>(null);
 
-  // Clear the switching state once the transition finishes
+  // Sync switchingToId with server data - ensures loader stays visible until refresh is done
   useEffect(() => {
-    if (!isPending && isSwitchingGroup) {
-      setIsSwitchingGroup(false);
+    if (switchingToId && initialActiveGroup?.id === switchingToId) {
+      // Small delay for visual consistency
+      const timer = setTimeout(() => {
+        setSwitchingToId(null);
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [isPending, isSwitchingGroup]);
+  }, [initialActiveGroup, switchingToId]);
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeGroup, setActiveGroup] = useState<Group | null>(initialActiveGroup);
@@ -124,7 +129,7 @@ export function GroupProvider({
   // Handle setting active group
   const handleSetActiveGroup = async (group: Group | null) => {
     // Show loader IMMEDIATELY — user sees it the instant they click
-    setIsSwitchingGroup(true);
+    setIsApiLoading(true);
 
     if (!group) {
       // Clear active group
@@ -134,14 +139,16 @@ export function GroupProvider({
       }
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['periods'] });
-      // Hand off to startTransition — isPending keeps isSwitchingGroup true
-      // until router.refresh() completes
-      setIsSwitchingGroup(false);
+
       startTransition(() => {
         router.refresh();
+        setIsApiLoading(false);
       });
       return;
     }
+
+    // Set the target group ID we're switching to
+    setSwitchingToId(group.id);
 
     // Capture previous state for rollback
     const previousGroup = activeGroup;
@@ -174,9 +181,9 @@ export function GroupProvider({
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['periods'] });
 
-      // Hand off to startTransition — isPending keeps isSwitchingGroup true
-      // until router.refresh() completes, so the loader stays visible
-      setIsSwitchingGroup(false);
+      // Clear API load immediately — switchingToId or isPending will hold the loader line
+      setIsApiLoading(false);
+
       startTransition(() => {
         router.refresh();
       });
@@ -187,6 +194,7 @@ export function GroupProvider({
 
       // ROLLBACK on error
       setActiveGroup(previousGroup);
+      setSwitchingToId(null);
       if (previousGroup) {
         const encrypted = encryptData(JSON.stringify(previousGroup));
         if (typeof window !== 'undefined') {
@@ -197,7 +205,7 @@ export function GroupProvider({
           localStorage.removeItem(ENC_KEY);
         }
       }
-      setIsSwitchingGroup(false);
+      setIsApiLoading(false);
     }
   };
 
@@ -236,7 +244,14 @@ export function GroupProvider({
   const contextIsLoading = status === 'loading' || isLoading;
 
   return (
-    <GroupContext.Provider value={{ activeGroup, setActiveGroup: handleSetActiveGroup, updateGroupData, isLoading: contextIsLoading, isSwitchingGroup: isSwitchingGroup || isPending, groups }}>
+    <GroupContext.Provider value={{
+      activeGroup,
+      setActiveGroup: handleSetActiveGroup,
+      updateGroupData,
+      isLoading: contextIsLoading,
+      isSwitchingGroup: !!switchingToId || isApiLoading || isPending,
+      groups
+    }}>
       {children}
     </GroupContext.Provider>
   );

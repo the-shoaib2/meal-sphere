@@ -23,7 +23,7 @@ export function GroupSwitchLoader({ children }: { children: React.ReactNode }) {
 
             {/* Overlay: covers content with background + centered spinner */}
             {isSwitchingGroup && (
-                <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center w-full min-h-[50vh] animate-in fade-in duration-500">
+                <div className="absolute inset-0 z-50 bg-background flex flex-col items-center justify-center w-full min-h-[50vh]">
                     <div className="relative">
                         <Loader size="lg" />
                     </div>
