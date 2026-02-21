@@ -453,16 +453,26 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </div>
       </div>
 
-      {/* All Members' Meals — Admin/Manager only */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {isPrivileged && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <div className="p-1.5 bg-primary/10 rounded-full">
-                  <Users className="h-4 w-4 text-primary" />
+              <CardTitle className="text-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/10 rounded-full">
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  All Meals — {format(selectedDate, 'MMMM d, yyyy')}
                 </div>
-                All Meals — {format(selectedDate, 'MMMM d, yyyy')}
+                {(() => {
+                  const totalGuestMeals = (guestMealsForDate || []).reduce((sum, m) => sum + (m.count || 0), 0);
+                  if (totalGuestMeals === 0) return null;
+                  return (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200/80 text-xs px-2 py-0.5 ml-2 shrink-0">
+                      {totalGuestMeals} guest meal{totalGuestMeals > 1 ? 's' : ''}
+                    </Badge>
+                  );
+                })()}
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -73,113 +73,130 @@ export async function fetchMealsData(
   //    we just need to include the meals prefix in the key so it gets swept up.
   const dataCacheKey = `${CACHE_PREFIXES.MEALS}:${groupId}:${currentPeriod.id}:${userId}`;
 
-  const result = await cacheGetOrSet(
-    dataCacheKey,
-    async () => {
-      // 3. All DB queries run in parallel — 8 round trips collapsed into one Promise.all
-      const [
-        meals,
-        guestMeals,
-        mealSettings,
-        autoMealSettings,
-        mealDistribution,
-        roomData,
-        membership,
-        userMealCount
-      ] = await Promise.all([
-        prisma.meal.findMany({
-          where: { roomId: groupId, periodId: currentPeriod!.id },
-          include: { user: { select: { id: true, name: true, image: true } } },
-          orderBy: { date: 'desc' }
-        }),
-        prisma.guestMeal.findMany({
-          where: { roomId: groupId, periodId: currentPeriod!.id },
-          include: { user: { select: { id: true, name: true, image: true } } },
-          orderBy: { date: 'desc' }
-        }),
-        prisma.mealSettings.findUnique({ where: { roomId: groupId } }),
-        prisma.autoMealSettings.findUnique({
-          where: { userId_roomId: { userId, roomId: groupId } }
-        }),
-        prisma.meal.groupBy({
-          by: ['type'],
-          where: { roomId: groupId, periodId: currentPeriod!.id },
-          _count: { type: true }
-        }),
-        prisma.room.findUnique({
-          where: { id: groupId },
-          select: { id: true, name: true, memberCount: true, isPrivate: true, periodMode: true }
-        }),
-        prisma.roomMember.findUnique({
-          where: { userId_roomId: { userId, roomId: groupId } },
-          select: { role: true, isBanned: true }
-        }),
-        prisma.meal.groupBy({
-          by: ['type'],
-          where: { userId, roomId: groupId, periodId: currentPeriod!.id },
-          _count: { type: true }
-        })
-      ]);
+  try {
+    const result = await cacheGetOrSet(
+      dataCacheKey,
+      async () => {
+        // 3. All DB queries run in parallel — 8 round trips collapsed into one Promise.all
+        const [
+          meals,
+          guestMeals,
+          mealSettings,
+          autoMealSettings,
+          mealDistribution,
+          roomData,
+          membership,
+          userMealCount
+        ] = await Promise.all([
+          prisma.meal.findMany({
+            where: { roomId: groupId, periodId: currentPeriod!.id },
+            include: { user: { select: { id: true, name: true, image: true } } },
+            orderBy: { date: 'desc' }
+          }),
+          prisma.guestMeal.findMany({
+            where: { roomId: groupId, periodId: currentPeriod!.id },
+            include: { user: { select: { id: true, name: true, image: true } } },
+            orderBy: { date: 'desc' }
+          }),
+          prisma.mealSettings.findUnique({ where: { roomId: groupId } }),
+          prisma.autoMealSettings.findUnique({
+            where: { userId_roomId: { userId, roomId: groupId } }
+          }),
+          prisma.meal.groupBy({
+            by: ['type'],
+            where: { roomId: groupId, periodId: currentPeriod!.id },
+            _count: { type: true }
+          }),
+          prisma.room.findUnique({
+            where: { id: groupId },
+            select: { id: true, name: true, memberCount: true, isPrivate: true, periodMode: true }
+          }),
+          prisma.roomMember.findUnique({
+            where: { userId_roomId: { userId, roomId: groupId } },
+            select: { role: true, isBanned: true }
+          }),
+          prisma.meal.groupBy({
+            by: ['type'],
+            where: { userId, roomId: groupId, periodId: currentPeriod!.id },
+            _count: { type: true }
+          })
+        ]);
 
-      const userMealStats = {
-        breakfast: userMealCount.find(m => m.type === 'BREAKFAST')?._count.type || 0,
-        lunch: userMealCount.find(m => m.type === 'LUNCH')?._count.type || 0,
-        dinner: userMealCount.find(m => m.type === 'DINNER')?._count.type || 0,
-        total: userMealCount.reduce((sum, m) => sum + m._count.type, 0)
-      };
+        const userMealStats = {
+          breakfast: userMealCount.find(m => m.type === 'BREAKFAST')?._count.type || 0,
+          lunch: userMealCount.find(m => m.type === 'LUNCH')?._count.type || 0,
+          dinner: userMealCount.find(m => m.type === 'DINNER')?._count.type || 0,
+          total: userMealCount.reduce((sum, m) => sum + m._count.type, 0)
+        };
 
-      return {
-        meals: meals.map(m => ({
-          ...m,
-          date: m.date.toISOString(),
-          createdAt: m.createdAt.toISOString(),
-          updatedAt: m.updatedAt.toISOString(),
-        })),
-        guestMeals: guestMeals.map(m => ({
-          ...m,
-          date: m.date.toISOString(),
-          createdAt: m.createdAt.toISOString(),
-          updatedAt: m.updatedAt.toISOString(),
-        })),
-        settings: mealSettings ? {
-          ...mealSettings,
-          createdAt: mealSettings.createdAt.toISOString(),
-          updatedAt: mealSettings.updatedAt.toISOString(),
-        } : null,
-        autoSettings: autoMealSettings ? {
-          ...autoMealSettings,
-          startDate: autoMealSettings.startDate.toISOString(),
-          endDate: autoMealSettings.endDate ? autoMealSettings.endDate.toISOString() : undefined,
-          createdAt: autoMealSettings.createdAt.toISOString(),
-          updatedAt: autoMealSettings.updatedAt.toISOString(),
-        } : null,
-        userStats: userMealStats,
-        mealDistribution: mealDistribution.map(m => ({ name: m.type, value: m._count.type })),
-        currentPeriod: {
-          ...currentPeriod,
-          startDate: new Date(currentPeriod!.startDate).toISOString(),
-          endDate: currentPeriod!.endDate ? new Date(currentPeriod!.endDate).toISOString() : undefined,
-          createdAt: new Date(currentPeriod!.createdAt).toISOString(),
-          updatedAt: new Date(currentPeriod!.updatedAt).toISOString(),
-        },
-        roomData: roomData ? {
-          ...roomData,
-          periodMode: roomData.periodMode as 'MONTHLY' | 'CUSTOM' | undefined
-        } : null,
-        userRole: membership?.role || null,
-        isBanned: membership?.isBanned || false,
-        groupId,
-      };
-    },
-    { ttl: CACHE_TTL.MEALS_LIST } // 2-minute TTL; mutations call invalidateMealCache which deletes meals:* keys
-  );
+        return {
+          meals: meals.map(m => ({
+            ...m,
+            date: m.date.toISOString(),
+            createdAt: m.createdAt.toISOString(),
+            updatedAt: m.updatedAt.toISOString(),
+          })),
+          guestMeals: guestMeals.map(m => ({
+            ...m,
+            date: m.date.toISOString(),
+            createdAt: m.createdAt.toISOString(),
+            updatedAt: m.updatedAt.toISOString(),
+          })),
+          settings: mealSettings ? {
+            ...mealSettings,
+            createdAt: mealSettings.createdAt.toISOString(),
+            updatedAt: mealSettings.updatedAt.toISOString(),
+          } : null,
+          autoSettings: autoMealSettings ? {
+            ...autoMealSettings,
+            startDate: autoMealSettings.startDate.toISOString(),
+            endDate: autoMealSettings.endDate ? autoMealSettings.endDate.toISOString() : undefined,
+            createdAt: autoMealSettings.createdAt.toISOString(),
+            updatedAt: autoMealSettings.updatedAt.toISOString(),
+          } : null,
+          userStats: userMealStats,
+          mealDistribution: mealDistribution.map(m => ({ name: m.type, value: m._count.type })),
+          currentPeriod: {
+            ...currentPeriod,
+            startDate: new Date(currentPeriod!.startDate).toISOString(),
+            endDate: currentPeriod!.endDate ? new Date(currentPeriod!.endDate).toISOString() : undefined,
+            createdAt: new Date(currentPeriod!.createdAt).toISOString(),
+            updatedAt: new Date(currentPeriod!.updatedAt).toISOString(),
+          },
+          roomData: roomData ? {
+            ...roomData,
+            periodMode: roomData.periodMode as 'MONTHLY' | 'CUSTOM' | undefined
+          } : null,
+          userRole: membership?.role || null,
+          isBanned: membership?.isBanned || false,
+          groupId,
+        };
+      },
+      { ttl: CACHE_TTL.MEALS_LIST } // 2-minute TTL; mutations call invalidateMealCache which deletes meals:* keys
+    );
 
-  const end = performance.now();
-  return {
-    ...result,
-    timestamp: new Date().toISOString(),
-    executionTime: end - start,
-  };
+    const end = performance.now();
+    return {
+      ...result,
+      timestamp: new Date().toISOString(),
+      executionTime: end - start,
+    };
+  } catch (error) {
+    console.error("[fetchMealsData] Error fetching meals data:", error);
+    return {
+      meals: [],
+      guestMeals: [],
+      settings: null,
+      autoSettings: null,
+      userStats: { breakfast: 0, lunch: 0, dinner: 0, total: 0 },
+      mealDistribution: [],
+      currentPeriod: null,
+      roomData: null,
+      userRole: null,
+      timestamp: new Date().toISOString(),
+      executionTime: 0
+    };
+  }
 }
 
 /**
@@ -628,7 +645,7 @@ export async function triggerAutoMeals(roomId: string, dateStr: string) {
     }
     
     if (newGuestMealsToCreate.length > 0) {
-      await prisma.guestMeal.createMany({ data: newGuestMealsToCreate });
+      await prisma.guestMeal.createMany({ data: newGuestMealsToCreate, skipDuplicates: true });
     }
 
     await invalidateMealCache(roomId);

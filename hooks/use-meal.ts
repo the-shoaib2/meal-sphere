@@ -484,6 +484,14 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         const withoutMatching = (old.guestMeals || []).filter(
           (m: any) => !(m.type === data.type && normalizeDateStr(m.date).startsWith(dateStr) && m.userId === data.userId) && !m.id.startsWith('temp-')
         );
+
+        if (data.count === 0) {
+          return {
+            ...old,
+            guestMeals: withoutMatching
+          };
+        }
+
         return {
           ...old,
           guestMeals: [data, ...withoutMatching]

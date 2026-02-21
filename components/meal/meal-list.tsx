@@ -122,9 +122,9 @@ function MealList({ mealsForDate, guestMealsForDate, session, isLoading, userRol
                     <div className="min-w-0">
                       <p className="font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{meal.user.name}</p>
                       {meal.count && (
-                        <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 font-normal mt-0.5">
                           {meal.count} guest meal{meal.count > 1 ? 's' : ''}
-                        </p>
+                        </Badge>
                       )}
                     </div>
                   </div>

@@ -33,10 +33,13 @@ export async function GET(request: Request) {
         breakfastTime: true,
         lunchTime: true,
         dinnerTime: true,
+        guestMealLimit: true,
       },
     })
 
     const processedMeals = []
+    const newMealsToCreate: any[] = []
+    const newGuestMealsToCreate: any[] = []
 
     for (const roomSettings of roomsWithAutoMeal) {
       // Get all auto meal settings for this room
@@ -46,6 +49,51 @@ export async function GET(request: Request) {
           isEnabled: true,
         },
       })
+
+      // Normalize date to start of day for consistency
+      const todayDate = new Date()
+      todayDate.setHours(0, 0, 0, 0)
+
+      // Fetch period for this date to ensure record consistency
+      const targetPeriod = await prisma.mealPeriod.findFirst({
+        where: {
+          roomId: roomSettings.roomId,
+          startDate: { lte: todayDate },
+          OR: [
+            { endDate: { gte: todayDate } },
+            { endDate: null }
+          ]
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      if (!targetPeriod || targetPeriod.isLocked) continue // Skip if no period found or locked
+
+      // Get existing counts/data to respect daily limits
+      const [existingMeals, existingGuestMeals] = await Promise.all([
+        prisma.meal.findMany({
+          where: {
+            roomId: roomSettings.roomId,
+            date: todayDate,
+          }
+        }),
+        prisma.guestMeal.findMany({
+          where: {
+            roomId: roomSettings.roomId,
+            date: todayDate,
+          }
+        })
+      ]);
+
+      const mealCountByUser = new Map<string, number>();
+      const guestMealCountByUser = new Map<string, number>();
+
+      for (const m of existingMeals) {
+        mealCountByUser.set(m.userId, (mealCountByUser.get(m.userId) || 0) + 1);
+      }
+      for (const gm of existingGuestMeals) {
+        guestMealCountByUser.set(gm.userId, (guestMealCountByUser.get(gm.userId) || 0) + gm.count);
+      }
 
       for (const autoSetting of autoMealSettings) {
         // Check if the date is excluded
@@ -71,59 +119,45 @@ export async function GET(request: Request) {
             continue
           }
 
-          // Normalize date to start of day for consistency
-          const todayDate = new Date()
-          todayDate.setHours(0, 0, 0, 0)
-
-          // Fetch period for this date to ensure record consistency
-          const targetPeriod = await prisma.mealPeriod.findFirst({
-            where: {
-              roomId: roomSettings.roomId,
-              startDate: { lte: todayDate },
-              OR: [
-                { endDate: { gte: todayDate } },
-                { endDate: null }
-              ]
-            },
-            orderBy: { createdAt: 'desc' }
+          newMealsToCreate.push({
+            userId: autoSetting.userId,
+            roomId: roomSettings.roomId,
+            date: todayDate,
+            type: mealType.type,
+            periodId: targetPeriod.id,
           })
 
-          if (!targetPeriod) continue // Skip if no period found
-
-          // Check if meal already exists
-          const existingMeal = await prisma.meal.findUnique({
-            where: {
-              userId_roomId_date_type: {
+          if (autoSetting.guestMealEnabled) {
+            const currentGuestCount = guestMealCountByUser.get(autoSetting.userId) || 0;
+            if (currentGuestCount < (roomSettings.guestMealLimit || 5)) {
+              newGuestMealsToCreate.push({
                 userId: autoSetting.userId,
                 roomId: roomSettings.roomId,
                 date: todayDate,
                 type: mealType.type,
-              },
-            },
-          })
-
-          if (!existingMeal) {
-            // Create the meal
-            const meal = await prisma.meal.create({
-              data: {
-                userId: autoSetting.userId,
-                roomId: roomSettings.roomId,
-                date: todayDate,
-                type: mealType.type,
+                count: 1,
                 periodId: targetPeriod.id,
-              },
-            })
-
-            processedMeals.push({
-              userId: autoSetting.userId,
-              roomId: roomSettings.roomId,
-              mealType: mealType.type,
-              date: today,
-              mealId: meal.id,
-            })
+              });
+              guestMealCountByUser.set(autoSetting.userId, currentGuestCount + 1);
+            }
           }
+
+          processedMeals.push({
+            userId: autoSetting.userId,
+            roomId: roomSettings.roomId,
+            mealType: mealType.type,
+            date: today,
+          })
         }
       }
+    }
+
+    if (newMealsToCreate.length > 0) {
+      await prisma.meal.createMany({ data: newMealsToCreate, skipDuplicates: true })
+    }
+
+    if (newGuestMealsToCreate.length > 0) {
+      await prisma.guestMeal.createMany({ data: newGuestMealsToCreate, skipDuplicates: true })
     }
 
     return NextResponse.json({
