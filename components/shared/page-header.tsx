@@ -58,7 +58,7 @@ export function PageHeader({
     const showToggle = isOverflowing || expanded
 
     return (
-        <div className={cn("mb-4 space-y-1.5", className)}>
+        <div className={cn("mb-2 sm:mb-4 space-y-1", className)}>
             <div className="flex items-center justify-between gap-3 w-full">
                 {/* Left — back button + title */}
                 <div className="flex items-center gap-2 min-w-0 flex-1">

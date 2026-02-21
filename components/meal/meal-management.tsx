@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
-import { Settings, Clock, ShieldCheck, Zap } from "lucide-react"
+import { Settings, Clock, ShieldCheck, Zap, Shield } from "lucide-react"
 import { format, isToday, isSameDay } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
@@ -202,50 +202,79 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       badgesNextToTitle={true}
       collapsible={false}
       description={
-        <span className="text-muted-foreground/90 font-medium text-sm">
-          Track and manage your meals for <span className="text-foreground font-semibold">{groupName || "your group"}</span>
-        </span>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex sm:hidden flex-wrap items-center gap-1.5">
+            {mealSettings?.autoMealEnabled && (
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 shadow-sm transition-all cursor-default uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+              >
+                <Zap className="h-3 w-3 fill-emerald-500" />
+                Auto meals
+              </Badge>
+            )}
+            {currentPeriod && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5 cursor-default",
+                  isPeriodLocked(currentPeriod)
+                    ? "bg-stone-50 text-stone-600 border-stone-200"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                )}
+              >
+                {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
+              </Badge>
+            )}
+          </div>
+          <span className="text-muted-foreground/90 font-medium text-sm">
+            Track and manage your meals for <span className="text-foreground font-semibold">{groupName || "your group"}</span>
+          </span>
+        </div>
       }
       badges={
-        <>
-          {mealSettings?.autoMealEnabled && (
-            <Badge
-              variant="outline"
-              className="bg-emerald-50 text-emerald-600 border-emerald-200/60 shadow-sm transition-all hover:bg-emerald-100 uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
-            >
-              <Zap className="h-3 w-3 fill-emerald-500" />
-              Auto meals active
-            </Badge>
-          )}
+        <div className="flex items-center gap-2">
           {userRole && (
             <Badge
               variant="outline"
               className={cn(
-                "shadow-sm transition-all uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0",
+                "shadow-sm transition-all uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0 cursor-default",
                 userRole === 'ADMIN'
-                  ? "bg-red-50 text-red-600 border-red-200/60 hover:bg-red-100"
-                  : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                  ? "bg-[#EA4335]/10 text-[#EA4335] border-[#EA4335]/20"
+                  : "bg-primary/10 text-primary border-primary/20"
               )}
             >
-              <div className={cn("h-1.5 w-1.5 rounded-full", userRole === 'ADMIN' ? "bg-red-500 animate-pulse" : "bg-primary")} />
+              <Shield className={cn("h-3 w-3", userRole === 'ADMIN' ? "fill-[#EA4335]" : "fill-primary")} />
               {userRole}
             </Badge>
           )}
-          {currentPeriod && (
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5",
-                isPeriodLocked(currentPeriod)
-                  ? "bg-stone-50 text-stone-600 border-stone-200"
-                  : "bg-emerald-50 text-emerald-700 border-emerald-200/60 hover:bg-emerald-100"
-              )}
-            >
-              {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-              {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
-            </Badge>
-          )}
-        </>
+          <div className="hidden sm:flex items-center gap-2">
+            {mealSettings?.autoMealEnabled && (
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 shadow-sm transition-all cursor-default uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+              >
+                <Zap className="h-3 w-3 fill-emerald-500" />
+                Auto meals
+              </Badge>
+            )}
+            {currentPeriod && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5 cursor-default",
+                  isPeriodLocked(currentPeriod)
+                    ? "bg-stone-50 text-stone-600 border-stone-200"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                )}
+              >
+                {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
+              </Badge>
+            )}
+          </div>
+        </div>
       }
     >
       <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
