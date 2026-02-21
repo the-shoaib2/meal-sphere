@@ -43,8 +43,9 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
                     select: { id: true, name: true, image: true }
                   },
                   members: {
-                    where: { userId: userId },
-                    select: { role: true, joinedAt: true, isCurrent: true }
+                    select: { role: true, joinedAt: true, isCurrent: true, user: { select: { id: true, name: true, image: true } } },
+                    take: 5,
+                    orderBy: { role: 'asc' }
                   }
                 },
                 orderBy: { createdAt: 'desc' },
@@ -68,8 +69,9 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
                     select: { id: true, name: true, image: true }
                   },
                   members: {
-                    where: { userId: userId },
-                    select: { role: true, joinedAt: true, isCurrent: true }
+                    select: { role: true, joinedAt: true, isCurrent: true, userId: true, user: { select: { id: true, name: true, image: true } } },
+                    take: 5,
+                    orderBy: { role: 'asc' }
                   }
                 },
                 orderBy: { createdAt: 'desc' },
@@ -91,22 +93,23 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
 
           // Standardize response format
           return combinedGroups.map((group: any) => {
-            const membership = group.members?.[0];
-            const role = (membership?.role as Role) || null;
+             // Let's determine the current user's role from the arrays, or use the first member if no matching
+            const myMembership = group.members?.find((m: any) => m.userId === userId);
+            const role = (myMembership?.role as Role) || null;
             return {
               ...group,
-              members: [], // Don't leak other members
+              members: group.members || [], 
               userRole: role,
               permissions: role ? (ROLE_PERMISSIONS[role] || []) : [],
-              joinedAt: membership?.joinedAt || null,
-              isCurrent: membership?.isCurrent || false,
-              isCurrentMember: !!membership
+              joinedAt: myMembership?.joinedAt || null,
+              isCurrent: myMembership?.isCurrent || false,
+              isCurrentMember: !!myMembership
             };
           });
         }
 
         // Default: for authenticated users, return groups where they are members
-        return await getUserGroups(userId, false);
+        return await getUserGroups(userId, true);
       },
       { 
         ttl: CACHE_TTL.GROUPS_LIST,

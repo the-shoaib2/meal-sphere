@@ -48,7 +48,6 @@ export function GroupCard({ group, isOwner }: GroupCardProps) {
         <Card className="group hover:shadow-md transition-shadow flex flex-col h-full overflow-hidden">
             <div className="relative h-32 w-full bg-muted">
                 {group.bannerUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                         src={group.bannerUrl}
                         alt={group.name}

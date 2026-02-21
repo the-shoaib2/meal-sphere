@@ -218,18 +218,23 @@ export async function getPublicGroups(limit = 50, userId?: string) {
               members: true
             }
           },
-          /*
-          ...(userId && {
-            members: {
-              where: { userId },
-              select: {
-                role: true,
-                joinedAt: true
-              },
-              take: 1
-            }
-          })
-          */
+          members: {
+            select: {
+              id: true,
+              userId: true,
+              role: true,
+              joinedAt: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                }
+              }
+            },
+            take: 5,
+            orderBy: { role: 'asc' }
+          }
         },
         orderBy: { createdAt: 'desc' },
         take: limit
@@ -262,7 +267,7 @@ export async function getPublicGroups(limit = 50, userId?: string) {
           joinedAt: membership?.joinedAt || null,
           memberCount: group._count?.members ?? 0,
           isCurrentMember: !!membership,
-          members: [] // Don't expose full member list
+          members: group.members || [] // Expose the partial member list we fetched
         };
       });
     },
