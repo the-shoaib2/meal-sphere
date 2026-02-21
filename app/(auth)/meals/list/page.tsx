@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 import { fetchGroupAccessData } from '@/lib/services/groups-service';
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck } from 'lucide-react';
 import MealListView from '@/components/meal/meal-list-view';
 
 export const dynamic = 'force-dynamic';
@@ -54,10 +53,15 @@ export default async function MealListPage({ searchParams }: { searchParams: Pro
                 showBackButton
                 backHref="/meals"
                 text={
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
-                        <span className="text-muted-foreground block sm:inline">Detailed meal view for {activeGroup.name}</span>
-                        <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0">
-                            <ShieldCheck className="h-3 w-3" />
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+                        <span className="text-muted-foreground/90 font-medium text-sm">
+                            Detailed meal view for <span className="text-foreground font-semibold">{activeGroup.name}</span>
+                        </span>
+                        <Badge
+                            variant="outline"
+                            className="bg-red-50 text-red-600 border-red-200/60 shadow-sm uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+                        >
+                            <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                             ADMIN
                         </Badge>
                     </div>

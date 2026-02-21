@@ -15,6 +15,7 @@ import { SettingsTab } from '@/components/groups/tabs/settings-tab';
 import { JoinRequestsTab } from '@/components/groups/tabs/join-requests-tab';
 import { ActivityDialog } from '@/components/groups/activity-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageHeader } from '@/components/shared/page-header';
 
 interface GroupPageContentProps {
     groupId: string;
@@ -59,8 +60,6 @@ export function GroupPageContent(
     );
 
     const [isMounted, setIsMounted] = useState(false);
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
 
     useEffect(() => {
         setIsMounted(true);
@@ -70,28 +69,6 @@ export function GroupPageContent(
     // which is consistent between server and client.
     const displayActiveTab = activeTab;
 
-    useEffect(() => {
-        let ticking = false;
-
-        const handleScroll = () => {
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const currentScrollY = window.scrollY;
-                    if (currentScrollY > lastScrollY && currentScrollY > 100) {
-                        setIsHeaderVisible(false);
-                    } else {
-                        setIsHeaderVisible(true);
-                    }
-                    setLastScrollY(currentScrollY);
-                    ticking = false;
-                });
-                ticking = true;
-            }
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
 
     useEffect(() => {
         if (error) {
@@ -222,41 +199,40 @@ export function GroupPageContent(
 
     return (
         <div className="flex flex-col gap-4">
-            <div
-                className={`sticky top-0 flex h-16 items-center gap-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-0 border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}
-            >
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div>
-                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{resolvedGroup.name}</h1>
-                    {resolvedGroup.description && (
-                        <p className="text-xs sm:text-sm text-muted-foreground">{resolvedGroup.description}</p>
-                    )}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                        {category && <Badge variant="secondary">{category}</Badge>}
-                        {tags.length > 0 && tags.map((tag: string) => (
-                            <Badge key={tag} variant="outline">{tag}</Badge>
-                        ))}
+            <PageHeader
+                heading={resolvedGroup.name}
+                showBackButton
+                backHref="/groups"
+                text={
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+                        {resolvedGroup.description && (
+                            <span className="text-muted-foreground/90 font-medium text-sm">{resolvedGroup.description}</span>
+                        )}
+                        <div className="flex flex-wrap gap-1">
+                            {category && <Badge variant="secondary">{category}</Badge>}
+                            {tags.length > 0 && tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline">{tag}</Badge>
+                            ))}
+                        </div>
                     </div>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                    {showActivityLog && isMember && (
-                        <Button className="h-8 w-8 rounded-full" variant="outline" size="icon" onClick={() => setShowActivityDialog(true)}>
-                            <Activity className="h-3.5 w-3.5" />
-                        </Button>
-                    )}
-                    {!isMember && (
-                        <Button
-                            className="bg-primary hover:bg-primary/90 text-white gap-2"
-                            onClick={() => router.push(`/groups/join/${groupId}`)}
-                        >
-                            <LogIn className="h-4 w-4" />
-                            Join Group
-                        </Button>
-                    )}
-                </div>
-            </div>
+                }
+            >
+                {showActivityLog && isMember && (
+                    <Button size="sm" variant="outline" className="h-9 w-9 rounded-full p-0" onClick={() => setShowActivityDialog(true)} title="Activity Log">
+                        <Activity className="h-4 w-4" />
+                    </Button>
+                )}
+                {!isMember && (
+                    <Button
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => router.push(`/groups/join/${groupId}`)}
+                    >
+                        <LogIn className="h-4 w-4" />
+                        Join Group
+                    </Button>
+                )}
+            </PageHeader>
 
             {isMember ? (
                 <Tabs defaultValue="members" value={displayActiveTab} onValueChange={handleTabChange} className="w-full">
