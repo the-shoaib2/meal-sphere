@@ -46,8 +46,9 @@ function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canE
     try {
       await addGuestMeal(date, type as any, newCount)
       onUpdate?.()
-    } catch (error) {
-      // Error handled in hook
+    } catch (error: any) {
+      console.error("Failed to update guest meal count:", error)
+      // use-meal hook handles the standard toast, but we should clear any local spinner states here if we had them.
     }
   }
 

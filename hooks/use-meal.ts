@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { 
@@ -149,6 +149,13 @@ export interface MealsPageData {
   timestamp?: string;
 }
 
+const normalizeDateStr = (dateVal: any): string => {
+  if (!dateVal) return '';
+  if (dateVal instanceof Date) return dateVal.toISOString();
+  if (typeof dateVal === 'string') return dateVal;
+  return String(dateVal);
+};
+
 interface UseMealReturn {
   // Data
   meals: Meal[];
@@ -207,14 +214,20 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   const monthKey = selectedDate ? format(selectedDate, 'yyyy-MM') : null;
   const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
 
+  const dateRef = useRef(selectedDateStr);
+  useEffect(() => {
+    dateRef.current = selectedDateStr;
+  }, [selectedDateStr]);
+
   // 1. Fetch Meals and Period for the selected date via GET /api/meals
   //    - initialData from SSR seeds the cache instantly on first render
   //    - Subsequent date changes trigger a real network fetch
   const { data: mealSystem = { meals: [], guestMeals: [], period: null }, isLoading: isLoadingMeals } = useQuery<{ meals: Meal[], guestMeals: GuestMeal[], period: any }>({
     queryKey: ['meals-system', roomId, monthKey],
-    queryFn: async () => {
-      if (!roomId || !selectedDateStr) return { meals: [], guestMeals: [], period: null };
-      const res = await fetchMealsData(session?.user?.id as string, roomId, { date: new Date(selectedDateStr) });
+    queryFn: async ({ queryKey }) => {
+      const [_key, _roomId, _monthKey] = queryKey as [string, string, string];
+      if (!_roomId || !dateRef.current) return { meals: [], guestMeals: [], period: null };
+      const res = await fetchMealsData(session?.user?.id as string, _roomId, { date: new Date(dateRef.current) });
       return { meals: res.meals, period: res.currentPeriod, guestMeals: res.guestMeals };
     },
     enabled: !!roomId && !!monthKey,
@@ -312,10 +325,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
         const dateOnly = dateString.split('T')[0];
         const existingMealIndex = old.meals.findIndex(
-          m => {
-            const mDateStr = m && (m as any).date instanceof Date ? ((m as any).date as Date).toISOString() : (typeof (m as any).date === 'string' ? (m as any).date : '');
-            return (mDateStr.startsWith(dateOnly)) && m.type === type && m.userId === userId;
-          }
+          m => normalizeDateStr(m.date).startsWith(dateOnly) && m.type === type && m.userId === userId
         );
 
         let newMeals = [...old.meals];
@@ -369,8 +379,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
           if (!old) return old;
           
           const updatedMeals = old.meals.map((m: any) => {
-            const mDateStr = m.date instanceof Date ? m.date.toISOString() : (typeof m.date === 'string' ? m.date : '');
-            if (m.id.startsWith('temp-') && m.type === type && mDateStr.startsWith(dateString)) {
+            if (m.id.startsWith('temp-') && m.type === type && normalizeDateStr(m.date).startsWith(dateString)) {
               return data.meal;
             }
             return m;
@@ -383,6 +392,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         });
       }
     },
+    onSettled: () => {
+      // Ensure absolute consistency and recalculate userStats/distributions
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
+    }
   });
 
   // Consolidated guest meal mutation for add and update
@@ -419,10 +434,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         
         const dateStr = format(date, 'yyyy-MM-dd');
         const existingMealIndex = (old.guestMeals || []).findIndex(
-          (m: any) => {
-            const mDateStr = m.date instanceof Date ? m.date.toISOString() : (typeof m.date === 'string' ? m.date : '');
-            return m.type === type && mDateStr.startsWith(dateStr) && m.userId === session?.user?.id;
-          }
+          (m: any) => m.type === type && normalizeDateStr(m.date).startsWith(dateStr) && m.userId === session?.user?.id
         );
 
         let newGuestMeals = [...(old.guestMeals || [])];
@@ -466,10 +478,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         if (!old) return old;
         const dateStr = data.date.split('T')[0];
         const withoutMatching = (old.guestMeals || []).filter(
-          (m: any) => {
-            const mDateStr = m.date instanceof Date ? m.date.toISOString() : (typeof m.date === 'string' ? m.date : '');
-            return !(m.type === data.type && mDateStr.startsWith(dateStr) && m.userId === data.userId) && !m.id.startsWith('temp-');
-          }
+          (m: any) => !(m.type === data.type && normalizeDateStr(m.date).startsWith(dateStr) && m.userId === data.userId) && !m.id.startsWith('temp-')
         );
         return {
           ...old,
@@ -477,6 +486,11 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         };
       });
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
+    }
   });
 
   const deleteGuestMealMutation = useMutation({
@@ -521,6 +535,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         });
       }
     },
+    onSettled: (_, __, variables, context: any) => {
+      const targetMonthKey = context?.targetMonthKey || monthKey;
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey] });
+      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
+    }
   });
 
   // Update meal settings mutation
@@ -616,21 +636,21 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   // Utility functions: Filter the period-wide data locally for instant UI updates
   const useMealsByDate = useCallback((date: Date): Meal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return (meals as Meal[]).filter(meal => ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr));
+    return (meals as Meal[]).filter(meal => normalizeDateStr(meal?.date).startsWith(dateStr));
   }, [meals]);
 
   const useGuestMealsByDate = useCallback((date: Date): GuestMeal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return (guestMeals as GuestMeal[]).filter(meal => ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr));
+    return (guestMeals as GuestMeal[]).filter(meal => normalizeDateStr(meal?.date).startsWith(dateStr));
   }, [guestMeals]);
 
   const useMealCount = useCallback((date: Date, type: MealType): number => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const regularMeals = (meals || []).filter((meal: Meal) =>
-      ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr) && meal.type === type
+      normalizeDateStr(meal?.date).startsWith(dateStr) && meal.type === type
     ).length;
     const guestMealsCount = (guestMeals || []).filter((meal: GuestMeal) =>
-      ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr) && meal.type === type
+      normalizeDateStr(meal?.date).startsWith(dateStr) && meal.type === type
     ).reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
     return regularMeals + guestMealsCount;
   }, [meals, guestMeals]);
@@ -666,7 +686,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     if (!targetUserId) return false;
 
     return meals.some((meal: Meal) =>
-      (((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr)) &&
+      normalizeDateStr(meal?.date).startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
     );
@@ -711,7 +731,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
     const dateStr = format(date, 'yyyy-MM-dd');
     const todayMeals = meals.filter((meal: Meal) =>
-      ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr) &&
+      normalizeDateStr(meal?.date).startsWith(dateStr) &&
       meal.userId === session?.user?.id
     ).length;
 
@@ -777,7 +797,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     if (!targetUserId) return [];
 
     return guestMeals.filter((meal: GuestMeal) =>
-      ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr) &&
+      normalizeDateStr(meal?.date).startsWith(dateStr) &&
       meal.userId === targetUserId
     );
   }, [guestMeals, session?.user?.id]);
@@ -796,13 +816,13 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     if (!targetUserId) return 0;
 
     const regularMeals = meals.filter((meal: Meal) =>
-      ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr) &&
+      normalizeDateStr(meal?.date).startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
     ).length;
 
     const guestMealsCount = guestMeals.filter((meal: GuestMeal) =>
-      ((meal?.date as any) instanceof Date ? ((meal.date as any) as Date).toISOString() : (typeof meal?.date === 'string' ? meal.date : '')).startsWith(dateStr) &&
+      normalizeDateStr(meal?.date).startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
     ).reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);

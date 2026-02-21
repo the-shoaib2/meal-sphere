@@ -343,7 +343,7 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
     ]);
 
     if (settings && !settings.allowGuestMeals) {
-        return { error: "Guest meals are not allowed in this group" };
+        return { success: false, error: "Guest meals are not allowed in this group" };
     }
 
     const limit = settings?.guestMealLimit || 5;
@@ -352,9 +352,19 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
         .reduce((sum, m) => sum + m.count, 0);
     
     // In patch, count is the new total for that type
+    if (count <= 0) {
+        const existing = todayGuestMeals.find(m => m.type === type);
+        if (existing) {
+            await prisma.guestMeal.delete({ where: { id: existing.id } });
+            await invalidateMealCache(roomId);
+            return { success: true, data: { ...existing, count: 0 } as any };
+        }
+        return { success: true, data: { count: 0, type, date: normalizedDate, userId, roomId } as any };
+    }
+
     if (otherTypesTotal + count > limit) {
         const remaining = limit - otherTypesTotal;
-        return { error: `Limit exceeded. Remaining: ${remaining < 0 ? 0 : remaining}` };
+        return { success: false, error: `Limit exceeded. Remaining: ${remaining < 0 ? 0 : remaining}` };
     }
 
     // Determine period and lock status
@@ -362,7 +372,7 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
     if (!targetPeriodId) {
         const targetPeriod = await getPeriodForDate(roomId, normalizedDate);
         if (targetPeriod?.isLocked) {
-            return { error: "This period is locked" };
+            return { success: false, error: "This period is locked" };
         }
         targetPeriodId = targetPeriod?.id;
     }
@@ -517,6 +527,10 @@ export async function triggerAutoMeals(roomId: string, dateStr: string) {
 
     const targetDate = new Date(dateStr)
     const period = await getPeriodForDate(roomId, targetDate)
+    
+    if (period?.isLocked) {
+        return { success: false, message: "Cannot trigger auto meals for a locked period" }
+    }
     
     let processedCount = 0
     let skippedCount = 0

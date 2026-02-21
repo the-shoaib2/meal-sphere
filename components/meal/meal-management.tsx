@@ -255,7 +255,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   );
 
   // Consolidated loading state
-  const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats || isTogglingMeal;
+  const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats;
 
 
 
@@ -427,7 +427,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
                               size="sm"
                               className="rounded-full px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-9"
                               onClick={() => handleToggleMeal(mealType)}
-                              disabled={isLoading || isTogglingMeal || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
+                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
                             >
                               {hasMealSelected ? (
                                 <>

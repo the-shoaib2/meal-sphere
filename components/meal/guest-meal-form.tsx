@@ -55,8 +55,10 @@ function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
       setGuestCount(1)
       setOpen(false)
       onSuccess?.()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding guest meal:", error)
+      // Note: The use-meal hook already fires toast.error internally for this action,
+      // so we simply catch it here to prevent the modal from closing.
     } finally {
       setIsSubmitting(false)
     }
