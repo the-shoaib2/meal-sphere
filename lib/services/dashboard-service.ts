@@ -51,7 +51,7 @@ export async function fetchDashboardSummary(userId: string, groupId?: string) {
         prisma.roomMember.count({ where: { userId, isBanned: false } }),
         prisma.room.findUnique({
           where: { id: resolvedGroupId },
-          select: { name: true }
+          select: { name: true, periodMode: true }
         }),
         getGroupBalanceSummary(resolvedGroupId, true),
       ]);
@@ -79,6 +79,7 @@ export async function fetchDashboardSummary(userId: string, groupId?: string) {
         totalActiveGroups: activeGroupsCount,
         groupId: resolvedGroupId,
         groupName: roomData?.name || 'Unknown Group',
+        periodMode: roomData?.periodMode as 'MONTHLY' | 'CUSTOM' || 'MONTHLY',
         groupBalance: groupBalanceSummary,
         currentPeriod: currentPeriod
       });

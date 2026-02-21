@@ -62,9 +62,10 @@ export default async function DashboardPage() {
     if (!summaryData?.currentPeriod) {
         const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
         return (
-            <Dashboard heading="Dashboard">
+            <Dashboard heading="Dashboard" text="Overview of your group's meal activity and analytics.">
                 <NoPeriodState
                     isPrivileged={isPrivileged}
+                    periodMode={summaryData?.periodMode}
                     title="No Active Period"
                     description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
                 />

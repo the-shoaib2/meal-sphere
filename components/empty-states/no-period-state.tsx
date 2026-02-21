@@ -1,5 +1,6 @@
 'use client';
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, Info, Plus } from "lucide-react";
@@ -33,7 +34,36 @@ export function NoPeriodState({
                 {/* Text Content */}
                 <div className="text-center space-y-2">
                     <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
+                                    {/* Action Button */}
+                {isPrivileged && (
+                    <div className="flex flex-col items-center gap-4 mt-2">
+                        {onCreatePeriod ? (
+                            <Button
+                                onClick={onCreatePeriod}
+                                size="sm"
+                                className="w-full max-w-xs"
+                            >
+                                <Plus className="h-5 w-5 mr-2" />
+                                Start New Period
+                            </Button>
+                        ) : (
+                            <Button
+                                asChild
+                                size="sm"
+                                className="px-4 rounded-full"
+                            >
+                                <Link href="/periods?action=create">
+                                    <Plus className="h-5 w-5 mr-2" />
+                                    Start New Period
+                                </Link>
+                            </Button>
+                        )}
+                        <p className="text-xs text-muted-foreground text-center mb-4">
+                            As a group administrator, you can start a new period to begin tracking
+                        </p>
+                    </div>
+                )}
+                    <p className="mt-2 text-xs text-muted-foreground max-w-md mx-auto">
                         {description}
                     </p>
                 </div>
@@ -66,35 +96,12 @@ export function NoPeriodState({
                     </CardHeader>
                 </Card>
 
-                {/* Action Button */}
-                {isPrivileged && periodMode === 'CUSTOM' && (
-                    <div className="flex flex-col items-center gap-4 mt-6">
-                        <Button
-                            onClick={onCreatePeriod}
-                            size="sm"
-                            className="w-full max-w-xs"
-                        >
-                            <Plus className="h-5 w-5 mr-2" />
-                            Start New Period
-                        </Button>
-                        <p className="text-xs text-muted-foreground text-center">
-                            As a group administrator, you can start a new period to begin tracking
-                        </p>
-                    </div>
-                )}
+
 
                 {!isPrivileged && (
                     <div className="text-center mt-6">
                         <p className="text-sm text-muted-foreground">
                             Please contact a group administrator to start a new period
-                        </p>
-                    </div>
-                )}
-
-                {periodMode === 'MONTHLY' && (
-                    <div className="text-center mt-6">
-                        <p className="text-sm text-muted-foreground">
-                            A new period will be automatically created at the start of the next month
                         </p>
                     </div>
                 )}

@@ -95,6 +95,17 @@ export function NoGroupState({
                     </div>
                 )}
 
+                {showActions && (
+                    <div className="flex justify-center mt-4">
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href="/periods" className="text-muted-foreground hover:text-primary flex items-center gap-1">
+                                <Search className="h-4 w-4" />
+                                View Period Management
+                            </Link>
+                        </Button>
+                    </div>
+                )}
+
                 {/* Additional Help Text */}
                 <div className="text-center mt-6">
                     <p className="text-sm text-muted-foreground">

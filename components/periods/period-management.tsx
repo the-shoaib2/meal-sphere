@@ -25,6 +25,7 @@ import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupAccess } from '@/hooks/use-group-access';
 import { PageHeader } from '@/components/shared/page-header';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // Define minimal type for initial data to avoid circular dependencies or strict type issues if not shared perfectly
 interface PeriodManagementProps {
@@ -32,6 +33,8 @@ interface PeriodManagementProps {
 }
 
 export function PeriodManagement({ initialData }: PeriodManagementProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     activeGroup,
     periods,
@@ -83,6 +86,18 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
 
   // Combined loading state - show loader if any data is loading
   const isLoading = periodsLoading || currentPeriodLoading || selectedPeriodLoading || summaryLoading || !activeGroup;
+
+  // Handle action parameter for auto-opening dialogs
+  React.useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create' && isPrivileged && !currentPeriod && !showCreateDialog && !isLoading) {
+      setShowCreateDialog(true);
+
+      // Clear the query parameter without refreshing the page
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams, isPrivileged, currentPeriod, showCreateDialog, isLoading, setShowCreateDialog]);
 
   // Check if user has no groups - show empty state
   if (!isLoadingGroups && userGroups.length === 0) {
