@@ -246,17 +246,20 @@ export function CreatePeriodDialog({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button size="sm" type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !formData.name}>
+            <Button size="sm" type="submit" disabled={isSubmitting || !formData.name}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (
-                'Start Period'
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Start Period
+                </>
               )}
             </Button>
           </DialogFooter>
