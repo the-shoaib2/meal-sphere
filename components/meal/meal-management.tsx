@@ -5,28 +5,28 @@ import { useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
-import { Plus, Settings, Clock, Users, Minus, Zap, ShieldCheck } from "lucide-react"
-import { format, startOfMonth, endOfMonth, isToday, isSameDay, eachDayOfInterval } from "date-fns"
+import { Settings, Clock, ShieldCheck } from "lucide-react"
+import { format, isToday, isSameDay } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
 import { useCurrentPeriod } from "@/hooks/use-periods"
 import { isPeriodLocked } from "@/lib/utils/period-utils-shared"
 import GuestMealForm from "@/components/meal/guest-meal-form"
-import MealCalendar from "@/components/meal/meal-calendar"
-import MealList from "@/components/meal/meal-list"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
-import { Loader } from "@/components/ui/loader";
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
 import MealSettingsDialog from "@/components/meal/meal-settings-dialog";
 import AutoMealSettingsDialog from "@/components/meal/auto-meal-settings-dialog";
 import { PageHeader } from "@/components/shared/page-header";
+
+import MealCalendarCard from "./meal-calendar-card"
+import DailyMealManagerCard from "./daily-meal-manager-card"
+import AllMealsCard from "./all-meals-card"
 
 
 
@@ -228,8 +228,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         </div>
       }
     >
-      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end mt-2 sm:mt-0">
-        <div className="flex-1 sm:flex-none" />
+      <div className="flex items-center gap-2 sm:w-auto justify-end mt-0">
+        <div className="hidden sm:block sm:flex-none" />
         <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
 
         {canManageMealSettings && (
@@ -328,163 +328,40 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       {/* Meal Calendar View */}
       <div className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader className="pb-1">
-            </CardHeader>
-            <CardContent>
-              <MealCalendar
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                getMealCount={getMealCountForCalendar}
-                isLoading={isAnyLoading}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">
-                Meals for {format(selectedDate, 'MMMM d, yyyy')}
-                {isToday(selectedDate) && ' (Today)'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 sm:space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                  {isAnyLoading ? (
-                    <div className="flex justify-center items-center py-12">
-                      <Loader />
-                    </div>
-                  ) : (
-                    (['BREAKFAST', 'LUNCH', 'DINNER'] as MealType[]).map((mealType) => {
-                      const hasMealSelected = userHasMeal(mealType)
-                      const mealCount = getUserMealCount(selectedDate, mealType)
-                      const guestCount = getUserGuestMealCount(selectedDate, mealType)
-                      const mealTypeIcon = mealType === 'BREAKFAST' ? '🌅' : mealType === 'LUNCH' ? '☀️' : '🌙'
-                      const mealTypeColor = mealType === 'BREAKFAST' ? 'bg-orange-100 text-orange-700' :
-                        mealType === 'LUNCH' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-blue-100 text-blue-700'
-                      const shouldAutoAdd = shouldAutoAddForUser(mealType)
-                      const isAutoTime = isAutoTimeForMeal(mealType)
-
-                      // Check if meal time has passed for today
-                      const now = new Date()
-                      const isTodaySelected = isSameDay(selectedDate, now)
-                      let mealTimeStr = ''
-                      if (mealType === 'BREAKFAST') mealTimeStr = mealSettings?.breakfastTime || '08:00'
-                      if (mealType === 'LUNCH') mealTimeStr = mealSettings?.lunchTime || '13:00'
-                      if (mealType === 'DINNER') mealTimeStr = mealSettings?.dinnerTime || '20:00'
-                      const [hours, minutes] = mealTimeStr.split(':').map(Number)
-                      const mealTime = new Date(selectedDate)
-                      mealTime.setHours(hours, minutes, 0, 0)
-                      const mealTimePassed = isTodaySelected && now >= mealTime
-
-                      return (
-                        <div key={mealType} className="flex items-center justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors gap-3 sm:gap-4">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}>
-                              <span className="text-base sm:text-lg">{mealTypeIcon}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-semibold text-sm sm:text-base block">{mealType}</span>
-                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-5">{mealCount} total</Badge>
-                                {hasMealSelected && (
-                                  <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0.5 h-5">
-                                    ✓ You're in
-                                  </Badge>
-                                )}
-                                {guestCount > 0 && (
-                                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 h-5">
-                                    +{guestCount} guest
-                                  </Badge>
-                                )}
-                                {shouldAutoAdd && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
-                                    <Zap className="h-2.5 w-2.5" />
-                                    Auto
-                                  </Badge>
-                                )}
-                                {isAutoTime && (
-                                  <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
-                                    <Clock className="h-2.5 w-2.5" />
-                                    Time
-                                  </Badge>
-                                )}
-                                {mealTimePassed && (
-                                  <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs px-1.5 py-0.5 h-5 flex items-center gap-0.5">
-                                    <Clock className="h-2.5 w-2.5" />
-                                    Time Passed
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex-shrink-0">
-                            <Button
-                              variant={hasMealSelected ? 'destructive' : 'default'}
-                              size="sm"
-                              className="rounded-full px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-9"
-                              onClick={() => handleToggleMeal(mealType)}
-                              disabled={isLoading || (!hasMealSelected && !canAddMeal(selectedDate, mealType)) || !canEditMeal(mealType)}
-                            >
-                              {hasMealSelected ? (
-                                <>
-                                  <Minus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                  Remove
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                  Add
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <MealCalendarCard
+            selectedDate={selectedDate}
+            onSelect={handleDateSelect}
+            getMealCount={getMealCountForCalendar}
+            isLoading={isAnyLoading}
+          />
+          <DailyMealManagerCard
+            selectedDate={selectedDate}
+            isLoading={isAnyLoading}
+            mealSettings={mealSettings}
+            userHasMeal={userHasMeal}
+            getUserMealCount={getUserMealCount}
+            getUserGuestMealCount={getUserGuestMealCount}
+            shouldAutoAddForUser={shouldAutoAddForUser}
+            isAutoTimeForMeal={isAutoTimeForMeal}
+            canEditMeal={canEditMeal}
+            canAddMeal={canAddMeal}
+            handleToggleMeal={handleToggleMeal}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {isPrivileged && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary/10 rounded-full">
-                    <Users className="h-4 w-4 text-primary" />
-                  </div>
-                  All Meals — {format(selectedDate, 'MMMM d, yyyy')}
-                </div>
-                {(() => {
-                  const totalGuestMeals = (guestMealsForDate || []).reduce((sum, m) => sum + (m.count || 0), 0);
-                  if (totalGuestMeals === 0) return null;
-                  return (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200/80 text-xs px-2 py-0.5 ml-2 shrink-0">
-                      {totalGuestMeals} guest meal{totalGuestMeals > 1 ? 's' : ''}
-                    </Badge>
-                  );
-                })()}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <MealList
-                mealsForDate={mealsForDate as any}
-                guestMealsForDate={guestMealsForDate}
-                currentUserId={session?.user?.id}
-                isLoading={isAnyLoading}
-                userRole={userRole}
-                handleToggleMeal={handleToggleMeal}
-                handleDeleteGuestMeal={handleDeleteGuestMeal}
-              />
-            </CardContent>
-          </Card>
+          <AllMealsCard
+            selectedDate={selectedDate}
+            mealsForDate={mealsForDate}
+            guestMealsForDate={guestMealsForDate}
+            currentUserId={session?.user?.id}
+            isLoading={isAnyLoading}
+            userRole={userRole}
+            handleToggleMeal={handleToggleMeal}
+            handleDeleteGuestMeal={handleDeleteGuestMeal}
+          />
         )}
         <GuestMealManager
           roomId={roomId}
