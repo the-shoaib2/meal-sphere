@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { 
   fetchMealsData,
   toggleMeal as toggleMealAction, 
-  patchGuestMeal as patchGuestMealAction, 
+  addGuestMeal as patchGuestMealAction, 
   deleteGuestMeal as deleteGuestMealAction, 
   updateMealSettings as updateMealSettingsAction, 
   updateAutoMealSettings as updateAutoMealSettingsAction, 
@@ -172,8 +172,8 @@ interface UseMealReturn {
 
   // Mutations
   toggleMeal: (date: Date, type: MealType, userId: string) => Promise<void>;
-  patchGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>;
-  deleteGuestMeal: (guestMealId: string) => Promise<void>;
+  addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>;
+  deleteGuestMeal: (guestMealId: string, date?: Date) => Promise<void>;
 
   // Settings
   updateMealSettings: (settings: Partial<MealSettings>) => Promise<void>;
@@ -287,7 +287,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     mutationFn: async ({ date, type, userId, action }: { date: Date; type: MealType; userId: string; action: 'add' | 'remove' }) => {
       const formattedDate = format(date, 'yyyy-MM-dd');
       const res = await toggleMealAction(roomId!, userId, formattedDate, type, action, currentPeriod?.id);
-      return { meal: res && typeof res === 'object' ? res : null, success: !!res }; // Return the new meal directly
+      if (!res.success) {
+          throw new Error(res.error || 'Failed to toggle meal');
+      }
+      return { meal: action === 'add' ? res.meal : null, success: true }; 
     },
     onMutate: async (variables) => {
       const { date, type, userId } = variables;
@@ -395,7 +398,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         periodId: currentPeriod?.id 
       });
       
-      if (res.error) throw new Error(res.error);
+      if (!res.success) throw new Error(res.error || "Failed to patch guest meal");
       const meal = res.data!;
       return {
         ...meal,
@@ -416,7 +419,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         
         const dateStr = format(date, 'yyyy-MM-dd');
         const existingMealIndex = (old.guestMeals || []).findIndex(
-          (m: any) => m.type === type && m.date.startsWith(dateStr) && m.userId === session?.user?.id
+          (m: any) => {
+            const mDateStr = m.date instanceof Date ? m.date.toISOString() : (typeof m.date === 'string' ? m.date : '');
+            return m.type === type && mDateStr.startsWith(dateStr) && m.userId === session?.user?.id;
+          }
         );
 
         let newGuestMeals = [...(old.guestMeals || [])];
@@ -460,7 +466,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         if (!old) return old;
         const dateStr = data.date.split('T')[0];
         const withoutMatching = (old.guestMeals || []).filter(
-          (m: any) => !(m.type === data.type && m.date.startsWith(dateStr) && m.userId === data.userId) && !m.id.startsWith('temp-')
+          (m: any) => {
+            const mDateStr = m.date instanceof Date ? m.date.toISOString() : (typeof m.date === 'string' ? m.date : '');
+            return !(m.type === data.type && mDateStr.startsWith(dateStr) && m.userId === data.userId) && !m.id.startsWith('temp-');
+          }
         );
         return {
           ...old,
@@ -470,20 +479,20 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
   });
 
-  // Delete guest meal mutation
   const deleteGuestMealMutation = useMutation({
-    mutationFn: async (guestMealId: string) => {
-      return await deleteGuestMealAction(guestMealId, session?.user?.id as string, currentPeriod?.id);
+    mutationFn: async ({ guestMealId }: { guestMealId: string; date?: Date }) => {
+      const res = await deleteGuestMealAction(guestMealId, session?.user?.id as string, currentPeriod?.id);
+      if (!res.success) throw new Error(res.error || "Failed to delete guest meal");
+      return res;
     },
-    onMutate: async (guestMealId) => {
-      const queryKey = ['meals-system', roomId, monthKey];
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey });
+    onMutate: async (variables) => {
+      const { guestMealId, date } = variables;
+      const targetMonthKey = date ? format(date, 'yyyy-MM') : monthKey;
+      const queryKey = ['meals-system', roomId, targetMonthKey];
       
-      // Snapshot previous value
+      await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData(queryKey);
       
-      // Optimistically remove guest meal
       queryClient.setQueryData(queryKey, (old: any | undefined) => {
         if (!old) return old;
         return {
@@ -492,24 +501,25 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         };
       });
       
-      return { previousData };
+      return { previousData, targetMonthKey };
     },
-    onError: (error: any, guestMealId, context) => {
-      // Rollback on error
-      if (context?.previousData) {
-        queryClient.setQueryData(['meals-system', roomId, monthKey], context.previousData);
+    onError: (error: any, variables, context: any) => {
+      if (context?.previousData && context?.targetMonthKey) {
+        queryClient.setQueryData(['meals-system', roomId, context.targetMonthKey], context.previousData);
       }
       console.error('Error deleting guest meal:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete guest meal');
+      toast.error('Failed to delete guest meal');
     },
-    onSuccess: (_, guestMealId) => {
-      queryClient.setQueryData(['meals-system', roomId, monthKey], (old: any | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          guestMeals: (old.guestMeals || []).filter((meal: any) => meal.id !== guestMealId)
-        };
-      });
+    onSuccess: (_, variables, context: any) => {
+      if (context?.targetMonthKey) {
+        queryClient.setQueryData(['meals-system', roomId, context.targetMonthKey], (old: any | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            guestMeals: (old.guestMeals || []).filter((meal: any) => meal.id !== variables.guestMealId)
+          };
+        });
+      }
     },
   });
 
@@ -517,10 +527,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   const updateMealSettingsMutation = useMutation({
     mutationFn: async (settings: Partial<MealSettings>) => {
       const res = await updateMealSettingsAction(roomId!, settings);
+      if (!res.success) throw new Error(res.error || "Failed to update meal settings");
+      const data = res.data!;
       return {
-        ...res,
-        createdAt: res.createdAt.toISOString(),
-        updatedAt: res.updatedAt.toISOString(),
+        ...data,
+        createdAt: data.createdAt.toISOString(),
+        updatedAt: data.updatedAt.toISOString(),
       } as unknown as MealSettings;
     },
     onSuccess: (data: MealSettings) => {
@@ -540,12 +552,14 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   const updateAutoMealSettingsMutation = useMutation({
     mutationFn: async (settings: Partial<AutoMealSettings>) => {
       const res = await updateAutoMealSettingsAction(roomId!, session?.user?.id as string, settings);
+      if (!res.success) throw new Error(res.error || "Failed to update auto meal settings");
+      const data = res.data!;
       return {
-        ...res,
-        startDate: res.startDate.toISOString(),
-        endDate: res.endDate ? res.endDate.toISOString() : undefined,
-        createdAt: res.createdAt.toISOString(),
-        updatedAt: res.updatedAt.toISOString(),
+        ...data,
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate ? data.endDate.toISOString() : undefined,
+        createdAt: data.createdAt.toISOString(),
+        updatedAt: data.updatedAt.toISOString(),
       } as unknown as AutoMealSettings;
     },
     onMutate: async (newSettings) => {
@@ -581,6 +595,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     mutationFn: async (date: Date) => {
       const formattedDate = format(date, 'yyyy-MM-dd');
       const res = await triggerAutoMealsAction(roomId!, formattedDate);
+      if (!res.success) throw new Error(res.error || "Failed to trigger auto meals");
       return res;
     },
     onSuccess: (data: any) => {
@@ -813,13 +828,25 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     await toggleMealMutation.mutateAsync({ date, type, userId, action });
   }, [toggleMealMutation, hasMeal]);
 
-  const patchGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {
+  const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {
     await patchGuestMealMutation.mutateAsync({ date, type, count });
   }, [patchGuestMealMutation]);
 
-  const deleteGuestMeal = useCallback(async (guestMealId: string) => {
-    await deleteGuestMealMutation.mutateAsync(guestMealId);
-  }, [deleteGuestMealMutation]);
+  const deleteGuestMeal = useCallback(async (guestMealId: string, date?: Date) => {
+    // If it's a temp ID, we just need to update the client-side cache
+    if (guestMealId.startsWith('temp-')) {
+      const targetMonthKey = date ? format(date, 'yyyy-MM') : monthKey;
+      queryClient.setQueryData(['meals-system', roomId, targetMonthKey], (old: any | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          guestMeals: (old.guestMeals || []).filter((meal: any) => meal.id !== guestMealId)
+        };
+      });
+      return;
+    }
+    await deleteGuestMealMutation.mutateAsync({ guestMealId, date });
+  }, [deleteGuestMealMutation, roomId, monthKey, queryClient]);
 
   const updateMealSettings = useCallback(async (settings: Partial<MealSettings>) => {
     await updateMealSettingsMutation.mutateAsync(settings);
@@ -856,7 +883,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
     // Mutations
     toggleMeal,
-    patchGuestMeal,
+    addGuestMeal,
     deleteGuestMeal,
 
     // Settings

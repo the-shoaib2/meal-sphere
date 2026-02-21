@@ -1,3 +1,4 @@
+import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,7 @@ interface MealListProps {
   handleDeleteGuestMeal: (id: string) => Promise<void>;
 }
 
-export default function MealList({ mealsForDate, guestMealsForDate, session, isLoading, userRole, handleToggleMeal, handleDeleteGuestMeal }: MealListProps) {
+function MealList({ mealsForDate, guestMealsForDate, session, isLoading, userRole, handleToggleMeal, handleDeleteGuestMeal }: MealListProps) {
   const allMeals = [...mealsForDate, ...guestMealsForDate];
 
   if (isLoading) {
@@ -160,4 +161,6 @@ export default function MealList({ mealsForDate, guestMealsForDate, session, isL
       })}
     </div>
   );
-} 
+}
+
+export default React.memo(MealList);

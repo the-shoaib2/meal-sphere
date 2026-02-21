@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -31,7 +31,7 @@ interface GuestMealFormProps {
   initialData?: any
 }
 
-export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
+function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -234,3 +234,5 @@ export default function GuestMealForm({ roomId, onSuccess, initialData }: GuestM
     </Dialog>
   )
 }
+
+export default React.memo(GuestMealForm)

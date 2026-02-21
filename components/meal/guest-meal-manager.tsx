@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,14 +21,14 @@ interface GuestMealManagerProps {
   canEdit?: boolean
 }
 
-export default function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canEdit = true }: GuestMealManagerProps) {
+function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canEdit = true }: GuestMealManagerProps) {
   const { data: session } = useSession()
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
 
   const {
     guestMeals,
     getUserGuestMeals,
-    patchGuestMeal,
+    addGuestMeal,
     deleteGuestMeal,
     mealSettings,
     isLoading: isMealLoading
@@ -44,7 +44,7 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
     if (newCount < 1 || newCount > guestMealLimit) return
 
     try {
-      await patchGuestMeal(date, type as any, newCount)
+      await addGuestMeal(date, type as any, newCount)
       onUpdate?.()
     } catch (error) {
       // Error handled in hook
@@ -193,4 +193,6 @@ export default function GuestMealManager({ roomId, date, onUpdate, initialData, 
       </CardContent>
     </Card>
   )
-} 
+}
+
+export default React.memo(GuestMealManager)

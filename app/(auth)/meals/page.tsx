@@ -45,10 +45,28 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
   // Resolve date from search params to ensure we fetch data for the correct period
   const dateParam = resolvedSearchParams?.date ? new Date(resolvedSearchParams.date) : undefined;
 
-  const [mealsData, accessData] = await Promise.all([
-    fetchMealsData(session.user.id, activeGroup.id, { date: dateParam }),
-    fetchGroupAccessData(activeGroup.id, session.user.id)
-  ]);
+  let mealsData: any = null;
+  let accessData: any = null;
+
+  try {
+    const [fetchedMealsData, fetchedAccessData] = await Promise.all([
+      fetchMealsData(session.user.id, activeGroup.id, { date: dateParam }),
+      fetchGroupAccessData(activeGroup.id, session.user.id)
+    ]);
+    mealsData = fetchedMealsData;
+    accessData = fetchedAccessData;
+  } catch (error) {
+    console.error("[SSR Error /meals]:", error);
+    return (
+      <div className="space-y-6">
+        <PageHeader heading="Meal Management" text="Track and manage your meals" />
+        <div className="p-6 text-center text-red-500 border rounded-lg bg-red-50/50">
+          <p className="font-semibold">Failed to load meal data.</p>
+          <p className="text-sm opacity-80 mt-1">Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
 
   // 3. Handle No Period State server-side
   if (!mealsData.currentPeriod) {

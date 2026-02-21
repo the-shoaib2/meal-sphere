@@ -12,7 +12,7 @@ interface MealCalendarProps {
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-export default function MealCalendar({ selected, onSelect, getMealCount, isLoading }: MealCalendarProps) {
+function MealCalendar({ selected, onSelect, getMealCount, isLoading }: MealCalendarProps) {
   const [viewDate, setViewDate] = React.useState(() => startOfMonth(selected))
 
   // Generate calendar grid
@@ -151,4 +151,6 @@ export default function MealCalendar({ selected, onSelect, getMealCount, isLoadi
       </div>
     </div>
   )
-} 
+}
+
+export default React.memo(MealCalendar) 

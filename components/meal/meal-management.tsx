@@ -260,20 +260,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
 
 
-  // Get meal counts for calendar display
-  const getMealCountsForMonth = () => {
-    const start = startOfMonth(selectedDate)
-    const end = endOfMonth(selectedDate)
-    const days = eachDayOfInterval({ start, end })
 
-    return days.map(day => ({
-      date: day,
-      breakfast: useMealCount(day, 'BREAKFAST'),
-      lunch: useMealCount(day, 'LUNCH'),
-      dinner: useMealCount(day, 'DINNER'),
-      total: useMealCount(day, 'BREAKFAST') + useMealCount(day, 'LUNCH') + useMealCount(day, 'DINNER')
-    }))
-  }
 
 
   // Helper: check if user can edit meal for a type (not after meal time unless privileged)

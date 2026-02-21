@@ -259,10 +259,14 @@ export async function fetchMealStats(
 
 export async function toggleMeal(roomId: string, userId: string, dateStr: string, type: MealType, action: 'add' | 'remove', periodId?: string) {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, error: "Unauthorized" };
 
     if (userId !== session.user.id) {
-        await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others meals");
+        try {
+            await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others meals");
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
     }
 
     const startOfDay = new Date(dateStr);
@@ -270,8 +274,8 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
     let targetPeriodId = periodId;
     if (!targetPeriodId) {
         const targetPeriod = await getPeriodForDate(roomId, new Date(dateStr));
-        if (!targetPeriod) throw new Error("No period found for this date");
-        if (targetPeriod.isLocked) throw new Error("This period is locked");
+        if (!targetPeriod) return { success: false, error: "No period found for this date" };
+        if (targetPeriod.isLocked) return { success: false, error: "This period is locked" };
         targetPeriodId = targetPeriod.id;
     }
 
@@ -287,9 +291,12 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
                     }
                 }
             });
-        } catch (error) {
+            await invalidateMealCache(roomId); // Invalidate cache after delete
+            return { success: true };
+        } catch (error: any) {
+            if (error.code === 'P2025') return { success: true }; // Record to delete does not exist
+            return { success: false, error: "Failed to remove meal" };
         }
-        return false;
     } else {
         try {
             const newMeal = await prisma.meal.create({
@@ -302,22 +309,28 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
                 },
                 include: { user: { select: { id: true, name: true, image: true, email: true } } }
             });
-            return newMeal;
+            await invalidateMealCache(roomId); // Invalidate cache after create
+            return { success: true, meal: newMeal };
         } catch (error: any) {
-            if (error.code === 'P2002') return false;
-            throw error;
+            if (error.code === 'P2002') return { success: false, error: "Meal already exists for this time" };
+            console.error('[toggleMeal error]', error);
+            return { success: false, error: "Failed to add meal" };
         }
     }
 }
 
-export async function patchGuestMeal(data: { roomId: string; userId: string; dateStr: string; type: MealType; count: number; periodId?: string }) {
+export async function addGuestMeal(data: { roomId: string; userId: string; dateStr: string; type: MealType; count: number; periodId?: string }) {
     const { roomId, userId, dateStr, type, count, periodId } = data;
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, error: "Unauthorized" };
 
     // Authorization check
     if (userId !== session.user.id) {
-        await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others guest meals");
+        try {
+            await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others guest meals");
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
     }
 
     const normalizedDate = new Date(dateStr);
@@ -355,7 +368,7 @@ export async function patchGuestMeal(data: { roomId: string; userId: string; dat
     }
 
     const guestMeal = await prisma.guestMeal.upsert({
-        where: { guestMealIdentifier: { userId, roomId, date: normalizedDate, type } },
+        where: { guestMealIdentifier: { userId, roomId, date: normalizedDate, type } } as any,
         update: { count },
         create: {
             userId,
@@ -368,14 +381,19 @@ export async function patchGuestMeal(data: { roomId: string; userId: string; dat
         include: { user: { select: { id: true, name: true, image: true } } }
     });
 
-    return { data: guestMeal };
+    await invalidateMealCache(roomId); // Invalidate cache after guest meal update
+    return { success: true, data: guestMeal };
 }
 
 export async function updateMealSettings(roomId: string, data: any) {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, error: "Unauthorized" };
 
-    await assertAdminRights(session.user.id, roomId, "Unauthorized");
+    try {
+        await assertAdminRights(session.user.id, roomId, "Unauthorized");
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
 
     let settings = await prisma.mealSettings.findUnique({ where: { roomId } });
     if (!settings) settings = await prisma.mealSettings.create({ data: { ...createDefaultSettings(), roomId } });
@@ -385,15 +403,15 @@ export async function updateMealSettings(roomId: string, data: any) {
         data: { ...data, updatedAt: new Date() }
     });
 
-    
-    return updated;
+    await invalidateMealCache(roomId);
+    return { success: true, data: updated };
 }
 
 export async function updateAutoMealSettings(roomId: string, userId: string, data: any) {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, error: "Unauthorized" };
 
-    if (userId !== session.user.id) throw new Error("Unauthorized");
+    if (userId !== session.user.id) return { success: false, error: "Unauthorized" };
 
     let autoSettings = await prisma.autoMealSettings.findUnique({ where: { userId_roomId: { userId, roomId } } });
     if (!autoSettings) {
@@ -407,8 +425,8 @@ export async function updateAutoMealSettings(roomId: string, userId: string, dat
         data: { ...data, updatedAt: new Date() }
     });
 
-    
-    return updated;
+    await invalidateMealCache(roomId);
+    return { success: true, data: updated };
 }
 
 // Helpers
@@ -442,37 +460,48 @@ export async function deleteGuestMeal(guestMealId: string, userId: string, perio
         where: { id: guestMealId },
     });
 
-    if (!guestMeal) throw new Error("Guest meal not found");
+    if (!guestMeal) {
+        console.log(`[GuestMeal] Not found (already deleted): ${guestMealId}`);
+        return { success: true };
+    }
 
     if (guestMeal.userId !== userId) {
-        await assertAdminRights(userId, guestMeal.roomId, "Unauthorized to edit others guest meals");
+        try {
+            await assertAdminRights(userId, guestMeal.roomId, "Unauthorized to edit others guest meals");
+        } catch (error: any) {
+            return { success: false, error: error.message };
+        }
     }
 
     if (!periodId && !guestMeal.periodId) {
         const targetPeriod = await getPeriodForDate(guestMeal.roomId, guestMeal.date);
-        if (targetPeriod?.isLocked) throw new Error("This period is locked");
+        if (targetPeriod?.isLocked) return { success: false, error: "This period is locked" };
     }
 
     await prisma.guestMeal.delete({
         where: { id: guestMealId }
     });
 
-    
-    return true;
+    await invalidateMealCache(guestMeal.roomId);
+    return { success: true };
 }
 
 export async function triggerAutoMeals(roomId: string, dateStr: string) {
     const session = await getServerSession(authOptions);
-    if (!session?.user) throw new Error("Unauthorized");
+    if (!session?.user) return { success: false, error: "Unauthorized" };
 
-    await assertAdminRights(session.user.id, roomId, "You don't have permission to trigger auto meals");
+    try {
+        await assertAdminRights(session.user.id, roomId, "You don't have permission to trigger auto meals");
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
 
     const mealSettings = await prisma.mealSettings.findUnique({
       where: { roomId: roomId },
     })
 
     if (!mealSettings?.autoMealEnabled) {
-      throw new Error("Auto meal system is not enabled for this room");
+      return { success: false, error: "Auto meal system is not enabled for this room" };
     }
 
     const autoMealSettingsList = await prisma.autoMealSettings.findMany({
@@ -588,8 +617,10 @@ export async function triggerAutoMeals(roomId: string, dateStr: string) {
       await prisma.guestMeal.createMany({ data: newGuestMealsToCreate });
     }
 
+    await invalidateMealCache(roomId);
     
     return {
+      success: true,
       message: `Auto meals processed successfully`,
       processed: processedCount,
       skipped: skippedCount,

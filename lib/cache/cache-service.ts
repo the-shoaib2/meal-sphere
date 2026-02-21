@@ -4,6 +4,15 @@ import { getRedisClient } from '@/lib/services/redis';
  * Unified cache service with TTL management and invalidation strategies
  */
 
+const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d*)?(?:[-+]\d{2}:?\d{2}|Z)?$/;
+
+export function dateReviver(key: string, value: any) {
+  if (typeof value === "string" && dateFormat.test(value)) {
+    return new Date(value);
+  }
+  return value;
+}
+
 export interface CacheOptions {
   ttl?: number; // Time to live in seconds
   tags?: string[]; // Tags for grouped invalidation
@@ -20,7 +29,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
     const value = await redis.get(key);
     if (!value) return null;
 
-    return JSON.parse(value) as T;
+    return JSON.parse(value, dateReviver) as T;
   } catch (error) {
     console.error(`Cache get error for key ${key}:`, error);
     return null;
@@ -224,7 +233,7 @@ export async function cacheMGet<T>(keys: string[]): Promise<(T | null)[]> {
     return values.map(value => {
       if (!value) return null;
       try {
-        return JSON.parse(value) as T;
+        return JSON.parse(value, dateReviver) as T;
       } catch {
         return null;
       }
