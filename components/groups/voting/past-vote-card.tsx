@@ -110,7 +110,7 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
                       <div className="mt-2.5">
                         <VoterStack
                           voters={votersForCandidate}
-                          size="sm"
+
                           maxVisible={4}
                         />
                       </div>

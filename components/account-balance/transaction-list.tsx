@@ -189,7 +189,7 @@ export function TransactionList({
                                                 <TableCell colSpan={isAdmin ? 6 : 5} className="p-0 border-0">
                                                     <div ref={ref} className="flex justify-center p-4">
                                                         {isFetchingNextPage ? (
-                                                            <Loader size="sm" />
+                                                            <Loader />
                                                         ) : (
                                                             <span className="h-4 w-full block" />
                                                         )}

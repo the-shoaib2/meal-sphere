@@ -134,7 +134,7 @@ const MealSettingsDialog: React.FC<MealSettingsDialogProps> = ({ open, onOpenCha
 
         <DialogFooter className="mt-6 flex flex-col-reverse sm:flex-row gap-2">
           <Button
-            size="sm"
+
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
@@ -143,7 +143,7 @@ const MealSettingsDialog: React.FC<MealSettingsDialogProps> = ({ open, onOpenCha
             Cancel
           </Button>
           <Button
-            size="sm"
+
             onClick={handleSave}
             disabled={isSaving}
             className="w-full sm:w-auto hover:bg-primary/90 transition-colors"

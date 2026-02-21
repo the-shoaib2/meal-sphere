@@ -13,12 +13,12 @@ interface PeriodNotFoundCardProps {
   userId?: string;
 }
 
-export const PeriodNotFoundCard: React.FC<PeriodNotFoundCardProps> = ({ 
-  userRole, 
-  isLoading, 
-  onCreatePeriod, 
-  groupId, 
-  userId 
+export const PeriodNotFoundCard: React.FC<PeriodNotFoundCardProps> = ({
+  userRole,
+  isLoading,
+  onCreatePeriod,
+  groupId,
+  userId
 }) => {
   const router = handleNavigation;
   const isAdmin = userRole && ["ADMIN", "MANAGER", "MEAL_MANAGER"].includes(userRole);
@@ -59,7 +59,7 @@ export const PeriodNotFoundCard: React.FC<PeriodNotFoundCardProps> = ({
             onClick={handleCreatePeriod}
             disabled={isLoading}
             className="w-full sm:w-auto"
-            size="sm"
+
           >
             Create Period
           </Button>
@@ -72,7 +72,7 @@ export const PeriodNotFoundCard: React.FC<PeriodNotFoundCardProps> = ({
             <Button
               onClick={handleMessageAdmin}
               variant="outline"
-              size="sm"
+
               className="border-green-300 text-green-700 hover:bg-green-50 w-full sm:w-auto"
             >
               Message Admin

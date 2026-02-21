@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-hot-toast"
-import { Settings, Clock, ShieldCheck } from "lucide-react"
+import { Settings, Clock, ShieldCheck, Zap } from "lucide-react"
 import { format, isToday, isSameDay } from "date-fns"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
@@ -199,24 +199,35 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   const header = (
     <PageHeader
       heading="Meals"
+      badgesNextToTitle={true}
+      collapsible={false}
       description={
         <span className="text-muted-foreground/90 font-medium text-sm">
           Track and manage your meals for <span className="text-foreground font-semibold">{groupName || "your group"}</span>
-          {mealSettings?.autoMealEnabled && (
-            <span className="ml-2 text-emerald-600 font-medium inline-flex items-center gap-1">
-              • Auto meals active
-            </span>
-          )}
         </span>
       }
       badges={
         <>
+          {mealSettings?.autoMealEnabled && (
+            <Badge
+              variant="outline"
+              className="bg-emerald-50 text-emerald-600 border-emerald-200/60 shadow-sm transition-all hover:bg-emerald-100 uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+            >
+              <Zap className="h-3 w-3 fill-emerald-500" />
+              Auto meals active
+            </Badge>
+          )}
           {userRole && (
             <Badge
               variant="outline"
-              className="bg-red-50 text-red-600 border-red-200/60 shadow-sm transition-all hover:bg-red-100 uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+              className={cn(
+                "shadow-sm transition-all uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0",
+                userRole === 'ADMIN'
+                  ? "bg-red-50 text-red-600 border-red-200/60 hover:bg-red-100"
+                  : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+              )}
             >
-              <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              <div className={cn("h-1.5 w-1.5 rounded-full", userRole === 'ADMIN' ? "bg-red-500 animate-pulse" : "bg-primary")} />
               {userRole}
             </Badge>
           )}
@@ -242,7 +253,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         {canManageMealSettings && (
           <Button
             variant="outline"
-            size="sm"
+
             className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all shadow-sm"
             onClick={() => setSettingsOpen(true)}
             title="Meal Settings"
@@ -253,7 +264,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         {canAccessAutoMealSettings && (
           <Button
             variant="outline"
-            size="sm"
+
             className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all shadow-sm"
             onClick={() => setAutoSettingsOpen(true)}
             title="Auto Meal Settings"

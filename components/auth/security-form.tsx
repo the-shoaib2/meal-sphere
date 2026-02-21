@@ -403,21 +403,21 @@ export function SecurityForm({ user }: SecurityFormProps) {
                   variant="destructive"
                   onClick={handleRevokeSelected}
                   disabled={selectedSessions.length === 0}
-                  size="sm"
+
                 >
                   Revoke Selected
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleRevokeAll}
-                  size="sm"
+
                 >
                   Revoke All
                 </Button>
                 <Button
                   variant="outline"
                   onClick={fetchSessions}
-                  size="sm"
+
                   disabled={isLoading}
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -450,8 +450,8 @@ export function SecurityForm({ user }: SecurityFormProps) {
                     <div
                       key={session.id}
                       className={`p-4 border rounded-lg space-y-3 ${session.isCurrent
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
-                          : ''
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-sm'
+                        : ''
                         }`}
                     >
                       <div className="flex items-center justify-between">

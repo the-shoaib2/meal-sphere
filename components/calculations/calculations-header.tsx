@@ -15,14 +15,14 @@ interface CalculationsHeaderProps {
 }
 
 // Memoized header component with period navigation
-const CalculationsHeader = memo(({ 
-  isAdmin, 
-  currentPeriod, 
-  selectedPeriodId, 
-  onPrevious, 
-  onNext, 
-  hasPrevious, 
-  hasNext 
+const CalculationsHeader = memo(({
+  isAdmin,
+  currentPeriod,
+  selectedPeriodId,
+  onPrevious,
+  onNext,
+  hasPrevious,
+  hasNext
 }: CalculationsHeaderProps) => {
   const isViewingCurrentPeriod = !selectedPeriodId || selectedPeriodId === currentPeriod?.id
   const displayPeriod = selectedPeriodId ? null : currentPeriod
@@ -33,18 +33,18 @@ const CalculationsHeader = memo(({
         <h2 className="text-xl font-bold tracking-tight">Meal Calculations</h2>
         <p className="text-muted-foreground text-sm">View and manage meal costs and balances</p>
       </div>
-      
+
       {isAdmin && (
         <div className="flex items-center gap-1">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+
             onClick={onPrevious}
             disabled={!hasPrevious}
           >
             <ChevronLeft className="h-3 w-3" />
           </Button>
-          
+
           <div className="text-center px-2 py-1 bg-muted rounded text-xs min-w-[80px]">
             <div className="text-muted-foreground font-medium text-[10px]">
               {isViewingCurrentPeriod ? "Current" : "Historical"}
@@ -55,10 +55,10 @@ const CalculationsHeader = memo(({
               </div>
             )}
           </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
+
+          <Button
+            variant="outline"
+
             onClick={onNext}
             disabled={!hasNext}
           >

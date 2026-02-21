@@ -60,7 +60,7 @@ export function EmailVerificationCard({ user }: EmailVerificationCardProps) {
                                 Please verify your email address to secure your account.
                             </AlertDescription>
                         </Alert>
-                        <Button onClick={sendVerificationEmail} disabled={isVerifying} size="sm">
+                        <Button onClick={sendVerificationEmail} disabled={isVerifying} >
                             {isVerifying ? "Sending..." : "Send Verification Email"}
                         </Button>
                     </div>

@@ -239,7 +239,7 @@ export default function PaymentHistory() {
             <CardTitle>Recent Payments</CardTitle>
             <CardDescription>Your payment history</CardDescription>
           </div>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>

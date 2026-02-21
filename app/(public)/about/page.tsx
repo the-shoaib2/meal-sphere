@@ -347,7 +347,7 @@ export default function AboutPage() {
                     <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{member.name}</h3>
                     <p className="text-primary text-sm mb-3">{member.role}</p>
                     <p className="text-muted-foreground text-sm mb-4">{member.bio}</p>
-                    <Button variant="outline" size="sm" className="w-full group">
+                    <Button variant="outline" className="w-full group">
                       <span className="group-hover:scale-105 transition-transform">Connect</span>
                     </Button>
                   </CardContent>
@@ -372,7 +372,7 @@ export default function AboutPage() {
                     <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">Loading Member...</h3>
                     <p className="text-primary text-sm mb-3">Loading role...</p>
                     <p className="text-muted-foreground text-sm mb-4">Loading bio...</p>
-                    <Button variant="outline" size="sm" className="w-full group">
+                    <Button variant="outline" className="w-full group">
                       <span className="group-hover:scale-105 transition-transform">Connect</span>
                     </Button>
                   </CardContent>

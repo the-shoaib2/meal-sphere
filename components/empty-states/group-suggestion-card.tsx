@@ -42,7 +42,7 @@ export function GroupSuggestionCard({
                     asChild
                     variant={variant}
                     className="w-full"
-                    size="sm"
+
                 >
                     <Link href={actionHref}>
                         {actionText}

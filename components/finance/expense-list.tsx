@@ -140,7 +140,7 @@ export function ExpenseList({ initialData }: ExpenseListProps) {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      size="sm"
+
                       className={cn(
                         "w-full justify-start text-left font-normal",
                         !startDate && "text-muted-foreground"
@@ -167,7 +167,7 @@ export function ExpenseList({ initialData }: ExpenseListProps) {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      size="sm"
+
                       className={cn(
                         "w-full justify-start text-left font-normal",
                         !endDate && "text-muted-foreground"
@@ -253,7 +253,7 @@ export function ExpenseList({ initialData }: ExpenseListProps) {
                           {expense.receiptUrl ? (
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" >
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>

@@ -209,7 +209,7 @@ export function ImagePicker({
                 <DialogFooter className="px-5 py-4 border-t bg-card flex sm:justify-between items-center gap-3">
                     <Button
                         variant="ghost"
-                        size="sm"
+
                         onClick={() => onOpenChange(false)}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/5"
                     >
@@ -217,7 +217,7 @@ export function ImagePicker({
                         Cancel
                     </Button>
                     <Button
-                        size="sm"
+
                         onClick={handleSave}
                         className="shadow-md hover:shadow-lg transition-all"
                     >

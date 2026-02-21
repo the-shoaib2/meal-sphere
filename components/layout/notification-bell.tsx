@@ -157,7 +157,7 @@ export function NotificationBell() {
           </CardContent>
           {safeNotifications.length > 0 && (
             <CardFooter className="border-t p-4">
-              <Button variant="outline" size="sm" className="w-full" onClick={() => markAllAsRead()}>
+              <Button variant="outline" className="w-full" onClick={() => markAllAsRead()}>
                 Mark all as read
               </Button>
             </CardFooter>

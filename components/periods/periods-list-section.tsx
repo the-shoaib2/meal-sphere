@@ -185,7 +185,7 @@ function PeriodActions({
 
   if (!mounted) {
     return (
-      <Button variant="outline" size="sm" className="w-full sm:w-auto opacity-50 cursor-not-allowed">
+      <Button variant="outline" className="w-full sm:w-auto opacity-50 cursor-not-allowed">
         <MoreHorizontal className="h-4 w-4" />
       </Button>
     );
@@ -194,7 +194,7 @@ function PeriodActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+        <Button variant="outline" className="w-full sm:w-auto">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>

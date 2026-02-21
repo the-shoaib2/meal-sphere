@@ -131,7 +131,7 @@ const EditVoteDialog: React.FC<EditVoteDialogProps> = ({
                       </CandidateDropdownMenuContent>
                     </CandidateDropdownMenu>
                     {editCandidateIds.length > 1 && (
-                      <Button variant="ghost" size="sm" onClick={() => setEditCandidateIds(ids => ids.filter((_, i) => i !== idx))}>
+                      <Button variant="ghost" onClick={() => setEditCandidateIds(ids => ids.filter((_, i) => i !== idx))}>
                         Remove
                       </Button>
                     )}

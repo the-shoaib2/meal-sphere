@@ -621,7 +621,7 @@ export default function RegisterForm() {
                       <Label htmlFor="captcha">Enter the text shown below:</Label>
                       <Button
                         variant="ghost"
-                        size="sm"
+
                         onClick={fetchCaptcha}
                         disabled={isLoadingCaptcha}
                         className="h-8 w-8 p-0 bg-muted/30 rounded-lg"

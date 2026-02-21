@@ -102,23 +102,23 @@ export function GroupVotes({ groupId, isAdmin, currentUserId }: GroupVotesProps)
     setVotes(
       votes.map((vote) => {
         if (vote.id !== voteId) return vote;
-        
+
         const updatedOptions = vote.options.map((option) => {
           if (option.id === optionId) {
             const newVoteCount = option.voted ? option.votes - 1 : option.votes + 1;
             return { ...option, voted: !option.voted, votes: newVoteCount };
           }
-          
+
           // For single choice votes, unselect other options
           if (!vote.isMultipleChoice && option.voted) {
             return { ...option, voted: false, votes: option.votes - 1 };
           }
-          
+
           return option;
         });
-        
+
         const totalVotes = updatedOptions.reduce((sum, opt) => sum + opt.votes, 0);
-        
+
         return {
           ...vote,
           options: updatedOptions,
@@ -131,11 +131,11 @@ export function GroupVotes({ groupId, isAdmin, currentUserId }: GroupVotesProps)
 
   const getVoteStatus = (vote: Vote) => {
     if (!vote.endsAt) return 'No end date';
-    
+
     if (isAfter(new Date(), new Date(vote.endsAt))) {
       return 'Ended';
     }
-    
+
     return `Ends in ${Math.ceil(
       (new Date(vote.endsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     )} days`;
@@ -148,19 +148,19 @@ export function GroupVotes({ groupId, isAdmin, currentUserId }: GroupVotesProps)
         <div className="flex items-center space-x-2">
           <Button
             variant={activeTab === 'active' ? 'default' : 'outline'}
-            size="sm"
+
             onClick={() => setActiveTab('active')}
           >
             Active
           </Button>
           <Button
             variant={activeTab === 'past' ? 'default' : 'outline'}
-            size="sm"
+
             onClick={() => setActiveTab('past')}
           >
             Past
           </Button>
-          <Button size="sm">
+          <Button >
             <Plus className="mr-2 h-4 w-4" />
             New Vote
           </Button>
@@ -261,7 +261,7 @@ export function GroupVotes({ groupId, isAdmin, currentUserId }: GroupVotesProps)
                         <Button
                           key={option.id}
                           variant={option.voted ? 'default' : 'outline'}
-                          size="sm"
+
                           onClick={() => handleVote(vote.id, option.id)}
                         >
                           {option.text}

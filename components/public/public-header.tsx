@@ -57,7 +57,7 @@ export function PublicHeader() {
                 key={link.name}
                 onClick={() => handleNavigation(link.href)}
                 variant={isActive(link.href) ? "secondary" : "ghost"}
-                size="sm"
+
                 className={cn(
                   "rounded-full transition-all px-3",
                   isActive(link.href)
@@ -78,10 +78,10 @@ export function PublicHeader() {
           </div>
         ) : (
           <div className="hidden md:flex items-center space-x-2">
-            <Button variant="outline" size="sm" className="rounded-full px-4" onClick={() => handleNavigation('/login')}>
+            <Button variant="outline" className="rounded-full px-4" onClick={() => handleNavigation('/login')}>
               Sign in
             </Button>
-            <Button variant="default" size="sm" className="rounded-full px-4" onClick={() => handleNavigation('/register')}>
+            <Button variant="default" className="rounded-full px-4" onClick={() => handleNavigation('/register')}>
               Get Started
             </Button>
           </div>
@@ -110,7 +110,7 @@ export function PublicHeader() {
                           setIsMenuOpen(false)
                         }}
                         variant={isActive(link.href) ? "secondary" : "ghost"}
-                        size="sm"
+
                         className={cn(
                           "w-full justify-start rounded-full transition-all",
                           isActive(link.href)

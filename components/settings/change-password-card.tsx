@@ -119,7 +119,7 @@ export function ChangePasswordCard({ user }: ChangePasswordCardProps) {
                                 </FormItem>
                             )}
                         />
-                        <Button type="submit" disabled={isLoading} size="sm">
+                        <Button type="submit" disabled={isLoading} >
                             {isLoading ? "Updating..." : "Update Password"}
                         </Button>
                     </form>

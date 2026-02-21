@@ -221,7 +221,7 @@ export function GroupPageContent(
                     )}
                     {!isMember && (
                         <Button
-                            size="sm"
+
                             className="gap-2 shadow-md hover:shadow-lg transition-all"
                             onClick={() => router.push(`/groups/join/${groupId}`)}
                         >

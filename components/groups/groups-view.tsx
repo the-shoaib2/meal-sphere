@@ -138,7 +138,7 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                                             handleTabChange('discover');
                                             setSearchQuery('');
                                         }}
-                                        size="sm"
+
                                     >
                                         Browse Public Groups
                                     </Button>

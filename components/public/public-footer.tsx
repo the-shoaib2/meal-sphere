@@ -9,7 +9,7 @@ import { handleNavigation } from "@/lib/utils"
 export function PublicFooter() {
   const router = useRouter()
   const currentYear = new Date().getFullYear()
-  
+
   const socialLinks = [
     { icon: <Facebook className="h-4 w-4" />, href: "#" },
     { icon: <Twitter className="h-4 w-4" />, href: "#" },
@@ -71,7 +71,7 @@ export function PublicFooter() {
             </p>
             <div className="flex space-x-2">
               {socialLinks.map((social, index) => (
-                <Button key={index} variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                <Button key={index} variant="ghost" asChild className="h-8 w-8 p-0">
                   <Link href={social.href} className="text-muted-foreground hover:text-foreground">
                     {social.icon}
                   </Link>

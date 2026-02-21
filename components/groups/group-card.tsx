@@ -116,7 +116,7 @@ export function GroupCard({ group, isOwner }: GroupCardProps) {
                 </div>
                 <div className="flex gap-2">
                     <Button
-                        size="sm"
+
                         className="group/button flex items-center gap-1"
                         onClick={handleViewGroup}
                     >

@@ -56,7 +56,7 @@ export function NoGroupState({
                                 <Button
                                     asChild
                                     className="w-full group/button"
-                                    size="sm"
+
                                 >
                                     <Link href="/groups/create" className="flex items-center justify-center gap-2">
                                         Create New Group
@@ -83,7 +83,7 @@ export function NoGroupState({
                                     asChild
                                     variant="outline"
                                     className="w-full group/button"
-                                    size="sm"
+
                                 >
                                     <Link href="/groups?tab=discover" className="flex items-center justify-center gap-2">
                                         Explore Public Groups
@@ -97,7 +97,7 @@ export function NoGroupState({
 
                 {showActions && (
                     <div className="flex justify-center mt-4">
-                        <Button variant="ghost" size="sm" asChild>
+                        <Button variant="ghost" asChild>
                             <Link href="/periods" className="text-muted-foreground hover:text-primary flex items-center gap-1">
                                 <Search className="h-4 w-4" />
                                 View Period Management

@@ -119,13 +119,13 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                         <div className="flex items-center gap-2">
                             {/* Actions for this specific period */}
                             {!selectedPeriod.isLocked && (
-                                <Button variant="outline" size="sm" onClick={() => handleLockPeriod(selectedPeriod.id)}>
+                                <Button variant="outline" onClick={() => handleLockPeriod(selectedPeriod.id)}>
                                     <Lock className="h-4 w-4 mr-2" />
                                     Lock
                                 </Button>
                             )}
                             {selectedPeriod.isLocked && (
-                                <Button variant="outline" size="sm" onClick={() => {
+                                <Button variant="outline" onClick={() => {
                                     setUnlockTargetPeriod(selectedPeriod);
                                     setUnlockToActive(false);
                                     setShowUnlockDialog(true);
@@ -134,7 +134,7 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                                     Unlock
                                 </Button>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => {
+                            <Button variant="outline" onClick={() => {
                                 setShowArchiveDialog(true);
                             }}>
                                 <Archive className="h-4 w-4 mr-2" />
@@ -188,18 +188,18 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button size="sm" variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
-                            <Button size="sm" onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
-                                {unlockLoading ? 
-                                <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Unlocking...
-                                </>
-                                : 
-                                <>
-                                <Unlock className="h-4 w-4" /> 
-                                Unlock & Set Status
-                                </>
+                            <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
+                            <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
+                                {unlockLoading ?
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Unlocking...
+                                    </>
+                                    :
+                                    <>
+                                        <Unlock className="h-4 w-4" />
+                                        Unlock & Set Status
+                                    </>
                                 }
                             </Button>
                         </DialogFooter>

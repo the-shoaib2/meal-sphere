@@ -134,11 +134,11 @@ export default function RoomOverview() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
                 <Users className="mr-2 h-4 w-4" />
                 Members
               </Button>
-              <Button size="sm" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto">
                 View Details
               </Button>
             </CardFooter>

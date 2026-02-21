@@ -231,7 +231,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                         <FormControl>
                           <Button
                             variant={"outline"}
-                            size="sm"
+
                             className={cn(
                               "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
@@ -306,7 +306,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
                 type="submit"
                 className="w-full sm:w-auto"
                 disabled={isLoading}
-                size="sm"
+
               >
                 {isEditMode ? (
                   isLoading ? (

@@ -158,7 +158,7 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isLoading} size="sm">
+            <Button type="submit" disabled={isLoading} >
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </form>

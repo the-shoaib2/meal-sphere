@@ -87,7 +87,7 @@ export function PeriodArchiveDialog({ open, onOpenChange, onConfirm, periodId, p
         </div>
 
         <DialogFooter>
-          <Button type="button" size="sm" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
@@ -95,18 +95,18 @@ export function PeriodArchiveDialog({ open, onOpenChange, onConfirm, periodId, p
             variant="destructive"
             onClick={handleConfirm}
             disabled={isSubmitting}
-            size="sm"
+
           >
-            {isSubmitting ? 
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Archiving...
-            </>
-            : 
-            <>
-              <Archive className="h-4 w-4" /> 
-              Archive Period  
-            </>
+            {isSubmitting ?
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Archiving...
+              </>
+              :
+              <>
+                <Archive className="h-4 w-4" />
+                Archive Period
+              </>
             }
           </Button>
         </DialogFooter>

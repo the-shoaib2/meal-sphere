@@ -311,32 +311,35 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
     }
   };
 
-  if (!group && isLoading) {
-    return (
-      <div className="space-y-4 p-4">
-        <Skeleton className="h-10 w-[120px]" />
-      </div>
-    );
-  }
+  if (!group && !isLoading) return null;
+  if (!canInvite) return null;
 
-  if (!group || !canInvite) return null;
+  const name = group?.name || "Group";
+  const memberCount = group?.memberCount;
+  const members = group?.members;
+  const maxMembers = group?.maxMembers;
 
-  const { name, isPrivate, memberCount, maxMembers, members } = group;
   const currentCount = memberCount ?? (Array.isArray(members) ? members.length : 0);
   const isGroupFull = maxMembers ? currentCount >= maxMembers : false;
+  const isInitialLoading = !group && isLoading;
 
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+
+          variant="default"
           className={className}
-          disabled={isGroupFull}
+          disabled={isGroupFull || isInitialLoading}
         >
-          <UserPlus className="mr-2 h-4 w-4" />
+          {isInitialLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <UserPlus className="h-4 w-4 mr-2" />
+          )}
           Invite Members
-          {isGroupFull && <span className="ml-2 text-xs">(Full)</span>}
+          {isGroupFull && <span className="ml-1 text-xs">(Full)</span>}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto rounded-lg sm:rounded-xl">
@@ -347,420 +350,423 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-            <TabsTrigger value="link" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Invite Link</TabsTrigger>
-            <TabsTrigger value="custom" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Custom Invite</TabsTrigger>
-            <TabsTrigger value="email" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Email Invite</TabsTrigger>
-          </TabsList>
+        {(isInitialLoading || (loading && activeTab === 'link' && !inviteToken)) ? (
+          <div className="flex flex-col items-center justify-center p-12 min-h-[300px]">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground animate-pulse font-medium">
+              {isInitialLoading ? "Loading group details..." : "Generating invitation link..."}
+            </p>
+          </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+              <TabsTrigger value="link" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Invite Link</TabsTrigger>
+              <TabsTrigger value="custom" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Custom Invite</TabsTrigger>
+              <TabsTrigger value="email" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Email Invite</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="link" className="space-y-6 pt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="invite-link" className="text-sm font-semibold">
-                    Invitation Link
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    {loading ? (
-                      <Skeleton className="h-10 w-full rounded-lg" />
-                    ) : (
+            <TabsContent value="link" className="space-y-6 pt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="invite-link" className="text-sm font-semibold">
+                      Invitation Link
+                    </Label>
+                    <div className="flex items-center gap-2">
                       <Input
                         id="invite-link"
                         value={inviteToken?.inviteUrl || ''}
                         readOnly
                         className="h-10 text-xs px-3 bg-muted/30 border-dashed"
                       />
-                    )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleCopyLink}
+                        className="h-10 text-xs font-semibold"
+                        disabled={loading || !inviteToken}
+                      >
+                        {copied ? (
+                          <><Check className="h-4 w-4 mr-2" />Copied</>
+                        ) : (
+                          <><Copy className="h-4 w-4 mr-2" />Copy Link</>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleShare}
+                        className="h-10 text-xs font-semibold"
+                        disabled={loading || !inviteToken}
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share
+                      </Button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+
+                  <div className="p-4 border rounded-xl bg-muted/20 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Permissions:</span>
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tight">
+                        {inviteToken?.role || 'MEMBER'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Expires:</span>
+                      <span className="font-medium">
+                        {inviteToken?.expiresAt ? new Date(inviteToken.expiresAt).toLocaleDateString() : 'Never'}
+                      </span>
+                    </div>
+
                     <Button
                       type="button"
-                      variant="secondary"
-                      onClick={handleCopyLink}
-                      className="h-10 text-xs font-semibold"
-                      disabled={loading || !inviteToken}
+                      variant="ghost"
+
+                      onClick={generateInviteToken}
+                      disabled={loading}
+                      className="w-full text-xs hover:bg-muted/50 text-muted-foreground"
                     >
-                      {copied ? (
-                        <><Check className="h-4 w-4 mr-2" />Copied</>
-                      ) : (
-                        <><Copy className="h-4 w-4 mr-2" />Copy Link</>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={handleShare}
-                      className="h-10 text-xs font-semibold"
-                      disabled={loading || !inviteToken}
-                    >
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share
+                      <Settings className="h-3 w-3 mr-2" />
+                      Regenerate Default Link
                     </Button>
                   </div>
                 </div>
 
-                <div className="p-4 border rounded-xl bg-muted/20 space-y-3">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Permissions:</span>
-                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tight">
-                      {inviteToken?.role || 'MEMBER'}
-                    </Badge>
+                <div className="flex flex-col items-center justify-center space-y-3 p-6 border rounded-xl bg-white dark:bg-zinc-900 shadow-sm relative group overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50 pointer-events-none" />
+
+                  <div className="relative z-10 p-2 bg-white rounded-lg shadow-inner ring-1 ring-black/5">
+                    {inviteToken ? (
+                      <QRCodeSVG
+                        value={inviteToken.inviteUrl}
+                        size={140}
+                        level="H"
+                        includeMargin={false}
+                      />
+                    ) : (
+                      <div className="h-[140px] w-[140px] flex items-center justify-center border-2 border-dashed rounded-lg">
+                        <AlertCircle className="h-8 w-8 text-muted-foreground/20" />
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Expires:</span>
-                    <span className="font-medium">
-                      {inviteToken?.expiresAt ? new Date(inviteToken.expiresAt).toLocaleDateString() : 'Never'}
-                    </span>
+                  <p className="text-[11px] font-medium text-muted-foreground text-center max-w-[160px] relative z-10">
+                    Scan this QR code to join <span className="text-foreground">{group?.name}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Safety Tip</p>
+                  <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-normal">
+                    Only share this link with people you trust. {group?.isPrivate ? "Admins must approve each join request." : "Anyone with the link can join directly."}
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="custom" className="space-y-6 pt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-role" className="text-sm font-semibold">New Token Role</Label>
+                    <Select value={selectedRole} onValueChange={(value: string) => setSelectedRole(value)}>
+                      <SelectTrigger className="h-10 bg-muted/30 hover:bg-muted/50 transition-colors rounded-md cursor-pointer">
+                        <SelectValue placeholder="Select role">
+                          {selectedRole && (
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const role = ROLE_OPTIONS.find(r => r.value === selectedRole);
+                                const Icon = role?.icon || Users;
+                                return <Icon className={cn("h-4 w-4", role?.color)} />;
+                              })()}
+                              <span className="text-sm">{ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}</span>
+                            </div>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="rounded-md">
+                        <div className="p-1">
+                          {ROLE_OPTIONS.map((role) => {
+                            const Icon = role.icon;
+                            return (
+                              <SelectItem
+                                key={role.value}
+                                value={role.value}
+                                className="focus:bg-primary/5 focus:text-primary rounded-sm py-2 px-2 cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={cn("p-1 rounded-sm bg-muted", role.color.replace('text-', 'bg-').split(' ')[0] + '/10')}>
+                                    <Icon className={cn("h-3.5 w-3.5", role.color)} />
+                                  </div>
+                                  <div className="flex flex-col gap-0">
+                                    <span className="text-xs font-semibold">{role.label}</span>
+                                    <span className="text-[10px] text-muted-foreground leading-tight line-clamp-1">
+                                      {role.description}
+                                    </span>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-expiry" className="text-sm font-semibold">Expiration Time</Label>
+                    <Select value={customExpiry.toString()} onValueChange={(value) => setCustomExpiry(parseFloat(value))}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select expiration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXPIRATION_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value.toString()}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="sm"
                     onClick={generateInviteToken}
-                    disabled={loading}
-                    className="w-full text-xs hover:bg-muted/50 text-muted-foreground"
+                    disabled={loading || !selectedRole || customExpiry === undefined}
+                    className="w-full mt-2"
                   >
-                    <Settings className="h-3 w-3 mr-2" />
-                    Regenerate Default Link
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="mr-2 h-4 w-4" />
+                        {inviteToken ? 'Regenerate Token' : 'Generate Token'}
+                      </>
+                    )}
                   </Button>
                 </div>
-              </div>
 
-              <div className="flex flex-col items-center justify-center space-y-3 p-6 border rounded-xl bg-white dark:bg-zinc-900 shadow-sm relative group overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50 pointer-events-none" />
+                <div className="space-y-4">
+                  <Label className="text-sm font-semibold">Current Active Token</Label>
+                  {inviteToken ? (
+                    <div className="p-5 border rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 space-y-4 relative overflow-hidden group shadow-sm border-primary/10">
+                      <div className="absolute -top-6 -right-6 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity rotate-12">
+                        <Lock className="h-24 w-24" />
+                      </div>
 
-                <div className="relative z-10 p-2 bg-white rounded-lg shadow-inner ring-1 ring-black/5">
-                  {loading ? (
-                    <Skeleton className="h-[140px] w-[140px] rounded-lg" />
-                  ) : inviteToken ? (
-                    <QRCodeSVG
-                      value={inviteToken.inviteUrl}
-                      size={140}
-                      level="H"
-                      includeMargin={false}
-                    />
+                      <div className="space-y-4 relative z-10">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const role = ROLE_OPTIONS.find(r => r.value === inviteToken.role);
+                              const Icon = role?.icon || Users;
+                              return (
+                                <div className={cn("p-1.5 rounded-lg bg-white dark:bg-zinc-800 shadow-sm", role?.color)}>
+                                  <Icon className="h-3.5 w-3.5" />
+                                </div>
+                              );
+                            })()}
+                            <span className="text-xs font-bold uppercase tracking-wider">{ROLE_OPTIONS.find(r => r.value === inviteToken.role)?.label}</span>
+                          </div>
+                          <Badge variant="secondary" className="px-2 py-0 h-5 text-[10px] font-medium bg-primary/10 text-primary border-none">
+                            {inviteToken.expiresAt ? 'Temporary' : 'Permanent'}
+                          </Badge>
+                        </div>
+
+                        <div className="grid gap-2 text-xs">
+                          <div className="flex items-center text-muted-foreground bg-white/50 dark:bg-black/20 p-2 rounded-lg">
+                            <Settings className="h-3.5 w-3.5 mr-2 text-primary" />
+                            <span className="font-medium">Expires:</span>
+                            <span className="ml-auto">{inviteToken.expiresAt ? new Date(inviteToken.expiresAt).toLocaleDateString() : 'Never'}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 flex gap-2">
+                          <Button
+                            type="button"
+
+                            onClick={handleCopyLink}
+                            className="h-9 flex-1 text-xs font-semibold shadow-sm"
+                          >
+                            {copied ? (
+                              <><Check className="h-3.5 w-3.5 mr-2" />Copied</>
+                            ) : (
+                              <><Copy className="h-3.5 w-3.5 mr-2" />Copy Link</>
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+
+                            variant="outline"
+                            onClick={handleShare}
+                            className="h-9 w-9 p-0 hover:bg-primary/5 hover:text-primary transition-colors"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="h-[140px] w-[140px] flex items-center justify-center border-2 border-dashed rounded-lg">
-                      <AlertCircle className="h-8 w-8 text-muted-foreground/20" />
+                    <div className="relative flex flex-col items-center justify-center h-[200px] p-8 text-center border-2 border-dashed rounded-2xl bg-muted/5 group/placeholder overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover/placeholder:opacity-100 transition-opacity" />
+                      <div className="p-4 rounded-full bg-muted/50 mb-4 group-hover/placeholder:scale-110 transition-transform duration-300">
+                        <Lock className="h-8 w-8 text-muted-foreground/40" />
+                      </div>
+                      <h4 className="text-sm font-semibold mb-1">No Active Token</h4>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[180px]">
+                        Configure a role and expiration time on the left to generate your custom invite token.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/20">
+                    <div className="flex items-start gap-2 text-blue-800 dark:text-blue-200">
+                      <Users className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                      <p className="text-[11px] leading-normal">
+                        Custom tokens allow you to control access levels and expiration times for specific invitees.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="email" className="space-y-6 pt-4">
+              <form onSubmit={handleGenerateInvite} className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="email" className="text-sm font-semibold">Invite via Email</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="email"
+                      type="email"
+                      value={currentEmail}
+                      onChange={(e) => setCurrentEmail(e.target.value)}
+                      placeholder="Enter email address"
+                      disabled={isGenerating}
+                      className="h-10 px-4 bg-muted/30 border-dashed"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddEmail}
+                      disabled={isGenerating || !currentEmail || emails.length >= 10}
+                      className="h-10 px-6 font-semibold"
+                    >
+                      Add
+                    </Button>
+                  </div>
+
+                  {emails.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {emails.map((email) => {
+                        const isPending = inviteStatus?.details?.pendingInvitations.includes(email);
+                        const isMember = inviteStatus?.details?.existingMembers.includes(email);
+
+                        return (
+                          <Badge
+                            key={email}
+                            variant={isPending || isMember ? "outline" : "secondary"}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${isPending ? "border-amber-500/50 bg-amber-500/5 text-amber-600 dark:text-amber-400" :
+                              isMember ? "border-green-500/50 bg-green-500/5 text-green-600 dark:text-green-400" :
+                                "bg-muted/50 border-transparent"
+                              }`}
+                          >
+                            {isPending ? (
+                              <AlertCircle className="h-3 w-3" />
+                            ) : isMember ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              <Mail className="h-3 w-3" />
+                            )}
+                            <span className="text-[11px] font-medium truncate max-w-[150px]">{email}</span>
+                            {!isPending && !isMember && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEmail(email)}
+                                disabled={isGenerating}
+                                className="ml-1 text-muted-foreground hover:text-red-500 transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {emails.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-xl bg-muted/5">
+                      <Mail className="h-8 w-8 text-muted-foreground/20 mb-2" />
+                      <p className="text-xs text-muted-foreground">Add up to 10 email addresses to send invitations</p>
                     </div>
                   )}
                 </div>
-                <p className="text-[11px] font-medium text-muted-foreground text-center max-w-[160px] relative z-10">
-                  Scan this QR code to join <span className="text-foreground">{group.name}</span>
-                </p>
-              </div>
-            </div>
 
-            <div className="flex gap-2 p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-xl">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">Safety Tip</p>
-                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-normal">
-                  Only share this link with people you trust. {group.isPrivate ? "Admins must approve each join request." : "Anyone with the link can join directly."}
-                </p>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="custom" className="space-y-6 pt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="custom-role" className="text-sm font-semibold">New Token Role</Label>
-                  <Select value={selectedRole} onValueChange={(value: string) => setSelectedRole(value)}>
-                    <SelectTrigger className="h-10 bg-muted/30 hover:bg-muted/50 transition-colors rounded-md cursor-pointer">
-                      <SelectValue placeholder="Select role">
-                        {selectedRole && (
-                          <div className="flex items-center gap-2">
-                            {(() => {
-                              const role = ROLE_OPTIONS.find(r => r.value === selectedRole);
-                              const Icon = role?.icon || Users;
-                              return <Icon className={cn("h-4 w-4", role?.color)} />;
-                            })()}
-                            <span className="text-sm">{ROLE_OPTIONS.find(r => r.value === selectedRole)?.label}</span>
+                {inviteStatus && (
+                  <div className={`p-4 rounded-xl border text-sm animate-in fade-in slide-in-from-top-1 duration-300 ${inviteStatus.success
+                    ? "bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-900/20"
+                    : "bg-amber-50/50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-900/20"
+                    }`}>
+                    <div className="flex items-start">
+                      {inviteStatus.success ? (
+                        <Check className="h-4 w-4 text-green-600 dark:text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mr-3 mt-0.5 flex-shrink-0" />
+                      )}
+                      <div className="space-y-1">
+                        <p className={`font-semibold text-xs ${inviteStatus.success ? "text-green-900 dark:text-green-200" : "text-amber-900 dark:text-amber-200"
+                          }`}>
+                          {inviteStatus.message}
+                        </p>
+                        {inviteStatus.details && (
+                          <div className="flex flex-col gap-0.5 opacity-80">
+                            {inviteStatus.details.pendingInvitations.length > 0 && (
+                              <p className="text-[10px]">
+                                • {inviteStatus.details.pendingInvitations.length} already have pending invites
+                              </p>
+                            )}
+                            {inviteStatus.details.existingMembers.length > 0 && (
+                              <p className="text-[10px]">
+                                • {inviteStatus.details.existingMembers.length} are already members
+                              </p>
+                            )}
                           </div>
                         )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-md">
-                      <div className="p-1">
-                        {ROLE_OPTIONS.map((role) => {
-                          const Icon = role.icon;
-                          return (
-                            <SelectItem
-                              key={role.value}
-                              value={role.value}
-                              className="focus:bg-primary/5 focus:text-primary rounded-sm py-2 px-2 cursor-pointer"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className={cn("p-1 rounded-sm bg-muted", role.color.replace('text-', 'bg-').split(' ')[0] + '/10')}>
-                                  <Icon className={cn("h-3.5 w-3.5", role.color)} />
-                                </div>
-                                <div className="flex flex-col gap-0">
-                                  <span className="text-xs font-semibold">{role.label}</span>
-                                  <span className="text-[10px] text-muted-foreground leading-tight line-clamp-1">
-                                    {role.description}
-                                  </span>
-                                </div>
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
                       </div>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="custom-expiry" className="text-sm font-semibold">Expiration Time</Label>
-                  <Select value={customExpiry.toString()} onValueChange={(value) => setCustomExpiry(parseFloat(value))}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select expiration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EXPIRATION_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value.toString()}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    </div>
+                  </div>
+                )}
 
                 <Button
-                  type="button"
-                  onClick={generateInviteToken}
-                  disabled={loading || !selectedRole || customExpiry === undefined}
-                  className="w-full mt-2"
+                  type="submit"
+                  className="w-full h-11 font-bold rounded-xl shadow-sm"
+                  disabled={isGenerating || emails.length === 0}
                 >
-                  {loading ? (
+                  {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
+                      Sending Invitations...
                     </>
                   ) : (
                     <>
-                      <Settings className="mr-2 h-4 w-4" />
-                      {inviteToken ? 'Regenerate Token' : 'Generate Token'}
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Invitations ({emails.length})
                     </>
                   )}
                 </Button>
-              </div>
+              </form>
+            </TabsContent>
 
-              <div className="space-y-4">
-                <Label className="text-sm font-semibold">Current Active Token</Label>
-                {inviteToken ? (
-                  <div className="p-5 border rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 space-y-4 relative overflow-hidden group shadow-sm border-primary/10">
-                    <div className="absolute -top-6 -right-6 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity rotate-12">
-                      <Lock className="h-24 w-24" />
-                    </div>
-
-                    <div className="space-y-4 relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {(() => {
-                            const role = ROLE_OPTIONS.find(r => r.value === inviteToken.role);
-                            const Icon = role?.icon || Users;
-                            return (
-                              <div className={cn("p-1.5 rounded-lg bg-white dark:bg-zinc-800 shadow-sm", role?.color)}>
-                                <Icon className="h-3.5 w-3.5" />
-                              </div>
-                            );
-                          })()}
-                          <span className="text-xs font-bold uppercase tracking-wider">{ROLE_OPTIONS.find(r => r.value === inviteToken.role)?.label}</span>
-                        </div>
-                        <Badge variant="secondary" className="px-2 py-0 h-5 text-[10px] font-medium bg-primary/10 text-primary border-none">
-                          {inviteToken.expiresAt ? 'Temporary' : 'Permanent'}
-                        </Badge>
-                      </div>
-
-                      <div className="grid gap-2 text-xs">
-                        <div className="flex items-center text-muted-foreground bg-white/50 dark:bg-black/20 p-2 rounded-lg">
-                          <Settings className="h-3.5 w-3.5 mr-2 text-primary" />
-                          <span className="font-medium">Expires:</span>
-                          <span className="ml-auto">{inviteToken.expiresAt ? new Date(inviteToken.expiresAt).toLocaleDateString() : 'Never'}</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={handleCopyLink}
-                          className="h-9 flex-1 text-xs font-semibold shadow-sm"
-                        >
-                          {copied ? (
-                            <><Check className="h-3.5 w-3.5 mr-2" />Copied</>
-                          ) : (
-                            <><Copy className="h-3.5 w-3.5 mr-2" />Copy Link</>
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={handleShare}
-                          className="h-9 w-9 p-0 hover:bg-primary/5 hover:text-primary transition-colors"
-                        >
-                          <Share2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative flex flex-col items-center justify-center h-[200px] p-8 text-center border-2 border-dashed rounded-2xl bg-muted/5 group/placeholder overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover/placeholder:opacity-100 transition-opacity" />
-                    <div className="p-4 rounded-full bg-muted/50 mb-4 group-hover/placeholder:scale-110 transition-transform duration-300">
-                      <Lock className="h-8 w-8 text-muted-foreground/40" />
-                    </div>
-                    <h4 className="text-sm font-semibold mb-1">No Active Token</h4>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed max-w-[180px]">
-                      Configure a role and expiration time on the left to generate your custom invite token.
-                    </p>
-                  </div>
-                )}
-
-                <div className="p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/20">
-                  <div className="flex items-start gap-2 text-blue-800 dark:text-blue-200">
-                    <Users className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                    <p className="text-[11px] leading-normal">
-                      Custom tokens allow you to control access levels and expiration times for specific invitees.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="email" className="space-y-6 pt-4">
-            <form onSubmit={handleGenerateInvite} className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="email" className="text-sm font-semibold">Invite via Email</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={currentEmail}
-                    onChange={(e) => setCurrentEmail(e.target.value)}
-                    placeholder="Enter email address"
-                    disabled={isGenerating}
-                    className="h-10 px-4 bg-muted/30 border-dashed"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddEmail}
-                    disabled={isGenerating || !currentEmail || emails.length >= 10}
-                    className="h-10 px-6 font-semibold"
-                  >
-                    Add
-                  </Button>
-                </div>
-
-                {emails.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {emails.map((email) => {
-                      const isPending = inviteStatus?.details?.pendingInvitations.includes(email);
-                      const isMember = inviteStatus?.details?.existingMembers.includes(email);
-
-                      return (
-                        <Badge
-                          key={email}
-                          variant={isPending || isMember ? "outline" : "secondary"}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${isPending ? "border-amber-500/50 bg-amber-500/5 text-amber-600 dark:text-amber-400" :
-                            isMember ? "border-green-500/50 bg-green-500/5 text-green-600 dark:text-green-400" :
-                              "bg-muted/50 border-transparent"
-                            }`}
-                        >
-                          {isPending ? (
-                            <AlertCircle className="h-3 w-3" />
-                          ) : isMember ? (
-                            <Check className="h-3 w-3" />
-                          ) : (
-                            <Mail className="h-3 w-3" />
-                          )}
-                          <span className="text-[11px] font-medium truncate max-w-[150px]">{email}</span>
-                          {!isPending && !isMember && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveEmail(email)}
-                              disabled={isGenerating}
-                              className="ml-1 text-muted-foreground hover:text-red-500 transition-colors"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          )}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {emails.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-xl bg-muted/5">
-                    <Mail className="h-8 w-8 text-muted-foreground/20 mb-2" />
-                    <p className="text-xs text-muted-foreground">Add up to 10 email addresses to send invitations</p>
-                  </div>
-                )}
-              </div>
-
-              {inviteStatus && (
-                <div className={`p-4 rounded-xl border text-sm animate-in fade-in slide-in-from-top-1 duration-300 ${inviteStatus.success
-                  ? "bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-900/20"
-                  : "bg-amber-50/50 border-amber-200 dark:bg-amber-900/10 dark:border-amber-900/20"
-                  }`}>
-                  <div className="flex items-start">
-                    {inviteStatus.success ? (
-                      <Check className="h-4 w-4 text-green-600 dark:text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500 mr-3 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="space-y-1">
-                      <p className={`font-semibold text-xs ${inviteStatus.success ? "text-green-900 dark:text-green-200" : "text-amber-900 dark:text-amber-200"
-                        }`}>
-                        {inviteStatus.message}
-                      </p>
-                      {inviteStatus.details && (
-                        <div className="flex flex-col gap-0.5 opacity-80">
-                          {inviteStatus.details.pendingInvitations.length > 0 && (
-                            <p className="text-[10px]">
-                              • {inviteStatus.details.pendingInvitations.length} already have pending invites
-                            </p>
-                          )}
-                          {inviteStatus.details.existingMembers.length > 0 && (
-                            <p className="text-[10px]">
-                              • {inviteStatus.details.existingMembers.length} are already members
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full h-11 font-bold rounded-xl shadow-sm"
-                disabled={isGenerating || emails.length === 0}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending Invitations...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Send Invitations ({emails.length})
-                  </>
-                )}
-              </Button>
-            </form>
-          </TabsContent>
-
-        </Tabs>
+          </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );

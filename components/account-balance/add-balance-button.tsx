@@ -11,7 +11,7 @@ export function AddBalanceButton() {
 
     return (
         <Button
-            size="sm"
+
             onClick={handleOpenDialog}
             className="w-full sm:w-auto"
         >

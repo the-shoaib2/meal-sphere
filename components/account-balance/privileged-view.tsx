@@ -207,7 +207,7 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                         <TableCell className="text-right">
                           <Button
                             variant="outline"
-                            size="sm"
+
                             className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-primary hover:text-primary-foreground"
                             onClick={() => handleViewDetails(member.userId)}
                           >

@@ -15,6 +15,8 @@ interface PageHeaderProps {
     backHref?: string
     /** @deprecated use description instead */
     text?: string | ReactNode
+    badgesNextToTitle?: boolean
+    collapsible?: boolean
 }
 
 export function PageHeader({
@@ -26,6 +28,8 @@ export function PageHeader({
     showBackButton,
     backHref,
     text,
+    badgesNextToTitle = false,
+    collapsible = true,
 }: PageHeaderProps) {
     const router = useRouter()
     const [expanded, setExpanded] = useState(false)
@@ -57,7 +61,7 @@ export function PageHeader({
         <div className={cn("mb-4 space-y-1.5", className)}>
             <div className="flex items-center justify-between gap-3 w-full">
                 {/* Left — back button + title */}
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                     {showBackButton && (
                         <Button
                             onClick={() => (backHref ? router.push(backHref) : router.back())}
@@ -69,9 +73,16 @@ export function PageHeader({
                             <ArrowLeft className="h-4 w-4 stroke-[2.5] text-blue-600 group-hover:text-white transition-colors duration-300" />
                         </Button>
                     )}
-                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
-                        {heading}
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
+                            {heading}
+                        </h1>
+                        {badgesNextToTitle && badges && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                {badges}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right — action buttons (Always in one row) */}
@@ -91,15 +102,15 @@ export function PageHeader({
                                 ref={textRef}
                                 className={cn(
                                     "overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out text-sm leading-tight text-muted-foreground",
-                                    expanded ? "max-h-96 opacity-100" : "max-h-4 opacity-80"
+                                    !collapsible || expanded ? "max-h-96 opacity-100" : "max-h-4 opacity-80"
                                 )}
                             >
-                                <div className={cn(expanded ? "whitespace-normal break-words" : "truncate")}>
+                                <div className={cn(!collapsible || expanded ? "whitespace-normal break-words" : "truncate")}>
                                     {resolvedDescription}
                                 </div>
                             </div>
 
-                            {showToggle && (
+                            {collapsible && showToggle && (
                                 <button
                                     onClick={() => setExpanded(v => !v)}
                                     className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold text-primary/80 hover:text-primary transition-all duration-200"
@@ -117,7 +128,7 @@ export function PageHeader({
                         </div>
                     )}
 
-                    {badges && (
+                    {!badgesNextToTitle && badges && (
                         <div className="flex flex-wrap items-center gap-1.5">
                             {badges}
                         </div>

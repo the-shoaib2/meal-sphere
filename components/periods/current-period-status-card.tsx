@@ -64,7 +64,7 @@ export function CurrentPeriodStatusCard({
               {currentPeriod.isLocked ? (
                 <Button
                   variant="outline"
-                  size="sm"
+
                   onClick={() => {
                     setUnlockTargetPeriod(currentPeriod);
                     setUnlockToActive(currentPeriod.status === 'ACTIVE');
@@ -78,7 +78,7 @@ export function CurrentPeriodStatusCard({
               ) : (
                 <Button
                   variant="outline"
-                  size="sm"
+
                   onClick={() => handleLockPeriod(currentPeriod.id)}
                   className="w-full sm:w-auto"
                 >

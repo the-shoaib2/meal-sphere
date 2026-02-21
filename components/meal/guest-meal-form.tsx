@@ -91,7 +91,7 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm" className="w-auto">
+        <Button variant="default" className="w-auto">
           <UserPlus className="h-4 w-4 mr-1" />
           Guest Meal
         </Button>
@@ -216,7 +216,7 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
             <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
               <Button
                 type="button"
-                size="sm"
+
                 variant="outline"
                 onClick={() => setOpen(false)}
                 className="w-full sm:w-auto hover:text-red-500">
@@ -224,7 +224,7 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
               </Button>
               <Button
                 type="submit"
-                size="sm"
+
                 disabled={isSubmitting}
                 className="w-full sm:w-auto hover:bg-primary/90">
                 {isSubmitting ? (

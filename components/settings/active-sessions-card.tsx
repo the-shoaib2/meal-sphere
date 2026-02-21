@@ -235,21 +235,21 @@ export function ActiveSessionsCard({ user, initialSessions = [] }: ActiveSession
                                 variant="destructive"
                                 onClick={handleRevokeSelected}
                                 disabled={selectedSessions.length === 0}
-                                size="sm"
+
                             >
                                 Revoke Selected
                             </Button>
                             <Button
                                 variant="outline"
                                 onClick={handleRevokeAll}
-                                size="sm"
+
                             >
                                 Revoke All
                             </Button>
                             <Button
                                 variant="outline"
                                 onClick={fetchSessions}
-                                size="sm"
+
                                 disabled={isLoading}
                             >
                                 <RefreshCw className="h-4 w-4" />

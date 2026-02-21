@@ -44,7 +44,7 @@ export function ExpensesPageContent({ activeGroup, userRole: propUserRole, initi
                 <div className="flex items-center gap-2">
                     <Button
                         onClick={() => setOpen(true)}
-                        size="sm"
+
                         className="gap-2">
                         <Plus className="h-4 w-4" />
                         Add Expense

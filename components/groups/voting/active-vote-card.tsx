@@ -281,7 +281,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
                       <div className="flex -space-x-1.5">
                         <VoterStack
                           voters={votersForCandidate}
-                          size="sm"
+
                           maxVisible={4}
                         />
                       </div>

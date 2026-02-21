@@ -284,7 +284,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
             <p className="text-sm text-muted-foreground">Manage and participate in group decisions.</p>
           </div>
           {isMember && !showCreateDialog && (
-            <Button size="sm" onClick={() => handleOpenChange(true)} className="w-full sm:w-auto">
+            <Button onClick={() => handleOpenChange(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Create Vote
             </Button>

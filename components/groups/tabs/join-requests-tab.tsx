@@ -128,7 +128,7 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [] }: Join
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
-                      size="sm"
+
                       variant="outline"
                       className="text-green-600 hover:text-green-700"
                       onClick={() => handleRequest(request.id, 'approve')}
@@ -142,7 +142,7 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [] }: Join
                       Approve
                     </Button>
                     <Button
-                      size="sm"
+
                       variant="outline"
                       className="text-red-600 hover:text-red-700"
                       onClick={() => handleRequest(request.id, 'reject')}

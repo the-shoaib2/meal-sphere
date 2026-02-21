@@ -186,7 +186,7 @@ export function MemberView({
             <CardTitle className="text-lg">Transaction History</CardTitle>
             <Button
               variant="outline"
-              size="sm"
+
               onClick={() => setHistoryView("ALL")}
               className="text-muted-foreground hover:text-foreground"
             >

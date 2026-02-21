@@ -124,7 +124,7 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
                       <span tabIndex={0}>
                         <Button
                           variant="outline"
-                          size="sm"
+
                           disabled
                           className="gap-2 opacity-50 cursor-not-allowed"
                         >
@@ -141,7 +141,7 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
               ) : (
                 <Button
                   variant="outline"
-                  size="sm"
+
                   onClick={() => setIsEditing(true)}
                   className="gap-2"
                 >
@@ -153,7 +153,7 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
               <>
                 <Button
                   variant="outline"
-                  size="sm"
+
                   onClick={handleCancel}
                   disabled={isLoading}
                   className="gap-2"
@@ -162,7 +162,7 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
                   Cancel
                 </Button>
                 <Button
-                  size="sm"
+
                   onClick={form.handleSubmit(onSubmit)}
                   disabled={isLoading}
                   className="gap-2"

@@ -100,7 +100,7 @@ export function CreatePeriodDialog({
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button size="sm" disabled={disabled} suppressHydrationWarning>
+              <Button disabled={disabled} suppressHydrationWarning>
                 <Plus className="h-4 w-4 mr-2" />
                 Start New Period
               </Button>
@@ -246,10 +246,10 @@ export function CreatePeriodDialog({
           </div>
 
           <DialogFooter>
-            <Button size="sm" type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button size="sm" type="submit" disabled={isSubmitting || !formData.name}>
+            <Button type="submit" disabled={isSubmitting || !formData.name}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

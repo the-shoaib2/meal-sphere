@@ -164,7 +164,7 @@ const DailyMealManagerCard = ({
                                         <div className="flex-shrink-0">
                                             <Button
                                                 variant={hasMealSelected ? "destructive" : "default"}
-                                                size="sm"
+
                                                 className="rounded-full px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-9"
                                                 onClick={() => handleToggleMeal(mealType)}
                                                 disabled={

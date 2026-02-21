@@ -28,7 +28,7 @@ export default function MealTypeSelector({ selectedTypes, onChange, disabled = f
           key={type}
           type="button"
           variant={selectedTypes.includes(type) ? "default" : "outline"}
-          size="sm"
+
           onClick={() => toggleType(type)}
           disabled={disabled}
           className="flex items-center"
