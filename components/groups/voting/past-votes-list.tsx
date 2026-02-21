@@ -43,10 +43,14 @@ const PastVotesList: React.FC<PastVotesListProps> = ({ pastVotes }) => {
       <CardContent>
         <div className="space-y-3">
           {pastVotes.length === 0 ? (
-            <div className="text-center py-8">
-              <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-muted-foreground">No past votes for this group.</p>
-              <p className="text-sm text-muted-foreground">Votes will appear here once they're completed.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-xl bg-muted/10">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <Trophy className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">No Past Votes</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Votes will appear here once they're completed.
+              </p>
             </div>
           ) : (
             pastVotes.map((vote) => (

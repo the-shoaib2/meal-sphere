@@ -86,7 +86,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   const [description, setDescription] = useState("")
   const [candidateType, setCandidateType] = useState<"member" | "custom">("member")
   const [customCandidates, setCustomCandidates] = useState<string[]>([])
-  const [showVoteDialog, setShowVoteDialog] = useState(false)
+  const [activeVoteDialogId, setActiveVoteDialogId] = useState<string | null>(null)
   const [selectedCandidate, setSelectedCandidate] = useState("")
   const [selectedRoom, setSelectedRoom] = useState(activeGroup?.id || "")
   const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([])
@@ -234,10 +234,19 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   }
 
   const handleVote = async (voteId: string) => {
-    await castVote(voteId, selectedCandidate);
-    await refreshVotes();
-    setShowVoteDialog(false);
-    setSelectedCandidate("");
+    try {
+      await castVote(voteId, selectedCandidate);
+    } catch (error) {
+      // The error is already caught by the hook and displayed in a toast
+    } finally {
+      setActiveVoteDialogId(null);
+      setSelectedCandidate("");
+
+      // Defers routing to allow React to visually unmount the dialog first
+      setTimeout(() => {
+        refreshVotes();
+      }, 50);
+    }
   };
 
   // Reset candidate selection when dialog opens
@@ -278,18 +287,17 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   return (
     <LoadingWrapper isLoading={initialLoading || !activeGroup} minHeight="70vh">
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-xl font-bold">Voting System</h2>
-            <p className="text-sm text-muted-foreground">Manage and participate in group decisions.</p>
-          </div>
+        <PageHeader
+          heading="Voting System"
+          description="Manage and participate in group decisions."
+        >
           {isMember && !showCreateDialog && (
             <Button onClick={() => handleOpenChange(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Create Vote
             </Button>
           )}
-        </div>
+        </PageHeader>
 
         {isMember && showCreateDialog && (
           <CreateVoteForm
@@ -342,8 +350,8 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
                   totalMembers={totalMembers}
                   options={options}
                   results={results}
-                  showVoteDialog={showVoteDialog}
-                  setShowVoteDialog={setShowVoteDialog}
+                  showVoteDialog={activeVoteDialogId === vote.id}
+                  setShowVoteDialog={(open) => setActiveVoteDialogId(open ? vote.id : null)}
                   selectedCandidate={selectedCandidate}
                   setSelectedCandidate={setSelectedCandidate}
                   handleVote={handleVote}

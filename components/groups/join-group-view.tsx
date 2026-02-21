@@ -485,7 +485,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         />
 
         <div className="flex items-center justify-center p-4">
-          <Card className="w-full">
+          <Card className="w-full max-w-2xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Group Invitation</CardTitle>
               <CardDescription>Review group details before joining</CardDescription>
@@ -593,7 +593,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
                       type={showMessageField || formValues.password ? 'submit' : 'button'}
                       onClick={(!showMessageField && !formValues.password) ? handleJoinClick : undefined}
                       disabled={isJoining}
-                      className="w-full"
+                      className="w-full sm:w-auto sm:ml-auto"
                     >
                       {isJoining ? (
                         <>

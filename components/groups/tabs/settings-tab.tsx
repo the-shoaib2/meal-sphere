@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -174,6 +175,7 @@ export function SettingsTab({
 
   const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   const { data: groupDetails, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId, group);
+  const router = useRouter();
 
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState('');
@@ -359,9 +361,14 @@ export function SettingsTab({
       setIsLeaving(true);
       await leaveGroup.mutateAsync(groupId);
       setIsLeaveDialogOpen(false);
+
+      // Defers routing to allow React to visually unmount the dialog first
+      setTimeout(() => {
+        router.refresh();
+        router.push('/groups');
+      }, 50);
     } catch (error) {
       // Error handled by mutation
-    } finally {
       setIsLeaving(false);
     }
   };

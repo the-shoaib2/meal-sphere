@@ -29,8 +29,7 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
   const results = (vote as any).results || {};
 
   return (
-    <Card className="col-span-full relative overflow-hidden bg-muted/20 border-muted-foreground/10 group hover:shadow-md transition-all duration-300">
-      <div className="absolute top-0 left-0 w-1 h-full bg-muted-foreground/30" />
+    <Card className="col-span-full overflow-hidden transition-all duration-300 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -64,18 +63,18 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
                 key={candidate.id}
                 className={cn(
                   "p-3 rounded-xl border transition-all duration-200",
-                  isWinner ? "border-yellow-500/30 bg-yellow-500/5" : "border-muted/50 bg-background/50"
+                  isWinner ? "border-primary/30 bg-muted/50" : "border-muted/50 bg-background/50"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <Avatar className={cn(
                     "h-10 w-10 border-2",
-                    isWinner ? "border-yellow-500/50 shadow-sm shadow-yellow-500/20" : "border-background"
+                    isWinner ? "border-primary/50 shadow-sm shadow-primary/20" : "border-background"
                   )}>
                     <AvatarImage src={candidate.image || "/placeholder.svg"} alt={candidate.name} />
                     <AvatarFallback className={cn(
                       "font-bold",
-                      isWinner ? "bg-yellow-500/10 text-yellow-600" : "bg-muted text-muted-foreground"
+                      isWinner ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                     )}>
                       {(candidate.name ? candidate.name.split(" ").map((n: string) => n[0]).join("") : "?")}
                     </AvatarFallback>
@@ -86,7 +85,7 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
                       <div className="flex items-center gap-2 min-w-0">
                         <p className="text-sm font-bold truncate">{candidate.name}</p>
                         {isWinner && (
-                          <Badge className="text-[9px] bg-yellow-500 text-white border-none h-4 uppercase font-black px-1.5">
+                          <Badge className="text-[9px] h-4 uppercase font-black px-1.5">
                             Winner
                           </Badge>
                         )}
@@ -102,7 +101,7 @@ const PastVoteCard: React.FC<PastVoteCardProps> = ({ vote, activeGroupMembersCou
                       value={percentage}
                       className={cn(
                         "h-1.5",
-                        isWinner ? "bg-yellow-500/20 [&>div]:bg-yellow-500" : "bg-muted [&>div]:bg-muted-foreground/30"
+                        isWinner ? "bg-primary/20 [&>div]:bg-primary" : "bg-muted [&>div]:bg-muted-foreground/30"
                       )}
                     />
 

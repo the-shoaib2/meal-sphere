@@ -62,7 +62,7 @@ const EditVoteDialog: React.FC<EditVoteDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[95vw] w-full">
+      <DialogContent className="sm:max-w-md overflow-visible">
         <DialogHeader>
           <DialogTitle>Edit Vote</DialogTitle>
           <DialogDescription>Update the vote type and candidates.</DialogDescription>

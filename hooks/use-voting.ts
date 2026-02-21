@@ -33,8 +33,8 @@ export interface Vote {
 }
 
 type VotesResponse = { votes: Vote[] };
-type CreateVoteResponse = { vote: Vote };
-type CastVoteResponse = { vote: Vote };
+type CreateVoteResponse = { success: boolean; data: Vote };
+type CastVoteResponse = { success: boolean; data: Vote };
 
 export function useVoting(options?: {
   groupId?: string;
@@ -74,8 +74,8 @@ export function useVoting(options?: {
   });
 
   // Separate active and past votes using useMemo equivalent
-  const activeVotes = votesData?.filter((v) => v.isActive) || [];
-  const pastVotes = votesData?.filter((v) => !v.isActive) || [];
+  const activeVotes = votesData?.filter((v) => v?.isActive) || [];
+  const pastVotes = votesData?.filter((v) => v && !v.isActive) || [];
 
   // Create vote mutation
   const createVoteMutation = useMutation({
@@ -84,7 +84,7 @@ export function useVoting(options?: {
       if (!groupId) throw new Error('No active group');
 
       const res = await axios.post<CreateVoteResponse>(`/api/groups/${groupId}/votes`, voteData);
-      return res.data.vote;
+      return res.data.data;
     },
     onSuccess: (newVote) => {
       // Optimistically update the cache
@@ -109,7 +109,7 @@ export function useVoting(options?: {
         `/api/groups/${groupId}/votes`,
         { voteId, candidateId, userId }
       );
-      return res.data.vote;
+      return res.data.data;
     },
     onSuccess: (updatedVote) => {
       // Update the cache with the new vote data
@@ -133,6 +133,13 @@ export function useVoting(options?: {
           });
         }
       }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Vote Failed",
+        description: error?.response?.data?.error || 'Failed to cast your vote. Please try again.',
+        variant: "destructive",
+      });
     },
   });
 

@@ -126,6 +126,21 @@ export function GroupProvider({
     }
   }, [status, session?.user?.id, groups]);
 
+  // Handle active group invalidation (e.g. user left the active group)
+  useEffect(() => {
+    // If we have an active group and a loaded groups list, but the active group is NOT in the list
+    if (activeGroup && groups.length > 0 && !groups.some(g => g.id === activeGroup.id)) {
+      // Find the first available group to fallback to, or null if they left their only group
+      const fallbackGroup = groups[0] || null;
+
+      // Use the handler to properly sync context, api, and storage
+      handleSetActiveGroup(fallbackGroup);
+    } else if (activeGroup && groups.length === 0 && status === 'authenticated' && !isLoading) {
+      // If they have NO groups but still have an active group ghost, clear it
+      handleSetActiveGroup(null);
+    }
+  }, [groups, activeGroup, status, isLoading]);
+
   // Handle setting active group
   const handleSetActiveGroup = async (group: Group | null) => {
     // Show loader IMMEDIATELY — user sees it the instant they click

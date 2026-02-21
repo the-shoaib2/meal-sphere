@@ -40,6 +40,22 @@ export async function createVote(
       }
     });
     
+    // Notify all members about the new vote
+    const groupMembers = await prisma.roomMember.findMany({
+      where: { roomId, userId: { not: createdById } },
+      select: { userId: true }
+    });
+
+    if (groupMembers.length > 0) {
+      await prisma.notification.createMany({
+        data: groupMembers.map(member => ({
+          userId: member.userId,
+          type: 'GENERAL',
+          message: `A new vote "${data.title}" has been started in your group.`
+        }))
+      });
+    }
+
     return { success: true, data: formatVote(vote) };
   } catch (error) {
     console.error("Error creating vote:", error);
@@ -123,8 +139,50 @@ async function updateVoteStatus(voteId: string, isActive: boolean) {
   const vote = await prisma.vote.update({
     where: { id: voteId },
     data: { isActive },
-    select: { roomId: true }
+    select: { roomId: true, title: true, results: true, options: true }
   });
+
+  if (!isActive) {
+    // Vote just ended, notify members
+    const groupMembers = await prisma.roomMember.findMany({
+      where: { roomId: vote.roomId },
+      select: { userId: true }
+    });
+
+    if (groupMembers.length > 0) {
+      let winnerText = "The results are in.";
+      
+      const results = typeof vote.results === 'string' 
+        ? JSON.parse(vote.results) 
+        : (vote.results || {});
+        
+      const options = typeof vote.options === 'string'
+        ? JSON.parse(vote.options)
+        : (vote.options || []);
+
+      const candidateVotes = Object.entries(results as Record<string, any[]>).map(([id, voters]) => ({
+        id, count: Array.isArray(voters) ? voters.length : 0
+      }));
+
+      if (candidateVotes.length > 0) {
+        candidateVotes.sort((a, b) => b.count - a.count);
+        const winnerId = candidateVotes[0].id;
+        const winnerObj = options.find((o: any) => o.id === winnerId);
+        
+        if (winnerObj && candidateVotes[0].count > 0) {
+          winnerText = `${winnerObj.name} won with ${candidateVotes[0].count} votes.`;
+        }
+      }
+
+      await prisma.notification.createMany({
+        data: groupMembers.map(member => ({
+          userId: member.userId,
+          type: 'GENERAL',
+          message: `The vote "${vote.title}" has concluded. ${winnerText}`
+        }))
+      });
+    }
+  }
 }
 
 export async function castVote(voteId: string, userId: string, candidateId: string) {

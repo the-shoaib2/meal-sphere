@@ -975,7 +975,8 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
                 isCurrent: true 
             },
             include: {
-                user: { select: { id: true, name: true, image: true } }
+                user: { select: { id: true, name: true, image: true } },
+                room: { select: { name: true } }
             }
         }),
         prisma.room.update({
@@ -995,6 +996,33 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
 
     const [result] = await prisma.$transaction(mutations);
 
+    // Notify Admins
+    const admins = await prisma.roomMember.findMany({
+        where: { roomId: groupId, role: 'ADMIN', userId: { not: userId } },
+        select: { userId: true }
+    });
+
+    if (admins.length > 0 && result) {
+        await prisma.notification.createMany({
+            data: admins.map(admin => ({
+                userId: admin.userId,
+                type: 'GENERAL',
+                message: `${result.user?.name || 'A user'} has joined your group "${result.room?.name || 'Group'}".`
+            }))
+        });
+    }
+
+    // Notify the user who just joined
+    if (result) {
+        await prisma.notification.create({
+            data: {
+                userId: userId,
+                type: 'GENERAL',
+                message: `Welcome to ${result.room?.name || 'the group'}! You have successfully joined as a member.`
+            }
+        });
+    }
+
     revalidateTag(`group-${groupId}`);
     revalidateTag(`user-${userId}`);
     revalidateTag('groups');
@@ -1008,7 +1036,7 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
 export async function leaveGroup(groupId: string, userId: string) {
     const membership = await prisma.roomMember.findUnique({
         where: { userId_roomId: { userId, roomId: groupId } },
-        include: { room: true }
+        include: { room: true, user: true }
     });
 
     if (!membership) throw new Error("Not a member of this group");
@@ -1059,6 +1087,22 @@ export async function leaveGroup(groupId: string, userId: string) {
             where: { id: groupId },
             data: { memberCount: remainingMembers }
         });
+
+        // Notify Admins that user left (only if group still has members)
+        const admins = await prisma.roomMember.findMany({
+            where: { roomId: groupId, role: 'ADMIN' },
+            select: { userId: true }
+        });
+
+        if (admins.length > 0) {
+            await prisma.notification.createMany({
+                data: admins.map(admin => ({
+                    userId: admin.userId,
+                    type: 'GENERAL',
+                    message: `${membership.user?.name || 'A user'} has left your group "${membership.room.name}".`
+                }))
+            });
+        }
     }
 
     revalidateTag(`group-${groupId}`);
@@ -1175,7 +1219,7 @@ export async function processJoinRequest(requestId: string, action: 'approve' | 
                 data: {
                     userId: request.userId,
                     type: 'JOIN_REQUEST_APPROVED',
-                    message: `Your join request for ${request.room.name} has been approved!`
+                    message: `Your join request for ${request.room.name} has been approved! Welcome to the group.`
                 }
             })
         ]);
@@ -1197,12 +1241,13 @@ export async function processJoinRequest(requestId: string, action: 'approve' | 
 
     revalidateTag(`group-${request.roomId}`, 'max');
     revalidateTag(`user-${request.userId}`, 'max');
-    revalidateTag('join-requests', 'max'); // Invalidate general join requests list
-    revalidateTag(`group-${request.roomId}-join-requests`, 'max'); // Invalidate group specific list
+    revalidateTag('join-requests', 'max'); 
+    revalidateTag(`group-${request.roomId}-join-requests`, 'max'); 
 
     return { success: true };
 }
 
+// Generate group invite
 export async function generateGroupInvite(groupId: string, userId: string, role: string = 'MEMBER', expiresInDays: number = 7) {
     // Validate the group exists and user has permission
     const group = await prisma.room.findUnique({
@@ -1220,7 +1265,7 @@ export async function generateGroupInvite(groupId: string, userId: string, role:
     });
 
     if (!group) {
-      throw new Error("Group not found");
+      return ("Group not found");
     }
 
     if (group.members.length === 0) {
@@ -1233,7 +1278,7 @@ export async function generateGroupInvite(groupId: string, userId: string, role:
     });
 
     if (group.maxMembers && currentMemberCount >= group.maxMembers) {
-      throw new Error("Group is full. Cannot create more invites.");
+      return ("Group is full. Cannot create more invites.");
     }
 
     // Generate a unique token

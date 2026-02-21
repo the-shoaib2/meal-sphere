@@ -175,8 +175,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
   };
 
   return (
-    <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300 border-primary/10">
-      <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -248,7 +247,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
                 key={candidate.id}
                 className={cn(
                   "p-3 rounded-xl border transition-all duration-200 bg-card/50",
-                  isLeading && "border-primary/20 bg-primary/5"
+                  isLeading && "border-primary/30 bg-muted/50"
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -319,7 +318,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
               )}
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">Cast Your Vote</DialogTitle>
               <DialogDescription>
@@ -386,7 +385,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
         voteTypeOptions={voteTypeOptions}
       />
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="rounded-2xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">Delete Vote?</AlertDialogTitle>
             <AlertDialogDescription>

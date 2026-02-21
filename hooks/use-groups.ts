@@ -286,9 +286,13 @@ export function useGroups(): UseGroupsReturn {
         password
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['group'] });
-      queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] });
+    onSuccess: async () => {
+      // Complete cache invalidation to sync Context and Switcher immediately
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['group'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+      ]);
       
       router.refresh();
       toast.success('Successfully joined the group!');
@@ -372,9 +376,9 @@ export function useGroups(): UseGroupsReturn {
     onSuccess: async (_, groupId) => {
       // Comprehensive cache invalidation and clearing
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['group'] }),
         queryClient.invalidateQueries({ queryKey: ['user-groups', session?.user?.id] }),
-        queryClient.invalidateQueries({ queryKey: ['groups', 'my'] }),
-        queryClient.invalidateQueries({ queryKey: ['groups', 'public'] }),
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
       ]);
 
       // Remove specific group data from cache
@@ -388,7 +392,6 @@ export function useGroups(): UseGroupsReturn {
       queryClient.setQueryData(['join-request-status', groupId], null);
 
       toast.success('You have left the group successfully');
-      router.push('/groups');
     },
     onError: (error: AxiosError<{ message: string }>, groupId: string, context: LeaveGroupContext | undefined) => {
       console.error('Error leaving group:', error);

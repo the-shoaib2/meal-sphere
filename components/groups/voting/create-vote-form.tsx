@@ -100,7 +100,7 @@ const CreateVoteForm: React.FC<CreateVoteFormProps> = ({
     };
 
     return (
-        <Card className="w-full mb-6 border-primary/20 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+        <Card className="w-full mb-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
