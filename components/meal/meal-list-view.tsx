@@ -75,7 +75,7 @@ export default function MealListView({ roomId, selectedDate, userRole, initialDa
                     <MealList
                         mealsForDate={mealsForDate as any}
                         guestMealsForDate={guestMealsForDate}
-                        session={session}
+                        currentUserId={session?.user?.id}
                         isLoading={isAnyLoading}
                         userRole={userRole}
                         handleToggleMeal={handleToggleMeal}

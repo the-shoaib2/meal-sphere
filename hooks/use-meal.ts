@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { 
@@ -198,12 +198,18 @@ interface UseMealReturn {
   getUserGuestMealCount: (date: Date, type: MealType, userId?: string) => number;
   getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
   currentPeriod: any;
+  optimisticToggles: Record<string, 'add' | 'remove' | null>;
 }
 
 export function useMeal(roomId?: string, selectedDate?: Date, initialData?: MealsPageData, userRoleFromProps?: string | null, forceRefetch?: boolean): UseMealReturn {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const { data: currentPeriodFromHook } = useCurrentPeriod();
+
+  // 0. Optimistic State for debouncing
+  // Key format: `${dateStr}-${type}-${userId}`
+  const [optimisticToggles, setOptimisticToggles] = useState<Record<string, 'add' | 'remove' | null>>({});
+  const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
 
   // Priority: 1. Passed initialData, 2. Server-side currentPeriod
   // Accept initialData if it has a matching groupId OR if groupId is missing (older format)
@@ -570,7 +576,6 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     onSuccess: (data: MealSettings) => {
       queryClient.setQueryData(['meal-settings', roomId], data);
-      // toast.success('Meal settings updated successfully');
     },
     onError: (error: any) => {
       console.error('Error updating meal settings:', error);
@@ -649,8 +654,54 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   // Utility functions: Filter the period-wide data locally for instant UI updates
   const useMealsByDate = useCallback((date: Date): Meal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return (meals as Meal[]).filter(meal => normalizeDateStr(meal?.date).startsWith(dateStr));
-  }, [meals]);
+    const serverMeals = (meals as Meal[]).filter(meal => normalizeDateStr(meal?.date).startsWith(dateStr));
+    
+    // Merge with optimistic additions/removals
+    const userId = session?.user?.id;
+    if (!userId) return serverMeals;
+
+    let result = [...serverMeals];
+    
+    // Handle removals
+    Object.entries(optimisticToggles).forEach(([key, action]) => {
+      if (key.startsWith(dateStr) && action === 'remove') {
+        const parts = key.split('-'); // 1-dateStr (index 0,1,2 after join), 3-type, 4-uid
+        const type = parts[3];
+        const uid = parts[4];
+        if (uid === userId) {
+          result = result.filter(m => !(m.type === type && m.userId === uid));
+        }
+      }
+    });
+
+    // Handle additions (simplified for local UI)
+    Object.entries(optimisticToggles).forEach(([key, action]) => {
+      if (key.startsWith(dateStr) && action === 'add') {
+        const parts = key.split('-');
+        const type = parts[3] as MealType;
+        const uid = parts[4];
+        if (uid === userId && !result.some(m => m.type === type && m.userId === uid)) {
+          result.push({
+            id: `opt-${key}`,
+            date: dateStr,
+            type,
+            userId: uid,
+            roomId: roomId!,
+            user: session.user as any,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+    });
+
+    return result;
+  }, [meals, optimisticToggles, session?.user?.id, roomId]);
+
+  const stateRef = useRef({ meals, optimisticToggles });
+  useEffect(() => {
+    stateRef.current = { meals, optimisticToggles };
+  }, [meals, optimisticToggles]);
 
   const useGuestMealsByDate = useCallback((date: Date): GuestMeal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -698,12 +749,17 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
     if (!targetUserId) return false;
 
+    // Check optimistic state first
+    const optKey = `${dateStr}-${type}-${targetUserId}`;
+    if (optimisticToggles[optKey] === 'add') return true;
+    if (optimisticToggles[optKey] === 'remove') return false;
+
     return meals.some((meal: Meal) =>
       normalizeDateStr(meal?.date).startsWith(dateStr) &&
       meal.type === type &&
       meal.userId === targetUserId
     );
-  }, [meals, session?.user?.id]);
+  }, [meals, session?.user?.id, optimisticToggles]);
 
   const canAddMeal = useCallback((date: Date, type: MealType): boolean => {
     const isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
@@ -856,12 +912,70 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     return userMealStats;
   }, [userMealStats]);
 
-  // Mutation wrappers
+  // Mutation wrappers with debouncing
   const toggleMeal = useCallback(async (date: Date, type: MealType, userId: string) => {
-    const exists = hasMeal(date, type, userId);
-    const action = exists ? 'remove' : 'add';
-    await toggleMealMutation.mutateAsync({ date, type, userId, action });
-  }, [toggleMealMutation, hasMeal]);
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const key = `${dateStr}-${type}-${userId}`;
+    const { meals: currentMeals, optimisticToggles: currOpt } = stateRef.current;
+    
+    // Determine the next action based on current state (respecting optimistic state)
+    let currentHasMeal = false;
+    if (currOpt[key] === 'add') currentHasMeal = true;
+    else if (currOpt[key] === 'remove') currentHasMeal = false;
+    else {
+      currentHasMeal = currentMeals.some((m: Meal) =>
+        normalizeDateStr(m?.date).startsWith(dateStr) &&
+        m.type === type &&
+        m.userId === userId
+      );
+    }
+    
+    const nextAction = currentHasMeal ? 'remove' : 'add';
+
+    // 1. Update UI Instantly
+    setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => ({ ...prev, [key]: nextAction }));
+
+    // 2. Clear existing debounce timer
+    if (timeoutRefs.current[key]) {
+      clearTimeout(timeoutRefs.current[key]);
+    }
+
+    // 3. Set new debounce timer
+    timeoutRefs.current[key] = setTimeout(async () => {
+      const latestAction = nextAction;
+
+      // Check if server state already matches what we want to achieve directly from queryClient cache for ultimate freshness
+      const targetMonthKey = format(date, 'yyyy-MM');
+      const data = queryClient.getQueryData(['meals-system', roomId, targetMonthKey]) as any;
+      const cachedMeals = data?.meals || [];
+      const serverHasMeal = cachedMeals.some((m: any) => 
+        normalizeDateStr(m.date).startsWith(dateStr) && m.type === type && m.userId === userId
+      );
+
+      if ((latestAction === 'add' && serverHasMeal) || (latestAction === 'remove' && !serverHasMeal)) {
+        setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => {
+          const newState = { ...prev };
+          delete newState[key];
+          return newState;
+        });
+        return;
+      }
+
+      try {
+        await toggleMealMutation.mutateAsync({ date, type, userId, action: latestAction });
+      } catch (err) {
+        console.error("Debounced toggle error:", err);
+      } finally {
+        // Clear optimistic state and timer ref
+        setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => {
+          const newState = { ...prev };
+          delete newState[key];
+          return newState;
+        });
+        delete timeoutRefs.current[key];
+      }
+    }, 800); // Throttling to 800ms for responsiveness vs reliability
+  }, [toggleMealMutation, queryClient, roomId]);
 
   const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {
     await patchGuestMealMutation.mutateAsync({ date, type, count });
@@ -936,7 +1050,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     getUserGuestMeals,
     getUserGuestMealCount,
     getUserMealCount,
-    currentPeriod: targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod
+    currentPeriod: targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod,
+    optimisticToggles
   };
 }
 

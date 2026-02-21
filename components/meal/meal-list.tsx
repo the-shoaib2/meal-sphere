@@ -25,14 +25,14 @@ interface MealWithUser {
 interface MealListProps {
   mealsForDate: MealWithUser[];
   guestMealsForDate: any[];
-  session: any;
+  currentUserId?: string;
   isLoading: boolean;
   userRole: string | null;
   handleToggleMeal: (type: MealType, userId: string) => void;
   handleDeleteGuestMeal: (id: string) => Promise<void>;
 }
 
-function MealList({ mealsForDate, guestMealsForDate, session, isLoading, userRole, handleToggleMeal, handleDeleteGuestMeal }: MealListProps) {
+function MealList({ mealsForDate, guestMealsForDate, currentUserId, isLoading, userRole, handleToggleMeal, handleDeleteGuestMeal }: MealListProps) {
   const allMeals = [...mealsForDate, ...guestMealsForDate];
 
   if (isLoading) {
@@ -135,7 +135,7 @@ function MealList({ mealsForDate, guestMealsForDate, session, isLoading, userRol
                         ×{meal.count}
                       </Badge>
                     )}
-                    {(meal.userId === session?.user?.id || ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole || '')) && (
+                    {(meal.userId === currentUserId || ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole || '')) && (
                       <Button
                         variant="ghost"
                         size="icon"

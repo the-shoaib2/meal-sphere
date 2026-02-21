@@ -92,13 +92,13 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     if (!date) return;
     setSelectedDate(date);
 
-    // Update URL
+    // Update URL without triggering RSC payload (Shallow route)
     const currentParams = typeof searchParams?.get === 'function'
       ? searchParams.toString()
       : (searchParams || {});
     const params = new URLSearchParams(currentParams as any);
     params.set('date', format(date, 'yyyy-MM-dd'));
-    router.push(`/meals?${params.toString()}`, { scroll: false });
+    window.history.pushState(null, '', `?${params.toString()}`);
   };
 
 
@@ -195,6 +195,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     return isAutoMealTime(selectedDate, type)
   }, [selectedDate, isAutoMealTime])
 
+  const getMealCountForCalendar = useCallback((date: Date) => {
+    return useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')
+  }, [useMealCount])
+
   // Header (always visible)
   const header = (
     <PageHeader
@@ -256,12 +260,6 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
 
   // Consolidated loading state
   const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats;
-
-
-
-
-
-
 
   // Helper: check if user can edit meal for a type (not after meal time unless privileged)
   const canEditMeal = (type: MealType) => {
@@ -337,7 +335,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               <MealCalendar
                 selected={selectedDate}
                 onSelect={handleDateSelect}
-                getMealCount={(date: Date) => useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')}
+                getMealCount={getMealCountForCalendar}
                 isLoading={isAnyLoading}
               />
             </CardContent>
@@ -479,7 +477,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
               <MealList
                 mealsForDate={mealsForDate as any}
                 guestMealsForDate={guestMealsForDate}
-                session={session}
+                currentUserId={session?.user?.id}
                 isLoading={isAnyLoading}
                 userRole={userRole}
                 handleToggleMeal={handleToggleMeal}
