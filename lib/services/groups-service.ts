@@ -336,26 +336,25 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
       if (!group) return null;
 
       const isMember = !!userMembership && !userMembership.isBanned;
-      const isAdmin = userMembership?.role === 'ADMIN' || userMembership?.role === 'MANAGER'; // Assuming MANAGER is Owner equivalent here based on usage
+      const isAdmin = userMembership?.role === 'ADMIN' || userMembership?.role === 'MANAGER';
       const canViewSensitive = isMember || isAdmin;
 
-      // Sanitize Members List
-      const sanitizedMembers = group.members.map(member => {
-        // Hide email for non-members listening in
-        if (!canViewSensitive) {
-          return {
-            ...member,
-            user: {
-              ...member.user,
-              email: null // Redact email
-            },
-            // Redact other sensitive member fields if any
-            permissions: null,
-            invites: [] 
-          };
-        }
-        return member;
-      });
+      const sanitizedMembers = group.members
+        .filter(member => !member.isBanned)
+        .map(member => {
+          if (!canViewSensitive) {
+            return {
+              ...member,
+              user: {
+                ...member.user,
+                email: null 
+              },
+              permissions: null,
+              invites: []
+            };
+          }
+          return member;
+        });
 
       // Sanitize Creator if needed, though usually less critical, strictness is good
       const sanitizedCreator = {

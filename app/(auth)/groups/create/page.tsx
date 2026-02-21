@@ -113,238 +113,238 @@ export default function CreateGroupPage() {
         backHref="/groups"
       />
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="relative p-1 rounded-full bg-primary/10 overflow-hidden h-10 w-10 flex items-center justify-center border-2 border-primary/20 shrink-0">
-                {bannerUrl ? (
-                  <Image
-                    src={bannerUrl}
-                    alt="Group preview"
-                    fill
-                    className="object-cover"
-                    sizes="40px"
-                  />
-                ) : (
-                  <Users className="h-5 w-5 text-primary" />
-                )}
-              </div>
-              <CardTitle className="text-xl font-bold"> {watch('name') || 'Create a New Group'}</CardTitle> 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="relative p-1 rounded-full bg-primary/10 overflow-hidden h-10 w-10 flex items-center justify-center border-2 border-primary/20 shrink-0">
+              {bannerUrl ? (
+                <Image
+                  src={bannerUrl}
+                  alt="Group preview"
+                  fill
+                  className="object-cover"
+                  sizes="40px"
+                />
+              ) : (
+                <Users className="h-5 w-5 text-primary" />
+              )}
             </div>
-          </CardHeader>
+            <CardTitle className="text-xl font-bold"> {watch('name') || 'Create a New Group'}</CardTitle>
+          </div>
+        </CardHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  Group Name <span className="text-destructive font-bold">*</span>
-                </Label>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Group Name <span className="text-destructive font-bold">*</span>
+              </Label>
+              <div className="relative">
                 <div className="relative">
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="My Awesome Group"
-                      {...register('name')}
-                      error={errors.name?.message as string | undefined}
-                      className="pl-10"
-                    />
-                    <div className="absolute left-3 top-2.5 h-5 w-5 rounded-sm overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                      {bannerUrl ? (
-                        <Image
-                          src={bannerUrl}
-                          alt="Thumbnail"
-                          fill
-                          className="object-cover"
-                          sizes="20px"
-                        />
-                      ) : (
-                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Tell members what this group is about"
-                  className="min-h-[100px]"
-                  {...register('description')}
-                />
-                <div className="flex justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    What makes this group special? Let members know what to expect.
-                  </p>
-                  <span className={`text-xs ${(description?.length || 0) > 500 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {description?.length || 0}/500
-                  </span>
-                </div>
-                {errors.description && (
-                  <p className="text-sm text-destructive">
-                    {errors.description.message as string}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <GroupImageSelection
-                  selectedImage={bannerUrl}
-                  onSelect={(url) => setValue('bannerUrl', url, { shouldDirty: true })}
-                  isEditing={true}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxMembers">Maximum Members (Optional)</Label>
-                <div className="relative">
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min={2}
-                      max={100}
-                      placeholder="Leave empty for no limit"
-                      {...register('maxMembers', {
-                        setValueAs: (v) => v === '' ? null : Number(v)
-                      })}
-                      error={errors.maxMembers?.message as string | undefined}
-                      className="pl-10"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                    />
-                    <Hash className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Set a limit on the number of members who can join this group.
-                </p>
-                {errors.maxMembers && (
-                  <p className="text-sm text-destructive">
-                    {errors.maxMembers.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between space-x-4 p-4 bg-muted/30 rounded-lg">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                      <Label htmlFor="isPrivate" className="font-medium">
-                        Private Group
-                      </Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {isPrivate
-                        ? 'New members will need admin approval to join this group.'
-                        : 'Anyone with the link can join this group.'}
-                    </p>
-                  </div>
-                  <Switch
-                    id="isPrivate"
-                    checked={isPrivate}
-                    onCheckedChange={handlePrivacyChange}
+                  <Input
+                    type="text"
+                    placeholder="My Awesome Group"
+                    {...register('name')}
+                    error={errors.name?.message as string | undefined}
+                    className="pl-10"
                   />
-                </div>
-
-                {isPrivate && (
-                  <div className="space-y-2 p-4 bg-muted/30 rounded-lg border border-dashed border-muted-foreground/20">
-                    <Label htmlFor="password">Group Password (Optional)</Label>
-                    <div className="relative group/pass">
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="Set a password for immediate joining"
-                        {...register('password')}
-                        className="pl-10 pr-10"
+                  <div className="absolute left-3 top-2.5 h-5 w-5 rounded-sm overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                    {bannerUrl ? (
+                      <Image
+                        src={bannerUrl}
+                        alt="Thumbnail"
+                        fill
+                        className="object-cover"
+                        sizes="20px"
                       />
-                      <LockKeyhole className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      If set, users can join immediately by entering this password. If left blank, they must request approval.
-                    </p>
+                    ) : (
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </CardContent>
-
-            <CardFooter className="flex justify-between border-t px-6 py-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!isDirty || !isValid || isSubmitting}
-                className="min-w-[120px]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Group
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
-
-        <div className="mt-8 p-6 bg-muted/20 rounded-lg border border-muted">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-full bg-primary/10">
-              <Info className="h-5 w-5 text-primary" />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
             </div>
-            <div>
-              <h3 className="font-medium text-lg mb-2">Group Creation Tips</h3>
-              <ul className="space-y-3 text-sm text-muted-foreground">
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    <span className="font-medium">Choose a clear name</span> - Make it easy for others to
-                    understand what your group is about.
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    <span className="font-medium">Set privacy carefully</span> - Public groups are
-                    discoverable by anyone, while private groups require a password to join.
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  <span>
-                    <span className="font-medium">Member limits</span> - Consider setting a reasonable
-                    limit based on your group's purpose.
-                  </span>
-                </li>
-              </ul>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Tell members what this group is about"
+                className="min-h-[100px]"
+                {...register('description')}
+              />
+              <div className="flex justify-between">
+                <p className="text-sm text-muted-foreground">
+                  What makes this group special? Let members know what to expect.
+                </p>
+                <span className={`text-xs ${(description?.length || 0) > 500 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {description?.length || 0}/500
+                </span>
+              </div>
+              {errors.description && (
+                <p className="text-sm text-destructive">
+                  {errors.description.message as string}
+                </p>
+              )}
             </div>
+
+            <div className="space-y-2">
+              <GroupImageSelection
+                selectedImage={bannerUrl}
+                onSelect={(url) => setValue('bannerUrl', url, { shouldDirty: true })}
+                isEditing={true}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maxMembers">Maximum Members (Optional)</Label>
+              <div className="relative">
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={2}
+                    max={100}
+                    placeholder="Leave empty for no limit"
+                    {...register('maxMembers', {
+                      setValueAs: (v) => v === '' ? null : Number(v)
+                    })}
+                    error={errors.maxMembers?.message as string | undefined}
+                    className="pl-10"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                  <Hash className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Set a limit on the number of members who can join this group.
+              </p>
+              {errors.maxMembers && (
+                <p className="text-sm text-destructive">
+                  {errors.maxMembers.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between space-x-4 p-4 bg-muted/30 rounded-lg">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <Label htmlFor="isPrivate" className="font-medium">
+                      Private Group
+                    </Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {isPrivate
+                      ? 'New members will need admin approval to join this group.'
+                      : 'Anyone with the link can join this group.'}
+                  </p>
+                </div>
+                <Switch
+                  id="isPrivate"
+                  checked={isPrivate}
+                  onCheckedChange={handlePrivacyChange}
+                />
+              </div>
+
+              {isPrivate && (
+                <div className="space-y-2 p-4 bg-muted/30 rounded-lg border border-dashed border-muted-foreground/20">
+                  <Label htmlFor="password">Group Password (Optional)</Label>
+                  <div className="relative group/pass">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Set a password for immediate joining"
+                      {...register('password')}
+                      className="pl-10 pr-10"
+                    />
+                    <LockKeyhole className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    If set, users can join immediately by entering this password. If left blank, they must request approval.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex justify-between border-t px-6 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!isDirty || !isValid || isSubmitting}
+              className="min-w-[120px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Group
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+
+      <div className="mt-8 p-6 bg-muted/20 rounded-lg border border-muted">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Info className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-medium text-lg mb-2">Group Creation Tips</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>
+                  <span className="font-medium">Choose a clear name</span> - Make it easy for others to
+                  understand what your group is about.
+                </span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>
+                  <span className="font-medium">Set privacy carefully</span> - Public groups are
+                  discoverable by anyone, while private groups require a password to join.
+                </span>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>
+                  <span className="font-medium">Member limits</span> - Consider setting a reasonable
+                  limit based on your group's purpose.
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
+    </div>
   );
 }

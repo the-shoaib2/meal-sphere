@@ -322,7 +322,7 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
   if (!group || !canInvite) return null;
 
   const { name, isPrivate, memberCount, maxMembers, members } = group;
-  const currentCount = Array.isArray(members) ? members.length : memberCount;
+  const currentCount = memberCount ?? (Array.isArray(members) ? members.length : 0);
   const isGroupFull = maxMembers ? currentCount >= maxMembers : false;
 
 
