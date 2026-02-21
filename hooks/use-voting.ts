@@ -178,6 +178,12 @@ export function useVoting(options?: {
         variant: "destructive",
       });
     },
+    onSuccess: () => {
+      toast({
+        title: "Vote deleted",
+        description: "The vote was successfully removed.",
+      });
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['votes', groupId] });
     },
