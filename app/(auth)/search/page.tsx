@@ -94,7 +94,7 @@ function ResultSection({ title, icon: Icon, results, gradient }: {
     if (results.length === 0) return null
 
     return (
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-2 sm:space-y-2">
             <div className={`flex items-center gap-2 px-1`}>
                 <div className={`h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center`}>
                     <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-foreground/80" />
@@ -156,10 +156,10 @@ export default function SearchPage() {
     }
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-2">
             <PageHeader
                 heading="Search Results"
-                text={
+                description={
                     isLoading
                         ? `Searching for "${query}"...`
                         : `Found ${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`

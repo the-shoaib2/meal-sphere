@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import type { MealType } from "@/hooks/use-meal"
+import GuestMealForm from "@/components/meal/guest-meal-form"
 
 interface DailyMealManagerCardProps {
+    roomId: string
     selectedDate: Date
     isLoading: boolean
     mealSettings: any
@@ -24,6 +26,7 @@ interface DailyMealManagerCardProps {
 }
 
 const DailyMealManagerCard = ({
+    roomId,
     selectedDate,
     isLoading,
     mealSettings,
@@ -38,11 +41,12 @@ const DailyMealManagerCard = ({
 }: DailyMealManagerCardProps) => {
     return (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <CardTitle className="text-lg sm:text-xl">
-                    Meals for {format(selectedDate, "MMMM d, yyyy")}
+                    {format(selectedDate, "MMMM d, yyyy")}
                     {isToday(selectedDate) && " (Today)"}
                 </CardTitle>
+                <GuestMealForm roomId={roomId} date={selectedDate} />
             </CardHeader>
             <CardContent>
                 <div className="space-y-3 sm:space-y-4">
@@ -62,12 +66,12 @@ const DailyMealManagerCard = ({
                                         : mealType === "LUNCH"
                                             ? "☀️"
                                             : "🌙"
-                                const mealTypeColor =
-                                    mealType === "BREAKFAST"
-                                        ? "bg-orange-100 text-orange-700"
-                                        : mealType === "LUNCH"
-                                            ? "bg-yellow-100 text-yellow-700"
-                                            : "bg-blue-100 text-blue-700"
+                                // const mealTypeColor =
+                                //     mealType === "BREAKFAST"
+                                //         ? "bg-orange-100 text-orange-700"
+                                //         : mealType === "LUNCH"
+                                //             ? "bg-yellow-100 text-yellow-700"
+                                //             : "bg-blue-100 text-blue-700"
                                 const shouldAutoAdd = shouldAutoAddForUser(mealType)
                                 const isAutoTime = isAutoTimeForMeal(mealType)
 
@@ -93,7 +97,8 @@ const DailyMealManagerCard = ({
                                     >
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                             <div
-                                                className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}
+                                                // className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}
+                                                className={`p-1.5 sm:p-2 rounded-full flex-shrink-0`}
                                             >
                                                 <span className="text-base sm:text-lg">
                                                     {mealTypeIcon}

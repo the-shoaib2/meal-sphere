@@ -47,7 +47,7 @@ export default async function MealListPage({ searchParams }: { searchParams: Pro
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-2">
             <PageHeader
                 heading="Meal List"
                 showBackButton

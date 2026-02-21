@@ -28,7 +28,7 @@ export default async function ShoppingPage() {
 
   if (!activeGroup) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Shopping List"
           text="Manage your shopping items"
@@ -48,7 +48,7 @@ export default async function ShoppingPage() {
   if (!shoppingData.currentPeriod) {
     const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Shopping List"
           text={`Manage your shopping items for ${activeGroup.name}`}
@@ -63,7 +63,7 @@ export default async function ShoppingPage() {
 
   // 4. Render client component with initial data
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <ShoppingManagement
         initialData={{
           ...shoppingData,

@@ -39,7 +39,7 @@ export function ExpensesPageContent({ activeGroup, userRole: propUserRole, initi
         <div className="space-y-4">
             <PageHeader
                 heading="Extra Expenses"
-                text={`Track additional expenses like utilities, rent, internet, and more for ${activeGroup?.name}.`}
+                description={`Track additional expenses like utilities, rent, internet, and more for ${activeGroup?.name}.`}
             >
                 <div className="flex items-center gap-2">
                     <Button

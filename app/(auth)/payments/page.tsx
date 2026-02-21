@@ -28,10 +28,10 @@ export default async function PaymentsPage() {
 
     if (!activeGroup) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-2">
                 <PageHeader
                     heading="Payments"
-                    text="Track and manage group payments"
+                    description="Track and manage group payments"
                 />
                 <NoGroupState />
             </div>
@@ -48,10 +48,10 @@ export default async function PaymentsPage() {
     if (!paymentsData.currentPeriod) {
         const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
         return (
-            <div className="space-y-6">
+            <div className="space-y-2">
                 <PageHeader
                     heading="Payments"
-                    text={`Track and manage payments for ${activeGroup.name}`}
+                    description={`Track and manage payments for ${activeGroup.name}`}
                 />
                 <NoPeriodState
                     isPrivileged={isPrivileged}
@@ -63,7 +63,7 @@ export default async function PaymentsPage() {
 
     // 4. Render client component with initial data
     return (
-        <div className="space-y-6">
+        <div className="space-y-2">
             <PaymentManagement
                 initialData={{
                     ...paymentsData,

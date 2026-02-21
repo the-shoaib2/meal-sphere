@@ -147,7 +147,7 @@ export default function ShoppingManagement({ initialData, initialAccessData }: S
       <div className="space-y-6">
         <PageHeader
           heading="Shopping List"
-          text={`Manage your shopping items for ${activeGroup?.name || "your group"}`}
+          description={`Manage your shopping items for ${activeGroup?.name || "your group"}`}
         >
           <Dialog
             open={showAddDialog}

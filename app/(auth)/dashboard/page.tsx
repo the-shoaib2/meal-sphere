@@ -40,10 +40,10 @@ export default async function DashboardPage() {
 
     if (!activeGroupId) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-2">
                 <PageHeader
                     heading="Dashboard"
-                    text="Welcome to MealSphere! Get started by creating or joining a group."
+                    description="Welcome to MealSphere! Get started by creating or joining a group."
                 />
                 <NoGroupState />
             </div>
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
             text="Overview of your group's meal activity and analytics."
         // We no longer pass activities/chartData to the Shell if it doesn't use them directly (it passed them as children in original code? No, let's check Dashboard comopnent)
         >
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 sm:space-y-2">
                 {/* Overview Section - Loaded Instantly */}
                 <DashboardOverview summaryData={summaryData} />
 

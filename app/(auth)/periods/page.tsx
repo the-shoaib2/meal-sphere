@@ -26,7 +26,7 @@ export default async function PeriodsPage() {
 
     if (!activeGroup) {
       return (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <PageHeader
             heading="Periods"
             text="Manage your group's meal periods"
@@ -72,7 +72,7 @@ export default async function PeriodsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <PeriodManagement initialData={initialData} />
     </div>
   );

@@ -7,25 +7,32 @@ import { Button } from "@/components/ui/button"
 
 interface PageHeaderProps {
     heading: string
-    text?: string | ReactNode
-    children?: ReactNode
+    description?: string | ReactNode
+    badges?: ReactNode
+    children?: ReactNode // Used for actions
     className?: string
     showBackButton?: boolean
     backHref?: string
+    /** @deprecated use description instead */
+    text?: string | ReactNode
 }
 
 export function PageHeader({
     heading,
-    text,
+    description,
+    badges,
     children,
     className,
     showBackButton,
     backHref,
+    text,
 }: PageHeaderProps) {
     const router = useRouter()
     const [expanded, setExpanded] = useState(false)
     const [isOverflowing, setIsOverflowing] = useState(false)
     const textRef = useRef<HTMLDivElement>(null)
+
+    const resolvedDescription = description || text
 
     // Measure overflow in collapsed state — works on any screen size
     useEffect(() => {
@@ -42,76 +49,81 @@ export function PageHeader({
         const ro = new ResizeObserver(check)
         ro.observe(el)
         return () => ro.disconnect()
-    }, [text, expanded])
+    }, [resolvedDescription, expanded])
 
     const showToggle = isOverflowing || expanded
 
     return (
-        <div className={cn("mb-6", className)}>
-            <div className="flex items-start justify-between gap-3 w-full">
-
-                {/* Left — back button + title + text */}
-                <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div className={cn("mb-4 space-y-1.5", className)}>
+            <div className="flex items-center justify-between gap-3 w-full">
+                {/* Left — back button + title */}
+                <div className="flex items-center gap-2 min-w-0">
                     {showBackButton && (
                         <Button
                             onClick={() => (backHref ? router.push(backHref) : router.back())}
                             variant="ghost"
                             size="icon"
                             title="Go back"
-                            className="group h-9 w-9 shrink-0 mt-0.5 rounded-full bg-muted/80 hover:bg-blue-600 hover:shadow-md transition-all duration-300"
+                            className="group h-8 w-8 shrink-0 rounded-full bg-muted/50 hover:bg-blue-600 hover:shadow-lg transition-all duration-300"
                         >
-                            <ArrowLeft className="h-[22px] w-[22px] stroke-[2.5] text-blue-600 group-hover:text-white transition-colors duration-300" />
+                            <ArrowLeft className="h-4 w-4 stroke-[2.5] text-blue-600 group-hover:text-white transition-colors duration-300" />
                         </Button>
                     )}
-
-                    <div className="flex flex-col min-w-0 flex-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground truncate">
-                            {heading}
-                        </h1>
-
-                        {text && (
-                            <div className="mt-0.5">
-                                {/* Animated text region */}
-                                <div
-                                    ref={textRef}
-                                    className={cn(
-                                        "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out text-sm text-muted-foreground",
-                                        expanded ? "max-h-40 opacity-100" : "max-h-5 opacity-80"
-                                    )}
-                                >
-                                    <div className={cn(expanded ? "whitespace-normal break-words" : "truncate")}>
-                                        {text}
-                                    </div>
-                                </div>
-
-                                {/* Show toggle only when content actually overflows */}
-                                {showToggle && (
-                                    <button
-                                        onClick={() => setExpanded(v => !v)}
-                                        className="mt-0.5 flex items-center gap-0.5 text-[11px] font-medium text-primary/70 hover:text-primary transition-colors duration-200"
-                                        aria-expanded={expanded}
-                                    >
-                                        <ChevronDown
-                                            className={cn(
-                                                "h-3.5 w-3.5 transition-transform duration-300",
-                                                expanded ? "rotate-180" : "rotate-0"
-                                            )}
-                                        />
-                                        {expanded ? "Show less" : "Show more"}
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
+                        {heading}
+                    </h1>
                 </div>
 
-                {/* Right — action buttons */}
+                {/* Right — action buttons (Always in one row) */}
                 {children && (
-                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         {children}
                     </div>
                 )}
             </div>
+
+            {/* Description and Badges Row (Always 2nd row) */}
+            {(resolvedDescription || badges) && (
+                <div className={cn("flex flex-col gap-1.5", showBackButton && "pl-10")}>
+                    {resolvedDescription && (
+                        <div className="max-w-3xl">
+                            <div
+                                ref={textRef}
+                                className={cn(
+                                    "overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out text-sm leading-tight text-muted-foreground",
+                                    expanded ? "max-h-96 opacity-100" : "max-h-4 opacity-80"
+                                )}
+                            >
+                                <div className={cn(expanded ? "whitespace-normal break-words" : "truncate")}>
+                                    {resolvedDescription}
+                                </div>
+                            </div>
+
+                            {showToggle && (
+                                <button
+                                    onClick={() => setExpanded(v => !v)}
+                                    className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold text-primary/80 hover:text-primary transition-all duration-200"
+                                    aria-expanded={expanded}
+                                >
+                                    <ChevronDown
+                                        className={cn(
+                                            "h-3 w-3 transition-transform duration-300",
+                                            expanded ? "rotate-180" : "rotate-0"
+                                        )}
+                                    />
+                                    {expanded ? "Show less" : "Show more"}
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {badges && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {badges}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

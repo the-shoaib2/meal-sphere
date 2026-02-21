@@ -373,8 +373,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       if (context?.previousData && context?.targetMonthKey) {
         queryClient.setQueryData(['meals-system', roomId, context.targetMonthKey], context.previousData);
       }
-      console.error('Error toggling meal:', error);
-      toast.error(error.response?.data?.message || 'Failed to update meal');
+      toast.error(error.message || 'Failed to update meal');
     },
     onSuccess: (data: any, variables) => {
       const { action, type, date } = variables;
@@ -401,8 +400,6 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     onSettled: (_, __, variables) => {
       const targetMonthKey = format(variables.date, 'yyyy-MM');
-      // Ensure absolute consistency and recalculate userStats/distributions
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey] });
       queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
       queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
     }
@@ -506,7 +503,6 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     onSettled: (_, __, variables) => {
       const targetMonthKey = format(variables.date, 'yyyy-MM');
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey] });
       queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
       queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
     }
@@ -540,8 +536,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       if (context?.previousData && context?.targetMonthKey) {
         queryClient.setQueryData(['meals-system', roomId, context.targetMonthKey], context.previousData);
       }
-      console.error('Error deleting guest meal:', error);
-      toast.error('Failed to delete guest meal');
+      toast.error(error.message || 'Failed to delete guest meal');
     },
     onSuccess: (_, variables, context: any) => {
       if (context?.targetMonthKey) {
@@ -556,7 +551,6 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     onSettled: (_, __, variables, context: any) => {
       const targetMonthKey = context?.targetMonthKey || monthKey;
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey] });
       queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
       queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
     }
@@ -578,8 +572,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       queryClient.setQueryData(['meal-settings', roomId], data);
     },
     onError: (error: any) => {
-      console.error('Error updating meal settings:', error);
-      toast.error(error.response?.data?.message || 'Failed to update meal settings');
+      toast.error(error.message || 'Failed to update meal settings');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
@@ -613,12 +606,11 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
       return { previousData };
     },
-    onError: (err, newSettings, context) => {
+    onError: (err: any, newSettings, context) => {
       if (context?.previousData) {
         queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], context.previousData);
       }
-      console.error('Error updating auto meal settings:', err);
-      toast.error((err as any).response?.data?.message || 'Failed to update auto meal settings');
+      toast.error(err.message || 'Failed to update auto meal settings');
     },
     onSuccess: (data: AutoMealSettings) => {
       queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], data);
@@ -643,8 +635,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       toast.success('Auto meals processed successfully');
     },
     onError: (error: any) => {
-      console.error('Error triggering auto meals:', error);
-      toast.error(error.response?.data?.message || 'Failed to trigger auto meals');
+      toast.error(error.message || 'Failed to trigger auto meals');
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, selectedDateStr] });
@@ -964,7 +955,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       try {
         await toggleMealMutation.mutateAsync({ date, type, userId, action: latestAction });
       } catch (err) {
-        console.error("Debounced toggle error:", err);
+        // Silently catch to prevent Next.js error overlay, React Query onError already handles the toast
       } finally {
         // Clear optimistic state and timer ref
         setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => {

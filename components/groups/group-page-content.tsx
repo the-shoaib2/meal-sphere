@@ -203,35 +203,33 @@ export function GroupPageContent(
                 heading={resolvedGroup.name}
                 showBackButton
                 backHref="/groups"
-                text={
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-                        {resolvedGroup.description && (
-                            <span className="text-muted-foreground/90 font-medium text-sm">{resolvedGroup.description}</span>
-                        )}
-                        <div className="flex flex-wrap gap-1">
-                            {category && <Badge variant="secondary">{category}</Badge>}
-                            {tags.length > 0 && tags.map((tag: string) => (
-                                <Badge key={tag} variant="outline">{tag}</Badge>
-                            ))}
-                        </div>
-                    </div>
+                description={resolvedGroup.description}
+                badges={
+                    <>
+                        {category && <Badge variant="secondary" className="shadow-sm">{category}</Badge>}
+                        {tags.length > 0 && tags.map((tag: string) => (
+                            <Badge key={tag} variant="outline" className="shadow-sm">{tag}</Badge>
+                        ))}
+                    </>
                 }
             >
-                {showActivityLog && isMember && (
-                    <Button size="sm" variant="outline" className="h-9 w-9 rounded-full p-0" onClick={() => setShowActivityDialog(true)} title="Activity Log">
-                        <Activity className="h-4 w-4" />
-                    </Button>
-                )}
-                {!isMember && (
-                    <Button
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => router.push(`/groups/join/${groupId}`)}
-                    >
-                        <LogIn className="h-4 w-4" />
-                        Join Group
-                    </Button>
-                )}
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    {showActivityLog && isMember && (
+                        <Button size="icon" variant="outline" className="h-9 w-9 rounded-full shadow-sm" onClick={() => setShowActivityDialog(true)} title="Activity Log">
+                            <Activity className="h-4 w-4" />
+                        </Button>
+                    )}
+                    {!isMember && (
+                        <Button
+                            size="sm"
+                            className="gap-2 shadow-md hover:shadow-lg transition-all"
+                            onClick={() => router.push(`/groups/join/${groupId}`)}
+                        >
+                            <LogIn className="h-4 w-4" />
+                            Join Group
+                        </Button>
+                    )}
+                </div>
             </PageHeader>
 
             {isMember ? (

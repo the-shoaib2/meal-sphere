@@ -32,7 +32,7 @@ export default async function GroupPage(props: {
 
     // Generic 403/404 state
     return (
-      <div className="space-y-6 p-4">
+      <div className="space-y-2 p-4">
         <div>
           <PageHeader
             heading="Access Denied"
@@ -52,7 +52,7 @@ export default async function GroupPage(props: {
 
   if (!group) {
     return (
-      <div className="space-y-6 p-4">
+      <div className="space-y-2 p-4">
         <NoGroupState />
       </div>
     );

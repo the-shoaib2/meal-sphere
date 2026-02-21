@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,10 +33,10 @@ export default async function AccountBalancePage() {
 
   if (!activeGroup) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Account Balance"
-          text="Track your meal expenses and payments"
+          description="Track your meal expenses and payments"
         />
         <NoGroupState />
       </div>
@@ -50,10 +51,10 @@ export default async function AccountBalancePage() {
   // 3. Handle No Period State server-side
   if (!currentPeriod) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Account Balance"
-          text={`Track your meal expenses and payments for ${activeGroup.name}`}
+          description={`Track your meal expenses and payments for ${activeGroup.name}`}
         />
         <NoPeriodState
           isPrivileged={hasPrivilege}
@@ -65,24 +66,24 @@ export default async function AccountBalancePage() {
 
   // 4. Render client component with initial data
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <PageHeader
         heading="Account Balances"
-        text={
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <span>Manage all user balances and transactions.</span>
+        description="Manage all user balances and transactions."
+        badges={
+          <>
             {currentPeriod && (
-              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit">
-                {currentPeriod.name} {currentPeriod.isLocked ? "(Locked)" : ""}
+              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-xs w-fit shadow-sm">
+                {currentPeriod.name} {currentPeriod.isLocked ? " (Locked)" : ""}
               </Badge>
             )}
             <Badge
               variant={hasPrivilege ? "default" : "outline"}
-              className={hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : ""}
+              className={cn("shadow-sm", hasPrivilege ? "bg-blue-600 hover:bg-blue-700" : "")}
             >
               {activeMember.role ? activeMember.role.replace('_', ' ') : 'MEMBER'}
             </Badge>
-          </div>
+          </>
         }
       >
         {hasPrivilege && (

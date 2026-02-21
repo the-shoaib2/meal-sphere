@@ -31,10 +31,10 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
 
   if (!activeGroup) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
-          heading="Meal Management"
-          text="Track and manage your meals"
+          heading="Meals"
+          description="Track and manage your meals"
         />
         <NoGroupState />
       </div>
@@ -58,8 +58,8 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
   } catch (error) {
     console.error("[SSR Error /meals]:", error);
     return (
-      <div className="space-y-6">
-        <PageHeader heading="Meal Management" text="Track and manage your meals" />
+      <div className="space-y-2">
+        <PageHeader heading="Meals" description="Track and manage your meals" />
         <div className="p-6 text-center text-red-500 border rounded-lg bg-red-50/50">
           <p className="font-semibold">Failed to load meal data.</p>
           <p className="text-sm opacity-80 mt-1">Please try refreshing the page.</p>
@@ -72,19 +72,17 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
   if (!mealsData.currentPeriod) {
     const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Meal Management"
-          text={
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mt-1">
-              <span className="text-muted-foreground block sm:inline">Track and manage your meals for {activeGroup.name}</span>
-              {accessData.userRole && (
-                <Badge variant="default" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0">
-                  <ShieldCheck className="h-3 w-3" />
-                  {accessData.userRole}
-                </Badge>
-              )}
-            </div>
+          description={`Track and manage your meals for ${activeGroup.name}`}
+          badges={
+            accessData.userRole && (
+              <Badge variant="destructive" className="bg-red-500 text-white hover:bg-red-600 transition-colors uppercase tracking-wider text-[10px] font-bold px-2 flex items-center gap-1 shrink-0 shadow-sm">
+                <ShieldCheck className="h-3 w-3" />
+                {accessData.userRole}
+              </Badge>
+            )
           }
         />
         <NoPeriodState
@@ -97,7 +95,7 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
 
   // 4. Render client component with initial data
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <MealManagement
         roomId={activeGroup.id}
         groupName={activeGroup.name}

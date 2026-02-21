@@ -15,7 +15,6 @@ import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
 import { useCurrentPeriod } from "@/hooks/use-periods"
 import { isPeriodLocked } from "@/lib/utils/period-utils-shared"
-import GuestMealForm from "@/components/meal/guest-meal-form"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
@@ -197,51 +196,54 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     return useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')
   }, [useMealCount])
 
-  // Header (always visible)
   const header = (
     <PageHeader
       heading="Meals"
-      text={
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-          <span className="text-muted-foreground/90 font-medium text-sm">
-            Manage meals for <span className="text-foreground font-semibold">{groupName || "your group"}</span>
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            {userRole && (
-              <Badge
-                variant="outline"
-                className="bg-red-50 text-red-600 border-red-200/60 shadow-sm transition-all hover:bg-red-100 uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
-              >
-                <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                {userRole}
-              </Badge>
-            )}
-            {currentPeriod && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5",
-                  isPeriodLocked(currentPeriod)
-                    ? "bg-stone-50 text-stone-600 border-stone-200"
-                    : "bg-emerald-50 text-emerald-700 border-emerald-200/60 hover:bg-emerald-100"
-                )}
-              >
-                {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
-              </Badge>
-            )}
-          </div>
-        </div>
+      description={
+        <span className="text-muted-foreground/90 font-medium text-sm">
+          Track and manage your meals for <span className="text-foreground font-semibold">{groupName || "your group"}</span>
+          {mealSettings?.autoMealEnabled && (
+            <span className="ml-2 text-emerald-600 font-medium inline-flex items-center gap-1">
+              • Auto meals active
+            </span>
+          )}
+        </span>
+      }
+      badges={
+        <>
+          {userRole && (
+            <Badge
+              variant="outline"
+              className="bg-red-50 text-red-600 border-red-200/60 shadow-sm transition-all hover:bg-red-100 uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+            >
+              <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+              {userRole}
+            </Badge>
+          )}
+          {currentPeriod && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5",
+                isPeriodLocked(currentPeriod)
+                  ? "bg-stone-50 text-stone-600 border-stone-200"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200/60 hover:bg-emerald-100"
+              )}
+            >
+              {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {currentPeriod.name} {isPeriodLocked(currentPeriod) ? "• Locked" : "• Active"}
+            </Badge>
+          )}
+        </>
       }
     >
-      <div className="flex items-center gap-2 w-auto justify-end mt-0">
-        <GuestMealForm roomId={roomId} onSuccess={() => { }} initialData={initialData} />
+      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
 
         {canManageMealSettings && (
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
+            className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all shadow-sm"
             onClick={() => setSettingsOpen(true)}
             title="Meal Settings"
           >
@@ -252,7 +254,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
           <Button
             variant="outline"
             size="sm"
-            className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all"
+            className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all shadow-sm"
             onClick={() => setAutoSettingsOpen(true)}
             title="Auto Meal Settings"
           >
@@ -340,6 +342,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             isLoading={isAnyLoading}
           />
           <DailyMealManagerCard
+            roomId={roomId}
             selectedDate={selectedDate}
             isLoading={isAnyLoading}
             mealSettings={mealSettings}

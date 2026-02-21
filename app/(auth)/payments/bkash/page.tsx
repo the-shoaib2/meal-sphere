@@ -28,7 +28,7 @@ export default function BkashPaymentPage() {
 
   if (!isPeriodLoading && !currentPeriod) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <Button variant="ghost" onClick={handleBack} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Payments
@@ -84,7 +84,7 @@ export default function BkashPaymentPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <Button variant="ghost" onClick={handleBack} className="mb-4">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Payments

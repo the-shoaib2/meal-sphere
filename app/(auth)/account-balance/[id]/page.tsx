@@ -35,7 +35,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
 
   if (!activeGroup) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Account Details"
           text="Manage user balances and transactions"
@@ -53,7 +53,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
   // STRICT ACCESS: Only Admin or Owner can view this page
   if (!isAdmin && !isOwner) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Account Details"
           text="Security & Permissions"
@@ -70,7 +70,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
   // 3. Handle No Period State server-side
   if (!balanceData.currentPeriod) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Account Details"
           text={`Manage balances for ${activeGroup.name}`}
@@ -85,7 +85,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
 
   // 4. Render client component with initial data
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <PageHeader
         heading="Account Details"
         text="View and manage specific user accounts"

@@ -18,10 +18,10 @@ export default async function GroupsPage() {
   const data = await fetchGroupsData(session.user.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <PageHeader
         heading="Groups"
-        text="Join or create groups to plan meals together."
+        description="Join or create groups to plan meals together."
       />
 
       <GroupsView initialData={data} />

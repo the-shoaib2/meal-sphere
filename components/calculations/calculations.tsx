@@ -38,7 +38,7 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
       <div className="space-y-6">
         <PageHeader
           heading="Calculations"
-          text="View meal calculations and balances"
+          description="View meal calculations and balances"
         />
         <NoGroupState />
       </div>

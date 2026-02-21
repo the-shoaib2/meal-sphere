@@ -41,7 +41,7 @@ export default async function SettingsPage() {
     <div className="space-y-4">
       <PageHeader
         heading="Settings"
-        text="Manage your account settings and preferences"
+        description="Manage your account settings and preferences"
       />
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">

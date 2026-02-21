@@ -43,7 +43,7 @@ export function Dashboard({
     return (
         <DashboardLoadingContext.Provider value={{ isLoading }}>
             {heading && (
-                <PageHeader heading={heading} text={text}>
+                <PageHeader heading={heading} description={text}>
                     <RefreshButton refresh={refresh} isRefreshing={isRefreshing} />
                 </PageHeader>
             )}

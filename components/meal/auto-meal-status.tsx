@@ -21,7 +21,7 @@ interface AutoMealStatusProps {
 export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
   const { data: session } = useSession()
   const [isOpen, setIsOpen] = useState(false)
-  
+
   const {
     mealSettings,
     autoMealSettings,
@@ -37,19 +37,19 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
       await triggerAutoMeals(new Date())
       toast.success("Auto meals triggered successfully")
     } catch (error) {
-      console.error("Error triggering auto meals:", error)
-      toast.error("Failed to trigger auto meals")
+      // console.error("Error triggering auto meals:", error)
+      // toast already handled by use-meal
     }
   }
 
   const handleAutoMealToggle = (mealType: MealType, enabled: boolean) => {
     if (!autoMealSettings) return
-    
+
     const updates: any = {}
     if (mealType === 'BREAKFAST') updates.breakfastEnabled = enabled
     if (mealType === 'LUNCH') updates.lunchEnabled = enabled
     if (mealType === 'DINNER') updates.dinnerEnabled = enabled
-    
+
     updateAutoMealSettings(updates)
   }
 
@@ -71,8 +71,8 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
         <CardTitle className="text-lg flex items-center gap-2">
           <Zap className="h-5 w-5" />
           Auto Meal System
-          <Badge 
-            variant={isFullyEnabled ? "default" : "secondary"} 
+          <Badge
+            variant={isFullyEnabled ? "default" : "secondary"}
             className="ml-auto"
           >
             {isFullyEnabled ? "Active" : "Inactive"}
@@ -91,7 +91,7 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
               {isSystemEnabled ? "Enabled" : "Disabled"}
             </Badge>
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
@@ -135,9 +135,9 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
                 const shouldAutoAdd = shouldAutoAddMeal(new Date(), mealType)
                 const isAutoTime = isAutoMealTime(new Date(), mealType)
                 const isEnabled = mealType === 'BREAKFAST' ? autoMealSettings?.breakfastEnabled :
-                                 mealType === 'LUNCH' ? autoMealSettings?.lunchEnabled :
-                                 autoMealSettings?.dinnerEnabled
-                
+                  mealType === 'LUNCH' ? autoMealSettings?.lunchEnabled :
+                    autoMealSettings?.dinnerEnabled
+
                 return (
                   <div key={mealType} className="flex items-center justify-between text-xs">
                     <span className="capitalize">{mealType.toLowerCase()}</span>

@@ -105,7 +105,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
       <div className="space-y-6">
         <PageHeader
           heading="Periods"
-          text="Manage your periods and their statuses"
+          description="Manage your periods and their statuses"
         />
         <NoGroupState />
       </div>
@@ -146,7 +146,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
       <div className="space-y-6">
         <PageHeader
           heading="Periods"
-          text="Manage your periods and their statuses"
+          description="Manage your periods and their statuses"
         >
           {isPrivileged && !currentPeriod && (
             <CreatePeriodDialog

@@ -28,7 +28,7 @@ export default async function CalculationsPage() {
 
   if (!activeGroup) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Calculations"
           text="View meal calculations and balances"
@@ -48,7 +48,7 @@ export default async function CalculationsPage() {
   if (!calculationsData.currentPeriod) {
     const isPrivileged = ['ADMIN', 'MANAGER'].includes(accessData.userRole || '');
     return (
-      <div className="space-y-6">
+      <div className="space-y-2">
         <PageHeader
           heading="Calculations"
           text={`View detailed meal rates for ${activeGroup.name}`}

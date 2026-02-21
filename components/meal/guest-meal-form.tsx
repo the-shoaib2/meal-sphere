@@ -1,18 +1,15 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Plus, Minus, UserPlus, Loader2 } from "lucide-react"
+import { Plus, Minus, UserPlus, Loader2, Calendar as CalendarIcon, Users, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useMeal, type MealType } from "@/hooks/use-meal"
@@ -27,25 +24,32 @@ type GuestMealFormData = z.infer<typeof guestMealSchema>
 
 interface GuestMealFormProps {
   roomId: string
+  date?: Date
   onSuccess?: () => void
   initialData?: any
 }
 
-function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
+function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { addGuestMeal, mealSettings, isLoading } = useMeal(roomId, undefined, initialData)
+  const { addGuestMeal, mealSettings, autoMealSettings, isLoading } = useMeal(roomId, undefined, initialData)
 
   const form = useForm<GuestMealFormData>({
     resolver: zodResolver(guestMealSchema),
     defaultValues: {
-      date: new Date(),
+      date: date || new Date(),
       type: "LUNCH",
       notes: "",
     },
   })
+
+  useEffect(() => {
+    if (date) {
+      form.setValue("date", date)
+    }
+  }, [date, form])
 
   const onSubmit = async (data: GuestMealFormData) => {
     setIsSubmitting(true)
@@ -87,112 +91,103 @@ function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 w-auto px-3 hover:bg-primary/5 hover:text-primary transition-all active:scale-95 shrink-0">
-          <UserPlus className="h-4 w-4 mr-2" />
-          <span className="inline">Add Guest Meal</span>
+        <Button variant="default" size="sm" className="w-auto">
+          <UserPlus className="h-4 w-4 mr-1" />
+          Guest Meal
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] rounded-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[425px] rounded-lg p-5">
+        <DialogHeader className="space-y-1 pb-1">
           <DialogTitle>Add Guest Meal</DialogTitle>
-          <DialogDescription>
-            Add guest meals for a specific date and time. You can add up to {guestMealLimit} guest meals.
+          <DialogDescription className="text-xs sm:text-sm">
+            You can add up to {guestMealLimit} guest meals.
           </DialogDescription>
         </DialogHeader>
 
+
+        {autoMealSettings?.isEnabled && mealSettings?.autoMealEnabled && (
+          <Badge className="flex items-center justify-center bg-yellow-50 text-yellow-700 text-[10px] font-bold rounded-full w-fit mx-auto border border-yellow-200 shadow-sm animate-pulse">
+            <Zap className="h-3 w-3 fill-yellow-500" />
+            AUTO MEALS ACTIVE
+          </Badge>
+        )}
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            {date && (
+              <div className="pt-2 flex flex-col space-y-1">
+                <FormLabel className="text-sm font-semibold text-muted-foreground block">Selected Date</FormLabel>
+                <div className="flex items-center justify-center">
+                  <span className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium w-fit text-sm">
+                    <CalendarIcon className="h-4 w-4" />
+                    {format(date, "MMMM d, yyyy")}
+                  </span>
+                </div>
+              </div>
+            )}
+
 
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Meal Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a meal type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="BREAKFAST">Breakfast</SelectItem>
-                      <SelectItem value="LUNCH">Lunch</SelectItem>
-                      <SelectItem value="DINNER">Dinner</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <FormItem className="space-y-3 pt-2">
+                  <FormLabel className="text-sm font-semibold text-muted-foreground text-center block sm:text-left">Meal Type</FormLabel>
+                  <FormControl>
+                    <div className="flex flex-col sm:flex-row justify-center sm:justify-start gap-2">
+                      {(["BREAKFAST", "LUNCH", "DINNER"] as const).map((type) => (
+                        <Button
+                          key={type}
+                          type="button"
+                          variant={field.value === type ? "default" : "outline"}
+                          className={cn(
+                            "flex-1 h-11 cursor-pointer rounded-full sm:h-10 transition-all font-medium",
+                            field.value === type ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm border-transparent" : "hover:bg-primary/10 hover:text-primary"
+                          )}
+                          onClick={() => field.onChange(type)}
+                        >
+                          <span className="mr-2 text-base">
+                            {type === "BREAKFAST" ? "🌅" : type === "LUNCH" ? "☀️" : "🌙"}
+                          </span>
+                          {type === "BREAKFAST" ? "Breakfast" : type === "LUNCH" ? "Lunch" : "Dinner"}
+                        </Button>
+                      ))}
+                    </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="space-y-2">
-              <FormLabel>Guest Count</FormLabel>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 border rounded-full p-1">
+            <div className="space-y-2 flex flex-col">
+              <FormLabel className="text-sm font-semibold text-muted-foreground">Guest Count</FormLabel>
+              <div className="flex flex-col justify-center items-center gap-2">
+                <div className="flex items-center gap-4 border-2 rounded-full p-1.5 shadow-sm">
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="cursor-pointer rounded-full"
+                    className="cursor-pointer rounded-full h-10 w-10 hover:bg-primary/10 hover:text-primary"
                     onClick={() => handleCountChange(false)}
                     disabled={guestCount <= 1}
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold min-w-[2rem] text-center">{guestCount}</span>
+                  <div className="flex items-center justify-center w-12 text-center">
+                    <span className="text-3xl font-bold text-primary">{guestCount}</span>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="cursor-pointer rounded-full"
+                    className="cursor-pointer rounded-full h-10 w-10 hover:bg-primary/10 hover:text-primary"
                     onClick={() => handleCountChange(true)}
                     disabled={guestCount >= guestMealLimit}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5 font-bold" />
                   </Button>
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground font-medium">
                   Max: {guestMealLimit}
                 </div>
               </div>
@@ -202,11 +197,12 @@ function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
               control={form.control}
               name="notes"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
+                <FormItem className="pt-1">
+                  <FormLabel className="text-center text-muted-foreground sm:text-left block font-medium">Notes (Optional)</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Any special requirements or notes..."
+                      placeholder="Any special requirements..."
+                      className="h-11 sm:h-10 text-center sm:text-left"
                       {...field}
                     />
                   </FormControl>
@@ -215,18 +211,36 @@ function GuestMealForm({ roomId, onSuccess, initialData }: GuestMealFormProps) {
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+
+
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                className="w-full sm:w-auto hover:text-red-500">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto hover:bg-primary/90">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Adding...
                   </>
                 ) : (
-                  `Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`
+                  <>
+                    {autoMealSettings?.isEnabled && mealSettings?.autoMealEnabled ? (
+                      <Zap className="mr-2 h-4 w-4 fill-yellow-400 text-yellow-600" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
+                    {`Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`}
+                  </>
                 )}
               </Button>
             </DialogFooter>

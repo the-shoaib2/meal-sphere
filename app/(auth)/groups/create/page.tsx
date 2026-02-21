@@ -105,7 +105,7 @@ export default function CreateGroupPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <PageHeader
         heading="Create Group"
         text="Set up your group with a name, description, and privacy settings."
@@ -134,7 +134,7 @@ export default function CreateGroupPage() {
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-2">
             <div className="space-y-2">
               <Label htmlFor="name">
                 Group Name <span className="text-destructive font-bold">*</span>
@@ -319,7 +319,7 @@ export default function CreateGroupPage() {
           </div>
           <div>
             <h3 className="font-medium text-lg mb-2">Group Creation Tips</h3>
-            <ul className="space-y-3 text-sm text-muted-foreground">
+            <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start">
                 <span className="mr-2">•</span>
                 <span>
