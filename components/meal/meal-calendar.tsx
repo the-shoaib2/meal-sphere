@@ -123,7 +123,7 @@ export default function MealCalendar({ selected, onSelect, getMealCount, isLoadi
               <div className={cn(
                 "mt-0.5 flex items-center justify-center w-5 h-5 rounded-full text-xs transition-all",
                 isSelected
-                  ? "bg-primary-foreground/10 text-primary-foreground/80"
+                  ? "bg-primary-foreground/10 text-primary"
                   : "text-muted-foreground/70",
                 mealCount > 0 && !isLoading ? "opacity-100" : "opacity-0"
               )}>
