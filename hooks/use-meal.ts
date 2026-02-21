@@ -195,7 +195,7 @@ interface UseMealReturn {
   hasMeal: (date: Date, type: MealType, userId?: string) => boolean;
   canAddMeal: (date: Date, type: MealType) => boolean;
   getUserGuestMeals: (date: Date, userId?: string) => GuestMeal[];
-  getUserGuestMealCount: (date: Date, userId?: string) => number;
+  getUserGuestMealCount: (date: Date, type: MealType, userId?: string) => number;
   getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
   currentPeriod: any;
 }
@@ -815,10 +815,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     );
   }, [guestMeals, session?.user?.id]);
 
-  // Get total guest meals for a user on a specific date
-  const getUserGuestMealCount = useCallback((date: Date, userId?: string): number => {
+  // Get total guest meals for a user on a specific date and type
+  const getUserGuestMealCount = useCallback((date: Date, type: MealType, userId?: string): number => {
     const userGuestMeals = getUserGuestMeals(date, userId);
-    return userGuestMeals.reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
+    return userGuestMeals
+      .filter((meal: GuestMeal) => meal.type === type)
+      .reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
   }, [getUserGuestMeals]);
 
   // Get user's meal count for a specific date and type

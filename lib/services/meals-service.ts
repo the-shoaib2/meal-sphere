@@ -368,6 +368,10 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
         .filter(m => m.type !== type)
         .reduce((sum, m) => sum + m.count, 0);
     
+    // Authorization check for limit bypass
+    const membership = await prisma.roomMember.findUnique({ where: { userId_roomId: { userId: session.user.id, roomId } } });
+    const isPrivileged = membership && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(membership.role);
+
     // In patch, count is the new total for that type
     if (count <= 0) {
         const existing = todayGuestMeals.find(m => m.type === type);
@@ -379,7 +383,7 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
         return { success: true, data: { count: 0, type, date: normalizedDate, userId, roomId } as any };
     }
 
-    if (otherTypesTotal + count > limit) {
+    if (!isPrivileged && (otherTypesTotal + count > limit)) {
         const remaining = limit - otherTypesTotal;
         return { success: false, error: `Limit exceeded. Remaining: ${remaining < 0 ? 0 : remaining}` };
     }
