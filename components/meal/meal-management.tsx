@@ -458,7 +458,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         {isPrivileged && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
                 <div className="p-1.5 bg-primary/10 rounded-full">
                   <Users className="h-4 w-4 text-primary" />
                 </div>

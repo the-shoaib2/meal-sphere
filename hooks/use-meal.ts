@@ -311,7 +311,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
       // Target the specific query for the current view
       // We use monthKey to ensure we update the period-wide cache
-      const queryKey = ['meals-system', roomId, monthKey];
+      const targetMonthKey = format(date, 'yyyy-MM');
+      const queryKey = ['meals-system', roomId, targetMonthKey];
 
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey });
@@ -359,12 +360,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         };
       });
 
-      return { previousData };
+      return { previousData, targetMonthKey };
     },
     onError: (error: any, variables, context: any) => {
       // Rollback on error
-      if (context?.previousData) {
-        queryClient.setQueryData(['meals-system', roomId, monthKey], context.previousData);
+      if (context?.previousData && context?.targetMonthKey) {
+        queryClient.setQueryData(['meals-system', roomId, context.targetMonthKey], context.previousData);
       }
       console.error('Error toggling meal:', error);
       toast.error(error.response?.data?.message || 'Failed to update meal');
@@ -372,7 +373,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     onSuccess: (data: any, variables) => {
       const { action, type, date } = variables;
       const dateString = format(date, 'yyyy-MM-dd');
-      const queryKey = ['meals-system', roomId, monthKey];
+      const queryKey = ['meals-system', roomId, format(date, 'yyyy-MM')];
       
       if (action === 'add' && data.meal) {
         queryClient.setQueryData(queryKey, (old: any) => {
@@ -392,9 +393,10 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         });
       }
     },
-    onSettled: () => {
+    onSettled: (_, __, variables) => {
+      const targetMonthKey = format(variables.date, 'yyyy-MM');
       // Ensure absolute consistency and recalculate userStats/distributions
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey] });
       queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
       queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
     }
@@ -424,7 +426,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     onMutate: async (variables) => {
       const { date, type, count } = variables;
-      const queryKey = ['meals-system', roomId, monthKey];
+      const targetMonthKey = format(date, 'yyyy-MM');
+      const queryKey = ['meals-system', roomId, targetMonthKey];
       
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData(queryKey);
@@ -446,7 +449,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
           // Add new temp
           const newGuestMeal: GuestMeal = {
             id: `temp-${Date.now()}`,
-            date: dateStr,
+            date: date.toISOString(),
             type,
             count,
             userId: session?.user?.id!,
@@ -465,16 +468,17 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         return { ...old, guestMeals: newGuestMeals };
       });
       
-      return { previousData };
+      return { previousData, targetMonthKey };
     },
     onError: (error: any, variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(['meals-system', roomId, monthKey], context.previousData);
+      if (context?.previousData && context?.targetMonthKey) {
+        queryClient.setQueryData(['meals-system', roomId, context.targetMonthKey], context.previousData);
       }
       toast.error(error.message || 'Failed to update guest meal');
     },
-    onSuccess: (data: GuestMeal) => {
-      queryClient.setQueryData(['meals-system', roomId, monthKey], (old: any | undefined) => {
+    onSuccess: (data: GuestMeal, variables) => {
+      const targetMonthKey = format(variables.date, 'yyyy-MM');
+      queryClient.setQueryData(['meals-system', roomId, targetMonthKey], (old: any | undefined) => {
         if (!old) return old;
         const dateStr = data.date.split('T')[0];
         const withoutMatching = (old.guestMeals || []).filter(
@@ -486,8 +490,9 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         };
       });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, monthKey] });
+    onSettled: (_, __, variables) => {
+      const targetMonthKey = format(variables.date, 'yyyy-MM');
+      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey] });
       queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
       queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
     }
