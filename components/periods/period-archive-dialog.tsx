@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Archive, AlertTriangle } from 'lucide-react';
+import { Archive, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -20,7 +20,7 @@ export function PeriodArchiveDialog({ open, onOpenChange, onConfirm, periodId, p
 
   const handleConfirm = async () => {
     if (!periodId) return;
-    
+
     setIsSubmitting(true);
     try {
       await onConfirm(periodId);
@@ -87,16 +87,27 @@ export function PeriodArchiveDialog({ open, onOpenChange, onConfirm, periodId, p
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" size="sm" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            type="button" 
-            variant="destructive" 
+          <Button
+            type="button"
+            variant="destructive"
             onClick={handleConfirm}
             disabled={isSubmitting}
+            size="sm"
           >
-            {isSubmitting ? 'Archiving...' : 'Archive Period'}
+            {isSubmitting ? 
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Archiving...
+            </>
+            : 
+            <>
+              <Archive className="h-4 w-4" /> 
+              Archive Period  
+            </>
+            }
           </Button>
         </DialogFooter>
       </DialogContent>

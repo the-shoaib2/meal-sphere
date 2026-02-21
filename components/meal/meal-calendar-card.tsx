@@ -2,7 +2,7 @@
 
 import React from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import MealCalendar from "./meal-calendar"
+import MealCalendar from "@/components/meal/meal-calendar"
 
 interface MealCalendarCardProps {
     selectedDate: Date

@@ -563,7 +563,7 @@ export function useGroups(): UseGroupsReturn {
         // Invalidate group details to reflect mode change
         queryClient.invalidateQueries({ queryKey: ['group', groupId] });
         
-        toast.success(`Period mode updated to ${data.periodMode}`);
+        // toast.success(`Period mode updated to ${data.periodMode}`);
     },
     onError: (error) => {
         console.error('Error updating period mode:', error);

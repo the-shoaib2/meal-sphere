@@ -47,15 +47,15 @@ export function CreatePeriodDialog({
     notes: '',
   });
 
-  // Sync name when monthly mode is active
+  // Sync name when monthly mode is active - ensure name is always set if mode is MONTHLY
   React.useEffect(() => {
-    if (periodMode === 'MONTHLY' && !formData.name) {
+    if (open && periodMode === 'MONTHLY' && !formData.name) {
       setFormData(prev => ({
         ...prev,
         name: format(new Date(), 'MMMM yyyy')
       }));
     }
-  }, [periodMode, formData.name]);
+  }, [open, periodMode, formData.name]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 

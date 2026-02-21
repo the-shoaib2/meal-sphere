@@ -2,11 +2,32 @@ import { prisma } from './prisma';
 import { PeriodStatus, Role } from '@prisma/client';
 import { createNotification, notifyRoomMembersBatch } from '../utils/notification-utils';
 import { NotificationType } from '@prisma/client';
-import { unstable_cache, revalidateTag as _revalidateTag } from 'next/cache';
+import { unstable_cache, revalidateTag as _revalidateTag, revalidatePath } from 'next/cache';
 const revalidateTag = _revalidateTag as any;
 import { encryptData, decryptData } from '@/lib/encryption';
 import { invalidatePeriodCache } from '@/lib/cache/cache-invalidation';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+
+/**
+ * Helper to invalidate all caches related to periods and groups
+ */
+function invalidatePeriodCaches(roomId: string, periodId?: string) {
+  // 1. Invalidate Tags for unstable_cache
+  revalidateTag(`group-${roomId}`);
+  revalidateTag('periods');
+  if (periodId) {
+    revalidateTag(`period-${periodId}`);
+  }
+
+  // 2. Invalidate Paths for SSR Pages
+  revalidatePath('/(auth)/dashboard', 'layout');
+  revalidatePath('/(auth)/periods', 'layout');
+  revalidatePath('/dashboard');
+  revalidatePath('/periods');
+  if (periodId) {
+    revalidatePath(`/periods/${periodId}`);
+  }
+}
 
 export interface PeriodSummary {
   id: string;
@@ -227,8 +248,7 @@ export async function startPeriod(
     },
   });
 
-  revalidateTag(`group-${roomId}`, 'max');
-  revalidateTag('periods', 'max');
+  invalidatePeriodCaches(roomId, period.id);
 
   return {
     period,
@@ -285,9 +305,7 @@ export async function endPeriod(roomId: string, userId: string, endDate?: Date, 
     });
   }
 
-  revalidateTag(`group-${roomId}`, 'max');
-  revalidateTag(`period-${currentPeriod.id}`, 'max');
-  revalidateTag('periods', 'max');
+  invalidatePeriodCaches(roomId, currentPeriod.id);
 
   return updatedPeriod;
 }
@@ -304,11 +322,11 @@ export async function lockPeriod(roomId: string, userId: string, periodId: strin
   });
 
   if (!period) {
-    throw new Error('Period not found');
+    return ('Period not found');
   }
 
   if (period.isLocked) {
-    throw new Error('Period is already locked');
+    return ('Period is already locked');
   }
 
   const updatedPeriod = await prisma.mealPeriod.update({
@@ -319,9 +337,7 @@ export async function lockPeriod(roomId: string, userId: string, periodId: strin
     },
   });
 
-  revalidateTag(`group-${roomId}`, 'max');
-  revalidateTag(`period-${periodId}`, 'max');
-  revalidateTag('periods', 'max');
+  invalidatePeriodCaches(roomId, periodId);
 
   return updatedPeriod;
 }
@@ -353,9 +369,7 @@ export async function unlockPeriod(roomId: string, userId: string, periodId: str
     },
   });
 
-  revalidateTag(`group-${roomId}`, 'max');
-  revalidateTag(`period-${periodId}`, 'max');
-  revalidateTag('periods', 'max');
+  invalidatePeriodCaches(roomId, periodId);
 
   return updatedPeriod;
 }
@@ -590,9 +604,7 @@ export async function archivePeriod(roomId: string, userId: string, periodId: st
     data: archiveData,
   });
 
-  revalidateTag(`group-${roomId}`, 'max');
-  revalidateTag(`period-${periodId}`, 'max');
-  revalidateTag('periods', 'max');
+  invalidatePeriodCaches(roomId, periodId);
 
   return updatedPeriod;
 }
@@ -667,8 +679,7 @@ export async function restartPeriod(roomId: string, userId: string, periodId: st
       await copyPeriodData(originalPeriod.id, newPeriod.id);
     }
 
-    revalidateTag(`group-${roomId}`, 'max');
-    revalidateTag('periods', 'max');
+    invalidatePeriodCaches(roomId, newPeriod.id);
 
     return newPeriod;
   } catch (error) {

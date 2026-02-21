@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { RefreshCw, AlertTriangle, Database, FileText } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Database, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,12 @@ interface RestartPeriodDialogProps {
   isLoading?: boolean;
 }
 
-export function RestartPeriodDialog({ 
-  open, 
-  onOpenChange, 
-  onConfirm, 
-  period, 
-  isLoading = false 
+export function RestartPeriodDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  period,
+  isLoading = false
 }: RestartPeriodDialogProps) {
   const [newName, setNewName] = useState('');
   const [withData, setWithData] = useState(false);
@@ -130,13 +130,13 @@ export function RestartPeriodDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+          <Button size="sm" variant="outline" onClick={handleCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={isLoading}>
+          <Button size="sm" onClick={handleConfirm} disabled={isLoading}>
             {isLoading ? (
               <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Restarting...
               </>
             ) : (

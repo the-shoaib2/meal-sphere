@@ -232,7 +232,6 @@ export function useStartPeriod() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
-      router.refresh();
       toast.success('Period started successfully!');
     },
     onError: (error: Error) => {
@@ -290,7 +289,7 @@ export function usePeriodMode(groupId?: string) {
         queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
         router.refresh();
         
-        toast.success(`Period mode updated to ${data.periodMode}`);
+        // toast.success(`Period mode updated to ${data.periodMode}`);
       },
       onError: (error: Error) => {
         toast.error(`Update failed: ${error.message}`);
@@ -342,7 +341,7 @@ export function usePeriodMode(groupId?: string) {
       queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });
       queryClient.invalidateQueries({ queryKey: ['periods-overview', groupId] });
 
-      toast.success(`Period mode updated to ${data.periodMode}`);
+      // toast.success(`Period mode updated to ${data.periodMode}`);
     },
     onError: (error: Error) => {
       toast.error(`Update failed: ${error.message}`);

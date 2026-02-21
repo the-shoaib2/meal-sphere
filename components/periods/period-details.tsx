@@ -15,7 +15,7 @@ import { PeriodReportsSection } from '@/components/periods/period-reports-sectio
 import { PeriodOverviewSection } from '@/components/periods/period-overview-section';
 import { useSession } from 'next-auth/react';
 import { LoadingWrapper, Loader } from '@/components/ui/loader';
-import { ArrowLeft, Lock, Unlock, Archive, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, Archive, RefreshCw, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PeriodStatusCard } from '@/components/periods/period-status-card';
 import { useGroupAccess } from '@/hooks/use-group-access';
@@ -188,9 +188,19 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
-                            <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
-                                {unlockLoading ? 'Unlocking...' : 'Unlock & Set Status'}
+                            <Button size="sm" variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
+                            <Button size="sm" onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
+                                {unlockLoading ? 
+                                <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Unlocking...
+                                </>
+                                : 
+                                <>
+                                <Unlock className="h-4 w-4" /> 
+                                Unlock & Set Status
+                                </>
+                                }
                             </Button>
                         </DialogFooter>
                     </DialogContent>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, AlertTriangle } from 'lucide-react';
+import { Calendar, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -96,16 +96,27 @@ export function EndPeriodDialog({ open, onOpenChange, onConfirm, period }: EndPe
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button size="sm" type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
+            size="sm"
             type="button"
             variant="destructive"
             onClick={handleConfirm}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Ending...' : 'End Period'}
+            {isSubmitting ? 
+            <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Ending...
+            </>
+            : 
+            <>
+            <AlertTriangle className="h-4 w-4" /> 
+            End Period
+            </>
+            }
           </Button>
         </DialogFooter>
       </DialogContent>
