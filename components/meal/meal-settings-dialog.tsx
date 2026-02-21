@@ -1,32 +1,49 @@
 // Dialog component for meal settings, extracted from meal-management.tsx
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import React from "react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Save } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 
 interface MealSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mealSettings: any;
-  updateMealSettings: (settings: Partial<any>) => void;
+  updateMealSettings: (settings: Partial<any>) => Promise<void>;
 }
 
 const MealSettingsDialog: React.FC<MealSettingsDialogProps> = ({ open, onOpenChange, mealSettings, updateMealSettings }) => {
-  // Local state for optimistic updates
-  const [localSettings, setLocalSettings] = React.useState(mealSettings);
+  // Local state for edits
+  const [localSettings, setLocalSettings] = useState(mealSettings);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Sync local state when prop changes
-  React.useEffect(() => {
-    setLocalSettings(mealSettings);
-  }, [mealSettings]);
+  // Sync local state when prop changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setLocalSettings(mealSettings);
+    }
+  }, [mealSettings, open]);
 
   const handleUpdate = (updates: Partial<any>) => {
-    // Optimistically update local state
     setLocalSettings((prev: any) => ({ ...prev, ...updates }));
-    // Trigger actual update
-    updateMealSettings(updates);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateMealSettings(localSettings);
+      // toast.success("Settings updated successfully");
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error updating meal settings:", error);
+      toast.error("Failed to update settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -73,9 +90,6 @@ const MealSettingsDialog: React.FC<MealSettingsDialogProps> = ({ open, onOpenCha
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto Meal System</Label>
-                {/* <p className="text-sm text-muted-foreground">
-                  Enable automatic meal scheduling
-                </p> */}
               </div>
               <Switch
                 checked={localSettings?.autoMealEnabled || false}
@@ -86,9 +100,6 @@ const MealSettingsDialog: React.FC<MealSettingsDialogProps> = ({ open, onOpenCha
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Guest Meals</Label>
-                {/* <p className="text-sm text-muted-foreground">
-                  Allow members to add guest meals
-                </p> */}
               </div>
               <Switch
                 checked={localSettings?.allowGuestMeals || false}
@@ -120,9 +131,37 @@ const MealSettingsDialog: React.FC<MealSettingsDialogProps> = ({ open, onOpenCha
             </div>
           </div>
         </div>
+
+        <DialogFooter className="mt-6 flex flex-col-reverse sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+            className="w-full sm:w-auto hover:text-red-500 hover:bg-red-50/10 transition-colors"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full sm:w-auto"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default MealSettingsDialog; 
+export default MealSettingsDialog;
