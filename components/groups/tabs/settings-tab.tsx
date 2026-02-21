@@ -479,7 +479,7 @@ export function SettingsTab({
         <div className="flex items-center gap-2">
           {isAdmin && (
             !isEditing ? (
-              <Button type="button" variant="outline" onClick={() => setIsEditing(true)}>
+              <Button type="button" variant="default" onClick={() => setIsEditing(true)}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </Button>
@@ -489,7 +489,7 @@ export function SettingsTab({
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button variant="outline" onClick={form.handleSubmit(onSubmit)} disabled={updateGroup.isPending}>
+                <Button variant="default" onClick={form.handleSubmit(onSubmit)} disabled={updateGroup.isPending}>
                   {updateGroup.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -85,12 +85,12 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                 className="w-full"
             >
                 <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
-                    <TabsList className="w-full flex">
-                        <TabsTrigger value="my-groups" className="flex-1 flex items-center justify-center gap-2">
+                    <TabsList className="w-full flex h-9 p-1">
+                        <TabsTrigger value="my-groups" className="flex-1 flex items-center justify-center gap-2 h-7">
                             <Users className="h-4 w-4" />
                             My Groups
                         </TabsTrigger>
-                        <TabsTrigger value="discover" className="flex-1 flex items-center justify-center gap-2">
+                        <TabsTrigger value="discover" className="flex-1 flex items-center justify-center gap-2 h-7">
                             <Compass className="h-4 w-4" />
                             Discover
                         </TabsTrigger>
@@ -102,21 +102,21 @@ export function GroupsView({ initialData }: GroupsViewProps) {
                             <Input
                                 type="search"
                                 placeholder="Search groups..."
-                                className="pl-8 w-full"
+                                className="pl-8 w-full h-9"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                         <Button variant="outline" asChild>
                             <Link href="/groups/join">
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Join Group
+                                <UserPlus className="mr-1 h-4 w-4" />
+                                Join
                             </Link>
                         </Button>
-                        <Button asChild>
+                        <Button variant="default" asChild>
                             <Link href="/groups/create">
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create Group
+                                <Plus className="mr-1 h-4 w-4" />
+                                Create
                             </Link>
                         </Button>
                     </div>

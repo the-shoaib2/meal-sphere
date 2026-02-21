@@ -319,7 +319,8 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
   const members = group?.members;
   const maxMembers = group?.maxMembers;
 
-  const currentCount = memberCount ?? (Array.isArray(members) ? members.length : 0);
+  // Use the actual members array length if available (safest guard against desync), otherwise fallback to the cached memberCount
+  const currentCount = (Array.isArray(members) && members.length > 0) ? members.length : (memberCount ?? 0);
   const isGroupFull = maxMembers ? currentCount >= maxMembers : false;
   const isInitialLoading = !group && isLoading;
 
@@ -531,15 +532,15 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
                   </div>
 
                   <Button
-                      type="button"
-                      variant="default"
-                      onClick={generateInviteToken}
-                      disabled={loading}
-                      className="w-full"
-                    >
-                      <RefreshCw className={cn("h-3 w-3 mr-2", loading && "animate-spin")} />
-                      Regenerate
-                    </Button>
+                    type="button"
+                    variant="default"
+                    onClick={generateInviteToken}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    <RefreshCw className={cn("h-3 w-3 mr-2", loading && "animate-spin")} />
+                    Regenerate
+                  </Button>
                 </div>
 
                 <div className="space-y-4">

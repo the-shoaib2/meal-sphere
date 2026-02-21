@@ -244,7 +244,7 @@ export function GroupPageContent(
                             onClick={() => router.push(`/groups/join/${groupId}`)}
                         >
                             <LogIn className="h-4 w-4" />
-                            Join Group
+                            Join
                         </Button>
                     )}
                 </div>
