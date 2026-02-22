@@ -24,14 +24,14 @@ export function usePublicData<T>({ endpoint, enabled = true }: UsePublicDataOpti
     setError(null)
 
     try {
-      const response = await fetch(`/api/public/${endpoint}`, { cache: 'no-store' })
+      const { getPublicDataAction } = await import("@/lib/actions/public.actions")
+      const result = await getPublicDataAction(endpoint)
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status}`)
+      if (!result) {
+        throw new Error(`Failed to fetch data: ${endpoint}`)
       }
 
-      const result = await response.json()
-      setData(result)
+      setData(result as T)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {

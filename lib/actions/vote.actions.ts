@@ -5,14 +5,14 @@ import { authOptions } from "@/lib/auth/auth";
 import { 
   createVote, 
   castVote, 
-  deleteVote, 
-  getVotes,
-  updateVoteStatus
+  deleteVote,
 } from "@/lib/services/voting-service";
-import { validateGroupAccess, validateAdminAccess } from "@/lib/auth/group-auth";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { validateGroupAccess } from "@/lib/auth/group-auth";
+import { revalidatePath, revalidateTag as _revalidateTag } from "next/cache";
+const revalidateTag = _revalidateTag as any;
 import { prisma } from "@/lib/services/prisma";
 import { VoteType } from "@prisma/client";
+import { Candidate } from "@/types/group";
 
 export async function createVoteAction(groupId: string, data: {
   title: string;
@@ -34,7 +34,8 @@ export async function createVoteAction(groupId: string, data: {
     revalidatePath(`/groups/${groupId}`, 'page');
     revalidateTag(`votes-${groupId}`);
 
-    return result;
+    // Return serializable data
+    return JSON.parse(JSON.stringify(result));
   } catch (error: any) {
     console.error("Error creating vote:", error);
     return { success: false, message: error.message || "Failed to create vote" };
@@ -54,7 +55,8 @@ export async function castVoteAction(groupId: string, voteId: string, candidateI
     revalidatePath(`/groups/${groupId}`, 'page');
     revalidateTag(`votes-${groupId}`);
 
-    return result;
+    // Return serializable data
+    return JSON.parse(JSON.stringify(result));
   } catch (error: any) {
     console.error("Error casting vote:", error);
     return { success: false, message: error.message || "Failed to cast vote" };
@@ -105,13 +107,26 @@ export async function updateVoteAction(groupId: string, voteId: string, updateDa
         description: updateData.description,
         endDate: updateData.endDate ? new Date(updateData.endDate) : undefined,
         options: updateData.candidates ? JSON.stringify(updateData.candidates) : undefined
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          }
+        }
       }
     });
 
     revalidatePath(`/groups/${groupId}`, 'page');
     revalidateTag(`votes-${groupId}`);
 
-    return { success: true, vote: updated };
+    // Return serializable data (Dates to ISO strings)
+    return { 
+      success: true, 
+      vote: JSON.parse(JSON.stringify(updated)) 
+    };
   } catch (error: any) {
     console.error("Error updating vote:", error);
     return { success: false, message: error.message || "Failed to update vote" };

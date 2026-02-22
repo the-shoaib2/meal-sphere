@@ -21,10 +21,10 @@ export function useLegalData(type: 'terms' | 'privacy' | 'cookies') {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/public/legal/${type}`, { cache: 'no-store' })
-        if (response.ok) {
-          const result = await response.json()
-          setData(result)
+        const { getLegalDataAction } = await import("@/lib/actions/public.actions")
+        const result = await getLegalDataAction(type)
+        if (result) {
+          setData(result as any)
         }
       } catch (error) {
         console.error(`Error fetching ${type} data:`, error)

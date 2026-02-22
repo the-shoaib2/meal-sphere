@@ -49,46 +49,32 @@ export default function BkashPayment({ roomId, roomName, onSuccess, onCancel }: 
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/payments/bkash/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          roomId,
-          amount: Number.parseFloat(amount),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to create payment")
-      }
-
-      const data = await response.json()
+      const { createBkashPaymentAction } = await import("@/lib/actions/payment.actions")
+      const data = await createBkashPaymentAction(roomId, Number.parseFloat(amount))
 
       if (data.success) {
-        setPaymentId(data.paymentId)
-        setBkashURL(data.bkashURL)
+        setPaymentId(data.paymentId || null)
+        setBkashURL(data.bkashURL || null)
         setPaymentStatus("created")
 
         // If we're in sandbox mode or there's no bkashURL, we'll simulate the payment
         if (!data.bkashURL) {
           // Poll for payment status
-          pollPaymentStatus(data.paymentId)
+          pollPaymentStatus(data.paymentId!)
         } else {
           // Open bKash payment page in a new window
           window.open(data.bkashURL, "_blank")
           // Start polling for payment status
-          pollPaymentStatus(data.paymentId)
+          pollPaymentStatus(data.paymentId!)
         }
       } else {
         throw new Error(data.error || "Failed to create payment")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating payment:", error)
       toast({
         title: "Payment failed",
-        description: "Failed to create payment. Please try again.",
+        description: error.message || "Failed to create payment. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -108,13 +94,8 @@ export default function BkashPayment({ roomId, roomName, onSuccess, onCancel }: 
       }
 
       try {
-        const response = await fetch(`/api/payments/bkash/status?paymentId=${paymentId}`)
-
-        if (!response.ok) {
-          throw new Error("Failed to check payment status")
-        }
-
-        const data = await response.json()
+        const { getBkashPaymentStatusAction } = await import("@/lib/actions/payment.actions")
+        const data = await getBkashPaymentStatusAction(paymentId)
 
         if (data.success) {
           if (data.status === "Completed") {
@@ -152,21 +133,8 @@ export default function BkashPayment({ roomId, roomName, onSuccess, onCancel }: 
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/payments/bkash/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paymentId,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to execute payment")
-      }
-
-      const data = await response.json()
+      const { executeBkashPaymentAction } = await import("@/lib/actions/payment.actions")
+      const data = await executeBkashPaymentAction(paymentId)
 
       if (data.success) {
         if (data.status === "Completed") {
@@ -187,11 +155,11 @@ export default function BkashPayment({ roomId, roomName, onSuccess, onCancel }: 
       } else {
         throw new Error(data.error || "Failed to execute payment")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error executing payment:", error)
       toast({
         title: "Payment failed",
-        description: "Failed to execute payment. Please try again.",
+        description: error.message || "Failed to execute payment. Please try again.",
         variant: "destructive",
       })
     } finally {
