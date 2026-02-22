@@ -15,7 +15,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { useMeal, type MealType, type MealsPageData } from "@/hooks/use-meal"
 import { useGroupAccess } from "@/hooks/use-group-access"
 import { useCurrentPeriod } from "@/hooks/use-periods"
-import { isPeriodLocked } from "@/lib/utils/period-utils-shared"
+import { isPeriodLocked, canUserEditMeal, formatDateSafe, parseDateSafe } from "@/lib/utils/period-utils-shared"
 import GuestMealManager from "@/components/meal/guest-meal-manager"
 import MealSummary from "@/components/meal/meal-summary"
 import type { ReadonlyURLSearchParams } from "next/navigation"
@@ -65,7 +65,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       : (searchParams as any)?.date;
 
     if (dateParam) {
-      const date = new Date(dateParam);
+      const date = parseDateSafe(dateParam);
       if (!isNaN(date.getTime())) {
         return date;
       }
@@ -79,7 +79,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   useEffect(() => {
     const dateFromUrl = typeof searchParams?.get === 'function' ? searchParams.get('date') : (searchParams as any)?.date;
     if (dateFromUrl) {
-      const parsed = new Date(dateFromUrl);
+      const parsed = parseDateSafe(dateFromUrl);
       if (!isNaN(parsed.getTime()) && !isSameDay(parsed, selectedDate)) {
         setSelectedDate(parsed);
       }
@@ -95,7 +95,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
       ? searchParams.toString()
       : (searchParams || {});
     const params = new URLSearchParams(currentParams as any);
-    params.set('date', format(date, 'yyyy-MM-dd'));
+    params.set('date', formatDateSafe(date));
     window.history.pushState(null, '', `?${params.toString()}`);
   };
 
@@ -297,56 +297,19 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats;
 
   // Helper: check if user can edit meal for a type (not after meal time unless privileged)
-  const canEditMeal = (type: MealType) => {
-    if (!session?.user?.id) return false
-
-    const now = new Date()
-    const targetDate = new Date(selectedDate)
-    const isToday = isSameDay(targetDate, now)
-
-    // BYPASS: Admins, Managers, and Meal Managers can skip other checks (limits, past/future dates, time restrictions)
-    const privileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
-    if (privileged) return true
-
-    // RESTRICTED: For today, check meal time cutoff
-    if (isToday) {
-      if (!mealSettings) return true
-
-      // Get meal time for the specific type
-      let mealTimeStr = ''
-      if (type === 'BREAKFAST') mealTimeStr = mealSettings.breakfastTime || '08:00'
-      if (type === 'LUNCH') mealTimeStr = mealSettings.lunchTime || '13:00'
-      if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00'
-
-      // Parse meal time
-      const [hours, minutes] = mealTimeStr.split(':').map(Number)
-      const mealTime = new Date(targetDate)
-      mealTime.setHours(hours, minutes, 0, 0)
-
-      // If time passed, member cannot add/toggle today
-      if (now >= mealTime) {
-        return false;
-      }
-    }
-
-    // RESTRICTED: Non-privileged users cannot edit past meals (before today)
-    const todayStart = new Date(now)
-    todayStart.setHours(0, 0, 0, 0)
-    if (targetDate < todayStart) {
-      return false
-    }
-
-    // Allow future dates
-    return true
-  }
+  const canEditMeal = useCallback((type: MealType) => {
+    return canUserEditMeal(selectedDate, type, userRole, mealSettings, currentPeriod);
+  }, [selectedDate, userRole, mealSettings, currentPeriod]);
 
 
-  // Check if user can edit guest meals (same restriction: no past days unless privileged)
-  const isPrivileged = userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const isPastDate = selectedDate < todayStart
-  const canEditGuestMeals = !!(isPrivileged || !isPastDate)
+  // Check if user has privileged access
+  const isPrivileged = !!(userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole));
+
+  // Check if user can edit guest meals
+  const canEditGuestMeals = useMemo(() => {
+    // We use LUNCH as a neutral type for general date/period check
+    return canUserEditMeal(selectedDate, 'LUNCH', userRole, mealSettings, currentPeriod);
+  }, [selectedDate, userRole, mealSettings, currentPeriod]);
 
   return (
     <div className="space-y-6">

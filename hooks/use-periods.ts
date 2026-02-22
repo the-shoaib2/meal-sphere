@@ -603,6 +603,80 @@ export function useRestartPeriod() {
   });
 }
 
+export function useUpdatePeriod() {
+  const queryClient = useQueryClient();
+  const { activeGroup } = useActiveGroup();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: async ({ periodId, data }: { periodId: string; data: Partial<CreatePeriodData> }) => {
+      if (!activeGroup?.id) {
+        throw new Error('No active group selected');
+      }
+
+      const response = await fetch(`/api/periods/${periodId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          groupId: activeGroup.id,
+          ...data
+        })
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update period');
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      router.refresh();
+      toast.success('Period updated successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Update failed: ${error.message}`);
+    },
+  });
+}
+
+export function useDeletePeriod() {
+  const queryClient = useQueryClient();
+  const { activeGroup } = useActiveGroup();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: async (periodId: string) => {
+      if (!activeGroup?.id) {
+        throw new Error('No active group selected');
+      }
+
+      const response = await fetch(`/api/periods/${periodId}?groupId=${activeGroup.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to delete period');
+      }
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      router.refresh();
+      toast.success('Period deleted successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Delete failed: ${error.message}`);
+    },
+  });
+}
+
 export function usePeriodManagement(initialData?: PeriodsPageData) {
   const { activeGroup } = useActiveGroup();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(
@@ -655,6 +729,8 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
   const unlockPeriodMutation = useUnlockPeriod();
   const archivePeriodMutation = useArchivePeriod();
   const restartPeriodMutation = useRestartPeriod();
+  const updatePeriodMutation = useUpdatePeriod();
+  const deletePeriodMutation = useDeletePeriod();
 
   const handleStartPeriod = useCallback(async (data: CreatePeriodData) => {
     await startPeriodMutation.mutateAsync(data);
@@ -686,6 +762,14 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
     // Note: Dialog closing will be handled by the parent component
   }, [restartPeriodMutation]);
 
+  const handleUpdatePeriod = useCallback(async (periodId: string, data: Partial<CreatePeriodData>) => {
+    await updatePeriodMutation.mutateAsync({ periodId, data });
+  }, [updatePeriodMutation]);
+
+  const handleDeletePeriod = useCallback(async (periodId: string) => {
+    await deletePeriodMutation.mutateAsync(periodId);
+  }, [deletePeriodMutation]);
+
   return {
     // Group context
     activeGroup,
@@ -712,6 +796,8 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
     unlockPeriodMutation,
     archivePeriodMutation,
     restartPeriodMutation,
+    updatePeriodMutation,
+    deletePeriodMutation,
 
     // UI state
     selectedPeriodId,
@@ -730,6 +816,8 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
     handleUnlockPeriod,
     handleArchivePeriod,
     handleRestartPeriod,
+    handleUpdatePeriod,
+    handleDeletePeriod,
   };
 }
 

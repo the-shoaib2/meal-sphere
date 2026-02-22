@@ -1,14 +1,17 @@
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
-import { redirect } from 'next/navigation';
 import { fetchMealsData } from '@/lib/services/meals-service';
+import { parseDateSafe } from '@/lib/utils/period-utils-shared';
 import { fetchGroupAccessData, fetchGroupsData } from '@/lib/services/groups-service';
+
 import MealManagement from "@/components/meal/meal-management";
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from '@/components/ui/badge';
+
 import { ShieldCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -43,7 +46,7 @@ export default async function MealsPage({ searchParams }: { searchParams: Promis
 
   // 2. Fetch Initial Data for the active group
   // Resolve date from search params to ensure we fetch data for the correct period
-  const dateParam = resolvedSearchParams?.date ? new Date(resolvedSearchParams.date) : undefined;
+  const dateParam = resolvedSearchParams?.date ? parseDateSafe(resolvedSearchParams.date) : undefined;
 
   let mealsData: any = null;
   let accessData: any = null;

@@ -34,7 +34,7 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
   const [guestCount, setGuestCount] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { addGuestMeal, mealSettings, autoMealSettings, isLoading } = useMeal(roomId, undefined, initialData)
+  const { addGuestMeal, mealSettings, autoMealSettings, isLoading, canEditGuestMeal, userRole, currentPeriod } = useMeal(roomId, undefined, initialData)
 
   const form = useForm<GuestMealFormData>({
     resolver: zodResolver(guestMealSchema),
@@ -112,6 +112,8 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
           </Badge>
         )}
 
+
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             {date && (
@@ -135,23 +137,36 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
                   <FormLabel className="text-sm font-semibold text-muted-foreground text-center block sm:text-left">Meal Type</FormLabel>
                   <FormControl>
                     <div className="flex flex-col sm:flex-row justify-center sm:justify-start gap-2">
-                      {(["BREAKFAST", "LUNCH", "DINNER"] as const).map((type) => (
-                        <Button
-                          key={type}
-                          type="button"
-                          variant={field.value === type ? "default" : "outline"}
-                          className={cn(
-                            "flex-1 h-11 cursor-pointer rounded-full sm:h-10 transition-all font-medium",
-                            field.value === type ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm border-transparent" : "hover:bg-primary/10 hover:text-primary"
-                          )}
-                          onClick={() => field.onChange(type)}
-                        >
-                          <span className="mr-2 text-base">
-                            {type === "BREAKFAST" ? "🌅" : type === "LUNCH" ? "☀️" : "🌙"}
-                          </span>
-                          {type === "BREAKFAST" ? "Breakfast" : type === "LUNCH" ? "Lunch" : "Dinner"}
-                        </Button>
-                      ))}
+                      {(["BREAKFAST", "LUNCH", "DINNER"] as const).map((type) => {
+                        const isLocked = !canEditGuestMeal(form.watch("date"), type);
+                        const isSelected = field.value === type;
+
+                        return (
+                          <div key={type} className="flex-1 flex flex-col gap-1">
+                            <Button
+                              type="button"
+                              disabled={isLocked}
+                              variant={isSelected ? "default" : "outline"}
+                              className={cn(
+                                "w-full h-11 cursor-pointer rounded-full sm:h-10 transition-all font-medium",
+                                isSelected ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm border-transparent" : "hover:bg-primary/10 hover:text-primary",
+                                isLocked && "opacity-50 grayscale-[0.5]"
+                              )}
+                              onClick={() => field.onChange(type)}
+                            >
+                              <span className="mr-2 text-base">
+                                {type === "BREAKFAST" ? "🌅" : type === "LUNCH" ? "☀️" : "🌙"}
+                              </span>
+                              {type === "BREAKFAST" ? "Breakfast" : type === "LUNCH" ? "Lunch" : "Dinner"}
+                            </Button>
+                            {isLocked && (
+                              <span className="text-[9px] text-red-500 font-bold text-center uppercase tracking-tighter">
+                                Locked
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -224,8 +239,7 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
               </Button>
               <Button
                 type="submit"
-
-                disabled={isSubmitting}
+                disabled={isSubmitting || !canEditGuestMeal(form.getValues("date"), form.getValues("type"))}
                 className="w-full sm:w-auto hover:bg-primary/90">
                 {isSubmitting ? (
                   <>

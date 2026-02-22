@@ -125,6 +125,21 @@ export async function PATCH(
         case 'archive':
           result = await PeriodService.archivePeriod(groupId, session.user.id, resolvedParams.id);
           break;
+        case 'update':
+          result = await PeriodService.updatePeriod(
+            groupId,
+            session.user.id,
+            resolvedParams.id,
+            {
+              name: body.name,
+              startDate: body.startDate ? new Date(body.startDate) : undefined,
+              endDate: body.endDate !== undefined ? (body.endDate ? new Date(body.endDate) : null) : undefined,
+              openingBalance: body.openingBalance,
+              carryForward: body.carryForward,
+              notes: body.notes,
+            }
+          );
+          break;
         default:
           return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
       }
@@ -176,4 +191,50 @@ export async function PATCH(
       { status: 500 }
     );
   }
-} 
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const groupId = searchParams.get('groupId');
+
+    if (!groupId) {
+      return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
+    }
+
+    // Verify user has access to this group
+    const member = await prisma.roomMember.findUnique({
+      where: {
+        userId_roomId: {
+          userId: session.user.id,
+          roomId: groupId,
+        },
+      },
+    });
+
+    if (!member) {
+      return NextResponse.json({ error: 'Access denied to this group' }, { status: 403 });
+    }
+
+    // Only Admins or the creator should be able to delete a period
+    // Basic check for now, can be enhanced in PeriodService
+    const resolvedParams = await params;
+    const result = await PeriodService.deletePeriod(groupId, session.user.id, resolvedParams.id);
+
+    return NextResponse.json(result);
+  } catch (error: any) {
+    console.error('Error deleting period:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete period' },
+      { status: 500 }
+    );
+  }
+}

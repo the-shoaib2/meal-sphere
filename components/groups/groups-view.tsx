@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -48,15 +48,28 @@ export function GroupsView({ initialData }: GroupsViewProps) {
     });
 
     // Get the active tab from URL search params, default to 'my-groups'
-    const [activeTab, setActiveTab] = useState(() => {
+    // Using a useEffect to stabilize the active tab after mount to ensure
+    // the server and client start with the same default, then sync with URL.
+    const [activeTab, setActiveTab] = useState('my-groups');
+
+    useEffect(() => {
         const tabFromUrl = searchParams?.get('tab');
-        return tabFromUrl && ['my-groups', 'discover'].includes(tabFromUrl)
-            ? tabFromUrl
-            : 'my-groups';
-    });
+        if (tabFromUrl && ['my-groups', 'discover'].includes(tabFromUrl)) {
+            setActiveTab(tabFromUrl);
+        }
+    }, [searchParams]);
 
     // Determine which groups to show based on active tab
-    const groups = activeTab === 'my-groups' ? myGroupsData : publicGroupsData;
+    // For 'my-groups', show owned groups first
+    const groups = activeTab === 'my-groups'
+        ? [...myGroupsData].sort((a, b) => {
+            const aIsOwner = a.createdByUser?.id === session?.user?.id;
+            const bIsOwner = b.createdByUser?.id === session?.user?.id;
+            if (aIsOwner && !bIsOwner) return -1;
+            if (!aIsOwner && bIsOwner) return 1;
+            return 0;
+        })
+        : publicGroupsData;
 
     // Update URL when tab changes
     const handleTabChange = (value: string) => {
@@ -80,6 +93,7 @@ export function GroupsView({ initialData }: GroupsViewProps) {
     return (
         <>
             <Tabs
+                id="groups-tabs-root"
                 value={activeTab}
                 onValueChange={handleTabChange}
                 className="w-full"

@@ -2,7 +2,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
 
 // Services
 import { fetchDashboardSummary } from '@/lib/services/dashboard-service';
@@ -19,7 +18,6 @@ import { PageHeader } from '@/components/shared/page-header';
 // Wrappers & Skeletons
 import { ActivityWrapper } from '@/components/dashboard/wrappers/activity-wrapper';
 import { AnalyticsWrapper } from '@/components/dashboard/wrappers/analytics-wrapper';
-import { ActivitySkeleton, AnalyticsSkeleton } from '@/components/dashboard/wrappers/skeletons';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,24 +82,20 @@ export default async function DashboardPage() {
                 {/* Overview Section - Loaded Instantly */}
                 <DashboardOverview summaryData={summaryData} />
 
-                {/* Activity Section - Streamed */}
-                <Suspense fallback={<ActivitySkeleton />}>
-                    <ActivityWrapper
-                        userId={session.user.id}
-                        groupId={activeGroupId}
-                    />
-                </Suspense>
+                {/* Activity Section - Loaded Instantly */}
+                <ActivityWrapper
+                    userId={session.user.id}
+                    groupId={activeGroupId}
+                />
 
                 {/* Quick Actions Section - Static */}
                 <DashboardQuickActions />
 
-                {/* Detailed Analytics Section - Streamed */}
-                <Suspense fallback={<AnalyticsSkeleton />}>
-                    <AnalyticsWrapper
-                        userId={session.user.id}
-                        groupId={activeGroupId}
-                    />
-                </Suspense>
+                {/* Detailed Analytics Section - Loaded Instantly */}
+                <AnalyticsWrapper
+                    userId={session.user.id}
+                    groupId={activeGroupId}
+                />
             </div>
         </Dashboard>
     );

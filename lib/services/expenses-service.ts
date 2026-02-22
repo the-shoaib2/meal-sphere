@@ -192,8 +192,11 @@ export async function fetchExpensesData(userId: string, groupId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  const cachedData = await cachedFn() as any;
+  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+      try { return decryptData(cachedData); } catch (e) { return cachedData; }
+  }
+  return cachedData;
 }
 
 /**
@@ -298,8 +301,11 @@ export async function fetchExpenseAnalytics(userId: string, groupId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  const cachedData = await cachedFn() as any;
+  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+      try { return decryptData(cachedData); } catch (e) { return cachedData; }
+  }
+  return cachedData;
 }
 
 // --- CRUD Operations ---
@@ -511,6 +517,9 @@ export async function fetchExpenses(
         }
     );
 
-    const encrypted = await cachedFn();
-    return decryptData(encrypted);
+    const cachedData = await cachedFn() as any;
+    if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+        try { return decryptData(cachedData); } catch (e) { return cachedData; }
+    }
+    return cachedData;
 }

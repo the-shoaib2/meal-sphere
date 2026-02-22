@@ -610,6 +610,93 @@ export async function archivePeriod(roomId: string, userId: string, periodId: st
 }
 
 /**
+ * Update a period's details
+ */
+export async function updatePeriod(
+  roomId: string,
+  userId: string,
+  periodId: string,
+  data: Partial<CreatePeriodData>
+) {
+  const period = await prisma.mealPeriod.findFirst({
+    where: {
+      id: periodId,
+      roomId,
+    },
+  });
+
+  if (!period) {
+    throw new Error('Period not found');
+  }
+
+  // If name is changing, ensure it's unique
+  let finalName = data.name;
+  if (data.name && data.name !== period.name) {
+    const tempDate = data.startDate || period.startDate;
+    const tempEndDate = data.endDate === undefined ? period.endDate : data.endDate;
+    
+    // Validate uniqueness and overlaps
+    await validatePeriodUniqueness(roomId, {
+      name: data.name,
+      startDate: tempDate,
+      endDate: tempEndDate,
+    }, periodId);
+    
+    finalName = data.name;
+  }
+
+  const updatedPeriod = await prisma.mealPeriod.update({
+    where: { id: periodId },
+    data: {
+      ...(finalName && { name: finalName }),
+      ...(data.startDate && { startDate: data.startDate }),
+      ...(data.endDate !== undefined && { endDate: data.endDate }),
+      ...(data.openingBalance !== undefined && { openingBalance: data.openingBalance }),
+      ...(data.carryForward !== undefined && { carryForward: data.carryForward }),
+      ...(data.notes !== undefined && { notes: data.notes }),
+    },
+  });
+
+  invalidatePeriodCaches(roomId, periodId);
+
+  return updatedPeriod;
+}
+
+/**
+ * Delete a period and its primary associations
+ */
+export async function deletePeriod(roomId: string, userId: string, periodId: string) {
+  const period = await prisma.mealPeriod.findFirst({
+    where: {
+      id: periodId,
+      roomId,
+    },
+  });
+
+  if (!period) {
+    throw new Error('Period not found');
+  }
+
+  // Use a transaction to delete everything related to this period
+  // Depending on requirements, we might want to just un-link or delete.
+  // Given "All Periods History" delete, deletion seems appropriate.
+  await prisma.$transaction([
+    prisma.meal.deleteMany({ where: { periodId } }),
+    prisma.guestMeal.deleteMany({ where: { periodId } }),
+    prisma.shoppingItem.deleteMany({ where: { periodId } }),
+    prisma.extraExpense.deleteMany({ where: { periodId } }),
+    prisma.payment.deleteMany({ where: { periodId } }),
+    prisma.marketDate.deleteMany({ where: { periodId } }),
+    prisma.accountTransaction.deleteMany({ where: { periodId } }),
+    prisma.mealPeriod.deleteMany({ where: { id: periodId, roomId } }),
+  ]);
+
+  invalidatePeriodCaches(roomId, periodId);
+
+  return { success: true };
+}
+
+/**
  * Restart a period (create a new period with the same settings)
  */
 export async function restartPeriod(roomId: string, userId: string, periodId: string, newName?: string, withData: boolean = false) {
@@ -991,6 +1078,8 @@ export const PeriodService = {
   getCurrentPeriod,
   getPeriods,
   getPeriod,
+  updatePeriod,
+  deletePeriod,
   calculatePeriodSummary,
   archivePeriod,
   restartPeriod,

@@ -11,15 +11,13 @@ import { sendGroupInviteEmail } from './email-utils';
 import { getUserGroups, getPublicGroups, getGroupWithMembers } from '@/lib/group-query-helpers';
 import { getGroupData } from '@/lib/auth/group-auth';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
-import { cacheGetOrSet } from '@/lib/cache/cache-service';
 import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
 
 export async function fetchGroupsList(userId: string | undefined, filter: string) {
     // Generate cache key based on user and filter
     const cacheKey = `groups_list:${userId || 'anonymous'}:${filter}`;
 
-    return await cacheGetOrSet(
-      cacheKey,
+    const cachedFn = unstable_cache(
       async () => {
         // If user is not authenticated OR filter is 'public', return public groups
         if (!userId || filter === 'public') {
@@ -111,11 +109,18 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
         // Default: for authenticated users, return groups where they are members
         return await getUserGroups(userId, true);
       },
+      [cacheKey],
       { 
-        ttl: CACHE_TTL.GROUPS_LIST,
-        tags: ['groups', `user-${userId || 'anonymous'}`]
+        revalidate: CACHE_TTL.GROUPS_LIST,
+        tags: ['groups', userId ? `user-${userId}` : 'anonymous']
       }
     );
+
+    const cachedData = await cachedFn() as any;
+    if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+        try { return decryptData(cachedData); } catch (e) { return cachedData; }
+    }
+    return cachedData;
 }
 
 export async function fetchGroupsData(userId: string) {
@@ -278,8 +283,11 @@ export async function fetchGroupsData(userId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  const cachedData = await cachedFn() as any;
+  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+      try { return decryptData(cachedData); } catch (e) { return cachedData; }
+  }
+  return cachedData;
 }
 
 export async function fetchGroupDetails(groupId: string, userId: string) {
@@ -364,7 +372,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         email: canViewSensitive ? group.createdByUser.email : null
       };
 
-      return {
+      return encryptData({
         group: {
             ...group,
             createdByUser: sanitizedCreator,
@@ -372,7 +380,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         },
         timestamp: new Date().toISOString(),
         executionTime: performance.now() - start
-      };
+      });
     },
     [cacheKey, 'v1-group-details'],
     { 
@@ -381,7 +389,11 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
     }
   );
 
-  return await cachedFn();
+  const cachedData = await cachedFn() as any;
+  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+      try { return decryptData(cachedData); } catch (e) { return cachedData; }
+  }
+  return cachedData;
 }
 export async function fetchGroupAccessData(groupId: string, userId: string) {
   const cacheKey = `group-access-${groupId}-${userId}`;
@@ -485,8 +497,11 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  const cachedData = await cachedFn() as any;
+  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+      try { return decryptData(cachedData); } catch (e) { return cachedData; }
+  }
+  return cachedData;
 }
 
 export async function fetchGroupJoinDetails(groupId: string, userId: string) {
@@ -824,10 +839,9 @@ export async function fetchGroupActivityLogs(groupId: string, userId: string) {
         throw new Error('You are banned from this group');
     }
 
-    return await cacheGetOrSet(
-        cacheKey,
+    const cachedFn = unstable_cache(
         async () => {
-            return prisma.groupActivityLog.findMany({
+            const data = await prisma.groupActivityLog.findMany({
                 where: { roomId: groupId },
                 include: {
                     user: {
@@ -842,12 +856,20 @@ export async function fetchGroupActivityLogs(groupId: string, userId: string) {
                 orderBy: { createdAt: 'desc' },
                 take: 50
             });
+            return encryptData(data);
         },
+        [cacheKey],
         { 
-            ttl: 60, // 1 minute cache
-            tags: [`group-${groupId}-activity`]
+            revalidate: 60, // 1 minute cache
+            tags: [`group-${groupId}`, `group-${groupId}-activity`]
         }
     );
+
+    const cachedData = await cachedFn() as any;
+    if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+        try { return decryptData(cachedData); } catch (e) { return cachedData; }
+    }
+    return cachedData;
 }
 
 export async function deleteGroup(groupId: string, userId: string) {

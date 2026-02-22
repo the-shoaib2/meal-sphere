@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/services/prisma';
 import { PeriodStatus } from '@prisma/client';
-import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { unstable_cache } from 'next/cache';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 export * from './period-utils-shared';
@@ -11,8 +11,7 @@ export * from './period-utils-shared';
 export async function getCurrentPeriod(roomId: string) {
   const cacheKey = `active_period:${roomId}`;
 
-  return await cacheGetOrSet(
-    cacheKey,
+  const cachedFn = unstable_cache(
     async () => {
       return await prisma.mealPeriod.findFirst({
         where: {
@@ -21,8 +20,14 @@ export async function getCurrentPeriod(roomId: string) {
         },
       });
     },
-    { ttl: CACHE_TTL.ACTIVE_PERIOD }
+    [cacheKey],
+    { 
+      revalidate: CACHE_TTL.ACTIVE_PERIOD,
+      tags: [`group-${roomId}`, 'periods', 'active-period'] 
+    }
   );
+
+  return await cachedFn();
 }
 
 /**

@@ -4,8 +4,8 @@
  */
 
 export const CACHE_PREFIXES = {
-  DASHBOARD: 'dashboard_v2',
-  ANALYTICS: 'analytics_v2',
+  DASHBOARD: 'dashboard',
+  ANALYTICS: 'analytics',
   CALCULATIONS: 'calculations',
   MEALS: 'meals',
   PAYMENTS: 'payments',

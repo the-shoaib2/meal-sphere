@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { PeriodCalendar } from './period-calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { CreatePeriodData } from '@/hooks/use-periods';
@@ -52,7 +51,7 @@ export function CreatePeriodDialog({
     if (open && periodMode === 'MONTHLY' && !formData.name) {
       setFormData(prev => ({
         ...prev,
-        name: format(new Date(), 'MMMM yyyy')
+        name: format(new Date(), 'MMM yyyy')
       }));
     }
   }, [open, periodMode, formData.name]);
@@ -116,8 +115,8 @@ export function CreatePeriodDialog({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Start New Meal Period</DialogTitle>
-          <DialogDescription>
-            Create a new meal period with custom start and end dates. All meals, shopping, and expenses will be tracked within this period.
+          <DialogDescription className="text-[12px]">
+            Create a new meal period. All meals, shopping, and expenses will be tracked within this period.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -158,57 +157,29 @@ export function CreatePeriodDialog({
           </div>
 
           {periodMode === 'CUSTOM' && (
-            <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
               <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !formData.startDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <Calendar className="mr-1 h-4 w-4" />
-                      {formData.startDate ? format(formData.startDate, 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.startDate}
-                      onSelect={(date) => date && handleInputChange('startDate', date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label>Start Date <span className="text-destructive">*</span></Label>
+                <PeriodCalendar
+                  title="Start Date"
+                  selected={formData.startDate}
+                  onSelect={(date) => date && handleInputChange('startDate', date)}
+                  align="start"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>End Date (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !formData.endDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <Calendar className="mr-1 h-4 w-4" />
-                      {formData.endDate ? format(formData.endDate, 'PPP') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={formData.endDate || undefined}
-                      onSelect={(date) => handleInputChange('endDate', date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label>End Date</Label>
+                <PeriodCalendar
+                  title="End Date"
+                  selected={formData.endDate}
+                  onSelect={(date) => handleInputChange('endDate', date)}
+                  align="end"
+                  placeholder="End Date"
+                  disabledDays={(date) =>
+                    !!formData.startDate && (date <= formData.startDate)
+                  }
+                />
               </div>
             </div>
           )}
@@ -218,7 +189,7 @@ export function CreatePeriodDialog({
             <Input
               id="openingBalance"
               type="number"
-              step="0.01"
+              step="1.00"
               value={formData.openingBalance}
               onChange={(e) => handleInputChange('openingBalance', parseFloat(e.target.value) || 0)}
               placeholder="0.00"
@@ -231,7 +202,7 @@ export function CreatePeriodDialog({
               checked={formData.carryForward}
               onCheckedChange={(checked) => handleInputChange('carryForward', checked)}
             />
-            <Label htmlFor="carryForward">Carry forward balance from previous period</Label>
+            <Label htmlFor="carryForward" className="text-sm cursor-pointer">Carry forward balance from previous period</Label>
           </div>
 
           <div className="space-y-2">
@@ -240,7 +211,7 @@ export function CreatePeriodDialog({
               id="notes"
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Any additional notes about this period..."
+              placeholder="Any additional notes..."
               rows={3}
             />
           </div>

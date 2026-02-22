@@ -82,8 +82,11 @@ export async function fetchShoppingData(userId: string, roomId: string, periodId
         }
     );
 
-    const encrypted = await cachedFn();
-    return decryptData(encrypted);
+    const cachedData = await cachedFn() as any;
+    if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+        try { return decryptData(cachedData); } catch (e) { return cachedData; }
+    }
+    return cachedData;
 }
 
 export async function createShoppingItem(userId: string, roomId: string, data: { description: string, amount: number, date: Date, receiptUrl?: string | null, periodId: string }) {

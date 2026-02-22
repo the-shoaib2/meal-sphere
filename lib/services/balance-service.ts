@@ -3,7 +3,7 @@ import { prisma } from '@/lib/services/prisma';
 import { unstable_cache } from 'next/cache';
 import { encryptData, decryptData } from '@/lib/encryption';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
-import { cacheGetOrSet } from '@/lib/cache/cache-service';
+import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 // Uses DB Aggregation
@@ -209,8 +209,7 @@ export async function getGroupBalanceSummary(
 ) {
   const cacheKey = `group_balance_summary:${roomId}:${includeDetails}`;
 
-  return cacheGetOrSet(
-    cacheKey,
+  const cachedFn = unstable_cache(
     async () => {
       const currentPeriod = await getCurrentPeriod(roomId);
       const periodId = currentPeriod?.id;
@@ -325,7 +324,7 @@ export async function getGroupBalanceSummary(
         };
       });
 
-      return {
+      const result = {
         members: membersWithBalances,
         groupTotalBalance: groupTotalBalance,
         totalExpenses: Number(totalExpenses) || 0,
@@ -341,9 +340,21 @@ export async function getGroupBalanceSummary(
           isLocked: currentPeriod.isLocked,
         } : null,
       };
+      
+      return encryptData(result);
     },
-    { ttl: CACHE_TTL.ACTIVE_PERIOD }
+    [cacheKey],
+    { 
+      revalidate: CACHE_TTL.ACTIVE_PERIOD,
+      tags: [`group-${roomId}`, 'balance', `summary-${roomId}`]
+    }
   );
+
+  const cachedData = await cachedFn() as any;
+  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
+    try { return decryptData(cachedData); } catch (e) { return cachedData; }
+  }
+  return cachedData;
 }
 
 // Transaction Management with Audit Logs

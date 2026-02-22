@@ -3,6 +3,8 @@ import { format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { MealPeriod } from '@prisma/client';
+import { PeriodActions } from './period-actions';
+import { useUpdatePeriod, useDeletePeriod } from '@/hooks/use-periods';
 
 interface PeriodHistoryCardProps {
     periods: MealPeriod[];
@@ -10,6 +12,17 @@ interface PeriodHistoryCardProps {
 }
 
 export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardProps) {
+    const { mutateAsync: updatePeriod } = useUpdatePeriod();
+    const { mutateAsync: deletePeriod } = useDeletePeriod();
+
+    const handleUpdate = async (periodId: string, data: any) => {
+        await updatePeriod({ periodId, data });
+    };
+
+    const handleDelete = async (periodId: string) => {
+        await deletePeriod(periodId);
+    };
+
     return (
         <Card className="mt-4 w-full border-dashed">
             <CardHeader>
@@ -28,6 +41,7 @@ export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardPro
                                     <TableHead>Date Range</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Members</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -46,6 +60,14 @@ export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardPro
                                         </TableCell>
                                         <TableCell>
                                             {activeGroup?.members?.length || 0} members
+                                        </TableCell>
+                                        <TableCell>
+                                            <PeriodActions
+                                                period={period}
+                                                onUpdate={handleUpdate}
+                                                onDelete={handleDelete}
+                                                isLocked={period.isLocked}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ))}
