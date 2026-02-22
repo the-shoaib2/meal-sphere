@@ -357,8 +357,8 @@ export async function unlockPeriod(roomId: string, userId: string, periodId: str
     throw new Error('Period not found');
   }
 
-  if (!period.isLocked) {
-    throw new Error('Period is not locked');
+  if (!period.isLocked && period.status !== PeriodStatus.ARCHIVED) {
+    throw new Error('Period is not locked or archived');
   }
 
   const updatedPeriod = await prisma.mealPeriod.update({

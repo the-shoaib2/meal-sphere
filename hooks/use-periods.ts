@@ -72,17 +72,52 @@ export function usePeriodsPageData(includeArchived = false, initialData?: Period
   return {
     data: isDataStaleForGroup ? null : data,
     isLoading: !!isDataStaleForGroup,
+    isFetching: false,
     error: null,
     refetch: async () => {},
   };
 }
 
 export function usePeriods(includeArchived = false, initialData?: PeriodsPageData) {
-  const unified = usePeriodsPageData(includeArchived, initialData);
-  return {
-    ...unified,
-    data: unified.data?.periods || [],
-  };
+  const { activeGroup } = useActiveGroup();
+  const { periodsData } = usePeriodContext();
+  
+  // Base data source
+  const contextData = initialData || periodsData;
+  const isCorrectGroup = !!(contextData?.groupId && activeGroup?.id && contextData.groupId === activeGroup.id);
+  const initialPeriods = isCorrectGroup ? contextData?.periods : undefined;
+
+  const query = useQuery({
+    queryKey: ['periods', activeGroup?.id, includeArchived],
+    queryFn: async () => {
+      if (!activeGroup?.id) return [];
+
+      // If we don't need archived and we have context data for this group, use it
+      if (!includeArchived && isCorrectGroup && initialPeriods) {
+        return initialPeriods;
+      }
+
+      // Fetch from API
+      const response = await fetch(`/api/periods?groupId=${activeGroup.id}&includeArchived=${includeArchived}`, { 
+        cache: 'no-store' 
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch periods');
+      }
+      
+      const data = await response.json();
+      return data.periods || [];
+    },
+    enabled: !!activeGroup?.id,
+    // Use initial data if available and we match the group + archive filter
+    // Provide initialDataUpdatedAt so react-query knows when to trust optimistic updates vs initialData
+    initialData: !includeArchived ? initialPeriods : undefined,
+    initialDataUpdatedAt: !includeArchived && initialPeriods ? Date.now() : undefined,
+    staleTime: includeArchived ? 0 : 30000, // Re-fetch archived immediately if requested
+  });
+
+  return { ...query, isFetching: query.isFetching };
 }
 
 export function useCurrentPeriod(initialData?: PeriodsPageData) {
@@ -229,12 +264,50 @@ export function useStartPeriod() {
       const result = await response.json();
       return result;
     },
+    onMutate: async (data: CreatePeriodData) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      const optimisticPeriod = {
+        id: `temp-${Date.now()}`,
+        name: data.name,
+        startDate: data.startDate,
+        endDate: data.endDate || null,
+        status: 'ACTIVE',
+        isLocked: false,
+        groupId: activeGroup?.id,
+        _count: {
+          members: 0,
+        },
+      };
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return [optimisticPeriod];
+        return [optimisticPeriod, ...old];
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return [optimisticPeriod];
+        return [optimisticPeriod, ...old];
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
       toast.success('Period started successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
+
       // Enhanced error handling with specific messages
       const errorMessage = error.message;
 
@@ -251,6 +324,10 @@ export function useStartPeriod() {
       } else {
         toast.error(`Start failed: ${errorMessage}`);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -385,22 +462,56 @@ export function useEndPeriod() {
       return await response.json();
     },
 
+    onMutate: async ({ periodId, endDate }) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, status: 'ENDED', endDate: endDate || new Date() } : p
+        );
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, status: 'ENDED', endDate: endDate || new Date() } : p
+        );
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
       toast.success('Period ended successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
       const errorMessage = error.message;
+
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
 
       if (errorMessage.includes('No active period found') || errorMessage.includes('not active')) {
         queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
+        queryClient.invalidateQueries({ queryKey: ['periods'] });
         toast.success('Period already ended');
       } else if (errorMessage.includes('Insufficient permissions')) {
         toast.error('Permission denied.');
       } else {
         toast.error(`End failed: ${errorMessage}`);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -433,13 +544,42 @@ export function useLockPeriod() {
       return await response.json();
     },
 
+    onMutate: async (periodId) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, isLocked: true, status: 'LOCKED' } : p
+        );
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, isLocked: true, status: 'LOCKED' } : p
+        );
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
       toast.success('Period locked successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
       const errorMessage = error.message;
+
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
 
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found');
@@ -450,6 +590,10 @@ export function useLockPeriod() {
       } else {
         toast.error(`Lock failed: ${errorMessage}`);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -483,23 +627,56 @@ export function useUnlockPeriod() {
       return await response.json();
     },
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
-      router.refresh();
-      toast.success('Period unlocked successfully!');
+    onMutate: async ({ periodId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, isLocked: false, status } : p
+        );
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, isLocked: false, status } : p
+        );
+      });
+
+      return { previousPeriods, previousOverview };
     },
-    onError: (error: Error) => {
+    onSuccess: () => {
+      router.refresh();
+      toast.success('Period restored successfully!');
+    },
+    onError: (error: Error, _, context) => {
       const errorMessage = error.message;
+
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
 
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found');
       } else if (errorMessage.includes('not locked')) {
-        toast.error('Period not locked');
+        toast.error('Period not locked or archived');
       } else if (errorMessage.includes('Insufficient permissions')) {
         toast.error('Permission denied.');
       } else {
         toast.error(`Unlock failed: ${errorMessage}`);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -532,13 +709,41 @@ export function useArchivePeriod() {
       return await response.json();
     },
 
+    onMutate: async (periodId) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, status: 'ARCHIVED' } : p
+        );
+      });
+      // Filter out archived periods from non-archived view optimistic update
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return old;
+        return old.filter((p: any) => p.id !== periodId);
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
       toast.success('Period archived successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
       const errorMessage = error.message;
+
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
 
       if (errorMessage.includes('Period not found')) {
         toast.error('Period not found');
@@ -549,6 +754,10 @@ export function useArchivePeriod() {
       } else {
         toast.error(`Archive failed: ${errorMessage}`);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -582,12 +791,47 @@ export function useRestartPeriod() {
       return data.period;
     },
 
+    onMutate: async ({ periodId, newName }) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      const optimisticPeriod = {
+        id: `temp-${Date.now()}`,
+        name: newName || 'Restarted Period...',
+        startDate: new Date(),
+        endDate: null,
+        status: 'ACTIVE',
+        isLocked: false,
+        roomId: activeGroup?.id,
+      };
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return [optimisticPeriod];
+        return [optimisticPeriod, ...old];
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return [optimisticPeriod];
+        return [optimisticPeriod, ...old];
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
       router.refresh();
       toast.success('Period restarted successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
+
       const errorMessage = error.message;
 
       if (errorMessage.includes('Period not found')) {
@@ -599,6 +843,10 @@ export function useRestartPeriod() {
       } else {
         toast.error(`Restart failed: ${errorMessage}`);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -631,14 +879,45 @@ export function useUpdatePeriod() {
 
       return await response.json();
     },
+    onMutate: async ({ periodId, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, ...data } : p
+        );
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) =>
+          p.id === periodId ? { ...p, ...data } : p
+        );
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
       router.refresh();
       toast.success('Period updated successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
       toast.error(`Update failed: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
@@ -665,19 +944,46 @@ export function useDeletePeriod() {
 
       return await response.json();
     },
+    onMutate: async (periodId) => {
+      await queryClient.cancelQueries({ queryKey: ['periods'] });
+      await queryClient.cancelQueries({ queryKey: ['periods-overview'] });
+
+      const previousPeriods = queryClient.getQueryData(['periods', activeGroup?.id, true]);
+      const previousOverview = queryClient.getQueryData(['periods-overview', activeGroup?.id]);
+
+      queryClient.setQueryData(['periods', activeGroup?.id, true], (old: any) => {
+        if (!old) return old;
+        return old.filter((p: any) => p.id !== periodId);
+      });
+      queryClient.setQueryData(['periods', activeGroup?.id, false], (old: any) => {
+        if (!old) return old;
+        return old.filter((p: any) => p.id !== periodId);
+      });
+
+      return { previousPeriods, previousOverview };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
-      queryClient.invalidateQueries({ queryKey: ['periods'] });
       router.refresh();
       toast.success('Period deleted successfully!');
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _, context) => {
+      if (context?.previousPeriods) {
+        queryClient.setQueryData(['periods', activeGroup?.id, true], context.previousPeriods);
+        queryClient.setQueryData(['periods', activeGroup?.id, false], context.previousPeriods);
+      }
+      if (context?.previousOverview) {
+        queryClient.setQueryData(['periods-overview', activeGroup?.id], context.previousOverview);
+      }
       toast.error(`Delete failed: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['periods'] });
+      queryClient.invalidateQueries({ queryKey: ['periods-overview'] });
     },
   });
 }
 
-export function usePeriodManagement(initialData?: PeriodsPageData) {
+export function usePeriodManagement(initialData?: PeriodsPageData, initialIncludeArchived = false) {
   const { activeGroup } = useActiveGroup();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(
     initialData?.selectedPeriodId || initialData?.currentPeriod?.id || null
@@ -685,12 +991,16 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(initialIncludeArchived);
 
   const {
     data: periods,
-    isLoading: periodsLoading,
+    isLoading: isInitialLoading,
+    isFetching: isFetchingPeriods,
     error: periodsError,
-  } = usePeriods(false, initialData);
+  } = usePeriods(includeArchived, initialData);
+
+  const periodsLoading = isInitialLoading || isFetchingPeriods;
 
   const {
     data: currentPeriod,
@@ -818,6 +1128,10 @@ export function usePeriodManagement(initialData?: PeriodsPageData) {
     handleRestartPeriod,
     handleUpdatePeriod,
     handleDeletePeriod,
+
+    // Archive visibility
+    includeArchived,
+    setIncludeArchived,
   };
 }
 

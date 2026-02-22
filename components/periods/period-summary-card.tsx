@@ -19,7 +19,25 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
   if (!period) return null;
 
   const getStatusBadge = () => {
-    return <Badge variant="default">Active</Badge>;
+    if (period.isLocked) {
+      return (
+        <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20">
+          Locked
+        </Badge>
+      );
+    }
+
+    const status = period.status as PeriodStatus;
+    switch (status) {
+      case 'ACTIVE':
+        return <Badge className="bg-green-500/10 text-green-600 border-none">Active</Badge>;
+      case 'ENDED':
+        return <Badge className="bg-amber-500/10 text-amber-600 border-none">Ended</Badge>;
+      case 'ARCHIVED':
+        return <Badge className="bg-slate-500/10 text-slate-500 border-none">Archived</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
   const totalExpenses = (summary?.totalShoppingAmount || 0) + (summary?.totalExtraExpenses || 0);

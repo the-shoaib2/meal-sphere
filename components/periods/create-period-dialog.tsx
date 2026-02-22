@@ -46,23 +46,22 @@ export function CreatePeriodDialog({
     notes: '',
   });
 
+  const [localPeriodMode, setLocalPeriodMode] = useState<'MONTHLY' | 'CUSTOM'>(periodMode);
+
   // Sync name when monthly mode is active - ensure name is always set if mode is MONTHLY
   React.useEffect(() => {
-    if (open && periodMode === 'MONTHLY' && !formData.name) {
+    if (open && localPeriodMode === 'MONTHLY' && !formData.name) {
       setFormData(prev => ({
         ...prev,
-        name: format(new Date(), 'MMM yyyy')
+        name: format(new Date(), 'MMMM yyyy')
       }));
     }
-  }, [open, periodMode, formData.name]);
+  }, [open, localPeriodMode, formData.name]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleModeChange = (checked: boolean) => {
-    if (onPeriodModeToggle) {
-      onPeriodModeToggle(checked);
-    }
-    // Dialog stays open to allow user to see the change
+    setLocalPeriodMode(checked ? 'MONTHLY' : 'CUSTOM');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,30 +118,32 @@ export function CreatePeriodDialog({
             Create a new meal period. All meals, shopping, and expenses will be tracked within this period.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Period Mode Toggle - Moved inside Dialog */}
-          <div className="flex items-center justify-center p-2 border rounded-lg bg-muted/30">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Settings2 className={cn("h-4 w-4", periodMode === 'CUSTOM' ? "text-primary" : "text-muted-foreground")} />
-                <span className={cn("text-sm font-medium", periodMode === 'CUSTOM' ? "text-foreground" : "text-muted-foreground")}>
-                  Custom
-                </span>
-              </div>
-              <Switch
-                id="dialog-period-mode-switch"
-                checked={periodMode === 'MONTHLY'}
-                onCheckedChange={handleModeChange}
-                disabled={isUpdatingMode || periodModeLoading || (periodMode === 'MONTHLY' && currentPeriodExists)}
-              />
-              <div className="flex items-center gap-2">
-                <Calendar className={cn("h-4 w-4", periodMode === 'MONTHLY' ? "text-primary" : "text-muted-foreground")} />
-                <span className={cn("text-sm font-medium", periodMode === 'MONTHLY' ? "text-foreground" : "text-muted-foreground")}>
-                  Monthly
-                </span>
-              </div>
+
+        {/* Period Mode Toggle - Moved outside form to prevent accidental submission */}
+        <div className="flex items-center justify-center p-2 border rounded-lg bg-muted/30 mt-2 mb-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Settings2 className={cn("h-4 w-4", localPeriodMode === 'CUSTOM' ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-sm font-medium", localPeriodMode === 'CUSTOM' ? "text-foreground" : "text-muted-foreground")}>
+                Custom
+              </span>
+            </div>
+            <Switch
+              id="dialog-period-mode-switch"
+              checked={localPeriodMode === 'MONTHLY'}
+              onCheckedChange={handleModeChange}
+              disabled={localPeriodMode === 'MONTHLY' && currentPeriodExists}
+            />
+            <div className="flex items-center gap-2">
+              <Calendar className={cn("h-4 w-4", localPeriodMode === 'MONTHLY' ? "text-primary" : "text-muted-foreground")} />
+              <span className={cn("text-sm font-medium", localPeriodMode === 'MONTHLY' ? "text-foreground" : "text-muted-foreground")}>
+                Monthly
+              </span>
             </div>
           </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
 
           <div className="space-y-2">
             <Label htmlFor="name">Period Name</Label>
@@ -150,13 +151,13 @@ export function CreatePeriodDialog({
               id="name"
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="e.g., January 2024, Q1 2024"
+              placeholder="e.g., January 2024, February 2024"
               required
-              disabled={periodMode === 'MONTHLY'}
+              disabled={localPeriodMode === 'MONTHLY'}
             />
           </div>
 
-          {periodMode === 'CUSTOM' && (
+          {localPeriodMode === 'CUSTOM' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
               <div className="space-y-2">
                 <Label>Start Date <span className="text-destructive">*</span></Label>

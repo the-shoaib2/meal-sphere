@@ -61,7 +61,10 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
     handleUnlockPeriod,
     handleArchivePeriod,
     handleRestartPeriod,
+    handleDeletePeriod,
     restartPeriodMutation,
+    includeArchived,
+    setIncludeArchived,
   } = usePeriodManagement(initialData);
 
   const { data: session } = useSession();
@@ -86,7 +89,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
   const [unlockLoading, setUnlockLoading] = useState(false);
 
   // Combined loading state - show loader if any data is loading
-  const isLoading = periodsLoading || currentPeriodLoading || selectedPeriodLoading || summaryLoading || !activeGroup;
+  const isLoading = currentPeriodLoading || selectedPeriodLoading || summaryLoading || !activeGroup;
 
   // Handle action parameter for auto-opening dialogs
   React.useEffect(() => {
@@ -113,11 +116,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
     );
   }
 
-  // Handle period mode toggle
-  const handlePeriodModeToggle = (checked: boolean) => {
-    const newMode = checked ? 'MONTHLY' : 'CUSTOM';
-    updatePeriodMode(newMode);
-  };
+
 
   // Handle restart period with dialog closing
   const handleRestartPeriodWithDialog = async (periodId: string, newName?: string, withData?: boolean) => {
@@ -158,9 +157,6 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
               onOpenChange={setShowCreateDialog}
               onSubmit={handleStartPeriod}
               periodMode={periodMode}
-              onPeriodModeToggle={handlePeriodModeToggle}
-              periodModeLoading={periodModeLoading}
-              isUpdatingMode={isUpdating}
               currentPeriodExists={!!currentPeriod}
             />
           )}
@@ -204,6 +200,10 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
           setShowCreateDialog={setShowCreateDialog}
           setShowArchiveDialog={setShowArchiveDialog}
           isPrivileged={isPrivileged}
+          includeArchived={includeArchived}
+          setIncludeArchived={setIncludeArchived}
+          handleDeletePeriod={handleDeletePeriod}
+          isLoading={periodsLoading}
         />
 
         {/* Reports Section */}
@@ -231,9 +231,9 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
         <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
           <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
-              <DialogTitle>Unlock Period</DialogTitle>
+              <DialogTitle>{unlockTargetPeriod?.status === 'ARCHIVED' ? 'Restore Period' : 'Unlock Period'}</DialogTitle>
               <DialogDescription>
-                Choose the status for the period after unlocking.
+                {unlockTargetPeriod?.status === 'ARCHIVED' ? 'Choose the status for the period after restoring.' : 'Choose the status for the period after unlocking.'}
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center justify-between py-4">
@@ -247,7 +247,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>Cancel</Button>
               <Button onClick={handleUnlockDialogConfirm} disabled={!unlockTargetPeriod || unlockLoading}>
-                {unlockLoading ? 'Unlocking...' : 'Unlock & Set Status'}
+                {unlockLoading ? (unlockTargetPeriod?.status === 'ARCHIVED' ? 'Restoring...' : 'Unlocking...') : (unlockTargetPeriod?.status === 'ARCHIVED' ? 'Restore & Set Status' : 'Unlock & Set Status')}
               </Button>
             </DialogFooter>
           </DialogContent>

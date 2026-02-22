@@ -174,9 +174,9 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                 <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
                     <DialogContent className="sm:max-w-[400px]">
                         <DialogHeader>
-                            <DialogTitle>Unlock Period</DialogTitle>
+                            <DialogTitle>{unlockTargetPeriod?.status === 'ARCHIVED' ? 'Restore Period' : 'Unlock Period'}</DialogTitle>
                             <DialogDescription>
-                                Choose the status for the period after unlocking.
+                                {unlockTargetPeriod?.status === 'ARCHIVED' ? 'Choose the status for the period after restoring.' : 'Choose the status for the period after unlocking.'}
                             </DialogDescription>
                         </DialogHeader>
                         <div className="flex items-center justify-between py-4">
@@ -193,12 +193,12 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                                 {unlockLoading ?
                                     <>
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        Unlocking...
+                                        {unlockTargetPeriod?.status === 'ARCHIVED' ? 'Restoring...' : 'Unlocking...'}
                                     </>
                                     :
                                     <>
-                                        <Unlock className="h-4 w-4" />
-                                        Unlock & Set Status
+                                        {unlockTargetPeriod?.status === 'ARCHIVED' ? <RefreshCw className="h-4 w-4 mr-2" /> : <Unlock className="h-4 w-4 mr-2" />}
+                                        {unlockTargetPeriod?.status === 'ARCHIVED' ? 'Restore & Set Status' : 'Unlock & Set Status'}
                                     </>
                                 }
                             </Button>

@@ -47,7 +47,7 @@ export function PeriodArchiveDialog({ open, onOpenChange, onConfirm, periodId, p
         </DialogHeader>
 
         <div className="space-y-4">
-          <Alert>
+          <Alert className='border-2 border-dashed'>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Archiving a period will:
