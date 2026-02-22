@@ -12,10 +12,6 @@ import {
     Receipt,
     PieChart,
     Calculator,
-    Vote,
-    TrendingUp,
-    FileSpreadsheet,
-    Bell,
     Settings2,
     Loader2,
     type LucideIcon,
@@ -171,9 +167,9 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                     {isSignout && isSigningOut ? (
                                         <Loader2 className="mr-3 h-4 w-4 animate-spin" />
                                     ) : (
-                                        <item.icon className={`mr-3 h-4 w-4 transition-colors ${isDestructive ? "text-destructive" : "text-foreground"}`} />
+                                        <item.icon className={`mr-3 h-4 w-4 text-red-500 transition-colors ${isDestructive ? "text-destructive" : "text-foreground"}`} />
                                     )}
-                                    <span className="font-medium">
+                                    <span className="font-medium text-red-500">
                                         {isSignout && isSigningOut ? "Signing out..." : item.name}
                                     </span>
                                 </button>

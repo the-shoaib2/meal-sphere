@@ -72,7 +72,7 @@ export function Header() {
         {/* Title - Hidden when search is expanded on mobile */}
         <Link
           href="/"
-          className={`items-center gap-2 font-semibold ${isMounted && isMobile && isSearchExpanded
+          className={`items-center gap-2 font-semibold ${isMobile && isSearchExpanded
             ? 'hidden'
             : 'flex'
             } md:flex flex-shrink-0`}
@@ -91,14 +91,14 @@ export function Header() {
         </div>
 
         {/* Spacer for mobile when search is not expanded */}
-        {isMounted && isMobile && !isSearchExpanded && <div className="flex-1" />}
+        {isMobile && !isSearchExpanded && <div className="flex-1" />}
 
         {/* Search expanded on mobile - takes full width with animation */}
-        <div className={`${isMounted ? 'transition-all duration-300 ease-out' : ''} ${isMounted && isMobile && isSearchExpanded
+        <div className={`${isMounted ? 'transition-all duration-300 ease-out' : ''} ${isMobile && isSearchExpanded
           ? `flex-1 ${isMounted ? 'opacity-100 translate-x-0' : ''}`
           : `w-0 ${isMounted ? 'opacity-0 translate-x-4' : ''} overflow-hidden md:hidden`
           } md:hidden`}>
-          {isMounted && isMobile && isSearchExpanded && (
+          {isMobile && isSearchExpanded && (
             <HeaderSearch
               isMobile={true}
               isExpanded={isSearchExpanded}
@@ -107,10 +107,7 @@ export function Header() {
           )}
         </div>
         {/* Right side actions - Always visible */}
-        <div
-          className="flex items-center gap-2 md:gap-4 flex-shrink-0"
-          style={{ visibility: isMounted ? 'visible' : 'hidden' }}
-        >
+        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
           {/* Fullscreen toggle - Desktop only */}
           <Button
             variant="ghost"
@@ -118,6 +115,7 @@ export function Header() {
             onClick={toggleFullscreen}
             className="hidden md:flex"
             title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            suppressHydrationWarning
           >
             {isFullscreen ? (
               <Minimize2 className="h-5 w-5" />
@@ -128,7 +126,7 @@ export function Header() {
           </Button>
 
           {/* Search button - Mobile only, shown when not expanded */}
-          {isMounted && isMobile && !isSearchExpanded && (
+          {isMobile && !isSearchExpanded && (
             <HeaderSearch
               isMobile={true}
               isExpanded={false}
@@ -137,7 +135,7 @@ export function Header() {
           )}
 
           {/* Notification - Always visible on desktop, hidden on mobile when search is expanded */}
-          {(!isMounted || !isMobile || !isSearchExpanded) && <NotificationBell />}
+          {(!isMobile || !isSearchExpanded) && <NotificationBell />}
 
           {/* User Avatar - Always visible */}
           <UserAvatar user={session?.user} />
