@@ -97,7 +97,7 @@ export function PeriodsListSection({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 px-0 sm:px-6 relative min-h-[400px]">
+        <CardContent className="pt-0 px-0 sm:px-6 relative min-h-[200px]">
           <div className="overflow-x-auto w-full">
             {isLoading || (periods && periods.length > 0) ? (
               <Table className="min-w-[700px] w-full text-xs sm:text-sm">
@@ -111,74 +111,74 @@ export function PeriodsListSection({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="relative">
-                  {isLoading && (
-                    <div className="absolute inset-0 bg-background z-10 flex items-center justify-center min-h-[400px]">
-                      <Loader size="md" />
-                    </div>
-                  )}
-                  {isLoading && (!periods || periods.length === 0) && (
+                  {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={isPrivileged ? 5 : 4} className="h-[400px]" />
-                    </TableRow>
-                  )}
-                  {periods?.map((period: MealPeriod) => (
-                    <TableRow key={period.id} className="group hover:bg-muted/20 transition-colors border-border/50">
-                      <TableCell className="font-semibold py-4">{period.name}</TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex flex-col">
-                          <span className="text-foreground/90 font-medium">
-                            {format(new Date(period.startDate), 'MMM d, yyyy')}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            to {period.endDate ? format(new Date(period.endDate), 'MMM d, yyyy') : 'Ongoing'}
-                          </span>
+                      <TableCell colSpan={isPrivileged ? 5 : 4} className="h-[200px] text-center">
+                        <div className="flex items-center justify-center w-full h-full">
+                          <Loader size="md" />
                         </div>
                       </TableCell>
-                      <TableCell className="py-4">
-                        <div className="flex items-center gap-2">
-                          {period.isLocked ? (
-                            <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
-                              Locked
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="secondary"
-                              className={`
+                    </TableRow>
+                  ) : (
+                    periods?.map((period: MealPeriod) => (
+                      <TableRow key={period.id} className="group hover:bg-muted/20 transition-colors border-border/50">
+                        <TableCell className="font-semibold py-4">{period.name}</TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex flex-col">
+                            <span className="text-foreground/90 font-medium">
+                              {format(new Date(period.startDate), 'MMM d, yyyy')}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              to {period.endDate ? format(new Date(period.endDate), 'MMM d, yyyy') : 'Ongoing'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-2">
+                            {period.isLocked ? (
+                              <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                                Locked
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className={`
                                 border-none font-medium
                                 ${period.status === 'ACTIVE' ? 'bg-green-500/10 text-green-600' :
-                                  period.status === 'ENDED' ? 'bg-amber-500/10 text-amber-600' :
-                                    period.status === 'ARCHIVED' ? 'bg-slate-500/10 text-slate-500' :
-                                      'bg-slate-500/10 text-slate-600'}
+                                    period.status === 'ENDED' ? 'bg-amber-500/10 text-amber-600' :
+                                      period.status === 'ARCHIVED' ? 'bg-slate-500/10 text-slate-500' :
+                                        'bg-slate-500/10 text-slate-600'}
                               `}
-                            >
-                              {period.status}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/5 text-primary border border-primary/10">
-                          {activeGroup?.members?.length || 0}
-                        </span>
-                      </TableCell>
-                      {isPrivileged && (
-                        <TableCell className="text-right py-4 pr-6">
-                          <PeriodActions
-                            period={period}
-                            handleLockPeriod={handleLockPeriod}
-                            setUnlockTargetPeriod={setUnlockTargetPeriod}
-                            setUnlockToActive={setUnlockToActive}
-                            setShowUnlockDialog={setShowUnlockDialog}
-                            setPeriodToRestart={setPeriodToRestart}
-                            setShowRestartDialog={setShowRestartDialog}
-                            setSelectedPeriodId={setSelectedPeriodId}
-                            setShowArchiveDialog={setShowArchiveDialog}
-                            handleDeletePeriod={handleDeletePeriod}
-                          />
+                              >
+                                {period.status}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
+                        <TableCell className="text-center py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/5 text-primary border border-primary/10">
+                            {activeGroup?.members?.length || 0}
+                          </span>
+                        </TableCell>
+                        {isPrivileged && (
+                          <TableCell className="text-right py-4 pr-6">
+                            <PeriodActions
+                              period={period}
+                              handleLockPeriod={handleLockPeriod}
+                              setUnlockTargetPeriod={setUnlockTargetPeriod}
+                              setUnlockToActive={setUnlockToActive}
+                              setShowUnlockDialog={setShowUnlockDialog}
+                              setPeriodToRestart={setPeriodToRestart}
+                              setShowRestartDialog={setShowRestartDialog}
+                              setSelectedPeriodId={setSelectedPeriodId}
+                              setShowArchiveDialog={setShowArchiveDialog}
+                              handleDeletePeriod={handleDeletePeriod}
+                            />
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             ) : (
