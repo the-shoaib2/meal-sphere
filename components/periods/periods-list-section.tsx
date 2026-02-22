@@ -5,10 +5,12 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { PeriodHistoryCard } from '@/components/periods/period-history-card';
-import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, List, ChevronUp, Edit } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
+import { EditPeriodDialog } from './edit-period-dialog';
+import { useUpdatePeriod } from '@/hooks/use-periods';
 
 
 export function PeriodsListSection({
@@ -43,12 +45,12 @@ export function PeriodsListSection({
   const router = useRouter();
   const [showHistory, setShowHistory] = useState(false);
 
-  if (!activeGroup || !periods) {
+  if (!activeGroup || !periods || !isPrivileged) {
+    if (!isPrivileged) return null;
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="text-center">
           <Loader size="lg" />
-          <p className="text-muted-foreground text-sm mt-4">Loading periods...</p>
         </div>
       </div>
     );
@@ -73,7 +75,7 @@ export function PeriodsListSection({
                     <TableHead>Date Range</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Members</TableHead>
-                    {isPrivileged && <TableHead>Actions</TableHead>}
+                    {isPrivileged && <TableHead >Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -146,7 +148,11 @@ export function PeriodsListSection({
             </Button>
 
             {showHistory && (
-              <PeriodHistoryCard periods={periods} activeGroup={activeGroup} />
+              <PeriodHistoryCard
+                periods={periods}
+                activeGroup={activeGroup}
+                isPrivileged={isPrivileged}
+              />
             )}
           </div>
         </CardContent>
@@ -178,6 +184,12 @@ function PeriodActions({
 }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const { mutateAsync: updatePeriod } = useUpdatePeriod();
+
+  const handleUpdate = async (periodId: string, data: any) => {
+    await updatePeriod({ periodId, data });
+  };
 
   React.useEffect(() => {
     setMounted(true);
@@ -185,7 +197,7 @@ function PeriodActions({
 
   if (!mounted) {
     return (
-      <Button variant="outline" className="w-full sm:w-auto opacity-50 cursor-not-allowed">
+      <Button variant="ghost" className="w-full sm:w-auto opacity-50 cursor-not-allowed">
         <MoreHorizontal className="h-4 w-4" />
       </Button>
     );
@@ -194,18 +206,22 @@ function PeriodActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full sm:w-auto">
+        <Button variant="ghost" className="w-full sm:w-auto">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit Period
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push(`/periods/${period.id}`)}>
-          <Eye className="h-4 w-4 mr-2" />
+          <Eye className="mr-2 h-4 w-4" />
           View
         </DropdownMenuItem>
         {!period.isLocked && (
           <DropdownMenuItem onClick={() => handleLockPeriod(period.id)}>
-            <Lock className="h-4 w-4 mr-2" />
+            <Lock className="mr-2 h-4 w-4" />
             Lock Period
           </DropdownMenuItem>
         )}
@@ -215,7 +231,7 @@ function PeriodActions({
             setUnlockToActive(period.status === 'ACTIVE');
             setShowUnlockDialog(true);
           }}>
-            <Unlock className="h-4 w-4 mr-2" />
+            <Unlock className="mr-2 h-4 w-4" />
             Unlock Period
           </DropdownMenuItem>
         )}
@@ -238,6 +254,12 @@ function PeriodActions({
           Archive Period
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <EditPeriodDialog
+        period={period}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSubmit={(data) => handleUpdate(period.id, data)}
+      />
     </DropdownMenu>
   );
 }

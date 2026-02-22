@@ -9,9 +9,10 @@ import { useUpdatePeriod, useDeletePeriod } from '@/hooks/use-periods';
 interface PeriodHistoryCardProps {
     periods: MealPeriod[];
     activeGroup: any;
+    isPrivileged: boolean;
 }
 
-export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardProps) {
+export function PeriodHistoryCard({ periods, activeGroup, isPrivileged }: PeriodHistoryCardProps) {
     const { mutateAsync: updatePeriod } = useUpdatePeriod();
     const { mutateAsync: deletePeriod } = useDeletePeriod();
 
@@ -26,9 +27,9 @@ export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardPro
     return (
         <Card className="mt-4 w-full border-dashed">
             <CardHeader>
-                <CardTitle>All Periods History</CardTitle>
-                <CardDescription>
-                    Complete history of all meal periods for this group.
+                <CardTitle className="text-base sm:text-lg">All Periods History</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                    Complete history of all meal periods for {activeGroup?.name || 'your group'}.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -41,7 +42,7 @@ export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardPro
                                     <TableHead>Date Range</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Members</TableHead>
-                                    <TableHead>Actions</TableHead>
+                                    {isPrivileged && <TableHead >Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -54,6 +55,8 @@ export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardPro
                                         <TableCell>
                                             {period.isLocked ? (
                                                 <span className="text-red-600 font-semibold">Locked</span>
+                                            ) : period.status === 'ENDED' ? (
+                                                <span className="text-red-600 font-semibold">Ended</span>
                                             ) : (
                                                 <span className="text-green-600 font-semibold">{period.status}</span>
                                             )}
@@ -61,14 +64,16 @@ export function PeriodHistoryCard({ periods, activeGroup }: PeriodHistoryCardPro
                                         <TableCell>
                                             {activeGroup?.members?.length || 0} members
                                         </TableCell>
-                                        <TableCell>
-                                            <PeriodActions
-                                                period={period}
-                                                onUpdate={handleUpdate}
-                                                onDelete={handleDelete}
-                                                isLocked={period.isLocked}
-                                            />
-                                        </TableCell>
+                                        {isPrivileged && (
+                                            <TableCell>
+                                                <PeriodActions
+                                                    period={period}
+                                                    onUpdate={handleUpdate}
+                                                    onDelete={handleDelete}
+                                                    isLocked={period.isLocked}
+                                                />
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>
