@@ -79,6 +79,7 @@ export async function ensureMonthPeriod(groupId: string, userId: string): Promis
     where: {
       roomId: groupId,
       status: PeriodStatus.ACTIVE,
+      deletedAt: null,
     },
   });
 
@@ -95,12 +96,13 @@ export async function ensureMonthPeriod(groupId: string, userId: string): Promis
     where: {
       roomId: groupId,
       name: monthName,
+      deletedAt: null,
     },
   });
 
   if (!existingMonthPeriod) {
     const lastEndedPeriod = await prisma.mealPeriod.findFirst({
-      where: { roomId: groupId, status: PeriodStatus.ENDED },
+      where: { roomId: groupId, status: PeriodStatus.ENDED, deletedAt: null },
       orderBy: { endDate: 'desc' },
     });
 
@@ -132,6 +134,7 @@ export async function validatePeriodUniqueness(roomId: string, data: CreatePerio
       where: {
         roomId,
         name: finalName,
+        deletedAt: null,
         ...(excludePeriodId && { id: { not: excludePeriodId } }),
       },
       select: { id: true }
@@ -150,6 +153,7 @@ export async function validatePeriodUniqueness(roomId: string, data: CreatePerio
     const overlappingPeriod = await prisma.mealPeriod.findFirst({
       where: {
         roomId,
+        deletedAt: null,
         ...(excludePeriodId && { id: { not: excludePeriodId } }),
         OR: [
           {
@@ -190,12 +194,14 @@ export async function startPeriod(
       where: {
         roomId,
         status: PeriodStatus.ACTIVE,
+        deletedAt: null,
       },
     }),
     // Check for date overlaps (if end date exists)
     data.endDate ? prisma.mealPeriod.findFirst({
       where: {
         roomId,
+        deletedAt: null,
         OR: [
           { startDate: { lte: data.startDate }, endDate: { gte: data.startDate }, },
           { startDate: { lte: data.endDate }, endDate: { gte: data.endDate }, },
@@ -210,7 +216,7 @@ export async function startPeriod(
        let finalName = originalName;
        while (true) {
          const existing = await prisma.mealPeriod.findFirst({
-           where: { roomId, name: finalName },
+           where: { roomId, name: finalName, deletedAt: null },
            select: { id: true }
          });
          if (!existing) return finalName;
@@ -266,6 +272,7 @@ export async function endPeriod(roomId: string, userId: string, endDate?: Date, 
       where: {
         id: periodId,
         roomId,
+        deletedAt: null,
       },
     });
 
@@ -318,6 +325,7 @@ export async function lockPeriod(roomId: string, userId: string, periodId: strin
     where: {
       id: periodId,
       roomId,
+      deletedAt: null,
     },
   });
 
@@ -350,6 +358,7 @@ export async function unlockPeriod(roomId: string, userId: string, periodId: str
     where: {
       id: periodId,
       roomId,
+      deletedAt: null,
     },
   });
 
@@ -386,6 +395,7 @@ export async function getCurrentPeriod(roomId: string) {
     where: {
       roomId,
       status: PeriodStatus.ACTIVE,
+      deletedAt: null,
     },
   });
 }
@@ -398,7 +408,7 @@ export async function getPeriods(roomId: string, includeArchived = false) {
     throw new Error('Room ID is required to get periods');
   }
 
-  const whereClause: any = { roomId };
+  const whereClause: any = { roomId, deletedAt: null };
 
   if (!includeArchived) {
     whereClause.status = {
@@ -433,7 +443,7 @@ export async function getPeriod(periodId: string, roomId?: string) {
     throw new Error('Period ID is required');
   }
 
-  const whereClause: any = { id: periodId };
+  const whereClause: any = { id: periodId, deletedAt: null };
 
   if (roomId) {
     whereClause.roomId = roomId;
@@ -481,8 +491,8 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
     extraExpensesAgg,
     memberCount
   ] = await Promise.all([
-    prisma.mealPeriod.findUnique({
-      where: { id: periodId },
+    prisma.mealPeriod.findFirst({
+      where: { id: periodId, deletedAt: null },
     }),
 
     prisma.meal.count({
@@ -584,6 +594,7 @@ export async function archivePeriod(roomId: string, userId: string, periodId: st
     where: {
       id: periodId,
       roomId,
+      deletedAt: null,
     },
   });
 
@@ -595,14 +606,30 @@ export async function archivePeriod(roomId: string, userId: string, periodId: st
       status: PeriodStatus.ARCHIVED,
   };
 
+  let wasActive = false;
   if (period.status === PeriodStatus.ACTIVE) {
       archiveData.endDate = new Date();
+      wasActive = true;
   }
 
   const updatedPeriod = await prisma.mealPeriod.update({
     where: { id: periodId },
     data: archiveData,
   });
+
+  if (wasActive) {
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      select: { periodMode: true }
+    });
+
+    if (room?.periodMode === 'MONTHLY') {
+      await prisma.room.update({
+        where: { id: roomId },
+        data: { periodMode: 'CUSTOM' }
+      });
+    }
+  }
 
   invalidatePeriodCaches(roomId, periodId);
 
@@ -622,6 +649,7 @@ export async function updatePeriod(
     where: {
       id: periodId,
       roomId,
+      deletedAt: null,
     },
   });
 
@@ -670,6 +698,7 @@ export async function deletePeriod(roomId: string, userId: string, periodId: str
     where: {
       id: periodId,
       roomId,
+      deletedAt: null,
     },
   });
 
@@ -677,19 +706,11 @@ export async function deletePeriod(roomId: string, userId: string, periodId: str
     throw new Error('Period not found');
   }
 
-  // Use a transaction to delete everything related to this period
-  // Depending on requirements, we might want to just un-link or delete.
-  // Given "All Periods History" delete, deletion seems appropriate.
-  await prisma.$transaction([
-    prisma.meal.deleteMany({ where: { periodId } }),
-    prisma.guestMeal.deleteMany({ where: { periodId } }),
-    prisma.shoppingItem.deleteMany({ where: { periodId } }),
-    prisma.extraExpense.deleteMany({ where: { periodId } }),
-    prisma.payment.deleteMany({ where: { periodId } }),
-    prisma.marketDate.deleteMany({ where: { periodId } }),
-    prisma.accountTransaction.deleteMany({ where: { periodId } }),
-    prisma.mealPeriod.deleteMany({ where: { id: periodId, roomId } }),
-  ]);
+  // Soft delete instead of hard delete to preserve financial records and history.
+  await prisma.mealPeriod.update({
+    where: { id: periodId },
+    data: { deletedAt: new Date() }
+  });
 
   invalidatePeriodCaches(roomId, periodId);
 
@@ -705,6 +726,7 @@ export async function restartPeriod(roomId: string, userId: string, periodId: st
       where: {
         id: periodId,
         roomId,
+        deletedAt: null,
       },
     });
 
@@ -716,6 +738,7 @@ export async function restartPeriod(roomId: string, userId: string, periodId: st
       where: {
         roomId,
         status: PeriodStatus.ACTIVE,
+        deletedAt: null,
       },
     });
 
@@ -733,6 +756,7 @@ export async function restartPeriod(roomId: string, userId: string, periodId: st
           where: {
             roomId,
             name: baseName,
+            deletedAt: null,
           },
         });
 

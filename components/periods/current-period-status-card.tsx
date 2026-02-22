@@ -19,6 +19,7 @@ export function CurrentPeriodStatusCard({
   setUnlockToActive,
   setShowUnlockDialog,
   handleLockPeriod,
+  isLocking,
 }: {
   currentPeriod: any;
   activeGroup: any;
@@ -30,6 +31,7 @@ export function CurrentPeriodStatusCard({
   setUnlockToActive: (active: boolean) => void;
   setShowUnlockDialog: (open: boolean) => void;
   handleLockPeriod: (id: string) => void;
+  isLocking?: boolean;
 }) {
   if (!currentPeriod) return null;
 
@@ -124,6 +126,7 @@ export function CurrentPeriodStatusCard({
                       handleLockPeriod(currentPeriod.id);
                     }
                   }}
+                  disabled={isLocking}
                 >
                   {currentPeriod.isLocked ? (
                     <>

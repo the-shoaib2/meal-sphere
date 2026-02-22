@@ -6,9 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { usePeriodManagement } from '@/hooks/use-periods';
-// Use any for types if Prisma client is still generating
-type PeriodStatus = any;
-type MealPeriod = any;
+import { MealPeriod, PeriodStatus } from '@prisma/client';
 import { CreatePeriodDialog } from '@/components/periods/create-period-dialog';
 import { PeriodArchiveDialog } from '@/components/periods/period-archive-dialog';
 import { RestartPeriodDialog } from '@/components/periods/restart-period-dialog';
@@ -46,6 +44,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
     currentPeriodLoading,
     selectedPeriodLoading,
     summaryLoading,
+    isLocking,
     periodsError,
     selectedPeriodId,
     setSelectedPeriodId,
@@ -174,6 +173,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
           setUnlockToActive={setUnlockToActive}
           setShowUnlockDialog={setShowUnlockDialog}
           handleLockPeriod={handleLockPeriod}
+          isLocking={isLocking}
         />
 
         {/* Overview Cards */}
@@ -191,6 +191,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
           activeGroup={activeGroup}
           setSelectedPeriodId={setSelectedPeriodId}
           handleLockPeriod={handleLockPeriod}
+          isLocking={isLocking}
           handleUnlockPeriod={handleUnlockPeriod}
           setUnlockTargetPeriod={setUnlockTargetPeriod}
           setUnlockToActive={setUnlockToActive}

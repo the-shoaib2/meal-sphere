@@ -42,11 +42,13 @@ export function PeriodsListSection({
   setIncludeArchived,
   handleDeletePeriod,
   isLoading,
+  isLocking,
 }: {
   periods: MealPeriod[];
   activeGroup: any;
   setSelectedPeriodId: (id: string) => void;
   handleLockPeriod: (id: string) => void;
+  isLocking?: boolean;
   handleUnlockPeriod: (id: string, status: PeriodStatus) => void;
   setUnlockTargetPeriod: (period: MealPeriod) => void;
   setUnlockToActive: (active: boolean) => void;
@@ -165,6 +167,7 @@ export function PeriodsListSection({
                             <PeriodActions
                               period={period}
                               handleLockPeriod={handleLockPeriod}
+                              isLocking={isLocking}
                               setUnlockTargetPeriod={setUnlockTargetPeriod}
                               setUnlockToActive={setUnlockToActive}
                               setShowUnlockDialog={setShowUnlockDialog}
@@ -197,6 +200,7 @@ export function PeriodsListSection({
 function PeriodActions({
   period,
   handleLockPeriod,
+  isLocking,
   setUnlockTargetPeriod,
   setUnlockToActive,
   setShowUnlockDialog,
@@ -208,6 +212,7 @@ function PeriodActions({
 }: {
   period: MealPeriod;
   handleLockPeriod: (id: string) => void;
+  isLocking?: boolean;
   setUnlockTargetPeriod: (period: MealPeriod) => void;
   setUnlockToActive: (active: boolean) => void;
   setShowUnlockDialog: (open: boolean) => void;
@@ -272,7 +277,10 @@ function PeriodActions({
         {period.status !== 'ARCHIVED' ? (
           <>
             {!period.isLocked && (
-              <DropdownMenuItem onClick={() => handleLockPeriod(period.id)}>
+              <DropdownMenuItem
+                onClick={() => handleLockPeriod(period.id)}
+                disabled={isLocking}
+              >
                 <Lock className="mr-2 h-4 w-4" />
                 Lock Period
               </DropdownMenuItem>

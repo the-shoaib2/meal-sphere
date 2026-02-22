@@ -313,6 +313,7 @@ model Meal {
   @@unique([userId, roomId, date, type], name: "userId_roomId_date_type")
   @@index([roomId, date])
   @@index([roomId, periodId, date])
+  @@index([periodId])
   @@index([userId, date])
   @@index([userId, roomId, date, type, periodId])
 }
@@ -736,6 +737,7 @@ model MealPeriod {
   closingBalance Float?
   carryForward   Boolean      @default(false)
   notes          String?
+  deletedAt      DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   roomId         String
@@ -757,6 +759,7 @@ model MealPeriod {
   @@index([createdAt])
   @@index([roomId, status])
   @@index([roomId, startDate])
+  @@index([deletedAt])
 }
 
 /// TRANSACTION HISTORY MODEL

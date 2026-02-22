@@ -124,7 +124,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                 <GroupSwitcher />
 
                 {/* Navigation Items */}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                     {data.navItems.map((item, index) => {
                         if ('category' in item) {
                             return (

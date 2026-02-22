@@ -1095,6 +1095,7 @@ export function usePeriodManagement(initialData?: PeriodsPageData, initialInclud
     currentPeriodLoading,
     selectedPeriodLoading,
     summaryLoading,
+    isLocking: lockPeriodMutation.isPending,
 
     // Error states
     periodsError,
