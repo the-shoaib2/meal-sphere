@@ -4,8 +4,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { PeriodHistoryCard } from '@/components/periods/period-history-card';
-import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, List, ChevronUp, Edit } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Eye, MoreHorizontal, Lock, Unlock, RefreshCw, Archive, List, Edit } from 'lucide-react';
 import { Loader } from '@/components/ui/loader';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
@@ -43,7 +43,6 @@ export function PeriodsListSection({
   isPrivileged: boolean;
 }) {
   const router = useRouter();
-  const [showHistory, setShowHistory] = useState(false);
 
   if (!activeGroup || !periods || !isPrivileged) {
     if (!isPrivileged) return null;
@@ -58,64 +57,83 @@ export function PeriodsListSection({
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">All Periods</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            View and manage all meal periods for {activeGroup?.name || 'your group'}
-          </CardDescription>
+      <Card className="border-none shadow-sm bg-background/50 backdrop-blur-sm">
+        <CardHeader className="pb-3 border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base sm:text-lg font-bold">All Period History</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Manage and view historical meal periods for {activeGroup.name}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 px-0 sm:px-6">
           <div className="overflow-x-auto w-full">
             {periods && periods.length > 0 ? (
-              <Table className="min-w-[600px] w-full text-xs sm:text-sm">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Date Range</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Members</TableHead>
-                    {isPrivileged && <TableHead >Actions</TableHead>}
+              <Table className="min-w-[700px] w-full text-xs sm:text-sm">
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="font-bold text-muted-foreground uppercase tracking-wider h-11">Name</TableHead>
+                    <TableHead className="font-bold text-muted-foreground uppercase tracking-wider h-11">Date Span</TableHead>
+                    <TableHead className="font-bold text-muted-foreground uppercase tracking-wider h-11">Status</TableHead>
+                    <TableHead className="font-bold text-muted-foreground uppercase tracking-wider h-11 text-center">Members</TableHead>
+                    {isPrivileged && <TableHead className="font-bold text-muted-foreground uppercase tracking-wider h-11 text-right pr-6">Manage</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {periods.map((period: MealPeriod) => (
-                    <TableRow key={period.id}>
-                      <TableCell className="font-medium">{period.name}</TableCell>
-                      <TableCell>
-                        {format(new Date(period.startDate), 'MMM d, yyyy')} {period.endDate ? `- ${format(new Date(period.endDate), 'MMM d, yyyy')}` : ''}
-                      </TableCell>
-                      <TableCell>
-                        {period.isLocked ? (
-                          <span className="text-red-600 font-semibold">Locked</span>
-                        ) : (
-                          <span className={`${period.status === 'ACTIVE' ? 'text-green-600' :
-                            period.status === 'ENDED' ? 'text-yellow-600' :
-                              period.status === 'ARCHIVED' ? 'text-gray-500' :
-                                'text-gray-600'
-                            } font-semibold`}>
-                            {period.status}
+                    <TableRow key={period.id} className="group hover:bg-muted/20 transition-colors border-border/50">
+                      <TableCell className="font-semibold py-4">{period.name}</TableCell>
+                      <TableCell className="py-4">
+                        <div className="flex flex-col">
+                          <span className="text-foreground/90 font-medium">
+                            {format(new Date(period.startDate), 'MMM d, yyyy')}
                           </span>
-                        )}
+                          <span className="text-[10px] text-muted-foreground">
+                            to {period.endDate ? format(new Date(period.endDate), 'MMM d, yyyy') : 'Ongoing'}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        {activeGroup?.members?.length || 0} members
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-2">
+                          {period.isLocked ? (
+                            <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                              Locked
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="secondary"
+                              className={`
+                                border-none font-medium
+                                ${period.status === 'ACTIVE' ? 'bg-green-500/10 text-green-600' :
+                                  period.status === 'ENDED' ? 'bg-amber-500/10 text-amber-600' :
+                                    'bg-slate-500/10 text-slate-600'}
+                              `}
+                            >
+                              {period.status}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center py-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/5 text-primary border border-primary/10">
+                          {activeGroup?.members?.length || 0}
+                        </span>
                       </TableCell>
                       {isPrivileged && (
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <PeriodActions
-                              period={period}
-                              handleLockPeriod={handleLockPeriod}
-                              setUnlockTargetPeriod={setUnlockTargetPeriod}
-                              setUnlockToActive={setUnlockToActive}
-                              setShowUnlockDialog={setShowUnlockDialog}
-                              setPeriodToRestart={setPeriodToRestart}
-                              setShowRestartDialog={setShowRestartDialog}
-                              setSelectedPeriodId={setSelectedPeriodId}
-                              setShowArchiveDialog={setShowArchiveDialog}
-                            />
-                          </div>
+                        <TableCell className="text-right py-4 pr-6">
+                          <PeriodActions
+                            period={period}
+                            handleLockPeriod={handleLockPeriod}
+                            setUnlockTargetPeriod={setUnlockTargetPeriod}
+                            setUnlockToActive={setUnlockToActive}
+                            setShowUnlockDialog={setShowUnlockDialog}
+                            setPeriodToRestart={setPeriodToRestart}
+                            setShowRestartDialog={setShowRestartDialog}
+                            setSelectedPeriodId={setSelectedPeriodId}
+                            setShowArchiveDialog={setShowArchiveDialog}
+                          />
                         </TableCell>
                       )}
                     </TableRow>
@@ -123,36 +141,10 @@ export function PeriodsListSection({
                 </TableBody>
               </Table>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No periods found</p>
+              <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-60">
+                <List className="h-12 w-12 text-muted-foreground/30" />
+                <p className="text-sm font-medium">No periods found in this group</p>
               </div>
-            )}
-          </div>
-          <div className="mt-4 flex flex-col items-center justify-center border-t pt-4">
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto mb-4"
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              {showHistory ? (
-                <>
-                  <ChevronUp className="mr-2 h-4 w-4" />
-                  Hide Period History
-                </>
-              ) : (
-                <>
-                  <List className="mr-2 h-4 w-4" />
-                  All Periods History
-                </>
-              )}
-            </Button>
-
-            {showHistory && (
-              <PeriodHistoryCard
-                periods={periods}
-                activeGroup={activeGroup}
-                isPrivileged={isPrivileged}
-              />
             )}
           </div>
         </CardContent>
@@ -245,6 +237,7 @@ function PeriodActions({
           Restart Period
         </DropdownMenuItem>
         <DropdownMenuItem
+          className='text-red-600 focus:text-red-600 focus:bg-red-600/10 cursor-pointer'
           onClick={() => {
             setSelectedPeriodId(period.id);
             setShowArchiveDialog(true);

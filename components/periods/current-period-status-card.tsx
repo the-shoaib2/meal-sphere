@@ -46,7 +46,7 @@ export function CurrentPeriodStatusCard({
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-primary/90 to-primary/40" />
         )}
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-[4px]" />
+        <div className="absolute inset-0 bg-white/10 dark:bg-black/50 backdrop-blur-[4px]" />
         <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-black/20 to-transparent" />
       </div>
 
@@ -96,7 +96,7 @@ export function CurrentPeriodStatusCard({
               <NumberTicker className='mr-1 text-white' value={activeGroup?.members?.length || 0} /> Members
             </span>
 
-            <h2 className="text-md sm:text-lg font-bold tracking-tight text-white/90 leading-tight">
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-white/90 leading-tight">
               {activeGroup?.name || 'Unnamed Group'}
             </h2>
           </div>

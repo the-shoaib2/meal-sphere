@@ -62,7 +62,7 @@ export function PeriodActions({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                         onClick={() => setShowDeleteAlert(true)}
-                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        className="text-red-600 focus:text-red-600 hover:bg-red-50/10 hover:text-red-600"
                     >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Period
