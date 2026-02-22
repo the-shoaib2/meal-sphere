@@ -99,13 +99,13 @@ export function useGroupBalances(roomId: string, enabled: boolean = true, includ
   return useQuery<GroupBalanceSummary | null>({
     queryKey: ['group-balances', roomId, includeDetails],
     queryFn: async () => {
-      const res = await fetch(`/api/account-balance?roomId=${roomId}&all=true&includeDetails=${includeDetails}`, { cache: 'no-store' });
-      if (res.status === 403) {
-        // User doesn't have privileged access, return null instead of throwing
-        return null;
+      const { getGroupBalanceSummaryAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await getGroupBalanceSummaryAction(roomId, includeDetails);
+      if (!res.success) {
+        if (res.message === "Insufficient permissions") return null;
+        throw new Error(res.message);
       }
-      if (!res.ok) throw new Error('Failed to fetch group balances');
-      return res.json();
+      return res.summary;
     },
     enabled: !!roomId && enabled,
     initialData: effectiveInitialData,
@@ -128,9 +128,10 @@ export function useGetBalance(roomId: string, userId: string, includeDetails: bo
   return useQuery<UserBalance>({
     queryKey: ['user-balance', roomId, userId, includeDetails],
     queryFn: async () => {
-      const res = await fetch(`/api/account-balance?roomId=${roomId}&userId=${userId}&includeDetails=${includeDetails}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to fetch user balance');
-      return res.json();
+      const { getUserBalanceAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await getUserBalanceAction(roomId, userId, includeDetails);
+      if (!res.success) throw new Error(res.message);
+      return res.data;
     },
     enabled: !!roomId && !!userId,
     initialData: effectiveInitialData as UserBalance,
@@ -166,16 +167,10 @@ export function useGetTransactions(roomId: string, userId: string, periodId?: st
   return useInfiniteQuery({
     queryKey: ['user-transactions', roomId, userId, periodId],
     queryFn: async ({ pageParam = undefined }) => {
-      const url = new URL('/api/account-balance/transactions', window.location.origin);
-      url.searchParams.set('userId', userId);
-      url.searchParams.set('roomId', roomId);
-      if (periodId) url.searchParams.set('periodId', periodId);
-      if (pageParam) url.searchParams.set('cursor', pageParam as string);
-      url.searchParams.set('limit', '10');
-
-      const res = await fetch(url.toString(), { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to fetch transactions');
-      return res.json();
+      const { getTransactionsAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await getTransactionsAction(roomId, userId, periodId, pageParam as string | undefined, 10);
+      if (!res.success) throw new Error(res.message);
+      return { items: res.items, nextCursor: res.nextCursor };
     },
     initialPageParam: undefined,
     getNextPageParam: (lastPage: { nextCursor?: string }) => lastPage.nextCursor,
@@ -204,16 +199,10 @@ export function useGetAccountHistory(roomId: string, userId: string, periodId?: 
   return useInfiniteQuery({
     queryKey: ['account-history', userId, roomId, periodId],
     queryFn: async ({ pageParam = undefined }) => {
-      const url = new URL('/api/account-balance/history', window.location.origin);
-      url.searchParams.set('userId', userId);
-      url.searchParams.set('roomId', roomId);
-      if (periodId) url.searchParams.set('periodId', periodId);
-      if (pageParam) url.searchParams.set('cursor', pageParam as string);
-      url.searchParams.set('limit', '10');
-
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error('Failed to fetch account history');
-      return res.json();
+      const { getAccountHistoryAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await getAccountHistoryAction(roomId, userId, periodId, pageParam as string | undefined, 10);
+      if (!res.success) throw new Error(res.message);
+      return { items: res.items, nextCursor: res.nextCursor };
     },
     initialPageParam: undefined,
     getNextPageParam: (lastPage: { nextCursor?: string }) => lastPage.nextCursor,
@@ -236,16 +225,10 @@ export function useAddTransaction() {
       type: string;
       description?: string;
     }) => {
-      const res = await fetch('/api/account-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transaction),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to add transaction');
-      }
-      return res.json();
+      const { createTransactionAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await createTransactionAction(transaction);
+      if (!res.success) throw new Error(res.message);
+      return res.transaction;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['group-balances', variables.roomId] });
@@ -259,16 +242,14 @@ export function useUpdateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { id: string; amount: number; description?: string; type: string }) => {
-      const res = await fetch(`/api/account-balance/transactions/${data.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: data.amount, description: data.description, type: data.type }),
+      const { updateTransactionAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await updateTransactionAction(data.id, {
+        amount: data.amount,
+        description: data.description,
+        type: data.type
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to update transaction');
-      }
-      return res.json();
+      if (!res.success) throw new Error(res.message);
+      return res.transaction;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-balances'] });
@@ -282,14 +263,10 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/account-balance/transactions/${id}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to delete transaction');
-      }
-      return res.json();
+      const { deleteTransactionAction } = await import('@/lib/actions/account-balance.actions');
+      const res = await deleteTransactionAction(id);
+      if (!res.success) throw new Error(res.message);
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-balances'] });

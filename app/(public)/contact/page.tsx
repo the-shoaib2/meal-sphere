@@ -98,15 +98,11 @@ export default function ContactPage() {
   // Generate CAPTCHA
   const generateCaptcha = async () => {
     try {
-      const response = await fetch('/api/captcha')
-      if (response.ok) {
-        const svg = await response.text()
-        const captchaId = response.headers.get('X-Captcha-ID')
-        const captchaText = response.headers.get('X-Captcha-Text')
-
-        setCaptchaImage(svg)
-        setCaptchaId(captchaId || "")
-        setCaptchaText(captchaText || "")
+      const { generateCaptchaAction } = await import("@/lib/actions/utils.actions")
+      const result = await generateCaptchaAction()
+      if (result.success && result.svg) {
+        setCaptchaImage(result.svg)
+        setCaptchaId(result.captchaId || "")
         setCaptchaInput("")
         setIsCaptchaValid(null)
       }
@@ -123,19 +119,8 @@ export default function ContactPage() {
     }
 
     try {
-      const response = await fetch('/api/captcha', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          captchaId,
-          userInput: captchaInput,
-          captchaText
-        }),
-      })
-
-      const result = await response.json()
+      const { verifyCaptchaAction } = await import("@/lib/actions/utils.actions")
+      const result = await verifyCaptchaAction(captchaId, captchaInput)
       setIsCaptchaValid(result.valid)
       return result.valid
     } catch (error) {
@@ -177,36 +162,17 @@ export default function ContactPage() {
 
   // Handle final form submission with CAPTCHA
   const handleSubmitWithCaptcha = async () => {
-    // Validate CAPTCHA
-    const isCaptchaValid = await validateCaptcha()
-    if (!isCaptchaValid) {
-      toast({
-        title: "Error",
-        description: "Please enter the correct CAPTCHA code",
-        variant: "destructive"
-      })
-      return
-    }
-
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          captchaId,
-          captchaText,
-          userInput: captchaInput
-        }),
+      const { sendContactEmailAction } = await import("@/lib/actions/utils.actions")
+      const result = await sendContactEmailAction({
+        ...formData,
+        captchaId,
+        userInput: captchaInput
       })
 
-      const result = await response.json()
-
-      if (response.ok) {
+      if (result.success) {
         // Show success toast
         toast({
           title: "Message Sent Successfully! 🎉",
@@ -239,6 +205,11 @@ export default function ContactPage() {
           description: result.error || "Failed to send message",
           variant: "destructive"
         })
+        // If CAPTCHA was invalid, reset it
+        if (result.error === "Invalid CAPTCHA") {
+          setIsCaptchaValid(false)
+          generateCaptcha()
+        }
       }
     } catch (error) {
       console.error('Failed to submit form:', error)

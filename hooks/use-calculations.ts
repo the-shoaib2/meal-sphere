@@ -107,22 +107,15 @@ export function useRoomCalculations({
         throw new Error('User or group not available');
       }
 
-        const params = {
-          roomId: resolvedRoomId,
-          startDate: startDate?.toISOString(),
-          endDate: endDate?.toISOString(),
-          _t: new Date().getTime(),
-        };
-
-      const { data } = await axios.get<RoomMealSummary>('/api/calculations', {
-        params,
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      return data;
+      const { getCalculationsAction } = await import('@/lib/actions/calculation.actions');
+      const res = await getCalculationsAction(
+        resolvedRoomId,
+        undefined,
+        startDate?.toISOString(),
+        endDate?.toISOString()
+      );
+      if (!res.success) throw new Error(res.message);
+      return res.summary as unknown as RoomMealSummary;
     },
     enabled: isEnabled && !effectiveInitialData,
     initialData: effectiveInitialData,
@@ -181,23 +174,15 @@ export function useUserCalculations({
         throw new Error('User, group, or userId not available');
       }
 
-      const params = {
-        roomId: resolvedRoomId,
+      const { getCalculationsAction } = await import('@/lib/actions/calculation.actions');
+      const res = await getCalculationsAction(
+        resolvedRoomId,
         userId,
-        startDate: startDate?.toISOString(),
-        endDate: endDate?.toISOString(),
-        _t: new Date().getTime(),
-      };
-
-      const { data } = await axios.get<MealSummary>('/api/calculations', {
-        params,
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      return data;
+        startDate?.toISOString(),
+        endDate?.toISOString()
+      );
+      if (!res.success) throw new Error(res.message);
+      return res.summary as unknown as MealSummary;
     },
     enabled: isEnabled,
     staleTime: 10 * 60 * 1000, // 10 minutes

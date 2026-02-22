@@ -44,14 +44,15 @@ export function HeaderSearch({ isMobile, isExpanded, onToggleExpand }: HeaderSea
     React.useEffect(() => {
         if (debouncedQuery.length >= 2) {
             setLoading(true)
-            fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`)
-                .then(res => res.json())
-                .then(data => {
-                    setResults(data.results || [])
-                    setLoading(false)
-                    setLocalOpen(true)
-                })
-                .catch(() => setLoading(false))
+            import('@/lib/actions/search.actions').then(({ globalSearchAction }) => {
+                globalSearchAction(debouncedQuery)
+                    .then(res => {
+                        setResults((res.results || []) as SearchResult[])
+                        setLoading(false)
+                        setLocalOpen(true)
+                    })
+                    .catch(() => setLoading(false))
+            }).catch(() => setLoading(false))
         } else {
             setResults([])
             setLocalOpen(false)

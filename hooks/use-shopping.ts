@@ -82,19 +82,16 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
     queryKey: ['shopping', groupId, periodId],
     queryFn: async (): Promise<ApiShoppingItem[]> => {
       if (!groupId) return [];
-      const { data } = await axios.get<ApiShoppingItem[]>(`/api/shopping`, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        params: {
-          roomId: groupId,
-          periodId: periodId || undefined,
-          _t: new Date().getTime()
-        }
-      });
-      return data;
+      const { getShoppingListAction } = await import('@/lib/actions/shopping.actions');
+      const res = await getShoppingListAction(groupId, { periodId });
+      if (!res.success) throw new Error(res.message);
+      return res.shoppingItems!.map((item: any) => ({
+        ...item,
+        date: item.date.toISOString(),
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+        user: item.user
+      })) as unknown as ApiShoppingItem[];
     },
     select: (data) =>
       data.map((item) => ({

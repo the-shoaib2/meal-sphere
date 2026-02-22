@@ -175,3 +175,74 @@ export async function deletePeriodAction(
     return { success: false, message: error.message || "Failed to delete period" };
   }
 }
+
+export async function getPeriodsAction(groupId: string, includeArchived: boolean = false) {
+  try {
+    const userId = await validateMembership(groupId);
+    
+    // Lazy check: Ensure monthly period logic is enforced when listing periods
+    try {
+      await PeriodService.ensureMonthPeriod(groupId, userId);
+    } catch (e) {
+      console.warn('Failed to ensure monthly period:', e);
+      // Continue anyway to show existing periods
+    }
+
+    const periods = await PeriodService.getPeriods(groupId, includeArchived);
+    return { success: true, periods };
+  } catch (error: any) {
+    // Handle database schema errors gracefully as empty array
+    if (error.message?.includes('Unknown table') || error.message?.includes('MealPeriod')) {
+      return { success: true, periods: [] };
+    }
+    console.error('Error in getPeriodsAction:', error);
+    return { success: false, message: error.message || 'Failed to fetch periods' };
+  }
+}
+
+export async function getPeriodAction(groupId: string, periodId: string) {
+  try {
+    await validateMembership(groupId);
+    const period = await PeriodService.getPeriod(periodId, groupId);
+    
+    if (!period) {
+      return { success: false, message: 'Period not found', period: null };
+    }
+    return { success: true, period };
+  } catch (error: any) {
+    if (error.message?.includes('Unknown table') || error.message?.includes('Period not found')) {
+      return { success: false, message: 'Period not found', period: null };
+    }
+    console.error('Error in getPeriodAction:', error);
+    return { success: false, message: error.message || 'Failed to fetch period details' };
+  }
+}
+
+export async function getPeriodSummaryAction(groupId: string, periodId: string) {
+  try {
+    await validateMembership(groupId);
+    const summary = await PeriodService.calculatePeriodSummary(periodId, groupId);
+    return { success: true, summary };
+  } catch (error: any) {
+    if (error.message?.includes('Unknown table') || error.message?.includes('Period not found')) {
+      return { success: false, message: 'Period not found', summary: null };
+    }
+    console.error('Error in getPeriodSummaryAction:', error);
+    return { success: false, message: error.message || 'Failed to fetch period summary' };
+  }
+}
+
+export async function getPeriodsByMonthAction(groupId: string, year: number, month: number) {
+  try {
+    await validateMembership(groupId);
+    const periods = await PeriodService.getPeriodsByMonth(groupId, year, month);
+    return { success: true, periods };
+  } catch (error: any) {
+    if (error.message?.includes('Unknown table') || error.message?.includes('MealPeriod')) {
+      return { success: true, periods: [] };
+    }
+    console.error('Error in getPeriodsByMonthAction:', error);
+    return { success: false, message: error.message || 'Failed to fetch periods by month' };
+  }
+}
+

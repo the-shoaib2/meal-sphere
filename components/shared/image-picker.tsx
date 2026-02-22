@@ -58,12 +58,15 @@ export function ImagePicker({
         if (isLoading) return;
         setIsLoading(true);
         try {
-            const response = await axios.get(`/api/images/images?page=${pageNum}&limit=15&category=${category}`);
-            const newImages = response.data.images;
+            const { getImagesAction } = await import('@/lib/actions/media.actions');
+            const response = await getImagesAction(pageNum, 15, category);
+            if (!response.success) throw new Error(response.message);
+
+            const newImages = response.images;
             setImages(prev => reset ? newImages : [...prev, ...newImages]);
-            setHasMore(response.data.hasMore);
-            if (response.data.categories) {
-                setCategories(response.data.categories);
+            setHasMore(response.hasMore);
+            if (response.categories) {
+                setCategories(response.categories);
             }
         } catch (error) {
             console.error("Failed to fetch images:", error);

@@ -124,9 +124,9 @@ export default function SearchPage() {
             if (!query) return;
             setIsLoading(true)
             try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-                const data = await res.json()
-                setResults(data.results || [])
+                const { globalSearchAction } = await import('@/lib/actions/search.actions');
+                const res = await globalSearchAction(query);
+                setResults(res.results || []);
             } catch (error) {
                 console.error("Search error:", error)
             } finally {

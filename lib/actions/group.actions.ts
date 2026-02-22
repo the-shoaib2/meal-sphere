@@ -3,7 +3,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth";
 import { z } from "zod";
-import { createGroup, updateGroup, deleteGroup, joinGroup, leaveGroup, updatePeriodMode, createJoinRequest, setCurrentGroup, removeMemberFromGroup, updateMemberRole, generateGroupInvite, sendGroupInvitations, fetchGroupActivityLogs, processJoinRequest } from "@/lib/services/groups-service";
+import { createGroup, updateGroup, deleteGroup, joinGroup, leaveGroup, updatePeriodMode, createJoinRequest, setCurrentGroup, removeMemberFromGroup, updateMemberRole, generateGroupInvite, sendGroupInvitations, fetchGroupActivityLogs, processJoinRequest, fetchGroupsList, fetchGroupDetails } from "@/lib/services/groups-service";
 import { prisma } from "@/lib/services/prisma";
 import { unstable_cache } from "next/cache";
 import { validateAdminAccess, validateGroupAccess } from "@/lib/auth/group-auth";
@@ -184,6 +184,28 @@ export async function updatePeriodModeAction(groupId: string, data: { mode: "MON
   } catch (error: any) {
     console.error("Error updating period mode:", error);
     return { success: false, message: error.message || "Failed to update period mode" };
+  }
+}
+
+export async function getGroupPeriodModeAction(groupId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) throw new Error("Unauthorized");
+    
+    const membership = await prisma.roomMember.findUnique({
+      where: { userId_roomId: { userId: session.user.id, roomId: groupId } }
+    });
+    if (!membership) throw new Error("Not a member of this group");
+    
+    const group = await prisma.room.findUnique({
+      where: { id: groupId },
+      select: { periodMode: true }
+    });
+    
+    return { success: true, periodMode: group?.periodMode || 'MONTHLY' };
+  } catch (error: any) {
+    console.error("Error fetching period mode:", error);
+    return { success: false, message: error.message || "Failed to fetch period mode" };
   }
 }
 
@@ -489,6 +511,106 @@ export async function processJoinRequestAction(requestId: string, action: 'appro
   } catch (error: any) {
     console.error("Error processing request:", error);
     return { success: false, message: error.message || "Failed to process request" };
+  }
+}
+
+const fineSettingsSchema = z.object({
+  fineAmount: z.number().min(0),
+  fineEnabled: z.boolean(),
+});
+
+export async function updateFineSettingsAction(groupId: string, data: z.infer<typeof fineSettingsSchema>) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return { success: false, message: "Authentication required" };
+    }
+
+    const validationData = fineSettingsSchema.safeParse(data);
+    if (!validationData.success) {
+      return { success: false, message: "Invalid request data" };
+    }
+
+    const validation = await validateAdminAccess(groupId);
+    if (!validation.success) {
+      return { success: false, message: validation.error || "Forbidden" };
+    }
+
+    const updatedGroup = await prisma.room.update({
+      where: { id: groupId },
+      data: {
+        fineAmount: validationData.data.fineAmount,
+        fineEnabled: validationData.data.fineEnabled,
+      },
+    });
+
+    return { success: true, message: "Fine settings updated successfully", group: updatedGroup };
+  } catch (error: any) {
+    console.error("Error updating fine settings:", error);
+    return { success: false, message: "Failed to update fine settings" };
+  }
+}
+
+export async function getGroupsListAction(filter: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    const groups = await fetchGroupsList(session?.user?.id, filter);
+    return { success: true, groups };
+  } catch (error: any) {
+    console.error("Error fetching groups list:", error);
+    return { success: false, message: "Failed to fetch groups list" };
+  }
+}
+
+export async function getGroupDetailsAction(groupId: string, password?: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, message: "Authentication required", status: 401 };
+
+    // Pass password to validation if needed, but currently fetchGroupDetails just uses userId
+    // If the group is private and the user is not a member, access validation should handle it
+    const access = await validateGroupAccess(groupId);
+    if (!access.success) {
+      return { 
+        success: false, 
+        message: access.error, 
+        requiresPassword: access.error?.includes('password'),
+        status: access.error?.includes('password') ? 403 : 401
+      };
+    }
+
+    const groupData = await fetchGroupDetails(groupId, session.user.id);
+    if (!groupData) return { success: false, message: "Group not found", status: 404 };
+
+    return { success: true, groupData };
+  } catch (error: any) {
+    console.error("Error fetching group details:", error);
+    return { success: false, message: "Failed to fetch group details", status: 500 };
+  }
+}
+
+export async function getJoinRequestsAction(groupId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, message: "Authentication required" };
+
+    const validation = await validateAdminAccess(groupId);
+    if (!validation.success) return { success: false, message: validation.error || "Forbidden" };
+
+    const joinRequests = await prisma.joinRequest.findMany({
+      where: { roomId: groupId },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, image: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return { success: true, joinRequests };
+  } catch (error: any) {
+    console.error("Error fetching join requests:", error);
+    return { success: false, message: "Failed to fetch join requests" };
   }
 }
 

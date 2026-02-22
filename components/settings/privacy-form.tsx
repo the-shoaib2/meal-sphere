@@ -4,6 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { updatePrivacySettingsAction } from "@/lib/actions/settings.actions"
 import { Button } from "@/components/ui/button"
 import {
     Form,
@@ -60,16 +61,10 @@ export function PrivacyForm({ user }: PrivacyFormProps) {
     async function onSubmit(data: PrivacyFormValues) {
         setIsLoading(true)
         try {
-            const response = await fetch("/api/settings/privacy", {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(data),
-            })
+            const result = await updatePrivacySettingsAction(data)
 
-            if (!response.ok) {
-                throw new Error("Failed to update privacy settings")
+            if (!result.success) {
+                throw new Error(result.message || "Failed to update privacy settings")
             }
 
             toast.success("Privacy settings updated successfully")

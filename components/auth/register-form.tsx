@@ -10,6 +10,7 @@ import { Eye, EyeOff, Loader2, RefreshCw, Utensils } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { signIn } from "next-auth/react"
 import { toast } from "react-hot-toast"
+import { registerUserAction } from "@/lib/actions/auth.actions"
 
 // Form validation types
 type FormErrors = {
@@ -80,20 +81,16 @@ export default function RegisterForm() {
       setIsLoadingCaptcha(true);
       setError('');
 
-      const response = await fetch('/api/captcha');
+      const { generateCaptchaAction } = await import("@/lib/actions/utils.actions")
+      const result = await generateCaptchaAction()
 
-      if (!response.ok) {
-        throw new Error('Failed to load CAPTCHA');
+      if (!result.success || !result.svg) {
+        throw new Error(result.error || 'Failed to load CAPTCHA');
       }
 
-      const svgText = await response.text();
-      const captchaId = response.headers.get('X-Captcha-ID');
-      const captchaText = response.headers.get('X-Captcha-Text');
-      const url = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
-
-      setCaptchaImage(url);
-      if (captchaId) {
-        setCaptchaSessionId(captchaId);
+      setCaptchaImage(`data:image/svg+xml;base64,${btoa(result.svg)}`);
+      if (result.captchaId) {
+        setCaptchaSessionId(result.captchaId);
       }
 
       return true;
@@ -127,20 +124,12 @@ export default function RegisterForm() {
         captchaText: captchaText.trim(),
       };
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const result = await registerUserAction(requestBody);
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!result.success) {
         // Handle field-specific errors from the server
-        if (data.details) {
-          const fieldErrors = data.details as Record<string, { _errors: string[] }>;
+        if (result.details) {
+          const fieldErrors = result.details as Record<string, { _errors: string[] }>;
           const newErrors: FormErrors = {};
 
           // Map server errors to form fields
@@ -165,19 +154,20 @@ export default function RegisterForm() {
           }
         } else {
           // Generic error message if no field-specific errors
-          toast.error(data.message || 'Registration failed. Please try again.', { id: toastId });
+          toast.error(result.message || 'Registration failed. Please try again.', { id: toastId });
         }
 
         // If there's a CAPTCHA error, stay on the current step
-        if (data.message?.toLowerCase().includes('captcha')) {
+        if (result.message?.toLowerCase().includes('captcha')) {
           return false;
         }
 
         // If there are validation errors, go back to the relevant step
-        if (data.details) {
-          if (data.details.email || data.details.name) {
+        if (result.details) {
+          const details = result.details as any;
+          if (details.email || details.name) {
             setCurrentStep(1);
-          } else if (data.details.password || data.details.confirmPassword) {
+          } else if (details.password || details.confirmPassword) {
             setCurrentStep(2);
           }
         }

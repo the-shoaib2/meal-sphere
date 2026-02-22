@@ -4,15 +4,25 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useActiveGroup } from '@/contexts/group-context';
 import { usePeriodContext } from '@/contexts/period-context';
-import { PeriodStatus } from '@prisma/client';
+import { PeriodStatus, MealPeriod } from '@prisma/client';
 import { 
   createPeriodAction, 
   endPeriodAction, 
   lockPeriodAction, 
   unlockPeriodAction, 
   archivePeriodAction, 
-  restartPeriodAction 
+  restartPeriodAction,
+  getPeriodsAction,
+  getPeriodAction,
+  getPeriodSummaryAction,
+  getPeriodsByMonthAction
 } from '@/lib/actions/period.actions';
+import { 
+  getGroupPeriodModeAction, 
+  updatePeriodModeAction 
+} from '@/lib/actions/group.actions';
+
+
 export interface CreatePeriodData {
   name: string;
   startDate: Date;
@@ -102,17 +112,14 @@ export function usePeriods(includeArchived = false, initialData?: PeriodsPageDat
         return initialPeriods;
       }
 
-      // Fetch from API
-      const response = await fetch(`/api/periods?groupId=${activeGroup.id}&includeArchived=${includeArchived}`, { 
-        cache: 'no-store' 
-      });
+      // Fetch via Server Action
+      const result = await getPeriodsAction(activeGroup.id, includeArchived);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch periods');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch periods');
       }
       
-      const data = await response.json();
-      return data.periods || [];
+      return (result.periods as MealPeriod[]) || [];
     },
     enabled: !!activeGroup?.id,
     // Use initial data if available and we match the group + archive filter
@@ -157,15 +164,14 @@ export function usePeriod(periodId: string) {
 
       // Only fetch the specific period if not found in cache
       try {
-        const response = await fetch(`/api/periods/${periodId}?groupId=${activeGroup.id}`, { cache: 'no-store' });
-        if (!response.ok) {
-          if (response.status === 404 || response.status === 403) {
+        const result = await getPeriodAction(activeGroup.id, periodId);
+        if (!result.success) {
+          if (result.message === 'Period not found' || result.message?.includes('Access denied')) {
             return null;
           }
-          throw new Error('Failed to fetch period');
+          throw new Error(result.message || 'Failed to fetch period');
         }
-        const responseData = await response.json();
-        return responseData.period || null;
+        return (result.period as MealPeriod) || null;
       } catch (error) {
         console.warn('Error fetching period:', error);
         return null;
@@ -201,12 +207,11 @@ export function usePeriodSummary(periodId: string, initialData?: any, groupId?: 
       if (!targetGroupId || !periodId) {
         return null;
       }
-      const response = await fetch(`/api/periods/${periodId}/summary?groupId=${targetGroupId}`, { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch period summary');
+      const result = await getPeriodSummaryAction(targetGroupId, periodId);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch period summary');
       }
-      const data = await response.json();
-      return (data.summary as PeriodSummary) || null;
+      return (result.summary as PeriodSummary) || null;
     },
     // Strictly disable fetching if we have initial data (Dashboard pattern)
     enabled: Boolean(targetGroupId && periodId),
@@ -226,12 +231,11 @@ export function usePeriodsByMonth(year: number, month: number) {
       if (!activeGroup?.id) {
         return [];
       }
-      const response = await fetch(`/api/periods/by-month?groupId=${activeGroup.id}&year=${year}&month=${month}`, { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch periods by month');
+      const result = await getPeriodsByMonthAction(activeGroup.id, year, month);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch periods by month');
       }
-      const data = await response.json();
-      return data.periods;
+      return (result.periods as MealPeriod[]) || [];
     },
     enabled: !!activeGroup?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -342,19 +346,13 @@ export function usePeriodMode(groupId?: string) {
       mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
         if (!activeGroup?.id) throw new Error('No active group');
         
-        const response = await fetch(`/api/groups/${activeGroup.id}/period-mode`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode })
-        });
+        const result = await updatePeriodModeAction(activeGroup.id, { mode });
 
-        if (!response.ok) {
-           const result = await response.json();
-           throw new Error(result.error || 'Failed to update period mode');
+        if (!result.success) {
+           throw new Error(result.message || 'Failed to update period mode');
         }
 
-        const data = await response.json();
-        return data; 
+        return result; 
       },
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ['periods-overview', activeGroup?.id] });
@@ -380,10 +378,9 @@ export function usePeriodMode(groupId?: string) {
     queryKey: ['period-mode', groupId],
     queryFn: async () => {
       if (!groupId) return 'MONTHLY';
-      const res = await fetch(`/api/groups/${groupId}/period-mode`, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to fetch period mode');
-      const data = await res.json();
-      return data.periodMode || 'MONTHLY';
+      const result = await getGroupPeriodModeAction(groupId);
+      if (!result.success) throw new Error(result.message || 'Failed to fetch period mode');
+      return (result.periodMode as 'MONTHLY' | 'CUSTOM') || 'MONTHLY';
     },
     enabled: !!groupId,
     staleTime: 30 * 60 * 1000,
@@ -394,19 +391,13 @@ export function usePeriodMode(groupId?: string) {
     mutationFn: async (mode: 'MONTHLY' | 'CUSTOM') => {
       if (!groupId) throw new Error('No group ID');
       
-      const response = await fetch(`/api/groups/${groupId}/period-mode`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode })
-      });
+      const result = await updatePeriodModeAction(groupId, { mode });
 
-      if (!response.ok) {
-         const result = await response.json();
-         throw new Error(result.error || 'Failed to update period mode');
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to update period mode');
       }
 
-      const data = await response.json();
-      return data;
+      return result;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['period-mode', groupId] });

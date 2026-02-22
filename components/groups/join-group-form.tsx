@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Search, Loader2, ArrowRight, Compass, ShieldCheck } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function JoinGroupForm() {
     const router = useRouter();
@@ -72,10 +73,12 @@ export function JoinGroupForm() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 p-3 rounded-md bg-amber-50 border border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/20 text-amber-800 dark:text-amber-300">
+                    <Alert className="bg-muted/50 text-muted-foreground border-border py-3">
                         <ShieldCheck className="h-4 w-4 shrink-0" />
-                        <p className="text-[10px] font-medium leading-tight">Invitation codes are case-sensitive.</p>
-                    </div>
+                        <AlertDescription className="text-xs leading-tight ml-2">
+                            Invitation codes are case-sensitive.
+                        </AlertDescription>
+                    </Alert>
 
                     <Button
                         type="submit"

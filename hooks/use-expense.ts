@@ -61,18 +61,15 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
     queryKey: ['extraExpenses', groupId],
     queryFn: async (): Promise<ExtraExpense[]> => {
       if (!groupId) return [];
-      const { data } = await axios.get<ExtraExpense[]>(`/api/expenses`, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        params: {
-            roomId: groupId,
-            _t: new Date().getTime()
-        }
-      });
-      return data;
+      const { getExpensesAction } = await import('@/lib/actions/expense.actions');
+      const res = await getExpensesAction(groupId);
+      if (!res.success) throw new Error(res.message);
+      return res.expenses!.map((e: any) => ({
+        ...e,
+        date: e.date.toISOString(),
+        createdAt: e.createdAt.toISOString(),
+        updatedAt: e.updatedAt.toISOString(),
+      })) as unknown as ExtraExpense[];
     },
     enabled: !!groupId && !effectiveInitialData,
     initialData: effectiveInitialData,

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import type { Room, User } from "@prisma/client"
+import { updateFineSettingsAction } from "@/lib/actions/group.actions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -51,20 +52,13 @@ export function FineSettingsForm({ user, rooms }: FineSettingsFormProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`/api/groups/${data.roomId}/fine-settings`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fineAmount: data.fineAmount,
-          fineEnabled: data.fineEnabled,
-        }),
+      const result = await updateFineSettingsAction(data.roomId, {
+        fineAmount: data.fineAmount,
+        fineEnabled: data.fineEnabled,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to update fine settings")
+      if (!result.success) {
+        throw new Error(result.message || "Failed to update fine settings")
       }
 
       toast.success("Fine settings updated successfully")

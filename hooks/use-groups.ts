@@ -1,7 +1,23 @@
 import { useCallback } from 'react';
-import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import { 
+  useMutation, 
+  useQuery, 
+  useQueryClient, 
+  UseQueryResult 
+} from '@tanstack/react-query';
 import axios from 'axios';
-import { createGroupAction, updateGroupAction, deleteGroupAction, joinGroupAction, leaveGroupAction, updatePeriodModeAction, handleJoinRequestAction, getGroupStatsAction } from '@/lib/actions/group.actions';
+import { 
+  createGroupAction, 
+  updateGroupAction, 
+  deleteGroupAction, 
+  joinGroupAction, 
+  leaveGroupAction, 
+  updatePeriodModeAction, 
+  handleJoinRequestAction, 
+  getGroupStatsAction, 
+  getGroupsListAction, 
+  getGroupDetailsAction, 
+  getJoinRequestsAction } from '@/lib/actions/group.actions';
 
 type AxiosError<T = any> = {
   response?: {
@@ -92,10 +108,12 @@ export function useGroups(): UseGroupsReturn {
     queryFn: async () => {
       if (!session?.user?.id) return [];
       try {
-        const { data } = await axios.get<Group[]>('/api/groups');
+        const result = await getGroupsListAction('my');
+        if (!result.success || !result.groups) throw new Error(result.message || 'Failed to fetch groups');
+        
         // Set the data in React Query cache for future use
-        queryClient.setQueryData(['user-groups', session.user.id], data);
-        return data;
+        queryClient.setQueryData(['user-groups', session.user.id], result.groups);
+        return result.groups as Group[];
       } catch (error: unknown) {
         console.error('Error fetching user groups:', error);
         throw new Error('Failed to fetch groups');
@@ -126,11 +144,9 @@ export function useGroups(): UseGroupsReturn {
       queryFn: async () => {
         if (!session?.user?.id) return [];
         try {
-          const { data } = await axios.get<Group[]>(
-            `/api/groups`,
-            { params: { filter } }
-          );
-          return data;
+          const result = await getGroupsListAction(filter);
+          if (!result.success || !result.groups) throw new Error(result.message || `Failed to fetch ${filter} groups`);
+          return result.groups as unknown as Group[];
         } catch (error) {
           console.error(`Error fetching ${filter} groups:`, error);
           throw new Error(`Failed to fetch ${filter} groups`);
@@ -155,72 +171,41 @@ export function useGroups(): UseGroupsReturn {
   // Get group details
   const getGroupDetails = useCallback(async (groupId: string, password?: string): Promise<Group> => {
     try {
-      const params = new URLSearchParams();
-      if (password) {
-        params.append('password', password);
-      }
+      const result = await getGroupDetailsAction(groupId, password);
 
-      const url = `/api/groups/${groupId}${params.toString() ? `?${params.toString()}` : ''}`;
-
-      // Make the API request
-      const response = await axios.get<Group>(url, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        validateStatus: (status) => {
-          // Don't throw for 403 (password required) or 401 (wrong password)
-          return (status >= 200 && status < 300) || status === 401 || status === 403;
-        },
-      });
-
-      const responseData = response.data as any;
+      const responseData = result.groupData as any;
 
       // Handle the case where the API returns requiresPassword in the success response
-      if (response.status === 403 || responseData.requiresPassword) {
+      if (result.status === 403 || result.requiresPassword) {
         const error = new Error('This is a private group. A password is required.');
         (error as any).requiresPassword = true;
-        (error as any).group = responseData.group || {};
+        (error as any).group = responseData || {};
         (error as any).status = 403;
         (error as any).code = 'PRIVATE_GROUP';
         throw error;
       }
 
       // Handle invalid password case
-      if (response.status === 401) {
+      if (result.status === 401) {
         const error = new Error('Invalid password');
         (error as any).code = 'INVALID_PASSWORD';
         throw error;
       }
 
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to fetch group details');
+      }
+
       return responseData;
+
     } catch (error: any) {
       // If it's already our custom error, just rethrow it
       if (error?.code === 'PRIVATE_GROUP' || error?.code === 'INVALID_PASSWORD') {
         throw error;
       }
 
-      // Handle axios errors
-      if (error?.response) {
-        const responseData = error.response.data || {};
-
-        // Handle password required case (403)
-        if (error.response.status === 403) {
-          const newError = new Error('This is a private group. A password is required.');
-          (newError as any).requiresPassword = true;
-          (newError as any).group = responseData.group || {};
-          (newError as any).code = 'PRIVATE_GROUP';
-          throw newError;
-        }
-
-        // Handle invalid password case (401)
-        if (error.response.status === 401) {
-          const newError = new Error('Invalid password');
-          (newError as any).code = 'INVALID_PASSWORD';
-          throw newError;
-        }
-      }
-
+      // Removed legacy axios error formatting since we are using server actions
+      
       // For any other errors, rethrow with a generic message
       throw new Error(error?.message || 'Failed to fetch group details');
     }
@@ -509,8 +494,9 @@ export function useGroups(): UseGroupsReturn {
       queryFn: async () => {
         if (!session?.user?.id) return [];
         try {
-          const { data } = await axios.get<JoinRequest[]>(`/api/groups/${groupId}/join-request`);
-          return data;
+          const result = await getJoinRequestsAction(groupId);
+          if (!result.success) throw new Error(result.message || 'Failed to fetch join requests');
+          return result.joinRequests as any;
         } catch (error) {
           console.error(`Error fetching join requests for group ${groupId}:`, error);
           throw new Error('Failed to fetch join requests');

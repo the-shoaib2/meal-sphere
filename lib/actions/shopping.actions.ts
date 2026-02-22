@@ -10,6 +10,7 @@ import { validateActivePeriod } from "@/lib/utils/period-utils";
 import { notifyRoomMembersBatch } from "@/lib/utils/notification-utils";
 import { invalidateShoppingCache } from "@/lib/cache/cache-invalidation";
 
+
 async function getUserId(): Promise<string> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -173,3 +174,73 @@ export async function clearPurchasedShoppingItemsAction(groupId: string) {
     return { success: false, message: error.message || "Failed to clear purchased items" };
   }
 }
+
+export async function getShoppingListAction(
+  roomId: string,
+  options?: {
+    periodId?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  }
+) {
+  try {
+    const userId = await getUserId();
+    await validateMembership(userId, roomId);
+
+    const { periodId, startDate, endDate } = options || {};
+
+    const { getPeriodAwareWhereClause } = await import("@/lib/utils/period-utils");
+    const activePeriodFilter = !periodId ? await getPeriodAwareWhereClause(roomId, { roomId }) : null;
+
+    let whereClause: any = { roomId };
+
+    if (periodId) {
+      whereClause.periodId = periodId;
+    } else {
+      if ((activePeriodFilter as any)?.id === null) {
+        return { success: true, shoppingItems: [] };
+      }
+      whereClause = { ...activePeriodFilter };
+    }
+
+    if (startDate && endDate) {
+      whereClause.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    }
+
+    const { cacheGetOrSet } = await import("@/lib/cache/cache-service");
+    const { getShoppingCacheKey, CACHE_TTL } = await import("@/lib/cache/cache-keys");
+    const cacheKey = getShoppingCacheKey(roomId, periodId || (activePeriodFilter as any)?.id || 'active');
+
+    const shoppingItems = await cacheGetOrSet(
+      cacheKey,
+      async () => {
+        return await prisma.shoppingItem.findMany({
+          where: whereClause,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+              },
+            },
+          },
+          orderBy: {
+            date: "desc",
+          },
+        });
+      },
+      { ttl: CACHE_TTL.MEALS_LIST }
+    );
+
+    return { success: true, shoppingItems };
+  } catch (error: any) {
+    console.error("Error fetching shopping items:", error);
+    return { success: false, message: error.message || "Failed to fetch shopping items" };
+  }
+}
+

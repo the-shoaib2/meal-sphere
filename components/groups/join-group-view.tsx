@@ -609,22 +609,22 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
           {/* Sidebar / Info */}
           <div className="md:col-span-4 space-y-6">
-            <div className="p-6 rounded-3xl bg-blue-600/5 border border-blue-600/10 space-y-4">
-              <div className="h-10 w-10 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-600">
+            <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10 space-y-4">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <Users className="h-5 w-5" />
               </div>
-              <h3 className="font-bold">What to expect</h3>
+              <h3 className="font-bold text-foreground">What to expect</h3>
               <ul className="space-y-3">
                 <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
-                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
                   Coordinate shared meals effortlessly
                 </li>
                 <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
-                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
                   Split expenses with total transparency
                 </li>
                 <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
-                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
                   Stay synced with real-time notifications
                 </li>
               </ul>
@@ -657,13 +657,13 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         badges={
           <div className="flex items-center gap-2">
             {requestStatus === 'pending' && (
-              <Badge variant="outline" className="rounded-full px-4 py-1 bg-amber-500/10 border-amber-500/20 text-amber-600 font-bold">
-                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+              <Badge variant="secondary" className="rounded-full px-4 py-1 font-bold">
+                <Loader2 className="h-3 w-3 mr-2 animate-spin text-muted-foreground" />
                 Under Review
               </Badge>
             )}
             {requestStatus === 'rejected' && (
-              <Badge variant="outline" className="rounded-full px-4 py-1 bg-destructive/10 border-destructive/20 text-destructive font-bold">
+              <Badge variant="destructive" className="rounded-full px-4 py-1 font-bold">
                 <XCircle className="h-3 w-3 mr-2" />
                 Entry Declined
               </Badge>
@@ -685,16 +685,16 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
           <CardContent className="px-10 pb-12 space-y-10">
             {/* Status Logic Visuals */}
             {requestStatus === 'pending' ? (
-              <div className="flex flex-col items-center gap-6 py-8 px-6 bg-amber-500/5 rounded-lg border border-amber-500/10">
+              <div className="flex flex-col items-center gap-6 py-8 px-6 bg-muted/50 rounded-lg border border-border">
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-pulse" />
-                  <div className="relative h-16 w-16 rounded-full bg-amber-500 flex items-center justify-center text-white shadow-sm">
+                  <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse" />
+                  <div className="relative h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/20">
                     <Lock className="h-8 w-8" />
                   </div>
                 </div>
                 <div className="text-center space-y-2">
-                  <p className="font-bold text-amber-900 dark:text-amber-200">The hosts are reviewing your request</p>
-                  <p className="text-sm text-amber-800/60 dark:text-amber-200/60">
+                  <p className="font-bold text-foreground">The hosts are reviewing your request</p>
+                  <p className="text-sm text-muted-foreground">
                     A notification has been sent to the group administrators. They typically respond within a few hours.
                   </p>
                 </div>

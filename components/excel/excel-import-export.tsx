@@ -98,18 +98,19 @@ export default function ExcelImportExport() {
     setPreviewData(null)
     try {
       if (!activeGroup) throw new Error('No active group')
-      const params = new URLSearchParams({
+
+      const { exportExcelAction } = await import('@/lib/actions/excel.actions')
+      const data = await exportExcelAction({
         roomId: activeGroup.id,
         type: exportType,
         scope: exportScope,
         dateRange,
-        preview: "true",
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        userId: selectedUserId,
+        preview: true,
       })
-      if (startDate) params.append('startDate', startDate.toISOString())
-      if (endDate) params.append('endDate', endDate.toISOString())
-      if (selectedUserId) params.append('userId', selectedUserId)
-      const response = await fetch(`/api/excel/export?${params.toString()}`)
-      const data = await response.json()
+
       if (data.success) {
         setPreviewData(data.preview)
         console.log("Preview data received:", data.preview)
@@ -142,33 +143,36 @@ export default function ExcelImportExport() {
 
     try {
       if (!activeGroup) throw new Error('No active group')
-      const params = new URLSearchParams({
+
+      const { exportExcelAction } = await import('@/lib/actions/excel.actions')
+      const data = await exportExcelAction({
         roomId: activeGroup.id,
         type: exportType,
         scope: exportScope,
         dateRange,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        userId: selectedUserId,
+        format: format,
       })
-      if (startDate) params.append('startDate', startDate.toISOString())
-      if (endDate) params.append('endDate', endDate.toISOString())
-      if (selectedUserId) params.append('userId', selectedUserId)
-      params.append('format', format)
-      const response = await fetch(`/api/excel/export?${params.toString()}`)
-      if (!response.ok) throw new Error('Failed to generate file')
-      const disposition = response.headers.get('content-disposition')
-      let filename = `export.${format === 'excel' ? 'xlsx' : 'pdf'}`
-      if (disposition) {
-        // Support both filename="..." and filename*=UTF-8''... formats
-        let match = disposition.match(/filename\*=UTF-8''([^;\n\r]*)/)
-        if (match) {
-          filename = decodeURIComponent(match[1])
-        } else {
-          match = disposition.match(/filename="([^"]+)"/)
-          if (match) filename = match[1]
-        }
+
+      if (!data.success) throw new Error(data.error || 'Failed to generate file')
+
+      const filename = data.filename || `export.${format === 'excel' ? 'xlsx' : 'pdf'}`
+
+      // Convert base64 to blob
+      const byteCharacters = atob(data.data as string)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
       }
-      const blob = await response.blob()
+      const byteArray = new Uint8Array(byteNumbers)
+      const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      const blob = new Blob([byteArray], { type: contentType })
+
       setDownloadProgress(100)
       clearInterval(progressInterval)
+
       // Wait a bit for UI
       setTimeout(() => {
         setIsDownloadInProgress(false)

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Bell, Check, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
+import { updateGlobalNotificationSettingsAction } from "@/lib/actions/settings.actions"
 
 type GlobalSettings = {
     mealReminders: boolean
@@ -38,15 +39,10 @@ export function NotificationsSettingsCard() {
     const handleSaveGlobalSettings = useCallback(async () => {
         try {
             setIsLoading(true)
-            // This would be replaced with an actual API call to save global settings
-            const response = await fetch('/api/settings/notifications', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(globalSettings)
-            })
+            const result = await updateGlobalNotificationSettingsAction(globalSettings)
 
-            if (!response.ok) {
-                throw new Error('Failed to save settings')
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to save settings')
             }
 
             toast({

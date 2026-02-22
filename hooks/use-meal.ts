@@ -17,7 +17,12 @@ import {
 import { toast } from 'react-hot-toast';
 import { format, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import { useCurrentPeriod } from '@/hooks/use-periods';
-import { isPeriodLocked, canUserEditMeal, formatDateSafe, parseDateSafe } from '@/lib/utils/period-utils-shared';
+import { 
+  isPeriodLocked, 
+  canUserEditMeal, 
+  formatDateSafe, 
+  parseDateSafe 
+} from '@/lib/utils/period-utils-shared';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 

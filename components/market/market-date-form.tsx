@@ -51,17 +51,15 @@ export function MarketDateForm({ user, rooms }: MarketDateFormProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/market-dates", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
+      const { createMarketDateAction } = await import('@/lib/actions/market-dates.actions');
+      const response = await createMarketDateAction({
+        roomId: data.roomId,
+        userId: data.userId,
+        date: data.date
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to assign market date")
+      if (!response.success) {
+        throw new Error(response.message || "Failed to assign market date")
       }
 
       toast.success("Market date assigned successfully")

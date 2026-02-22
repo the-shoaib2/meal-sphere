@@ -211,3 +211,68 @@ export async function deleteExpenseAction(expenseId: string) {
     return { success: false, message: error.message || "Failed to delete expense" };
   }
 }
+
+export async function getExpensesAction(
+  roomId: string,
+  options?: {
+    periodId?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    type?: string | null;
+  }
+) {
+  try {
+    const userId = await getUserId();
+    await validateMembership(userId, roomId);
+
+    const { periodId, startDate, endDate, type } = options || {};
+
+    const { getPeriodAwareWhereClause } = await import("@/lib/utils/period-utils");
+    const activePeriodFilter = !periodId ? await getPeriodAwareWhereClause(roomId, { roomId }) : null;
+
+    let whereClause: any = { roomId };
+
+    if (periodId) {
+      whereClause.periodId = periodId;
+    } else {
+      if ((activePeriodFilter as any)?.id === null) {
+        return { success: true, expenses: [] };
+      }
+      whereClause = { ...activePeriodFilter };
+    }
+
+    if (startDate && endDate) {
+      whereClause.date = {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      };
+    }
+
+    if (type) {
+      whereClause.type = type;
+    }
+
+    const expenses = await prisma.extraExpense.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+      },
+      orderBy: {
+        date: "desc",
+      },
+    });
+
+    return { success: true, expenses };
+  } catch (error: any) {
+    console.error("Error fetching expenses:", error);
+    return { success: false, message: error.message || "Failed to fetch expenses" };
+  }
+}
+

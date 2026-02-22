@@ -6,19 +6,14 @@ import { useSession } from "next-auth/react"
 import { toast } from "@/hooks/use-toast"
 import { Bell } from "lucide-react"
 
+import { NotificationType } from "@prisma/client"
+
 export type Notification = {
   id: string
-  type:
-  | "MEAL_REMINDER"
-  | "PAYMENT_DUE"
-  | "VOTE_STARTED"
-  | "VOTE_ENDED"
-  | "MANAGER_CHANGED"
-  | "SHOPPING_ADDED"
-  | "CUSTOM"
+  type: NotificationType | "CUSTOM"
   message: string
   read: boolean
-  createdAt: string
+  createdAt: string | Date
 }
 
 type NotificationContextType = {
@@ -46,21 +41,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      const response = await fetch("/api/notifications", { signal })
-      if (!response.ok) {
-        // Handle specific status codes if needed
-        if (response.status === 401) return;
-        throw new Error(`Failed to fetch notifications: ${response.status}`)
+      const { getNotificationsAction } = await import('@/lib/actions/notification.actions');
+      const res = await getNotificationsAction();
+      if (!res.success) {
+        if (res.message === "Unauthorized") return;
+        throw new Error(`Failed to fetch notifications: ${res.message}`);
       }
 
-      const data = await response.json()
+      const data: Notification[] = res.notifications as unknown as Notification[];
 
       // Ensure unique notifications by ID to prevent React key errors
       const uniqueNotifications = Array.isArray(data)
         ? data.filter((notification: Notification, index: number, self: Notification[]) =>
           index === self.findIndex((n) => n.id === notification.id)
         )
-        : []
+        : [];
 
       setNotifications(uniqueNotifications)
       setUnreadCount(uniqueNotifications.filter((notif: Notification) => !notif.read).length)
@@ -75,11 +70,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!session?.user) return
 
     try {
-      const response = await fetch(`/api/notifications/${id}/read`, {
-        method: "PUT",
-      })
+      const { markAsReadAction } = await import('@/lib/actions/notification.actions');
+      const res = await markAsReadAction(id);
 
-      if (!response.ok) throw new Error("Failed to mark notification as read")
+      if (!res.success) throw new Error("Failed to mark notification as read");
 
       setNotifications((prev) => prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
       setUnreadCount((prev) => Math.max(0, prev - 1))
@@ -92,11 +86,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!session?.user) return
 
     try {
-      const response = await fetch("/api/notifications/read-all", {
-        method: "PUT",
-      })
+      const { markAllAsReadAction } = await import('@/lib/actions/notification.actions');
+      const res = await markAllAsReadAction();
 
-      if (!response.ok) throw new Error("Failed to mark all notifications as read")
+      if (!res.success) throw new Error("Failed to mark all notifications as read");
 
       setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })))
       setUnreadCount(0)
@@ -109,11 +102,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!session?.user) return
 
     try {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "DELETE",
-      })
+      const { deleteNotificationAction } = await import('@/lib/actions/notification.actions');
+      const res = await deleteNotificationAction(id);
 
-      if (!response.ok) throw new Error("Failed to delete notification")
+      if (!res.success) throw new Error("Failed to delete notification");
 
       const updatedNotifications = notifications.filter((notif) => notif.id !== id)
       setNotifications(updatedNotifications)
@@ -204,18 +196,24 @@ export function useNotifications() {
 // Helper function to get notification title based on type
 function getNotificationTitle(type: Notification["type"]): string {
   switch (type) {
-    case "MEAL_REMINDER":
-      return "Meal Reminder"
-    case "PAYMENT_DUE":
-      return "Payment Due"
-    case "VOTE_STARTED":
-      return "New Vote Started"
-    case "VOTE_ENDED":
-      return "Vote Ended"
-    case "MANAGER_CHANGED":
-      return "Manager Changed"
-    case "SHOPPING_ADDED":
-      return "Shopping Added"
+    case "MEAL_CREATED":
+    case "MEAL_UPDATED":
+      return "Meal Update"
+    case "MEAL_DELETED":
+      return "Meal Cancelled"
+    case "PAYMENT_CREATED":
+    case "PAYMENT_UPDATED":
+      return "Payment Update"
+    case "PAYMENT_DELETED":
+      return "Payment Cancelled"
+    case "MEMBER_ADDED":
+      return "New Member Joined"
+    case "MEMBER_REMOVED":
+      return "Member Left"
+    case "JOIN_REQUEST_APPROVED":
+      return "Request Approved"
+    case "JOIN_REQUEST_REJECTED":
+      return "Request Rejected"
     case "CUSTOM":
       return "Notification"
     default:

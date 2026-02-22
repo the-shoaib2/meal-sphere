@@ -17,8 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, CreditCard, Receipt, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { RoleBadge } from '@/components/shared/role-badge';
-import { createManualPayment } from '@/lib/services/payments-service';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createManualPaymentAction } from '@/lib/actions/payment.actions';
 
 interface PaymentManagementProps {
     initialData?: any;
@@ -43,28 +43,12 @@ export function PaymentManagement({ initialData, initialAccessData }: PaymentMan
 
     const createPaymentMutation = useMutation({
         mutationFn: async (data: any) => {
-            // This should call an API route ideally, but we can stick to server actions if configured, 
-            // or simplest: call a route we create. 
-            // For now, let's assume direct server action or API call.
-            // User requested "no API call" for SSR, but for actions (POST), API routes are standard.
-            // But to keep it consistent with "direct db" philosophy requested, this might need a server action.
-            // However, we are in a CLIENT component here. So we MUST use `fetch` or server actions.
-            // I will use a simple fetch to a new route /api/payments/create for now, 
-            // or assume the user accepts API for ACTIONS.
+            const response = await createManualPaymentAction(data);
 
-            // Wait, the user said "get api call and direct ssr". GET requests should be SSR. 
-            // Writes usually are APIs.
-            const response = await fetch('/api/payments/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to create payment');
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to create payment');
             }
-            return response.json();
+            return response.payment;
         },
         onSuccess: () => {
             toast({ title: 'Success', description: 'Payment recorded successfully' });
