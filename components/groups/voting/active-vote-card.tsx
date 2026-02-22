@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { format, formatDistanceToNow } from "date-fns";
-import { Candidate, ActiveVote, Voter } from "./types";
+import { Candidate, Vote as VoteInterface, Voter } from "./types";
 import VoterStack from "./voter-stack";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -30,7 +30,7 @@ import { DropdownMenu as CandidateDropdownMenu, DropdownMenuTrigger as Candidate
 import EditVoteDialog from "./edit-vote-dialog";
 
 interface ActiveVoteCardProps {
-  vote: ActiveVote;
+  vote: VoteInterface;
   totalMembers: number;
   options: Candidate[];
   results: Record<string, Voter[]>;
@@ -40,11 +40,12 @@ interface ActiveVoteCardProps {
   setSelectedCandidate: (id: string) => void;
   handleVote: (voteId: string) => void;
   isSubmitting: boolean;
-  hasVoted: (vote: ActiveVote) => boolean;
+  hasVoted: (vote: VoteInterface) => boolean;
   isAdmin?: boolean;
   currentUserId?: string;
   refreshVotes?: () => void;
   deleteVote?: (voteId: string) => Promise<{ success: boolean; error?: string }>;
+  updateVote?: (voteData: any) => Promise<void>;
   candidateOptions: Candidate[];
   voteTypeOptions: { value: string; label: string; backend: string }[];
 }
@@ -65,6 +66,7 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
   currentUserId,
   refreshVotes,
   deleteVote,
+  updateVote,
   candidateOptions,
   voteTypeOptions,
 }) => {
@@ -134,26 +136,10 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
     setActionLoading(true);
     try {
       if (deleteVote) {
-        const result = await deleteVote(vote.id);
-        if (result.success) {
-          // toast is handled in mutation onSuccess
-        } else {
-          toast.error(result.error || "Failed to delete vote.");
-        }
+        await deleteVote(vote.id);
+        // Toast and refresh handled in hook
       } else {
-        // Fallback if not provided
-        const res = await fetch(`/api/groups/${vote.roomId}/votes`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ voteId: vote.id })
-        });
-        const data = await res.json();
-        if (data.success) {
-          toast.success("Vote deleted.");
-          refreshVotes && refreshVotes();
-        } else {
-          toast.error(data.error || "Failed to delete vote.");
-        }
+        toast.error("Delete function not available.");
       }
     } catch (err) {
       toast.error("Failed to delete vote.");
@@ -166,18 +152,11 @@ const ActiveVoteCard: React.FC<ActiveVoteCardProps> = ({
   const handleEditSave = async ({ type, candidates }: { type: string; candidates: Candidate[] }) => {
     setEditLoading(true);
     try {
-      const res = await fetch(`/api/groups/${vote.roomId}/votes`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voteId: vote.id, type, candidates })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Vote updated.");
-        refreshVotes && refreshVotes();
+      if (updateVote) {
+        await updateVote({ voteId: vote.id, type, candidates });
         setEditOpen(false);
       } else {
-        toast.error(data.error || "Failed to update vote.");
+        toast.error("Update function not available.");
       }
     } catch (err) {
       toast.error("Failed to update vote.");

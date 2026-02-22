@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useActiveGroup } from '@/contexts/group-context';
 import { ExpenseType } from '@prisma/client';
+import { createExpenseAction, updateExpenseAction, deleteExpenseAction } from '@/lib/actions/expense.actions';
 
 export interface ExtraExpense {
   id: string;
@@ -96,13 +97,12 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
         formData.append('receipt', newExpense.receipt);
       }
 
-      const { data } = await axios.post<ExtraExpense>('/api/expenses', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const result = await createExpenseAction(formData);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to add expense');
+      }
 
-      return data;
+      return result.expense as unknown as ExtraExpense;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraExpenses', groupId] });
@@ -125,13 +125,12 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
         formData.append('receipt', receipt);
       }
 
-      const { data } = await axios.patch<ExtraExpense>(`/api/expenses/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const result = await updateExpenseAction(id, formData);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update expense');
+      }
 
-      return data;
+      return result.expense as unknown as ExtraExpense;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraExpenses', groupId] });
@@ -141,7 +140,10 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
   // Delete an expense
   const deleteExpense = useMutation<void, Error, string>({
     mutationFn: async (expenseId): Promise<void> => {
-      await axios.delete(`/api/expenses/${expenseId}`);
+      const result = await deleteExpenseAction(expenseId);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to delete expense');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['extraExpenses', groupId] });

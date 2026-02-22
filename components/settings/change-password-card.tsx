@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { toast } from "react-hot-toast"
+import { updateUserPassword } from "@/lib/actions/user.actions"
 
 const passwordFormSchema = z
     .object({
@@ -46,17 +47,9 @@ export function ChangePasswordCard({ user }: ChangePasswordCardProps) {
         setIsLoading(true)
 
         try {
-            const response = await fetch("/api/user/password", {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(data),
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.message || "Failed to update password")
+            const result = await updateUserPassword(data)
+            if (!result.success) {
+                throw new Error(result.message || "Failed to update password")
             }
 
             toast.success("Password updated successfully")

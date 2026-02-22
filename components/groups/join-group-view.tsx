@@ -15,7 +15,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert, KeyRound, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangle, ArrowLeft, ShieldAlert, KeyRound, XCircle, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { RoleBadge } from '@/components/shared/role-badge';
 import { PageHeader } from '@/components/shared/page-header';
-// Actions import removed
+import { joinGroupAction, createJoinRequestAction, getJoinRequestStatusAction, cancelJoinRequestAction } from '@/lib/actions/group.actions';
 
 // Update the join room form schema
 const joinRoomSchema = z.object({
@@ -163,9 +163,9 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
     try {
       setIsCheckingStatus(true);
 
-      const response = await fetch(`/api/groups/${targetGroupId}/join-request/my-request`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await getJoinRequestStatusAction(targetGroupId);
+      if (response.success && response.joinRequest) {
+        const data = response;
         if (data.joinRequest) {
           const status = data.joinRequest.status.toLowerCase();
           setRequestStatus(status as 'pending' | 'approved' | 'rejected');
@@ -179,7 +179,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
             return;
           }
         } else {
-          // No join request found (status 404 or just null)
+          // No join request found
           setRequestStatus(null);
         }
       } else {
@@ -199,13 +199,10 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
     try {
       setIsJoining(true);
-      const response = await fetch(`/api/groups/${groupId}/join-request`, {
-        method: 'DELETE',
-      });
+      const result = await cancelJoinRequestAction(groupId);
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to cancel request');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to cancel request');
       }
 
       toast.success('Join request cancelled');
@@ -235,15 +232,10 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
       const targetGroupId = groupId; // Simplified for SSR version
 
-      const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: values.message })
-      });
+      const result = await createJoinRequestAction(targetGroupId, { message: values.message });
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to send join request');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to send join request');
       }
 
       setRequestStatus('pending');
@@ -285,18 +277,12 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       if (group?.isPrivate && !inviteToken) {
         // Check if user is trying to join with password
         if (values.password && group.hasPassword) {
-          const response = await fetch(`/api/groups/${targetGroupId}/join`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: values.password })
-          });
+          const result = await joinGroupAction({ groupId: targetGroupId, password: values.password });
 
-          if (!response.ok) {
-            const result = await response.json();
-            throw new Error(result.error || 'Failed to join group');
+          if (!result.success) {
+            throw new Error(result.message || 'Failed to join group');
           }
 
-          const result = await response.json();
           if (result.requestCreated) {
             setRequestStatus('pending');
             toast('Join request sent, waiting for admin approval...', {
@@ -311,33 +297,21 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         }
 
         // Otherwise Private Group Request Flow
-        const response = await fetch(`/api/groups/${targetGroupId}/join-request`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: values.message })
-        });
+        const result = await createJoinRequestAction(targetGroupId, { message: values.message });
 
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || 'Failed to send join request');
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to send join request');
         }
 
         setRequestStatus('pending');
         toast.success('Join request sent successfully!');
       } else {
         // Public Group Flow OR Invite Token Flow
-        const response = await fetch(`/api/groups/${targetGroupId}/join`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: inviteToken || undefined })
-        });
+        const result = await joinGroupAction({ groupId: targetGroupId, token: inviteToken || undefined });
 
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.error || 'Failed to join group');
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to join group');
         }
-
-        const result = await response.json();
 
         if (result.requestCreated) {
           setRequestStatus('pending');
@@ -397,70 +371,62 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   // If user is already a member, show success state
   if (initialIsMember) {
     return (
-      <div className="space-y-4">
+      <div className="max-w-4xl mx-auto space-y-8 pb-20 px-4 sm:px-6">
         <PageHeader
-          heading={group?.name || "Group"}
-          description="Already a member of this group"
+          heading={group?.name || "Community"}
+          description="You're already part of this journey."
           showBackButton
           backHref="/groups"
           badges={<RoleBadge role={group?.members?.find(m => m.userId === session?.user?.id)?.role as any} />}
           badgesNextToTitle={true}
           collapsible={false}
+          className="pt-4"
         />
-        <div className="flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                <CheckCircle2 className="h-5 w-5" />
-                <CardTitle>Welcome Back</CardTitle>
+        <div className="flex items-center justify-center pt-8">
+          <Card className="w-full max-w-2xl border bg-card shadow-sm rounded-lg">
+            <CardHeader className="text-center pb-8 pt-8 bg-muted/30 border-b">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CheckCircle2 className="h-8 w-8" />
               </div>
-              <CardDescription>
-                You are already a member of this group. You can access all group features.
+              <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back!</CardTitle>
+              <CardDescription className="text-sm max-w-[400px] mx-auto">
+                You are currently an active member of <strong>{group?.name}</strong>. Step back in to see what's new.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardFooter className="pb-8 pt-6 flex justify-center">
               <Button
                 onClick={() => router.push(`/groups/${groupId}`)}
-                className="w-full sm:w-auto"
+                className="w-full max-w-xs"
               >
-                Go to Group
+                Enter Community
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            </CardContent>
+            </CardFooter>
           </Card>
         </div>
       </div>
     );
   }
 
-  // Error state is handled by the server component (redirects or 404)
-
-
   // If no group data, show error state
   if (!group) {
     return (
-      <div className="flex items-center justify-center  p-4">
-        <div className="w-full max-w-2xl">
-          <Button variant="ghost" asChild className="mb-6">
-            <Link href="/groups">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Groups
-            </Link>
-          </Button>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-5 w-5" />
-                <CardTitle>Error</CardTitle>
+      <div className="max-w-4xl mx-auto space-y-8 pb-20 px-4 sm:px-6">
+        <div className="flex items-center justify-center pt-24">
+          <Card className="w-full max-w-lg border-dashed border-2 bg-muted/30">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <AlertCircle className="h-6 w-6" />
               </div>
-              <CardDescription>Group not found</CardDescription>
+              <CardTitle>Discovery Failed</CardTitle>
+              <CardDescription>We couldn't find the group you're looking for. The link may be broken or the group has been removed.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex justify-center pb-8">
               <Button
-                onClick={() => router.push('/groups')}
-                className="mt-4 w-full sm:w-auto"
+                onClick={() => router.push('/groups/join')}
                 variant="outline"
               >
-                Back to Groups
+                Try Another Code
               </Button>
             </CardContent>
           </Card>
@@ -475,179 +441,231 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   // Show join form if no status or if user wants to send new request
   if (!requestStatus) {
     return (
-      <div className="space-y-4">
+      <div className="max-w-4xl mx-auto space-y-12 pb-20 px-4 sm:px-6">
         <PageHeader
-          heading={group?.name}
-          description={group?.description || 'Join this group to share meals and expenses'}
+          heading="Community Invitation"
+          description="Review the details of this community and request your spot at the table."
           showBackButton
-          backHref="/groups"
+          backHref="/groups/join"
           collapsible={false}
+          className="pt-4"
         />
 
-        <div className="flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Group Invitation</CardTitle>
-              <CardDescription>Review group details before joining</CardDescription>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          {/* Main Card */}
+          <Card className="md:col-span-8 border bg-card shadow-sm rounded-lg overflow-hidden">
+            {/* Banner Placeholder or Group Image */}
+            <div className="h-40 w-full bg-muted flex items-center justify-center border-b">
+              {group?.isPrivate ? (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
+                  <Lock className="h-10 w-10" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Private Space</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
+                  <Users className="h-10 w-10" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Public Community</span>
+                </div>
+              )}
+            </div>
+
+            <CardHeader className="px-8 pt-8">
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <CardTitle className="text-3xl font-extrabold tracking-tight">{group?.name}</CardTitle>
+                <div className="flex gap-2">
+                  <Badge variant="outline" className="rounded-full px-3 py-0.5 border-primary/20 bg-primary/5 text-primary">
+                    {group?.isPrivate ? 'Protected' : 'Open Access'}
+                  </Badge>
+                </div>
+              </div>
+              <CardDescription className="text-base leading-relaxed">
+                {group?.description || 'This community hasn\'t provided a description yet, but they\'re excited to have you!'}
+              </CardDescription>
             </CardHeader>
 
-            <CardContent>
-              <div className="space-y-4">
-                {/* Group Type and Inviter Info */}
-                <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
-                    {group?.isPrivate ? (
-                      <Lock className="h-5 w-5 text-primary" />
-                    ) : (
-                      <Users className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm sm:text-base">
-                      {group?.isPrivate ? 'Private Group' : 'Public Group'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                      {group?.isPrivate
-                        ? 'This is a private group. Your join request will need to be approved by an admin.'
-                        : 'This is a public group. Anyone can join.'}
+            <CardContent className="px-8 pb-8 space-y-8">
+              {/* Group Details Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Members</p>
+                  <p className="text-lg font-bold">{group?.memberCount} / {group?.maxMembers}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Founded</p>
+                  <p className="text-lg font-bold">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : 'N/A'}</p>
+                </div>
+                {group?.fineEnabled && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Security</p>
+                    <p className="text-lg font-bold flex items-center gap-1">
+                      ₹{group?.fineAmount}
+                      <AlertCircle className="h-3 w-3 text-muted-foreground" />
                     </p>
                   </div>
+                )}
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Category</p>
+                  <p className="text-lg font-bold">{group?.category || 'General'}</p>
                 </div>
+              </div>
 
-                {/* Group Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground">Members</p>
-                    <p className="font-medium text-sm sm:text-base">{group?.memberCount} / {group?.maxMembers}</p>
+              {/* Inviter Information */}
+              {group?.inviter && (
+                <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+                  <Avatar className="h-10 w-10 border shadow-sm">
+                    <AvatarImage src={group.inviter.image} alt={group.inviter.name} />
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">{group.inviter.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Your Host</p>
+                    <p className="font-bold text-sm truncate">Invited by {group.inviter.name}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground">Created At</p>
-                    <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB') : 'N/A'}</p>
-                  </div>
-                  {group?.fineEnabled && (
-                    <div className="space-y-1 sm:col-span-2">
-                      <p className="text-xs sm:text-sm text-muted-foreground">Fine Amount</p>
-                      <p className="font-medium text-sm sm:text-base">₹{group?.fineAmount}</p>
-                    </div>
-                  )}
                 </div>
+              )}
 
-                {/* Inviter Information */}
-                {group?.inviter && (
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                      <AvatarImage src={group.inviter.image} alt={group.inviter.name} />
-                      <AvatarFallback className="text-xs sm:text-sm">{group.inviter.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm sm:text-base truncate">Invited by {group.inviter.name}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{group.inviter.email}</p>
+              {/* Join Form UI Integration */}
+              <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t border-muted/30">
+                {group?.hasPassword && !inviteToken && (
+                  <div className="space-y-3">
+                    <Label htmlFor="password text-sm font-semibold">Immediate Access Password</Label>
+                    <div className="relative group">
+                      <KeyRound className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-blue-600" />
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Enter direct entry code..."
+                        disabled={isJoining}
+                        value={formValues.password || ''}
+                        onChange={handleInputChange}
+                        className="pl-10"
+                      />
                     </div>
                   </div>
                 )}
 
-                {/* Join Form */}
-                <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-                  {group?.hasPassword && !inviteToken && (
-                    <div className="space-y-2">
-                      <Label htmlFor="password" className="text-sm">Group Password (Optional)</Label>
-                      <div className="relative">
-                        <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="password"
-                          name="password"
-                          type="password"
-                          placeholder="Enter password to join immediately"
-                          disabled={isJoining}
-                          value={formValues.password || ''}
-                          onChange={handleInputChange}
-                          className="pl-9"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Enter the group password to verify your invitation and submit a join request.
-                      </p>
+                {group?.isPrivate && !inviteToken && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="message" className="text-sm font-semibold">Message to Host (Recommended)</Label>
+                      {!showMessageField && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 h-7 text-xs font-bold"
+                          onClick={() => setShowMessageField(true)}
+                        >
+                          Add Message
+                        </Button>
+                      )}
                     </div>
-                  )}
-
-                  {group?.isPrivate && showMessageField && (
-                    <div className="space-y-2">
-                      <Label htmlFor="message" className="text-sm">Message to Admins (Optional)</Label>
+                    {showMessageField && (
                       <textarea
                         id="message"
                         name="message"
-                        placeholder="Tell the admins why you want to join this group"
+                        placeholder="Say hi! Tell the admins why you'd like to join..."
                         disabled={isJoining}
                         value={formValues.message}
                         onChange={handleInputChange}
-                        className="w-full min-h-[80px] p-3 border rounded-md text-sm resize-none"
+                        className="w-full min-h-[100px] p-4 bg-background border rounded-md text-sm resize-none focus:ring-2 focus:ring-primary/10 transition-all outline-none"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        This message will be sent to the group admins along with your join request.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <Button
-                      type={showMessageField || formValues.password ? 'submit' : 'button'}
-                      onClick={(!showMessageField && !formValues.password) ? handleJoinClick : undefined}
-                      disabled={isJoining}
-                      className="w-full sm:w-auto sm:ml-auto"
-                    >
-                      {isJoining ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {group?.isPrivate ? 'Sending Request...' : 'Joining...'}
-                        </>
-                      ) : (
-                        <>
-                          {group?.isPrivate ? (
-                            <>
-                              <Lock className="h-4 w-4 mr-2" />
-                              {formValues.password
-                                ? 'Join Group'
-                                : (showMessageField ? 'Send Join Request' : 'Request to Join')}
-                            </>
-                          ) : (
-                            <>
-                              <Users className="h-4 w-4 mr-2" />
-                              Join Group
-                            </>
-                          )}
-                        </>
-                      )}
-                    </Button>
+                    )}
                   </div>
-                </form>
-              </div>
+                )}
+
+                <div className="pt-2">
+                  <Button
+                    type={showMessageField || formValues.password ? 'submit' : 'button'}
+                    onClick={(!showMessageField && !formValues.password) ? handleJoinClick : undefined}
+                    disabled={isJoining}
+                    className="w-full h-11"
+                  >
+                    {isJoining ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing Entry...
+                      </>
+                    ) : (
+                      <>
+                        {group?.isPrivate && !inviteToken ? (
+                          <>
+                            <ShieldAlert className="h-4 w-4 mr-2" />
+                            {formValues.password ? 'Verify & Join' : (showMessageField ? 'Send Entry Request' : 'Request to Join')}
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Join Community Now
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
+
+          {/* Sidebar / Info */}
+          <div className="md:col-span-4 space-y-6">
+            <div className="p-6 rounded-3xl bg-blue-600/5 border border-blue-600/10 space-y-4">
+              <div className="h-10 w-10 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-600">
+                <Users className="h-5 w-5" />
+              </div>
+              <h3 className="font-bold">What to expect</h3>
+              <ul className="space-y-3">
+                <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
+                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  Coordinate shared meals effortlessly
+                </li>
+                <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
+                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  Split expenses with total transparency
+                </li>
+                <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
+                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-blue-600" />
+                  Stay synced with real-time notifications
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-6 rounded-3xl border border-muted-foreground/10 flex items-center gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Global Reputation</p>
+                <div className="flex items-center gap-0.5 text-orange-400">
+                  {[1, 2, 3, 4, 5].map(i => <Sparkles key={i} className="h-3 w-3 fill-current" />)}
+                  <span className="text-xs font-bold text-foreground ml-2">Trusted Community</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-4xl mx-auto space-y-12 pb-20 px-4 sm:px-6">
       <PageHeader
-        heading={group?.name || 'Group'}
-        description={group?.description || 'Join this group to share meals and expenses'}
+        heading="Entry Request"
+        description="Monitor the progress of your membership application."
         showBackButton
-        backHref="/groups"
+        backHref="/groups/join"
         collapsible={false}
+        className="pt-4"
         badges={
           <div className="flex items-center gap-2">
             {requestStatus === 'pending' && (
-              <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Pending
+              <Badge variant="outline" className="rounded-full px-4 py-1 bg-amber-500/10 border-amber-500/20 text-amber-600 font-bold">
+                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                Under Review
               </Badge>
             )}
             {requestStatus === 'rejected' && (
-              <Badge variant="destructive" className="text-xs">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Rejected
+              <Badge variant="outline" className="rounded-full px-4 py-1 bg-destructive/10 border-destructive/20 text-destructive font-bold">
+                <XCircle className="h-3 w-3 mr-2" />
+                Entry Declined
               </Badge>
             )}
           </div>
@@ -655,163 +673,118 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         badgesNextToTitle={true}
       />
 
-      <div className="flex items-center justify-center p-4">
-        <Card className="w-full">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Request Status</CardTitle>
-            <CardDescription>Track the status of your join request</CardDescription>
+      <div className="flex items-center justify-center pt-8">
+        <Card className="w-full max-w-3xl border bg-card shadow-sm rounded-lg overflow-hidden">
+          <CardHeader className="text-center px-8 pt-12 pb-8">
+            <CardTitle className="text-2xl font-bold">Application Status</CardTitle>
+            <CardDescription className="text-base max-w-[450px] mx-auto">
+              Your request to join <strong>{group?.name}</strong> is in progress. Check back soon for updates.
+            </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <div className="space-y-4">
-              {/* Status Message */}
-              {requestStatus === 'pending' && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
-                    Your join request has been submitted and is currently under review. You will be notified once the administrators make a decision.
-                  </p>
+          <CardContent className="px-10 pb-12 space-y-10">
+            {/* Status Logic Visuals */}
+            {requestStatus === 'pending' ? (
+              <div className="flex flex-col items-center gap-6 py-8 px-6 bg-amber-500/5 rounded-lg border border-amber-500/10">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-pulse" />
+                  <div className="relative h-16 w-16 rounded-full bg-amber-500 flex items-center justify-center text-white shadow-sm">
+                    <Lock className="h-8 w-8" />
+                  </div>
                 </div>
-              )}
-
-              {requestStatus === 'rejected' && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-xs sm:text-sm text-destructive-foreground">
-                    Your previous join request was not approved. You can try sending a new request with a different message, or contact the group administrators for more information.
-                  </p>
-                </div>
-              )}
-
-              {/* Group Type and Inviter Info */}
-              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                <div className="flex-shrink-0 p-2 bg-primary/10 rounded-full">
-                  {group?.isPrivate ? (
-                    <Lock className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Users className="h-5 w-5 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm sm:text-base">
-                    {group?.isPrivate ? 'Private Group' : 'Public Group'}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    {group?.isPrivate
-                      ? 'This is a private group. Your join request will need to be approved by an admin.'
-                      : 'This is a public group. Anyone can join.'}
+                <div className="text-center space-y-2">
+                  <p className="font-bold text-amber-900 dark:text-amber-200">The hosts are reviewing your request</p>
+                  <p className="text-sm text-amber-800/60 dark:text-amber-200/60">
+                    A notification has been sent to the group administrators. They typically respond within a few hours.
                   </p>
                 </div>
               </div>
-
-              {/* Group Details Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Members</p>
-                  <p className="font-medium text-sm sm:text-base">{group?.memberCount} / {group?.maxMembers}</p>
+            ) : (
+              <div className="flex flex-col items-center gap-6 py-8 px-6 bg-destructive/5 rounded-lg border border-destructive/10">
+                <XCircle className="h-16 w-16 text-destructive" />
+                <div className="text-center space-y-2">
+                  <p className="font-bold text-destructive">Submission Declined</p>
+                  <p className="text-sm text-destructive/70">
+                    The administrators were unable to approve your recent join request. You can try resubmitting with a new message.
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs sm:text-sm text-muted-foreground">Created At</p>
-                  <p className="font-medium text-sm sm:text-base">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB') : 'N/A'}</p>
-                </div>
-                {group?.fineEnabled && (
-                  <div className="space-y-1 sm:col-span-2">
-                    <p className="text-xs sm:text-sm text-muted-foreground">Fine Amount</p>
-                    <p className="font-medium text-sm sm:text-base">₹{group?.fineAmount}</p>
-                  </div>
-                )}
               </div>
+            )}
 
-              {/* Inviter Information */}
-              {group?.inviter && (
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                    <AvatarImage src={group.inviter.image} alt={group.inviter.name} />
-                    <AvatarFallback className="text-xs sm:text-sm">{group.inviter.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm sm:text-base truncate">Invited by {group.inviter.name}</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{group.inviter.email}</p>
-                  </div>
-                </div>
+            {/* Quick Group Info Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6 border-y border-muted-foreground/10">
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Community</p>
+                <p className="font-bold text-sm truncate px-2">{group?.name}</p>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Type</p>
+                <p className="font-bold text-sm">Protected</p>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Capacity</p>
+                <p className="font-bold text-sm">{group?.memberCount} / {group?.maxMembers}</p>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Submitted</p>
+                <p className="font-bold text-sm">Recently</p>
+              </div>
+            </div>
+
+            {/* Action Controls */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              {requestStatus === 'pending' ? (
+                <>
+                  <Button
+                    onClick={() => groupId && checkJoinRequestStatus(groupId)}
+                    disabled={isCheckingStatus}
+                    className="flex-1"
+                  >
+                    {isCheckingStatus ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Check For Approval
+                  </Button>
+                  <Button
+                    onClick={handleCancelRequest}
+                    disabled={isJoining}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    {isJoining ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Withdraw Request
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => handleNewRequest(formValues)}
+                    disabled={isJoining}
+                    className="flex-1"
+                  >
+                    {isJoining ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    Resubmit Application
+                  </Button>
+                  <Button
+                    onClick={handleCancelRequest}
+                    disabled={isJoining}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Clear Decided Request
+                  </Button>
+                </>
               )}
-
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2 pt-2">
-                {requestStatus === 'pending' && (
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      onClick={() => {
-                        if (groupId) {
-                          checkJoinRequestStatus(groupId);
-                        }
-                      }}
-                      disabled={isCheckingStatus}
-                      variant="default"
-                      className="flex-1"
-                    >
-                      {isCheckingStatus ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Checking Status...
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 mr-2" />
-                          Check Status
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleCancelRequest}
-                      disabled={isJoining}
-                      variant="outline"
-                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      {isJoining ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <XCircle className="h-4 w-4 mr-2" />
-                      )}
-                      Cancel Request
-                    </Button>
-                  </div>
-                )}
-
-                {requestStatus === 'rejected' && (
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      onClick={() => handleNewRequest(formValues)}
-                      disabled={isJoining}
-                      variant="default"
-                      className="flex-1"
-                    >
-                      {isJoining ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Send New Request
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleCancelRequest}
-                      disabled={isJoining}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      {isJoining ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <XCircle className="h-4 w-4 mr-2" />
-                      )}
-                      Clear Request
-                    </Button>
-                  </div>
-                )}
-              </div>
             </div>
           </CardContent>
         </Card>

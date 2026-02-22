@@ -13,6 +13,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { updateMemberRoleAction } from '@/lib/actions/group.actions';
 
 interface ChangeRoleDialogProps {
   isOpen: boolean;
@@ -104,16 +105,10 @@ export function ChangeRoleDialog({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/groups/${groupId}/members/${member.userId}/role`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: selectedRole }),
-      });
+      const result = await updateMemberRoleAction(groupId, member.userId, selectedRole);
 
-      if (!response.ok) {
-        throw new Error('Failed to update member role');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update member role');
       }
 
       toast({

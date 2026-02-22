@@ -30,8 +30,15 @@ export async function POST(
       { message: 'Successfully left the group' }, 
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error leaving group:', error);
+    
+    // Surface meaningful errors to the client
+    const errorMessage = error.message || 'Internal Server Error';
+    if (errorMessage.includes('Not a member') || errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
+         return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+    
     return NextResponse.json(
       { error: 'Internal Server Error' }, 
       { status: 500 }

@@ -21,6 +21,8 @@ export interface Vote {
   results: Record<string, Voter[]>;
   winner?: Candidate;
   totalVotes?: number;
+  description?: string;
+  userId?: string;
 }
 
 export interface ActiveVote {

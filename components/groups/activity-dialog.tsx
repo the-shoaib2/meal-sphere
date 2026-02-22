@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getGroupActivityAction } from '@/lib/actions/group.actions';
 
 interface ActivityLog {
     id: string;
@@ -47,9 +48,9 @@ export function ActivityDialog({ groupId, groupName, isOpen, onOpenChange, isAdm
     const { data: logs, isLoading, error } = useQuery<ActivityLog[]>({
         queryKey: ['activity-logs', groupId],
         queryFn: async () => {
-            const response = await fetch(`/api/groups/${groupId}/activity`);
-            if (!response.ok) throw new Error('Failed to fetch activity logs');
-            return response.json();
+            const data = await getGroupActivityAction(groupId);
+            if (!data.success) throw new Error(data.message || 'Failed to fetch activity logs');
+            return data.logs;
         },
         enabled: isAdmin && isOpen // Only fetch when open and admin
     });

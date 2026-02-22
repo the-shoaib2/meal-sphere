@@ -12,6 +12,7 @@ import {
 } from "@/types/excel"
 import { getExcelPermissions } from "@/lib/excel/excel-permissions"
 import { Role } from "@prisma/client"
+import { exportExcelAction, importExcelAction, downloadTemplateAction } from "@/lib/actions/excel.actions"
 
 export function useExcel() {
   const [isExporting, setIsExporting] = useState(false)
@@ -55,29 +56,19 @@ export function useExcel() {
     setIsExporting(true)
 
     try {
-      // Build query parameters
-      const params = new URLSearchParams({
+      const data = await exportExcelAction({
         roomId: activeGroup.id,
         type,
         scope,
         dateRange,
+        startDate: startDate ? startDate.toISOString() : undefined,
+        endDate: endDate ? endDate.toISOString() : undefined,
+        userId
       })
-
-      if (startDate) params.append('startDate', startDate.toISOString())
-      if (endDate) params.append('endDate', endDate.toISOString())
-      if (userId) params.append('userId', userId)
-
-      const response = await fetch(`/api/excel/export?${params.toString()}`, { cache: 'no-store' })
-
-      if (!response.ok) {
-        throw new Error("Failed to export data")
-      }
-
-      const data = await response.json()
 
       if (data.success) {
         // Convert base64 to blob
-        const byteCharacters = atob(data.data)
+        const byteCharacters = atob(data.data as string)
         const byteNumbers = new Array(byteCharacters.length)
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i)
@@ -91,7 +82,7 @@ export function useExcel() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        a.download = data.filename
+        a.download = (data.filename as string) || "export.xlsx"
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
@@ -151,16 +142,7 @@ export function useExcel() {
       formData.append("type", type)
       formData.append("file", file)
 
-      const response = await fetch("/api/excel/import", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to import data")
-      }
-
-      const data = await response.json()
+      const data = await importExcelAction(formData)
 
       if (data.success) {
         toast({
@@ -196,17 +178,11 @@ export function useExcel() {
     setIsDownloadingTemplate(true)
 
     try {
-      const response = await fetch("/api/excel/template", { cache: 'no-store' })
-
-      if (!response.ok) {
-        throw new Error("Failed to download template")
-      }
-
-      const data = await response.json()
+      const data = await downloadTemplateAction()
 
       if (data.success) {
         // Convert base64 to blob
-        const byteCharacters = atob(data.data)
+        const byteCharacters = atob(data.data as string)
         const byteNumbers = new Array(byteCharacters.length)
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i)
@@ -220,7 +196,7 @@ export function useExcel() {
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement("a")
         a.href = url
-        a.download = data.filename
+        a.download = (data.filename as string) || "template.xlsx"
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)

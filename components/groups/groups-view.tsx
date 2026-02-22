@@ -22,9 +22,10 @@ interface GroupsViewProps {
         timestamp: string;
         executionTime: number;
     };
+    initialTab?: string;
 }
 
-export function GroupsView({ initialData }: GroupsViewProps) {
+export function GroupsView({ initialData, initialTab = 'my-groups' }: GroupsViewProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { data: session } = useSession();
@@ -47,17 +48,17 @@ export function GroupsView({ initialData }: GroupsViewProps) {
         initialData: initialData.publicGroups
     });
 
-    // Get the active tab from URL search params, default to 'my-groups'
-    // Using a useEffect to stabilize the active tab after mount to ensure
-    // the server and client start with the same default, then sync with URL.
-    const [activeTab, setActiveTab] = useState('my-groups');
+    // Initialize state directly from the server-passed prop to avoid hydration flicker
+    const [activeTab, setActiveTab] = useState(initialTab);
 
+    // Keep this to sync tab if user manually changes URL without a full reload, 
+    // or if they use browser back/forward buttons.
     useEffect(() => {
         const tabFromUrl = searchParams?.get('tab');
-        if (tabFromUrl && ['my-groups', 'discover'].includes(tabFromUrl)) {
+        if (tabFromUrl && ['my-groups', 'discover'].includes(tabFromUrl) && tabFromUrl !== activeTab) {
             setActiveTab(tabFromUrl);
         }
-    }, [searchParams]);
+    }, [searchParams, activeTab]);
 
     // Determine which groups to show based on active tab
     // For 'my-groups', show owned groups first

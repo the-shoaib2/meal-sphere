@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import axios from 'axios';
+import { createGroupAction, updateGroupAction, deleteGroupAction, joinGroupAction, leaveGroupAction, updatePeriodModeAction, handleJoinRequestAction, getGroupStatsAction } from '@/lib/actions/group.actions';
 
 type AxiosError<T = any> = {
   response?: {
@@ -59,11 +60,11 @@ interface UseGroupsReturn {
   };
   useGroupDetails: (groupId: string, initialData?: any, password?: string) => UseQueryResult<Group, Error>;
   getGroupDetails: (groupId: string, password?: string) => Promise<Group>;
-  createGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, CreateGroupInput>>;
-  updateGroup: ReturnType<typeof useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>>;
-  joinGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>>;
-  leaveGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, string>>;
-  deleteGroup: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { 
+  createGroup: ReturnType<typeof useMutation<Group, Error, CreateGroupInput>>;
+  updateGroup: ReturnType<typeof useMutation<Group, Error, { groupId: string; data: UpdateGroupInput }>>;
+  joinGroup: ReturnType<typeof useMutation<void, Error, JoinGroupInput>>;
+  leaveGroup: ReturnType<typeof useMutation<void, Error, string>>;
+  deleteGroup: ReturnType<typeof useMutation<void, Error, { groupId: string }, { 
     previousUserGroups: Group[] | undefined;
     previousMyGroups: Group[] | undefined;
     previousPublicGroups: Group[] | undefined;
@@ -74,9 +75,10 @@ interface UseGroupsReturn {
     isLoading: boolean;
     error: Error | null;
   };
-  handleJoinRequest: ReturnType<typeof useMutation<void, AxiosError<{ message: string }>, { groupId: string; requestId: string; action: 'approve' | 'reject' }>>;
+  handleJoinRequest: ReturnType<typeof useMutation<void, Error, { groupId: string; requestId: string; action: 'approve' | 'reject' }>>;
   resetJoinRequestStatus: (groupId: string) => void;
-  updatePeriodMode: ReturnType<typeof useMutation<{ periodMode: string }, AxiosError<{ message: string }>, { groupId: string; mode: 'MONTHLY' | 'CUSTOM' }>>;
+  updatePeriodMode: ReturnType<typeof useMutation<{ periodMode: string }, Error, { groupId: string; mode: 'MONTHLY' | 'CUSTOM' }>>;
+  useGroupStats: (groupId: string, enabled?: boolean) => UseQueryResult<any, Error>;
 }
 
 export function useGroups(): UseGroupsReturn {
@@ -249,10 +251,14 @@ export function useGroups(): UseGroupsReturn {
   };
 
   // Create a new group
-  const createGroup = useMutation<Group, AxiosError<{ message: string }>, CreateGroupInput>({
+  const createGroup = useMutation<Group, Error, CreateGroupInput>({
     mutationFn: async (groupData: CreateGroupInput) => {
-      const { data } = await axios.post<Group>('/api/groups', groupData);
-      return data;
+      const result = await createGroupAction({
+        ...groupData,
+        isPrivate: groupData.isPrivate ?? false
+      });
+      if (!result.success || !result.group) throw new Error(result.message || 'Failed to create group');
+      return result.group as unknown as Group;
     },
     onSuccess: async (data: Group) => {
       // Optimistically add the new group to the cache
@@ -264,27 +270,17 @@ export function useGroups(): UseGroupsReturn {
         queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
       ]);
     },
-    onError: (error: AxiosError<{ message: string }>) => {
+    onError: (error: Error) => {
       console.error('Error creating group:', error);
-      toast.error(error.response?.data?.message || 'Failed to create group');
+      toast.error(error.message || 'Failed to create group');
     },
   });
 
   // Join a group
-  const joinGroup = useMutation<void, AxiosError<{ message: string }>, JoinGroupInput>({
+  const joinGroup = useMutation<void, Error, JoinGroupInput>({
     mutationFn: async ({ groupId, inviteToken, password }) => {
-      if (!groupId && !inviteToken) {
-        throw new Error('Either groupId or inviteToken must be provided');
-      }
-
-      const endpoint = inviteToken
-        ? `/api/groups/join/${inviteToken}`
-        : `/api/groups/${groupId}/join`;
-
-      await axios.post(endpoint, {
-        join: true,
-        password
-      });
+      const result = await joinGroupAction({ groupId, token: inviteToken, password });
+      if (!result.success) throw new Error(result.message || 'Failed to join group');
     },
     onSuccess: async () => {
       // Complete cache invalidation to sync Context and Switcher immediately
@@ -297,19 +293,23 @@ export function useGroups(): UseGroupsReturn {
       router.refresh();
       toast.success('Successfully joined the group!');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error joining group:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to join group';
-      toast.error(errorMessage);
+      toast.error(error.message || 'Failed to join group');
       throw error;
     },
   });
 
   // Update a group
-  const updateGroup = useMutation<Group, AxiosError<{ message: string }>, { groupId: string; data: UpdateGroupInput }>({
+  const updateGroup = useMutation<Group, Error, { groupId: string; data: UpdateGroupInput }>({
     mutationFn: async ({ groupId, data }) => {
-      const { data: updatedGroup } = await axios.patch<Group>(`/api/groups/${groupId}`, data);
-      return updatedGroup;
+      const response = {
+        ...data,
+        maxMembers: data.maxMembers === null ? undefined : data.maxMembers,
+      };
+      const result = await updateGroupAction(groupId, response);
+      if (!result.success || !result.group) throw new Error(result.message || 'Failed to update group');
+      return result.group as unknown as Group;
     },
     onSuccess: async (data: Group) => {
       // Optimistically update the user-groups list
@@ -326,9 +326,9 @@ export function useGroups(): UseGroupsReturn {
         queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
       ]);
     },
-    onError: (error: AxiosError<{ message: string }>) => {
+    onError: (error: Error) => {
       console.error('Error updating group:', error);
-      toast.error(error.response?.data?.message || 'Failed to update group');
+      toast.error(error.message || 'Failed to update group');
     },
   });
 
@@ -339,10 +339,10 @@ export function useGroups(): UseGroupsReturn {
   };
 
   // Leave a group
-  const leaveGroup = useMutation<void, AxiosError<{ message: string }>, string, LeaveGroupContext>({
+  const leaveGroup = useMutation<void, Error, string, LeaveGroupContext>({
     mutationFn: async (groupId: string) => {
-      // Use the proper API endpoint for leaving a group
-      await axios.post(`/api/groups/${groupId}/leave`);
+      const result = await leaveGroupAction(groupId);
+      if (!result.success) throw new Error(result.message || 'Failed to leave group');
     },
     onMutate: async (groupId: string): Promise<LeaveGroupContext> => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
@@ -393,11 +393,10 @@ export function useGroups(): UseGroupsReturn {
 
       toast.success('You have left the group successfully');
     },
-    onError: (error: AxiosError<{ message: string }>, groupId: string, context: LeaveGroupContext | undefined) => {
+    onError: (error: Error, groupId: string, context: LeaveGroupContext | undefined) => {
       console.error('Error leaving group:', error);
 
-      // Handle specific error cases
-      const errorMessage = error.response?.data?.message || 'Failed to leave group';
+      const errorMessage = error.message || 'Failed to leave group';
 
       if (errorMessage.includes('CREATOR_CANNOT_LEAVE')) {
         toast.error('You must transfer the Admin role to another member before leaving the group.');
@@ -424,14 +423,15 @@ export function useGroups(): UseGroupsReturn {
     },
   });
   // Delete group
-  const deleteGroup = useMutation<void, AxiosError<{ message: string }>, { groupId: string }, { 
+  const deleteGroup = useMutation<void, Error, { groupId: string }, { 
     previousUserGroups: Group[] | undefined;
     previousMyGroups: Group[] | undefined;
     previousPublicGroups: Group[] | undefined;
     previousAllGroups: Group[] | undefined;
   }>({
     mutationFn: async ({ groupId }) => {
-      await axios.delete(`/api/groups/${groupId}`);
+      const result = await deleteGroupAction(groupId);
+      if (!result.success) throw new Error(result.message || 'Failed to delete group');
     },
     onMutate: async ({ groupId }) => {
       // Cancel any outgoing refetches
@@ -478,7 +478,7 @@ export function useGroups(): UseGroupsReturn {
       ]);
       router.push('/groups');
     },
-    onError: (error: AxiosError<{ message: string }>, variables, context) => {
+    onError: (error: Error, variables, context) => {
       console.error('Error deleting group:', error);
       // Rollback on error
       if (context?.previousUserGroups) {
@@ -493,7 +493,7 @@ export function useGroups(): UseGroupsReturn {
       if (context?.previousAllGroups) {
         queryClient.setQueryData(['groups', 'all'], context.previousAllGroups);
       }
-      toast.error(error.response?.data?.message || 'Failed to delete group');
+      toast.error(error.message || 'Failed to delete group');
     },
     onSettled: () => {
       // Only refetch user-groups to keep the session context somewhat fresh, 
@@ -529,17 +529,18 @@ export function useGroups(): UseGroupsReturn {
   };
 
   // Handle join request
-  const handleJoinRequest = useMutation<void, AxiosError<{ message: string }>, { groupId: string; requestId: string; action: 'approve' | 'reject' }>({
+  const handleJoinRequest = useMutation<void, Error, { groupId: string; requestId: string; action: 'approve' | 'reject' }>({
     mutationFn: async ({ groupId, requestId, action }) => {
-      await axios.patch(`/api/groups/${groupId}/join-request/${requestId}`, { action });
+      const result = await handleJoinRequestAction(groupId, requestId, action);
+      if (!result.success) throw new Error(result.message || 'Failed to handle join request');
     },
     onSuccess: (_, { groupId }) => {
       queryClient.invalidateQueries({ queryKey: ['join-requests', groupId] });
       toast.success('Join request handled successfully');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error handling join request:', error);
-      toast.error(error.response?.data?.message || 'Failed to handle join request');
+      toast.error(error.message || 'Failed to handle join request');
     },
   });
 
@@ -557,10 +558,11 @@ export function useGroups(): UseGroupsReturn {
   }, [queryClient]);
 
   // Update Period Mode
-  const updatePeriodMode = useMutation<{ periodMode: string }, AxiosError<{ message: string }>, { groupId: string; mode: 'MONTHLY' | 'CUSTOM' }>({
+  const updatePeriodMode = useMutation<{ periodMode: string }, Error, { groupId: string; mode: 'MONTHLY' | 'CUSTOM' }>({
     mutationFn: async ({ groupId, mode }) => {
-      const { data } = await axios.patch(`/api/groups/${groupId}/period-mode`, { mode });
-      return data;
+      const result = await updatePeriodModeAction(groupId, { mode });
+      if (!result.success || !result.periodMode) throw new Error(result.message || 'Failed to update period mode');
+      return { periodMode: result.periodMode };
     },
     onSuccess: (data, { groupId }) => {
         // Invalidate group details to reflect mode change
@@ -568,11 +570,26 @@ export function useGroups(): UseGroupsReturn {
         
         // toast.success(`Period mode updated to ${data.periodMode}`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
         console.error('Error updating period mode:', error);
-        toast.error(error.response?.data?.message || 'Failed to update period mode');
+        toast.error(error.message || 'Failed to update period mode');
     }
   });
+
+  // Fetch Group Stats (Deduplicated with React Query)
+  const useGroupStats = (groupId: string, enabled: boolean = true) => {
+    return useQuery({
+      queryKey: ['group-stats', groupId],
+      queryFn: async () => {
+        const result = await getGroupStatsAction(groupId);
+        if (!result.success) throw new Error(result.message || 'Failed to fetch group stats');
+        return result.stats;
+      },
+      enabled: !!groupId && enabled,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000,
+    });
+  };
 
   return {
     data: userGroups,
@@ -590,6 +607,7 @@ export function useGroups(): UseGroupsReturn {
     handleJoinRequest,
     resetJoinRequestStatus,
     updatePeriodMode,
+    useGroupStats,
   };
 }
 

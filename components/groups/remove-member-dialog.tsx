@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { removeMemberAction } from '@/lib/actions/group.actions';
 
 interface RemoveMemberDialogProps {
   isOpen: boolean;
@@ -41,12 +42,11 @@ export function RemoveMemberDialog({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/groups/${groupId}/members/${member.id}`, {
-        method: 'DELETE',
-      });
+      // Ensure we use the userId for targeting the member
+      const result = await removeMemberAction(groupId, member.userId);
 
-      if (!response.ok) {
-        throw new Error('Failed to remove member');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to remove member');
       }
 
       toast({

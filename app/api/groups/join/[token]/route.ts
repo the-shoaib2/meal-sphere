@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
+import { joinGroup } from '@/lib/services/groups-service';
 
 export async function GET(
   request: NextRequest,
@@ -151,181 +152,60 @@ export async function POST(
 
     const { token } = await context.params;
 
-    // Find the invite token
-    const inviteToken = await prisma.inviteToken.findUnique({
+    // Find the invite token to get the groupId
+    const invite = await prisma.inviteToken.findUnique({
       where: { token },
       include: {
-        room: {
-          include: {
-            members: {
-              where: {
-                userId: session.user.id
-              }
-            }
-          }
-        },
-        createdByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
+        room: true
       }
     });
 
-    if (!inviteToken) {
+    if (!invite) {
       return NextResponse.json(
-        { 
-          success: false,
-          error: 'Invalid or expired invite token' 
-        },
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        }
+        { success: false, error: 'Invalid or expired invite token' },
+        { status: 404 }
       );
     }
 
-    // Check if the token is expired
-    if (inviteToken.expiresAt && inviteToken.expiresAt < new Date()) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Invite token has expired' 
-        },
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
+    try {
+      // Use the unified joinGroup service which handles notifications, counts, and validation
+      const result = await joinGroup(invite.roomId, session.user.id, undefined, token);
 
-    // Check if user is already a member
-    if (inviteToken.room.members.length > 0) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'You are already a member of this group' 
-        },
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // Check if group is full
-    const currentMemberCount = await prisma.roomMember.count({
-      where: { roomId: inviteToken.roomId }
-    });
-
-    if (inviteToken.room.maxMembers && currentMemberCount >= inviteToken.room.maxMembers) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Group is full. Cannot join at this time.' 
-        },
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    // For private groups, require join request instead of direct joining
-    if (inviteToken.room.isPrivate) {
-      // Check if user already has a pending request
-      const existingRequest = await prisma.joinRequest.findFirst({
-        where: {
-          roomId: inviteToken.roomId,
-          userId: session.user.id,
-          status: 'PENDING'
-        }
-      });
-
-      if (existingRequest) {
-        return NextResponse.json(
-          { 
-            success: false,
-            error: 'You already have a pending join request for this group' 
-          },
-          { 
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
+      if (result.requestCreated) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            groupId: invite.roomId,
+            message: 'Join request sent successfully. Waiting for admin approval.',
+            joinRequest: true,
+            isPrivate: true
           }
-        );
+        });
       }
-
-      // Create or update join request for private group using upsert
-      const joinRequest = await prisma.joinRequest.upsert({
-        where: {
-          userId_roomId: {
-            userId: session.user.id,
-            roomId: inviteToken.roomId
-          }
-        },
-        update: {
-          status: 'PENDING',
-          message: `Invited via token by ${inviteToken.createdByUser?.name || 'an admin'}`,
-          updatedAt: new Date()
-        },
-        create: {
-          roomId: inviteToken.roomId,
-          userId: session.user.id,
-          message: `Invited via token by ${inviteToken.createdByUser?.name || 'an admin'}`,
-          status: 'PENDING'
-        }
-      });
 
       return NextResponse.json({
         success: true,
         data: {
-          groupId: inviteToken.roomId,
-          message: 'Join request sent successfully. Waiting for admin approval.',
-          joinRequest: true,
-          isPrivate: true
+          groupId: invite.roomId,
+          message: 'Successfully joined the group'
         }
-      }, {
-        headers: { 'Content-Type': 'application/json' }
       });
+    } catch (error: any) {
+      // Map service errors to appropriate HTTP responses
+      const errorMessage = error.message || 'Failed to join group';
+      
+      if (errorMessage.includes('has expired')) {
+         return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
+      }
+      if (errorMessage.includes('Already a member')) {
+         return NextResponse.json({ success: false, error: 'You are already a member of this group' }, { status: 400 });
+      }
+      if (errorMessage.includes('full')) {
+         return NextResponse.json({ success: false, error: 'Group is full. Cannot join at this time.' }, { status: 400 });
+      }
+
+      throw error; // Let the outer catch handle it
     }
-
-    // For public groups, allow direct joining
-    await prisma.roomMember.create({
-      data: {
-        roomId: inviteToken.roomId,
-        userId: session.user.id,
-        role: inviteToken.role
-      }
-    });
-
-    // CRITICAL: Update memberCount sync
-    const newCount = await prisma.roomMember.count({
-      where: { roomId: inviteToken.roomId }
-    });
-    
-    await prisma.room.update({
-      where: { id: inviteToken.roomId },
-      data: { memberCount: newCount }
-    });
-
-
-
-
-    // Note: We don't delete the invite token anymore to allow multiple joins
-    // The token will only be invalidated when it expires
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        groupId: inviteToken.roomId,
-        message: 'Successfully joined the group'
-      }
-    }, {
-      headers: { 'Content-Type': 'application/json' }
-    });
   } catch (error) {
     console.error('Error in join token route:', error);
     return NextResponse.json(
@@ -334,10 +214,7 @@ export async function POST(
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
+      { status: 500 }
     );
   }
-} 
+}

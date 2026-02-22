@@ -7,7 +7,11 @@ import { PageHeader } from '@/components/shared/page-header';
 
 export const dynamic = 'force-dynamic';
 
-export default async function GroupsPage() {
+export default async function GroupsPage(props: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const initialTab = searchParams.tab || 'my-groups';
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
@@ -24,7 +28,7 @@ export default async function GroupsPage() {
         description="Join or create groups to plan meals together."
       />
 
-      <GroupsView initialData={data} />
+      <GroupsView initialData={data} initialTab={initialTab} />
     </div>
   );
 }

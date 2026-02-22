@@ -19,37 +19,25 @@ export default async function GroupPage(props: {
   const groupId = params.id;
   const tab = typeof searchParams.tab === 'string' ? searchParams.tab : undefined;
 
-  // 1. Validate Access (Standardized)
-  const { success, authResult, error, status } = await validateGroupAccess(groupId);
+  // 1. Initial Access & Data Fetching (Optimized Parallelization)
+  // We fetch everything in parallel. Security checks are performed AFTER data is retrieved
+  // to avoid waterfalls. fetchGroupDetails already includes membership info.
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) redirect('/login');
 
-  if (!success || !authResult) {
-    if (status === 401) redirect('/login');
-    // If 403 (Not a member), allow them to see the "Join" page or "Not Found" state
-    // But wait, the existing logic redirects to join page if specific error.
-    if (error === "Not a member of this private group") {
-      redirect(`/groups/join/${groupId}`);
-    }
+  const userId = session.user.id;
 
-    // Generic 403/404 state
-    return (
-      <div className="space-y-2 p-4">
-        <div>
-          <PageHeader
-            heading="Access Denied"
-            text={error || "You do not have permission to view this group."}
-          />
-        </div>
-        <NoGroupState />
-      </div>
-    );
-  }
+  const [groupData, votes, joinRequestsRaw, inviteTokensResult] = await Promise.all([
+    fetchGroupDetails(groupId, userId),
+    getVotes(groupId),
+    // We fetch these regardless, access is checked before passing to client
+    fetchGroupRequests(groupId),
+    fetchGroupInviteTokens(groupId, userId)
+  ]);
 
-  // 2. Fetch Data (Optimized & Secure)
-  // We use the authResult to avoid re-fetching membership, but we still need full group details.
-  // We pass authResult.userId to fetchGroupDetails to get the sanitized view.
-  const groupData = await fetchGroupDetails(groupId, authResult.userId!);
-  const { group } = groupData || { group: null };
+  const { group, userMembership } = groupData || { group: null, userMembership: null };
 
+  // 2. Security & Redirection Logic
   if (!group) {
     return (
       <div className="space-y-2 p-4">
@@ -58,18 +46,32 @@ export default async function GroupPage(props: {
     );
   }
 
-  const isAdmin = authResult.isAdmin;
+  const isMember = !!userMembership && !userMembership.isBanned;
+  const isAdmin = userMembership?.role === 'ADMIN' || userMembership?.role === 'MANAGER';
+  const isCreator = group.createdById === userId;
 
-  // 3. Admin-Only Data (Strictly Conditional)
-  const [joinRequests, inviteTokensResult] = await Promise.all([
-    isAdmin ? fetchGroupRequests(groupId) : Promise.resolve([]),
-    isAdmin ? fetchGroupInviteTokens(groupId, authResult.userId!) : Promise.resolve({ data: [] })
-  ]);
+  if (group.isPrivate && !isMember) {
+    redirect(`/groups/join/${groupId}`);
+  }
+
+  // Determine userRole for GroupPageContent
+  const userRole = userMembership?.role || null;
+
+  // Reconstruct authResult for GroupPageContent compatibility
+  const authResult = {
+    isAuthenticated: true,
+    isMember,
+    userRole,
+    canAccess: isMember || !group.isPrivate,
+    isAdmin,
+    isCreator,
+    groupId,
+    userId,
+    features: group.features as Record<string, boolean>
+  };
 
   const inviteTokens = inviteTokensResult.data || [];
-
-  // 4. Voting Data (Cached)
-  const votes = await getVotes(groupId);
+  const joinRequests = isAdmin ? joinRequestsRaw : [];
 
   return (
     <GroupPageContent

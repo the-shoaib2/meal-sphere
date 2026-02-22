@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useActiveGroup } from '@/contexts/group-context';
+import { 
+  createShoppingItemAction, 
+  updateShoppingItemAction, 
+  deleteShoppingItemAction, 
+  clearPurchasedShoppingItemsAction 
+} from '@/lib/actions/shopping.actions';
 
 export interface ShoppingItem {
   id: string;
@@ -125,12 +131,11 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
       formData.append('amount', (newItem.quantity || 0).toString());
       formData.append('date', new Date().toISOString());
 
-      const { data } = await axios.post<ShoppingItem>('/api/shopping', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return data;
+      const result = await createShoppingItemAction(formData);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to add item');
+      }
+      return result.shoppingItem as unknown as ShoppingItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
@@ -141,10 +146,11 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
   const updateItem = useMutation<ShoppingItem, Error, UpdateShoppingItemInput>({
     mutationFn: async (updatedItem): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
-      const { data } = await axios.patch<ShoppingItem>(`/api/shopping?id=${updatedItem.id}&groupId=${groupId}`, {
-        ...updatedItem,
-      });
-      return data;
+      const result = await updateShoppingItemAction(updatedItem.id, groupId, updatedItem);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update item');
+      }
+      return result.shoppingItem as unknown as ShoppingItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
@@ -155,16 +161,11 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
   const togglePurchased = useMutation<ShoppingItem, Error, { id: string; purchased: boolean }>({
     mutationFn: async ({ id, purchased }): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
-      const { data } = await axios.patch<ShoppingItem>(
-        '/api/shopping',
-        { id, purchased },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      return data;
+      const result = await updateShoppingItemAction(id, groupId, { purchased });
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to toggle item');
+      }
+      return result.shoppingItem as unknown as ShoppingItem;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
@@ -175,7 +176,10 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
   const deleteItem = useMutation<void, Error, string>({
     mutationFn: async (itemId) => {
       if (!groupId) throw new Error('No active group selected');
-      await axios.delete(`/api/shopping?id=${itemId}&groupId=${groupId}`);
+      const result = await deleteShoppingItemAction(itemId, groupId);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to delete item');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
@@ -186,7 +190,10 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
   const clearPurchased = useMutation<void, Error>({
     mutationFn: async () => {
       if (!groupId) throw new Error('No active group selected');
-      await axios.delete(`/api/shopping/clear-purchased?groupId=${groupId}`);
+      const result = await clearPurchasedShoppingItemsAction(groupId);
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to clear items');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });

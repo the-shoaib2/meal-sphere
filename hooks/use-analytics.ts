@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import { useActiveGroup } from '@/contexts/group-context';
+import { 
+  getUserRoomsAction, 
+  getAnalyticsAction, 
+  getSelectedRoomsAnalyticsAction, 
+  getRoomAnalyticsAction, 
+  getAllRoomsAnalyticsAction 
+} from '@/lib/actions/analytics.actions';
 
 export interface AnalyticsData {
   meals: MealData[];
@@ -128,8 +134,7 @@ export function useUserRooms() {
       }
 
       try {
-        const { data } = await axios.get<UserRoom[]>('/api/analytics/user-rooms');
-        return data;
+        return await getUserRoomsAction();
       } catch (error) {
         console.error('Error fetching user rooms:', error);
         throw new Error('Failed to fetch user rooms');
@@ -154,12 +159,7 @@ export function useAnalytics() {
       }
 
       try {
-        const { data } = await axios.get<AnalyticsData>('/api/analytics', {
-          params: {
-            groupId: activeGroup?.id || 'all'
-          }
-        });
-        return data;
+        return await getAnalyticsAction(activeGroup?.id || 'all') as unknown as AnalyticsData;
       } catch (error) {
         console.error('Error fetching analytics data:', error);
         throw new Error('Failed to fetch analytics data');
@@ -183,12 +183,7 @@ export function useSelectedRoomsAnalytics(selectedRoomIds: string[], options?: {
       }
 
       try {
-        const { data } = await axios.get<AnalyticsData>('/api/analytics/selected-rooms', {
-          params: {
-            roomIds: selectedRoomIds.join(',')
-          }
-        });
-        return data;
+        return await getSelectedRoomsAnalyticsAction(selectedRoomIds.join(',')) as unknown as AnalyticsData;
       } catch (error) {
         console.error('Error fetching selected rooms analytics data:', error);
         throw new Error('Failed to fetch selected rooms analytics data');
@@ -211,8 +206,7 @@ export function useRoomAnalytics(roomId?: string) {
       }
 
       try {
-        const { data } = await axios.get<AnalyticsData>(`/api/analytics/room/${roomId}`);
-        return data;
+        return await getRoomAnalyticsAction(roomId) as unknown as AnalyticsData;
       } catch (error) {
         console.error('Error fetching room analytics data:', error);
         throw new Error('Failed to fetch room analytics data');
@@ -235,8 +229,7 @@ export function useAllRoomsAnalytics() {
       }
 
       try {
-        const { data } = await axios.get<AnalyticsData>('/api/analytics/all-rooms');
-        return data;
+        return await getAllRoomsAnalyticsAction() as unknown as AnalyticsData;
       } catch (error) {
         console.error('Error fetching all rooms analytics data:', error);
         throw new Error('Failed to fetch all rooms analytics data');

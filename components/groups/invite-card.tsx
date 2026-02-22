@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { generateGroupInviteAction, sendGroupInvitationsAction } from "@/lib/actions/group.actions";
 
 
 interface InviteTokenData {
@@ -156,24 +157,20 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
       const expiryTime = activeTab === 'custom' ? customExpiry : expiresInDays;
 
       // Replacing API call with Server Action
-      const response = await fetch(`/api/groups/${groupId}/invites/link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: selectedRole }) // Default role or selected
-      });
+      const data = await generateGroupInviteAction(groupId, selectedRole, expiryTime);
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to generate link');
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to generate link');
       }
 
-      const data = await response.json();
+      const invite = data.inviteLink as any;
+      if (!invite) throw new Error('Failed to generate link');
 
       setInviteToken({
-        token: data.token,
-        expiresAt: data.expiresAt,
-        role: data.role,
-        inviteUrl: data.url
+        token: invite.token,
+        expiresAt: invite.expiresAt,
+        role: invite.role,
+        inviteUrl: invite.url
       });
 
       uiToast({
@@ -263,26 +260,16 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
       setInviteStatus(null);
 
       // Sending via Server Action
-      const response = await fetch(`/api/groups/${group.id}/invites/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emails,
-          role: 'MEMBER'
-        })
-      });
+      const data = await sendGroupInvitationsAction(group.id, emails, 'MEMBER');
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to send invitations');
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to send invitations');
       }
-
-      const data = await response.json();
 
       setInviteStatus({
         success: true,
-        message: data.message,
-        details: data.skipped
+        message: data.message || 'Invitations sent successfully',
+        details: (data as any).skipped
       });
 
       uiToast({
@@ -291,10 +278,10 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
       });
 
       // Only clear emails that were successfully sent
-      if (data.invitations?.length > 0) {
+      if ((data as any).invitations?.length > 0) {
         setEmails(emails.filter(email =>
-          data.skipped?.existingMembers.includes(email) ||
-          data.skipped?.pendingInvitations.includes(email)
+          (data as any).skipped?.existingMembers.includes(email) ||
+          (data as any).skipped?.pendingInvitations.includes(email)
         ));
       }
       setCurrentEmail('');
@@ -360,10 +347,10 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-auto p-1">
-              <TabsTrigger value="link" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Invite Link</TabsTrigger>
-              <TabsTrigger value="custom" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Custom Invite</TabsTrigger>
-              <TabsTrigger value="email" className="text-xs sm:text-sm py-2 px-1 sm:px-3">Email Invite</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-auto ">
+              <TabsTrigger value="link" >Invite Link</TabsTrigger>
+              <TabsTrigger value="custom" >Custom Invite</TabsTrigger>
+              <TabsTrigger value="email" >Email Invite</TabsTrigger>
             </TabsList>
 
             <TabsContent value="link" className="space-y-6 pt-4">
@@ -736,7 +723,7 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
 
                 <Button
                   type="submit"
-                  className="w-full h-11 font-bold rounded-xl shadow-sm"
+                  className="w-full left-0 md:left-auto md:w-auto font-bold"
                   disabled={isGenerating || emails.length === 0}
                 >
                   {isGenerating ? (

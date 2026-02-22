@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { X, Plus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { GROUP_FEATURES, GROUP_CATEGORIES, GROUP_TAGS, type GroupCategory, type GroupTag } from '@/lib/utils/features';
+import { updateGroupAction } from '@/lib/actions/group.actions';
+import { useGroups } from '@/hooks/use-groups';
 
 interface GroupFeaturesProps {
   groupId: string;
@@ -19,24 +21,14 @@ export function GroupFeatures({ groupId, isAdmin }: GroupFeaturesProps) {
   const queryClient = useQueryClient();
   const [selectedTags, setSelectedTags] = useState<GroupTag[]>([]);
 
-  const { data: group, isLoading } = useQuery({
-    queryKey: ['group', groupId],
-    queryFn: async () => {
-      const response = await fetch(`/api/groups/${groupId}`);
-      if (!response.ok) throw new Error('Failed to fetch group');
-      return response.json();
-    }
-  });
+  const { useGroupDetails } = useGroups();
+  const { data: group, isLoading } = useGroupDetails(groupId);
 
   const updateFeaturesMutation = useMutation({
     mutationFn: async (features: Record<string, boolean>) => {
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ features })
-      });
-      if (!response.ok) throw new Error('Failed to update features');
-      return response.json();
+      const result = await updateGroupAction(groupId, { features });
+      if (!result.success) throw new Error(result.message || 'Failed to update features');
+      return result.group;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
@@ -49,13 +41,9 @@ export function GroupFeatures({ groupId, isAdmin }: GroupFeaturesProps) {
 
   const updateCategoryMutation = useMutation({
     mutationFn: async (category: GroupCategory) => {
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category })
-      });
-      if (!response.ok) throw new Error('Failed to update category');
-      return response.json();
+      const result = await updateGroupAction(groupId, { category });
+      if (!result.success) throw new Error(result.message || 'Failed to update category');
+      return result.group;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
@@ -68,13 +56,9 @@ export function GroupFeatures({ groupId, isAdmin }: GroupFeaturesProps) {
 
   const updateTagsMutation = useMutation({
     mutationFn: async (tags: GroupTag[]) => {
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tags })
-      });
-      if (!response.ok) throw new Error('Failed to update tags');
-      return response.json();
+      const result = await updateGroupAction(groupId, { tags });
+      if (!result.success) throw new Error(result.message || 'Failed to update tags');
+      return result.group;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
@@ -85,13 +69,13 @@ export function GroupFeatures({ groupId, isAdmin }: GroupFeaturesProps) {
     }
   });
 
-  if (isLoading) {
+  if (isLoading || !group) {
     return <div>Loading...</div>;
   }
 
-  const features = group.features || {};
+  const features = (group.features as Record<string, boolean>) || {};
   const category = group.category as GroupCategory;
-  const tags = group.tags as GroupTag[] || [];
+  const tags = (group.tags as GroupTag[]) || [];
 
   return (
     <div className="space-y-6">

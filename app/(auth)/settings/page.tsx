@@ -49,7 +49,6 @@ export default async function SettingsPage() {
         <PrivacyForm user={user} />
         <AppearanceForm user={user} />
         <EmailVerificationCard user={user} />
-        <EmailVerificationCard user={user} />
         <ActiveSessionsCard user={user} initialSessions={activeSessions} />
         <NotificationsSettingsCard />
       </div>

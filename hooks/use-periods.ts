@@ -5,9 +5,14 @@ import { toast } from 'react-hot-toast';
 import { useActiveGroup } from '@/contexts/group-context';
 import { usePeriodContext } from '@/contexts/period-context';
 import { PeriodStatus } from '@prisma/client';
-// Actions import removed
-
-
+import { 
+  createPeriodAction, 
+  endPeriodAction, 
+  lockPeriodAction, 
+  unlockPeriodAction, 
+  archivePeriodAction, 
+  restartPeriodAction 
+} from '@/lib/actions/period.actions';
 export interface CreatePeriodData {
   name: string;
   startDate: Date;
@@ -245,23 +250,12 @@ export function useStartPeriod() {
         throw new Error('No active group selected');
       }
       
-      const response = await fetch('/api/periods', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          groupId: activeGroup.id
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start period');
+      const result = await createPeriodAction(activeGroup.id, data);
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to start period');
       }
 
-      const result = await response.json();
       return result;
     },
     onMutate: async (data: CreatePeriodData) => {
@@ -444,22 +438,13 @@ export function useEndPeriod() {
         throw new Error('No active group selected');
       }
       
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'end', 
-          endDate, 
-          groupId: activeGroup.id 
-        })
-      });
+      const result = await endPeriodAction(activeGroup.id, periodId, endDate);
 
-      if (!response.ok) {
-         const result = await response.json();
-         throw new Error(result.error || 'Failed to end period');
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to end period');
       }
 
-      return await response.json();
+      return result;
     },
 
     onMutate: async ({ periodId, endDate }) => {
@@ -527,21 +512,13 @@ export function useLockPeriod() {
         throw new Error('No active group selected');
       }
       
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'lock', 
-          groupId: activeGroup.id 
-        })
-      });
+      const result = await lockPeriodAction(activeGroup.id, periodId);
 
-      if (!response.ok) {
-         const result = await response.json();
-         throw new Error(result.error || 'Failed to lock period');
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to lock period');
       }
 
-      return await response.json();
+      return result;
     },
 
     onMutate: async (periodId) => {
@@ -609,22 +586,13 @@ export function useUnlockPeriod() {
         throw new Error('No active group selected');
       }
       
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'unlock', 
-          status,
-          groupId: activeGroup.id 
-        })
-      });
+      const result = await unlockPeriodAction(activeGroup.id, periodId, status);
 
-      if (!response.ok) {
-         const result = await response.json();
-         throw new Error(result.error || 'Failed to unlock period');
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to unlock period');
       }
 
-      return await response.json();
+      return result;
     },
 
     onMutate: async ({ periodId, status }) => {
@@ -692,21 +660,13 @@ export function useArchivePeriod() {
         throw new Error('No active group selected');
       }
       
-      const response = await fetch(`/api/periods/${periodId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'archive', 
-          groupId: activeGroup.id 
-        })
-      });
+      const result = await archivePeriodAction(activeGroup.id, periodId);
 
-      if (!response.ok) {
-         const result = await response.json();
-         throw new Error(result.error || 'Failed to archive period');
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to archive period');
       }
 
-      return await response.json();
+      return result;
     },
 
     onMutate: async (periodId) => {
@@ -773,22 +733,13 @@ export function useRestartPeriod() {
         throw new Error('No active group selected');
       }
 
-      const response = await fetch(`/api/periods/${periodId}/restart?groupId=${activeGroup.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          newName, 
-          withData 
-        })
-      });
+      const result = await restartPeriodAction(activeGroup.id, periodId, newName, withData);
 
-      if (!response.ok) {
-         const result = await response.json();
-         throw new Error(result.error || 'Failed to restart period');
+      if (!result.success) {
+         throw new Error(result.message || 'Failed to restart period');
       }
 
-      const data = await response.json();
-      return data.period;
+      return result.period;
     },
 
     onMutate: async ({ periodId, newName }) => {

@@ -29,6 +29,7 @@ import {
   getCurrentSessionTokenFromBrowser,
   isCurrentSession
 } from "@/lib/auth/utils"
+import { updateUserPassword, sendUserVerificationEmail } from "@/lib/actions/user.actions"
 
 const passwordFormSchema = z
   .object({
@@ -269,17 +270,9 @@ export function SecurityForm({ user }: SecurityFormProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/user/password", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to update password")
+      const result = await updateUserPassword(data)
+      if (!result.success) {
+        throw new Error(result.message || "Failed to update password")
       }
 
       toast.success("Password updated successfully")
@@ -292,16 +285,13 @@ export function SecurityForm({ user }: SecurityFormProps) {
     }
   }
 
-  async function sendVerificationEmail() {
+  async function handleSendVerificationEmail() {
     setIsVerifying(true)
 
     try {
-      const response = await fetch("/api/user/verify-email", {
-        method: "POST",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to send verification email")
+      const result = await sendUserVerificationEmail()
+      if (!result.success) {
+        throw new Error(result.message || "Failed to send verification email")
       }
 
       toast.success("Verification email sent successfully")
@@ -360,7 +350,7 @@ export function SecurityForm({ user }: SecurityFormProps) {
                   Please verify your email address to secure your account.
                 </AlertDescription>
               </Alert>
-              <Button onClick={sendVerificationEmail} disabled={isVerifying} className="w-full sm:w-auto">
+              <Button onClick={handleSendVerificationEmail} disabled={isVerifying} className="w-full sm:w-auto">
                 {isVerifying ? "Sending..." : "Send Verification Email"}
               </Button>
             </div>

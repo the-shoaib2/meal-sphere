@@ -89,14 +89,17 @@ export function GroupPageContent(
 
     const handleTabChange = (value: string) => {
         setActiveTab(value);
-        // Correctly handle both URLSearchParams (client-side) and plain object (server-side)
-        const params = new URLSearchParams(
-            typeof searchParams?.get === 'function'
-                ? searchParams.toString()
-                : (searchParams as any)
-        );
+
+        // Soft Navigation: Update URL without full RSC re-render
+        // This makes tab switching feel instant because we already have the data
+        const params = new URLSearchParams(window.location.search);
         params.set('tab', value);
-        router.push(`/groups/${groupId}?${params.toString()}`, { scroll: false });
+
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.pushState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+
+        // Optional: If we want to notify Next.js router of the change without a full request
+        // router.refresh(); // Only if we need to sync server state
     };
 
     const { isMember, isAdmin, userRole, isCreator } = initialAccessData;
@@ -296,6 +299,7 @@ export function GroupPageContent(
                                 isAdmin={isAdmin}
                                 isCreator={isCreator}
                                 onUpdate={() => refetch()}
+                                isActive={displayActiveTab === 'settings'}
                             />
                         </TabsContent>
 

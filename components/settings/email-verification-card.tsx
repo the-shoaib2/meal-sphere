@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2, AlertCircle } from "lucide-react"
 import { toast } from "react-hot-toast"
+import { sendUserVerificationEmail } from "@/lib/actions/user.actions"
 
 interface EmailVerificationCardProps {
     user: User
@@ -19,12 +20,9 @@ export function EmailVerificationCard({ user }: EmailVerificationCardProps) {
         setIsVerifying(true)
 
         try {
-            const response = await fetch("/api/user/verify-email", {
-                method: "POST",
-            })
-
-            if (!response.ok) {
-                throw new Error("Failed to send verification email")
+            const result = await sendUserVerificationEmail()
+            if (!result.success) {
+                throw new Error(result.message || "Failed to send verification email")
             }
 
             toast.success("Verification email sent successfully")

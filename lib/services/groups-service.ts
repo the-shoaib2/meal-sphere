@@ -378,6 +378,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
             createdByUser: sanitizedCreator,
             members: sanitizedMembers
         },
+        userMembership,
         timestamp: new Date().toISOString(),
         executionTime: performance.now() - start
       });

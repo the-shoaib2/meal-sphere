@@ -23,6 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { updateUserProfile } from "@/lib/actions/user.actions"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -74,16 +75,9 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to update profile")
+      const result = await updateUserProfile(data)
+      if (!result.success) {
+        throw new Error(result.message || "Failed to update profile")
       }
 
       toast.success("Profile updated successfully")

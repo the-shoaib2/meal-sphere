@@ -18,11 +18,11 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 // import { useGroups } from '@/hooks/use-groups';
-import { InviteCard } from '../invite-card';
+import { InviteCard } from '@/components/groups/invite-card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { UserProfileDialog } from '../user-profile-dialog';
-import { ChangeRoleDialog } from '../change-role-dialog';
-import { RemoveMemberDialog } from '../remove-member-dialog';
+import { UserProfileDialog } from '@/components/groups/user-profile-dialog';
+import { ChangeRoleDialog } from '@/components/groups/change-role-dialog';
+import { RemoveMemberDialog } from '@/components/groups/remove-member-dialog';
 
 interface Member {
   id: string;

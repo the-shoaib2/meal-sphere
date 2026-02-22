@@ -135,7 +135,7 @@ export async function getVotes(roomId: string) {
   return cachedFn();
 }
 
-async function updateVoteStatus(voteId: string, isActive: boolean) {
+export async function updateVoteStatus(voteId: string, isActive: boolean) {
   const vote = await prisma.vote.update({
     where: { id: voteId },
     data: { isActive },

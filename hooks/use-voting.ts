@@ -4,37 +4,14 @@ import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { assertOnline } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from "axios";
+import { 
+  createVoteAction, 
+  castVoteAction, 
+  deleteVoteAction, 
+  updateVoteAction 
+} from "@/lib/actions/vote.actions";
 
-export interface Candidate {
-  id: string;
-  name: string;
-  image?: string;
-}
-
-export interface Voter {
-  id: string;
-  name: string;
-  image?: string;
-}
-
-export interface Vote {
-  id: string;
-  title: string;
-  description?: string;
-  type: string;
-  isActive: boolean;
-  startDate?: string;
-  endDate?: string;
-  options: Candidate[];
-  results: Record<string, Voter[]>;
-  winner?: Candidate;
-  totalVotes?: number;
-}
-
-type VotesResponse = { votes: Vote[] };
-type CreateVoteResponse = { success: boolean; data: Vote };
-type CastVoteResponse = { success: boolean; data: Vote };
+import { Vote, Candidate, Voter } from "@/components/groups/voting/types";
 
 export function useVoting(options?: {
   groupId?: string;
@@ -48,52 +25,48 @@ export function useVoting(options?: {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch all votes using React Query
+  // Fetch all votes remains somewhat standard for GET if not using server components exclusively
+  // But for better performance, we already pass initialVotes from server
   const { data: votesData, isLoading: initialLoading } = useQuery<Vote[]>({
     queryKey: ['votes', groupId],
     queryFn: async () => {
       assertOnline();
       if (!groupId) return [];
 
-      const res = await axios.get<VotesResponse>(`/api/groups/${groupId}/votes`, {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        params: { _t: new Date().getTime() }
-      });
-      return res.data.votes || [];
+      // Still using API for GET list if not refreshed via Server Actions revalidation
+      // But we can also use a Server Action for GET if we want.
+      // For now, let's keep GET as is or use the cached server-side votes.
+      const res = await fetch(`/api/groups/${groupId}/votes?_t=${Date.now()}`);
+      const data = await res.json();
+      return data.votes || [];
     },
     enabled: !!groupId,
     initialData: options?.initialVotes,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, 
     refetchOnWindowFocus: false,
-    refetchInterval: 60000, // Refetch every minute to check for expired votes
-    select: (votes) => votes, // Can add transformation here if needed
+    refetchInterval: 60000,
   });
 
-  // Separate active and past votes using useMemo equivalent
   const activeVotes = votesData?.filter((v) => v?.isActive) || [];
   const pastVotes = votesData?.filter((v) => v && !v.isActive) || [];
 
   // Create vote mutation
   const createVoteMutation = useMutation({
-    mutationFn: async (voteData: Partial<Vote> & { candidates: Candidate[]; startDate?: string; endDate?: string }) => {
+    mutationFn: async (voteData: any) => {
       assertOnline();
       if (!groupId) throw new Error('No active group');
-
-      const res = await axios.post<CreateVoteResponse>(`/api/groups/${groupId}/votes`, voteData);
-      return res.data.data;
+      const result: any = await createVoteAction(groupId, voteData);
+      if (!result.success) throw new Error(result.message || 'Failed to create vote');
+      return result.data;
     },
     onSuccess: (newVote) => {
-      // Optimistically update the cache
       queryClient.setQueryData<Vote[]>(['votes', groupId], (old = []) => [newVote, ...old]);
+      toast({ title: "Vote created", description: "The vote was successfully started." });
     },
     onError: (error: any) => {
       toast({
         title: "Failed to create vote",
-        description: error?.response?.data?.error || 'Failed to create vote.',
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -104,40 +77,43 @@ export function useVoting(options?: {
     mutationFn: async ({ voteId, candidateId }: { voteId: string; candidateId: string }) => {
       assertOnline();
       if (!groupId || !userId) throw new Error('Missing required data');
-
-      const res = await axios.patch<CastVoteResponse>(
-        `/api/groups/${groupId}/votes`,
-        { voteId, candidateId, userId }
-      );
-      return res.data.data;
+      const result: any = await castVoteAction(groupId, voteId, candidateId);
+      if (!result.success) throw new Error(result.message || 'Failed to cast vote');
+      return result.data;
     },
-    onSuccess: (updatedVote) => {
-      // Update the cache with the new vote data
+    onSuccess: (result: any) => {
+      const updatedVote = result.data || result;
       queryClient.setQueryData<Vote[]>(['votes', groupId], (old = []) =>
         old.map((v) => (v.id === updatedVote.id ? updatedVote : v))
       );
-
-      // Show appropriate toast based on vote status
-      if (!updatedVote.isActive) {
-        if (updatedVote.winner) {
-          toast({
-            title: "Vote Completed!",
-            description: `"${updatedVote.title}" has been completed. Winner: ${updatedVote.winner.name}`,
-            duration: 5000,
-          });
-        } else {
-          toast({
-            title: "Vote Expired",
-            description: "This vote has expired and has been moved to history.",
-            duration: 5000,
-          });
-        }
-      }
+      toast({ title: "Vote cast successfully" });
     },
     onError: (error: any) => {
       toast({
         title: "Vote Failed",
-        description: error?.response?.data?.error || 'Failed to cast your vote. Please try again.',
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit vote mutation
+  const updateVoteMutation = useMutation({
+    mutationFn: async ({ voteId, ...updateData }: any) => {
+      assertOnline();
+      if (!groupId) throw new Error('No active group');
+      const result: any = await updateVoteAction(groupId, voteId, updateData);
+      if (!result.success) throw new Error(result.message || 'Failed to update vote');
+      return result.vote;
+    },
+    onSuccess: (updatedVote) => {
+      queryClient.invalidateQueries({ queryKey: ['votes', groupId] });
+      toast({ title: "Vote updated", description: "Changes saved successfully." });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -148,44 +124,20 @@ export function useVoting(options?: {
     mutationFn: async (voteId: string) => {
       assertOnline();
       if (!groupId) throw new Error('No active group');
-
-      const res = await axios.delete(`/api/groups/${groupId}/votes`, {
-        data: { voteId }
-      });
-      return res.data;
-    },
-    onMutate: async (deletedVoteId) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['votes', groupId] });
-
-      // Snapshot the previous value
-      const previousVotes = queryClient.getQueryData<Vote[]>(['votes', groupId]);
-
-      // Optimistically update to the new value
-      if (previousVotes) {
-        queryClient.setQueryData<Vote[]>(['votes', groupId], previousVotes.filter((v: Vote) => v.id !== deletedVoteId));
-      }
-
-      return { previousVotes };
-    },
-    onError: (err: any, deletedVoteId, context) => {
-      if (context?.previousVotes) {
-        queryClient.setQueryData<Vote[]>(['votes', groupId], context.previousVotes);
-      }
-      toast({
-        title: "Failed to delete vote",
-        description: err?.response?.data?.error || 'Failed to delete vote.',
-        variant: "destructive",
-      });
+      const result: any = await deleteVoteAction(groupId, voteId);
+      if (!result.success) throw new Error(result.message || 'Failed to delete vote');
+      return result;
     },
     onSuccess: () => {
-      toast({
-        title: "Vote deleted",
-        description: "The vote was successfully removed.",
-      });
-    },
-    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['votes', groupId] });
+      toast({ title: "Vote deleted", description: "The vote was successfully removed." });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete vote",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -234,15 +186,23 @@ export function useVoting(options?: {
     [deleteVoteMutation]
   );
 
+  const updateVote = useCallback(
+    async (voteData: any) => {
+      await updateVoteMutation.mutateAsync(voteData);
+    },
+    [updateVoteMutation]
+  );
+
   return {
     activeVotes,
     pastVotes,
-    loading: createVoteMutation.isPending || castVoteMutation.isPending || deleteVoteMutation.isPending,
+    loading: createVoteMutation.isPending || castVoteMutation.isPending || deleteVoteMutation.isPending || updateVoteMutation.isPending,
     initialLoading,
     isSubmitting: castVoteMutation.isPending,
     createVote,
     castVote,
     deleteVote,
+    updateVote,
     hasVoted,
     group: contextGroup || (options?.groupId ? { id: options.groupId } : null),
     refreshVotes,

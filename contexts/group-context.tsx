@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Group } from '@/types/group';
 import { encryptData, decryptData } from '@/lib/utils/storage-encryption';
 import { toast } from 'react-hot-toast';
+import { setCurrentGroupAction } from '@/lib/actions/group.actions';
 
 const ENC_KEY = 'ms_active_group_ctx';
 type GroupContextType = {
@@ -178,18 +179,11 @@ export function GroupProvider({
         localStorage.setItem(ENC_KEY, encrypted);
       }
 
-      // Call API to persist the group switch on the server
-      const response = await fetch('/api/groups/set-current', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ groupId: group.id }),
-      });
+      // Call Server Action to persist the group switch on the server
+      const result = await setCurrentGroupAction(group.id);
 
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'Failed to switch group');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to switch group');
       }
 
       // Invalidate stale queries

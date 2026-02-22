@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';
 import { useActiveGroup } from '@/contexts/group-context';
+import { getGroupStatsAction } from '@/lib/actions/group.actions';
 
 
 type FeatureCategory = 'membership' | 'communication' | 'meals' | 'management';
@@ -150,14 +151,13 @@ interface ComponentStats {
   members: number;
 }
 
-// Actions import removed
-
 interface SettingsTabProps {
   groupId: string;
   group: any;
   isAdmin: boolean;
   isCreator: boolean;
   onUpdate: () => void;
+  isActive?: boolean;
 }
 
 
@@ -167,19 +167,34 @@ export function SettingsTab({
   onUpdate,
   isAdmin = false,
   isCreator = false,
+  isActive = false,
 }: SettingsTabProps) {
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const { updateGroupData } = useActiveGroup();
 
-  const { deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
+  const { useGroupStats, deleteGroup, useGroupDetails, updateGroup, leaveGroup } = useGroups();
   const { data: groupDetails, isLoading: isLoadingGroup, refetch } = useGroupDetails(groupId, group);
   const router = useRouter();
 
   const [newTag, setNewTag] = useState('');
   const [tagError, setTagError] = useState('');
   const [deleteGroupName, setDeleteGroupName] = useState('');
+
+  // Fetch Stats using robust React Query hook (Deduplicated, Lazy, and Cached)
+  const {
+    data: stats,
+    isLoading: isLoadingStats,
+    error: statsError
+  } = useGroupStats(groupId, isActive);
+
+  useEffect(() => {
+    if (statsError) {
+      console.error('Error fetching group stats:', statsError);
+    }
+  }, [statsError]);
+
   const [isDeleteNameValid, setIsDeleteNameValid] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   // Notification settings state
@@ -191,31 +206,8 @@ export function SettingsTab({
     joinRequests: true,
   });
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
-  const [stats, setStats] = useState<ComponentStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoadingStats(true);
-        const response = await fetch(`/api/groups/${groupId}/stats`);
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.stats);
-        }
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
-        setIsLoadingStats(false);
-      }
-    };
-
-    if (groupId) {
-      fetchStats();
-    }
-  }, [groupId]);
 
 
   const form = useForm<GroupSettingsFormValues>({
@@ -364,7 +356,6 @@ export function SettingsTab({
 
       // Defers routing to allow React to visually unmount the dialog first
       setTimeout(() => {
-        router.refresh();
         router.push('/groups');
       }, 50);
     } catch (error) {

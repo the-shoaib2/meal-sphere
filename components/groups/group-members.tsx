@@ -30,6 +30,7 @@ import { useSession } from 'next-auth/react';
 import { InviteCard } from './invite-card';
 import { Role } from '@prisma/client';
 import { UserProfileDialog } from './user-profile-dialog';
+import { removeMemberAction, updateMemberRoleAction } from '@/lib/actions/group.actions';
 
 type User = {
   id: string;
@@ -94,17 +95,14 @@ export function GroupMembers({
   };
 
   const removeMemberMutation = useMutation({
-    mutationFn: async (memberId: string) => {
-      const response = await fetch(`/api/groups/${groupId}/members/${memberId}`, {
-        method: 'DELETE',
-      });
+    mutationFn: async (userId: string) => {
+      const result = await removeMemberAction(groupId, userId);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to remove member');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to remove member');
       }
 
-      return response.json();
+      return result;
     },
     onSuccess: () => {
       toast.success('Member removed successfully');
@@ -117,21 +115,14 @@ export function GroupMembers({
   });
 
   const updateMemberRoleMutation = useMutation({
-    mutationFn: async ({ memberId, role }: { memberId: string, role: string }) => {
-      const response = await fetch(`/api/groups/${groupId}/members/${memberId}/role`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role }),
-      });
+    mutationFn: async ({ userId, role }: { userId: string, role: string }) => {
+      const result = await updateMemberRoleAction(groupId, userId, role);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update member role');
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update member role');
       }
 
-      return response.json();
+      return result;
     },
     onSuccess: () => {
       toast.success('Member role updated successfully');
@@ -149,13 +140,13 @@ export function GroupMembers({
 
   const confirmRemoveMember = () => {
     if (memberToRemove) {
-      removeMemberMutation.mutate(memberToRemove.id);
+      removeMemberMutation.mutate(memberToRemove.userId);
     }
   };
 
-  const handleRoleChangeClick = (memberId: string, currentRole: string) => {
+  const handleRoleChangeClick = (userId: string, currentRole: string) => {
     setMemberToUpdateRole({
-      id: memberId,
+      id: userId,
       role: currentRole === 'ADMIN' ? 'MEMBER' : 'ADMIN'
     });
   };
@@ -163,7 +154,7 @@ export function GroupMembers({
   const confirmRoleChange = () => {
     if (memberToUpdateRole) {
       updateMemberRoleMutation.mutate({
-        memberId: memberToUpdateRole.id,
+        userId: memberToUpdateRole.id,
         role: memberToUpdateRole.role === 'ADMIN' ? 'MEMBER' : 'ADMIN'
       });
     }
@@ -359,14 +350,14 @@ export function GroupMembers({
                             <>
                               {member.role !== 'ADMIN' && member.role !== 'MEAL_MANAGER' && (
                                 <DropdownMenuItem
-                                  onClick={() => handleRoleChangeClick(member.id, member.role)}
+                                  onClick={() => handleRoleChangeClick(member.userId, member.role)}
                                 >
                                   Make Admin
                                 </DropdownMenuItem>
                               )}
                               {member.role === 'ADMIN' && member.user.id !== currentUserId && (
                                 <DropdownMenuItem
-                                  onClick={() => handleRoleChangeClick(member.id, member.role)}
+                                  onClick={() => handleRoleChangeClick(member.userId, member.role)}
                                 >
                                   Remove Admin
                                 </DropdownMenuItem>
