@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useState } from "react"
 import {
     LogOut,
     LayoutDashboard,
@@ -13,13 +12,13 @@ import {
     PieChart,
     Calculator,
     Settings2,
-    Loader2,
     type LucideIcon,
 } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
-import { signOut, useSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { GroupSwitcher } from "@/components/layout/group-switcher"
 import { clearLocalStorage } from "@/lib/utils"
+import { SignOutDialog } from "@/components/auth/sign-out-dialog"
 
 type NavItem = {
     title: string
@@ -73,7 +72,6 @@ interface SidebarContentProps {
 }
 
 export function SidebarContent({ onNavigate }: SidebarContentProps) {
-    const [isSigningOut, setIsSigningOut] = useState(false)
     const router = useRouter()
     const pathname = usePathname()
     const { data: session } = useSession()
@@ -87,28 +85,12 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
     }
 
     const handleNavigation = async (href: string) => {
-        if (href === "/signout") {
-            setIsSigningOut(true);
-            try {
-                // Clear local storage safely
-                clearLocalStorage();
-
-                // Direct sign out
-                await signOut({ callbackUrl: '/', redirect: true });
-            } catch (error) {
-                console.error('Sign out error:', error);
-                window.location.href = '/';
-            } finally {
-                setIsSigningOut(false);
-            }
-        } else {
-            if (pathname !== href) {
-                // Dispatch event to show loading bar immediately
-                window.dispatchEvent(new Event('routeChangeStart'))
-            }
-            router.push(href)
-            onNavigate?.()
+        if (pathname !== href) {
+            // Dispatch event to show loading bar immediately
+            window.dispatchEvent(new Event('routeChangeStart'))
         }
+        router.push(href)
+        onNavigate?.()
     }
 
     const user = session?.user
@@ -151,30 +133,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                 {/* Account Section */}
                 <div className="pt-3 border-t border-border/40 mt-auto">
                     <div className="space-y-1">
-                        {data.account.map((item) => {
-                            const isDestructive = item.variant === "destructive"
-                            const isSignout = item.href === "/signout"
-                            return (
-                                <button
-                                    key={item.name}
-                                    onClick={() => handleNavigation(item.href)}
-                                    disabled={isSignout && isSigningOut}
-                                    className={`w-full flex items-center px-3 py-2 text-sm rounded-sm transition-colors group cursor-pointer ${isDestructive
-                                        ? "hover:bg-destructive/10 hover:text-destructive"
-                                        : "hover:bg-accent/50"
-                                        } ${(isSignout && isSigningOut) ? "opacity-50 cursor-not-allowed" : ""}`}
-                                >
-                                    {isSignout && isSigningOut ? (
-                                        <Loader2 className="mr-3 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <item.icon className={`mr-3 h-4 w-4 text-red-500 transition-colors ${isDestructive ? "text-destructive" : "text-foreground"}`} />
-                                    )}
-                                    <span className="font-medium text-red-500">
-                                        {isSignout && isSigningOut ? "Signing out..." : item.name}
-                                    </span>
-                                </button>
-                            )
-                        })}
+                        <SignOutDialog variant="sidebar" />
                     </div>
                 </div>
             </div>

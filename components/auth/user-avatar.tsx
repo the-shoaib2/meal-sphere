@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, LogOut, LayoutDashboard, Sun, Moon, Laptop, Loader2 } from "lucide-react";
+import { Settings, LayoutDashboard, Sun, Moon, Laptop } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,6 +19,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { handleNavigation, clearLocalStorage } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton";
+import { SignOutDialog } from "@/components/auth/sign-out-dialog";
 interface UserAvatarProps {
   user: {
     id: string;
@@ -31,23 +32,9 @@ interface UserAvatarProps {
 }
 
 export function UserAvatar({ user, className = '' }: UserAvatarProps) {
-  const [loggingOut, setLoggingOut] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
 
   const { status } = useSession();
-
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    try {
-      clearLocalStorage();
-      await signOut({ callbackUrl: '/', redirect: true });
-    } catch (error) {
-      console.error('Sign out error:', error);
-      window.location.href = '/';
-    } finally {
-      setLoggingOut(false);
-    }
-  };
 
   // 1. Loading State (Hydration/Session Fetching)
   if (user === undefined || status === "loading") {
@@ -79,7 +66,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
           <Button
             variant="ghost"
             size="icon"
-            className={`group rounded-full flex-shrink-0 relative focus-visible:ring-0 focus fing  ${className}`}
+            className={`group rounded-full flex-shrink-0 relative focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${className}`}
           >
             <Avatar className="h-8 w-8 border border-border/50 ring-offset-background">
               <AvatarImage
@@ -149,19 +136,10 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
           </DropdownMenuGroup>
           <DropdownMenuSeparator className="my-1.5" />
           <DropdownMenuItem
-            className="px-2.5 py-2 hover:bg-red-500/10 rounded-lg cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 transition-colors"
-            onClick={(e) => {
-              e.preventDefault();
-              handleLogout();
-            }}
-            disabled={loggingOut}
+            className="p-0 focus:bg-transparent"
+            onSelect={(e) => e.preventDefault()}
           >
-            {loggingOut ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2.5" />
-            ) : (
-              <LogOut className="h-4 w-4 mr-2.5 text-red-500 hover:text-red-500 transition-colors" />
-            )}
-            <span className="font-medium cursor-pointer text-red-500 hover:text-red-500 transition-colors">Sign out</span>
+            <SignOutDialog variant="avatar" className="w-full" />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
