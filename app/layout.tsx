@@ -19,6 +19,7 @@ export const dynamicParams = true
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://meal-sphere.vercel.app"),
   title: "MealSphere - Meal Management System",
   description: "A comprehensive meal management system for roommates and hostels",
   openGraph: {
