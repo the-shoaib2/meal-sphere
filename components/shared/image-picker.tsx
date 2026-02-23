@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import axios from "axios";
 import { LoadingWrapper, Loader } from "@/components/ui/loader";
 
 interface ImageItem {
@@ -60,13 +59,15 @@ export function ImagePicker({
         try {
             const { getImagesAction } = await import('@/lib/actions/media.actions');
             const response = await getImagesAction(pageNum, 15, category);
-            if (!response.success) throw new Error(response.message);
-
-            const newImages = response.images;
-            setImages(prev => reset ? newImages : [...prev, ...newImages]);
-            setHasMore(response.hasMore);
-            if (response.categories) {
-                setCategories(response.categories);
+            const newImages = response.images || [];
+            if (response.success) {
+                setImages(prev => reset ? newImages : [...prev, ...newImages]);
+                setHasMore(response.hasMore);
+                if (response.categories) {
+                    setCategories(response.categories || ["All"]);
+                }
+            } else {
+                throw new Error(response.message);
             }
         } catch (error) {
             console.error("Failed to fetch images:", error);

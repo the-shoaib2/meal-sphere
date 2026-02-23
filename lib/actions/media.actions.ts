@@ -43,7 +43,21 @@ function getImagesRecursively(dir: string, baseDir: string): ImageItem[] {
   }
 }
 
-export async function getImagesAction(page: number = 1, limit: number = 20, categoryFilter: string = 'all') {
+export async function getImagesAction(
+  page: number = 1,
+  limit: number = 20,
+  categoryFilter: string = 'all'
+): Promise<{
+    success: true;
+    images: ImageItem[];
+    hasMore: boolean;
+    total: number;
+    categories: string[];
+  } | {
+    success: false;
+    message: string;
+    images: [];
+  }> {
   try {
     const imagesDirectory = path.join(process.cwd(), 'public/images');
     
@@ -76,6 +90,10 @@ export async function getImagesAction(page: number = 1, limit: number = 20, cate
     };
   } catch (error: any) {
     console.error('Error fetching images:', error);
-    return { success: false, message: 'Failed to fetch images' };
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Failed to fetch images',
+      images: [] 
+    };
   }
 }

@@ -4,7 +4,7 @@ export interface Period {
   id: string;
   name: string;
   startDate: Date;
-  endDate: Date;
+  endDate: Date | null;
   status: PeriodStatus;
   isLocked: boolean;
   openingBalance: number;
@@ -83,6 +83,7 @@ export function canUserEditMeal(
 export function isDateInPeriod(date: Date, period: Period | null): boolean {
   if (!period) return false;
   const startDate = new Date(period.startDate);
+  if (!period.endDate) return date >= startDate;
   const endDate = new Date(period.endDate);
   return date >= startDate && date <= endDate;
 }
@@ -101,6 +102,7 @@ export function canEditMealsForDate(date: Date, currentPeriod: Period | null): b
  */
 export function formatPeriodDateRange(period: Period): string {
   const startDate = new Date(period.startDate);
+  if (!period.endDate) return `${startDate.toLocaleDateString()} - Ongoing`;
   const endDate = new Date(period.endDate);
   return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
 }
@@ -110,6 +112,7 @@ export function formatPeriodDateRange(period: Period): string {
  */
 export function getPeriodDuration(period: Period): number {
   const startDate = new Date(period.startDate);
+  if (!period.endDate) return 0;
   const endDate = new Date(period.endDate);
   return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 }

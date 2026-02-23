@@ -147,7 +147,7 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                 {/* Overview Cards for the SELECTED period */}
                 <div className="w-full">
                     <PeriodOverviewSection
-                        periods={periods}
+                        periods={periods ?? []}
                         currentPeriod={currentPeriod}
                         selectedPeriod={selectedPeriod}
                         periodSummary={periodSummary}
@@ -156,7 +156,9 @@ export function PeriodDetails({ initialData }: PeriodDetailsProps) {
                 </div>
 
                 {/* Reports Section */}
-                <PeriodReportsSection groupName={activeGroup?.name ?? ''} />
+                <PeriodReportsSection
+                    groupName={activeGroup?.name ?? ''}
+                />
 
                 {/* Archive Dialog */}
                 <PeriodArchiveDialog

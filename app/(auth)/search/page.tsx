@@ -126,7 +126,7 @@ export default function SearchPage() {
             try {
                 const { globalSearchAction } = await import('@/lib/actions/search.actions');
                 const res = await globalSearchAction(query);
-                setResults(res.results || []);
+                setResults(res.results as SearchResult[]);
             } catch (error) {
                 console.error("Search error:", error)
             } finally {

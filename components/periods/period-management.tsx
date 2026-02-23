@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { usePeriodManagement } from '@/hooks/use-periods';
@@ -17,8 +16,6 @@ import { useSession } from 'next-auth/react';
 import { CurrentPeriodStatusCard } from '@/components/periods/current-period-status-card';
 import { LoadingWrapper, Loader } from '@/components/ui/loader';
 import { usePeriodMode } from '@/hooks/use-periods';
-import { Calendar, Settings2 } from 'lucide-react';
-import { Label } from '@/components/ui/label';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupAccess } from '@/hooks/use-group-access';
@@ -178,7 +175,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
 
         {/* Overview Cards */}
         <PeriodOverviewSection
-          periods={periods}
+          periods={periods || []}
           currentPeriod={currentPeriod}
           selectedPeriod={selectedPeriod}
           periodSummary={periodSummary}
@@ -187,7 +184,7 @@ export function PeriodManagement({ initialData }: PeriodManagementProps) {
 
         {/* Periods List Section */}
         <PeriodsListSection
-          periods={periods}
+          periods={periods || []}
           activeGroup={activeGroup}
           setSelectedPeriodId={setSelectedPeriodId}
           handleLockPeriod={handleLockPeriod}

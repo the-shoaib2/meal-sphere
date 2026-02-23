@@ -83,8 +83,8 @@ export function useRoomCalculations({
 
   // Memoize resolved room ID to prevent unnecessary re-renders
   const resolvedRoomId = useMemo(() => {
-    return roomId || currentPeriod?.groupId || currentPeriod?.roomId;
-  }, [roomId, currentPeriod?.groupId, currentPeriod?.roomId]);
+    return roomId || currentPeriod?.roomId;
+  }, [roomId, currentPeriod?.roomId]);
 
   // Memoize query key to prevent unnecessary refetches
   const queryKey = useMemo(() => [
@@ -149,8 +149,8 @@ export function useUserCalculations({
 
   // Memoize resolved room ID
   const resolvedRoomId = useMemo(() => {
-    return roomId || currentPeriod?.groupId || currentPeriod?.roomId;
-  }, [roomId, currentPeriod?.groupId, currentPeriod?.roomId]);
+    return roomId || currentPeriod?.roomId;
+  }, [roomId, currentPeriod?.roomId]);
 
   // Memoize query key
   const queryKey = useMemo(() => [

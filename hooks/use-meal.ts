@@ -291,7 +291,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
   // Toggle meal mutation
   const toggleMealMutation = useMutation({
-    mutationFn: async ({ date, type, userId, action }: { date: Date; type: MealType; userId: string; action: 'add' | 'remove' }) => {
+    mutationFn: async ({ date, type, userId, action, silent }: { date: Date; type: MealType; userId: string; action: 'add' | 'remove'; silent?: boolean }) => {
       const formattedDate = formatDateSafe(date);
       const res = await toggleMealAction(roomId!, userId, formattedDate, type, action, currentPeriod?.id);
       if (!res.success) {
@@ -361,8 +361,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       // - Conflict (P2002 duplicate): meal already exists, keep optimistic state (matches reality). No toast.
       // - Silent flag: auto-triggered meals — never bother the user with a toast.
       // - All other errors: rollback and show a toast.
-      if (error.conflict || error.silent) {
-        return; // keep optimistic add, no toast
+      if (variables.silent) {
+        return; // handle silently
       }
       if (context?.previousData && context?.queryKey) {
         queryClient.setQueryData(context.queryKey, context.previousData);
@@ -888,11 +888,9 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
           // update already put the meal in the UI; if the server rejects it,
           // the mutation's onError will roll it back silently.
           await toggleMealMutation.mutateAsync(
-            { date: mealDate, type, userId, action: 'add' },
+            { date: mealDate, type, userId, action: 'add', silent: true },
             {
-              onError: (err: any) => {
-                // Mark as silent so the global onError skips the toast
-                err.silent = true;
+              onError: () => {
                 scheduledAutoMealsRef.current.delete(scheduleKey);
               },
             }

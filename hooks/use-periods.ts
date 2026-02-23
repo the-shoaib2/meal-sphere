@@ -65,8 +65,8 @@ export interface MemberPeriodBreakdown {
 }
 
 export interface PeriodsPageData {
-  periods: any[];
-  currentPeriod: any;
+  periods: MealPeriod[];
+  currentPeriod: MealPeriod | null;
   periodMode: 'MONTHLY' | 'CUSTOM';
   initialPeriodSummary?: PeriodSummary;
   groupId?: string;
@@ -100,7 +100,7 @@ export function usePeriods(includeArchived = false, initialData?: PeriodsPageDat
   // Base data source
   const contextData = initialData || periodsData;
   const isCorrectGroup = !!(contextData?.groupId && activeGroup?.id && contextData.groupId === activeGroup.id);
-  const initialPeriods = isCorrectGroup ? contextData?.periods : undefined;
+  const initialPeriods = isCorrectGroup ? contextData?.periods as MealPeriod[] : undefined;
 
   const query = useQuery({
     queryKey: ['periods', activeGroup?.id, includeArchived],
