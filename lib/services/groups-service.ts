@@ -1434,8 +1434,8 @@ export async function setCurrentGroup(groupId: string, userId: string) {
         })
     ]);
 
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     
     return true;
 }
@@ -1698,6 +1698,6 @@ async function _performRoleUpdate(groupId: string, adminId: string, targetMember
       }
     });
     
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     return updated;
 }

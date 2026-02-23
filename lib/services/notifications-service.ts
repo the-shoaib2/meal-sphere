@@ -104,8 +104,8 @@ export async function deleteNotification(notificationId: string, userId: string)
 
     // Invalidate
     await cacheDelete(`notifications:${userId}:list`);
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('notifications', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('notifications');
 
     return { success: true };
 }

@@ -291,8 +291,12 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   };
 
   const handleTransactionSuccess = () => {
+    // 1. Refresh React Query cache first for instant client updates
     refetchBalance();
     refetchTransactions();
+
+    // 2. Refresh server components to sync page-level data (e.g. breadcrumbs, header stats)
+    router.refresh();
   };
 
   const handleDeleteTransaction = async (transactionId: string) => {

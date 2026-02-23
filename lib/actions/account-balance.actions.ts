@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/balance-service";
 import { getCurrentPeriod } from "@/lib/utils/period-utils";
 import { hasBalancePrivilege, canViewUserBalance, canModifyTransactions, canDeleteTransactions } from "@/lib/auth/balance-permissions";
+import { invalidateCacheForMutation } from "@/lib/cache/cache-invalidation";
 
 async function getUserId() {
   const session = await getServerSession(authOptions);
@@ -160,6 +161,9 @@ export async function createTransactionAction(data: {
       periodId: currentPeriod?.id,
     });
 
+    // Standardize revalidation
+    await invalidateCacheForMutation('payment', { roomId, userId: targetUserId, periodId: currentPeriod?.id });
+
     return { success: true, transaction: newTransaction };
   } catch (error: any) {
     console.error("Error creating transaction:", error);
@@ -180,6 +184,14 @@ export async function updateTransactionAction(transactionId: string, data: { amo
     }
 
     const updated = await updateTransaction(transactionId, { ...data, changedBy: userId });
+
+    // Standardize revalidation
+    await invalidateCacheForMutation('payment', { 
+      roomId: transaction.roomId, 
+      userId: transaction.targetUserId, 
+      periodId: transaction.periodId || undefined 
+    });
+
     return { success: true, transaction: updated };
   } catch (error: any) {
     console.error("Error updating transaction:", error);
@@ -200,6 +212,14 @@ export async function deleteTransactionAction(transactionId: string) {
     }
 
     await deleteTransaction(transactionId, userId);
+
+    // Standardize revalidation
+    await invalidateCacheForMutation('payment', { 
+      roomId: transaction.roomId, 
+      userId: transaction.targetUserId, 
+      periodId: transaction.periodId || undefined 
+    });
+
     return { success: true };
   } catch (error: any) {
     console.error("Error deleting transaction:", error);
