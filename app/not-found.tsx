@@ -67,9 +67,9 @@ export default function NotFound() {
             asChild
             className="w-full sm:w-auto min-w-[140px] shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
           >
-            <Link href="/">
+            <Link href="/dashboard">
               <Home className="w-4 h-4 mr-2" />
-              Return Home
+              Return Dashboard
             </Link>
           </Button>
         </motion.div>

@@ -904,7 +904,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
       // Check if server state already matches what we want to achieve directly from queryClient cache for ultimate freshness
       const targetMonthKey = format(date, 'yyyy-MM');
-      const data = queryClient.getQueryData(['meals-system', roomId, targetMonthKey]) as any;
+      const targetPeriodId = mealSystem?.period?.id || 'current';
+      const data = queryClient.getQueryData(['meals-system', roomId, targetMonthKey, targetPeriodId]) as any;
       const cachedMeals = data?.meals || [];
       const serverHasMeal = cachedMeals.some((m: any) => 
         normalizeDateStr(m.date).startsWith(dateStr) && m.type === type && m.userId === userId
