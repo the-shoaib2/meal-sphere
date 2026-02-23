@@ -176,8 +176,20 @@ export async function getPublicDataAction(endpoint: string) {
         };
       case "showcase":
         return {
-          // Add default empty or simple showcase data if needed
-          items: []
+          title: "See MealSphere in Action",
+          subtitle: "Experience a seamless interface on both desktop and mobile. Designed for clarity, speed, and ease of use.",
+          screenshots: {
+            desktop: {
+              image: "/Screenshot-desktop.png",
+              alt: "Desktop view screenshot",
+              label: "Desktop View",
+            },
+            mobile: {
+              image: "/Screenshot-phone.png",
+              alt: "Phone view screenshot",
+              label: "Phone View",
+            },
+          },
         };
       default:
         throw new Error(`Public data endpoint not found: ${endpoint}`);

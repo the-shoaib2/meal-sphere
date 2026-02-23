@@ -93,7 +93,8 @@ export async function fetchMealsData(
           mealDistribution,
           roomData,
           membership,
-          userMealCount
+          userMealCount,
+          roomDataWithMembers
         ] = await Promise.all([
           prisma.meal.findMany({
             where: { 
@@ -172,7 +173,8 @@ export async function fetchMealsData(
               }
             },
             _count: { type: true }
-          })
+          }),
+          import('@/lib/group-query-helpers').then(m => m.getGroupWithMembers(groupId))
         ]);
 
         const userMealStats = {
@@ -209,6 +211,7 @@ export async function fetchMealsData(
           } : null,
           userStats: userMealStats,
           mealDistribution: mealDistribution.map(m => ({ name: m.type, value: m._count.type })),
+          members: (roomDataWithMembers as any)?.members || [],
           currentPeriod: {
             ...currentPeriod,
             startDate: new Date(currentPeriod!.startDate).toISOString(),

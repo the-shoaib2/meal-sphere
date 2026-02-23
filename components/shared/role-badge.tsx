@@ -15,11 +15,11 @@ export function RoleBadge({ role, className }: RoleBadgeProps) {
 
     return (
         <Badge
-            variant="outline"
+            variant="destructive"
             className={cn(
                 "shadow-sm transition-all uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0 cursor-default",
                 isAdmin
-                    ? "bg-[#EA4335]/10 text-[#EA4335] border-[#EA4335]/20"
+                    ? ""
                     : "bg-primary/10 text-primary border-primary/20",
                 className
             )}

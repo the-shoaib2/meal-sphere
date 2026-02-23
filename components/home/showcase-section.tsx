@@ -25,7 +25,7 @@ export default function ShowcaseSection() {
   const { data, error } = usePublicData<ShowcaseData>({ endpoint: "showcase" })
 
 
-  if (error || !data) {
+  if (error || !data || !data.screenshots || !data.screenshots.desktop || !data.screenshots.mobile) {
     return (
       <section className="w-full py-10 md:py-20 bg-background px-2 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col items-center">

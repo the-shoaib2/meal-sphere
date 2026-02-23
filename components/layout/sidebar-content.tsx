@@ -1,9 +1,8 @@
 "use client"
 
-import * as React from "react"
 import {
     LogOut,
-    LayoutDashboard,
+    Home,
     Users,
     Calendar,
     Utensils,
@@ -17,7 +16,6 @@ import {
 import { useRouter, usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { GroupSwitcher } from "@/components/layout/group-switcher"
-import { clearLocalStorage } from "@/lib/utils"
 import { SignOutDialog } from "@/components/auth/sign-out-dialog"
 
 type NavItem = {
@@ -45,7 +43,7 @@ const data: {
 } = {
     navItems: [
         { category: "Main" },
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+        { title: "Dashboard", url: "/dashboard", icon: Home },
         { title: "Groups", url: "/groups", icon: Users },
         { title: "Periods", url: "/periods", icon: Calendar },
 
