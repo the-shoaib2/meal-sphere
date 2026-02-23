@@ -20,7 +20,9 @@ interface MealCalendarProps {
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 function MealCalendar({ selected, onSelect, getMealCount, isLoading, period }: MealCalendarProps) {
-  const [viewDate, setViewDate] = React.useState(() => startOfMonth(selected))
+  const [viewDate, setViewDate] = React.useState(() =>
+    period?.startDate ? startOfMonth(new Date(period.startDate)) : startOfMonth(selected)
+  )
 
   // Normalise period dates to Date objects
   const periodStart = useMemo(() =>
@@ -66,9 +68,19 @@ function MealCalendar({ selected, onSelect, getMealCount, isLoading, period }: M
   const prevMonth = () => setViewDate(d => addDays(startOfMonth(d), -1))
   const nextMonth = () => setViewDate(d => addDays(endOfMonth(d), 1))
 
+  // When the period changes (e.g. group switch), jump to the period's start month
   React.useEffect(() => {
-    setViewDate(startOfMonth(selected))
-  }, [selected])
+    if (period?.startDate) {
+      setViewDate(startOfMonth(new Date(period.startDate)))
+    }
+  }, [period?.startDate])
+
+  // Follow external selected date changes (e.g. URL navigation) only when no period lock
+  React.useEffect(() => {
+    if (!period?.startDate) {
+      setViewDate(startOfMonth(selected))
+    }
+  }, [selected, period?.startDate])
 
   return (
     <div className="w-full max-w-md mx-auto select-none">

@@ -105,12 +105,7 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
         </DialogHeader>
 
 
-        {autoMealSettings?.isEnabled && mealSettings?.autoMealEnabled && (
-          <Badge className="flex items-center justify-center bg-yellow-50 text-yellow-700 text-[10px] font-bold rounded-full w-fit mx-auto border border-yellow-200 shadow-sm animate-pulse">
-            <Zap className="h-3 w-3 fill-yellow-500" />
-            AUTO MEALS ACTIVE
-          </Badge>
-        )}
+
 
 
 
@@ -118,7 +113,15 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             {date && (
               <div className="pt-2 flex flex-col space-y-1">
-                <FormLabel className="text-sm font-semibold text-muted-foreground block">Selected Date</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-sm font-semibold text-muted-foreground text-center block sm:text-left">Selected Date</FormLabel>
+                  {autoMealSettings?.isEnabled && mealSettings?.autoMealEnabled && (
+                    <Badge variant="destructive" className="flex items-center gap-1 text-[10px] w-fit">
+                      <Zap className="h-3 w-3" />
+                      AUTO MEALS ACTIVE
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center justify-center">
                   <span className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium w-fit text-sm">
                     <CalendarIcon className="h-4 w-4" />
