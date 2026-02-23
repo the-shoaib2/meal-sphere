@@ -28,32 +28,39 @@ export function NotificationBell() {
 
   const getNotificationIcon = (type: Notification["type"]) => {
     switch (type) {
-      case "MEAL_REMINDER":
+      case "MEAL_CREATED":
+      case "MEAL_UPDATED":
+      case "MEAL_DELETED":
         return (
           <div className="rounded-full bg-blue-100 p-1.5 mr-2 group-hover:bg-blue-200 transition-colors">
             <Bell className="h-3.5 w-3.5 text-blue-600" />
           </div>
         )
-      case "PAYMENT_DUE":
+      case "PAYMENT_CREATED":
+      case "PAYMENT_UPDATED":
+      case "PAYMENT_DELETED":
         return (
           <div className="rounded-full bg-red-100 p-1.5 mr-2 group-hover:bg-red-200 transition-colors">
             <Bell className="h-3.5 w-3.5 text-red-600" />
           </div>
         )
-      case "VOTE_STARTED":
-      case "VOTE_ENDED":
+      case "PERIOD_STARTED":
+      case "PERIOD_ENDED":
+      case "PERIOD_LOCKED":
         return (
           <div className="rounded-full bg-green-100 p-1.5 mr-2 group-hover:bg-green-200 transition-colors">
             <Bell className="h-3.5 w-3.5 text-green-600" />
           </div>
         )
-      case "MANAGER_CHANGED":
+      case "MEMBER_ADDED":
+      case "MEMBER_REMOVED":
         return (
           <div className="rounded-full bg-purple-100 p-1.5 mr-2 group-hover:bg-purple-200 transition-colors">
             <Bell className="h-3.5 w-3.5 text-purple-600" />
           </div>
         )
-      case "SHOPPING_ADDED":
+      case "JOIN_REQUEST_APPROVED":
+      case "JOIN_REQUEST_REJECTED":
         return (
           <div className="rounded-full bg-yellow-100 p-1.5 mr-2 group-hover:bg-yellow-200 transition-colors">
             <Bell className="h-3.5 w-3.5 text-yellow-600" />
@@ -71,7 +78,7 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild suppressHydrationWarning>
-        <Button variant="ghost" size="icon" className="relative group rounded-lg active:scale-95">
+        <Button variant="ghost" size="icon" className="relative group rounded-full active:scale-95">
           {unreadCount > 0 ? (
             <div className="relative">
               <BellRing className={`h-5 w-5 text-primary ${!open ? 'animate-pulse' : ''}`} />

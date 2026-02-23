@@ -80,7 +80,7 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="min-w-64 rounded-xl shadow-2xl p-1.5" align="end" sideOffset={8} side="bottom">
+        <DropdownMenuContent className="min-w-64 rounded-lg shadow-2xl p-1.5" align="end" sideOffset={8} side="bottom">
           <DropdownMenuLabel className="p-2.5 font-normal">
             <div className="flex items-center gap-3 text-left">
               <Avatar className="h-10 w-10 rounded-full border border-border/50">

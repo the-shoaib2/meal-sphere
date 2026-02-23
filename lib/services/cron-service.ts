@@ -55,26 +55,47 @@ export async function processAutoMeals() {
             continue
           }
 
+          // Normalize date to UTC midnight for consistent unique key matching
+          const mealDate = new Date(now);
+          mealDate.setUTCHours(0, 0, 0, 0);
+
           // Check if meal already exists
           const existingMeal = await prisma.meal.findUnique({
             where: {
               userId_roomId_date_type: {
                 userId: autoSetting.userId,
                 roomId: roomSettings.roomId,
-                date: now,
+                date: mealDate,
                 type: mealType.type,
               },
             },
           })
 
           if (!existingMeal) {
+            // Check if period is locked before creating
+            const period = await prisma.mealPeriod.findFirst({
+                where: {
+                    roomId: roomSettings.roomId,
+                    startDate: { lte: mealDate },
+                    OR: [
+                        { endDate: { gte: mealDate } },
+                        { endDate: null }
+                    ]
+                }
+            });
+
+            if (period?.isLocked) {
+                continue;
+            }
+
             // Create the meal
             const meal = await prisma.meal.create({
               data: {
                 userId: autoSetting.userId,
                 roomId: roomSettings.roomId,
-                date: now,
+                date: mealDate,
                 type: mealType.type,
+                periodId: period?.id || null
               },
             })
 

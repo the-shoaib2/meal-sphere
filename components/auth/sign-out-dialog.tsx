@@ -46,6 +46,7 @@ export function SignOutDialog({ variant = "avatar", className }: SignOutDialogPr
                 <AlertDialogTrigger asChild>
                     <button
                         disabled={isSigningOut}
+                        suppressHydrationWarning
                         className={cn(
                             "w-full flex items-center px-3 py-2 text-sm rounded-sm transition-colors group cursor-pointer hover:bg-red-500/10",
                             isSigningOut && "opacity-50 cursor-not-allowed",

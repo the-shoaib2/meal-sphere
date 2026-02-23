@@ -932,7 +932,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         });
         delete timeoutRefs.current[key];
       }
-    }, 800); // Throttling to 800ms for responsiveness vs reliability
+    }, 400); // Throttling to 400ms for responsiveness vs reliability
   }, [toggleMealMutation, queryClient, roomId]);
 
   const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {

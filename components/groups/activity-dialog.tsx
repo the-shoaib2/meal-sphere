@@ -19,7 +19,7 @@ interface ActivityLog {
     id: string;
     type: string;
     details: any;
-    createdAt: string;
+    createdAt: string | Date;
     user: {
         id: string;
         name: string | null;
@@ -50,7 +50,7 @@ export function ActivityDialog({ groupId, groupName, isOpen, onOpenChange, isAdm
         queryFn: async () => {
             const data = await getGroupActivityAction(groupId);
             if (!data.success) throw new Error(data.message || 'Failed to fetch activity logs');
-            return data.logs;
+            return (data.logs ?? []) as unknown as ActivityLog[];
         },
         enabled: isAdmin && isOpen // Only fetch when open and admin
     });

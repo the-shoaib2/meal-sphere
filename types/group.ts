@@ -6,7 +6,8 @@ export interface Group extends Omit<Room, 'createdBy'> {
     id: string;
     userId: string;
     role: string;
-    joinedAt: string;
+    joinedAt: string | Date;
+    isCurrent?: boolean;
     user: {
       id: string;
       name: string | null;

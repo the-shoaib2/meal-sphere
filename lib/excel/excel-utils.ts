@@ -2,6 +2,8 @@ import * as XLSX from "xlsx"
 import prisma from "@/lib/services/prisma"
 import { MealType, ExtraExpense, Payment, ShoppingItem, Meal, RoomMember, User } from "@prisma/client"
 import { buildDataReportPDFDocDefinition, BuildDataReportPDFDocDefinitionParams } from "@/lib/utils/pdf-templates"
+import { parseDateSafe } from "@/lib/utils/period-utils-shared"
+import { getPeriodForDate } from "@/lib/utils/period-utils"
 
 // Types for Excel data
 // (TypeScript: use 'any' for row types to avoid linter errors)
@@ -553,14 +555,22 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
           // Skip rows without a date or name
           if (!row.Date || !row.Name) return null
 
-          const date = new Date(row.Date)
+          // Normalize date to UTC midnight for consistent unique key matching
+          const date = parseDateSafe(row.Date);
           if (isNaN(date.getTime())) return null
 
           const userName = row.Name.toLowerCase()
           const userId = userMap.get(userName)
           if (!userId) return null
 
-          // Process meals
+          // Find target period for this date
+          const targetPeriod = await getPeriodForDate(roomId, date);
+
+          if (targetPeriod?.isLocked) {
+              console.warn(`Skipping import for locked date: ${row.Date}`);
+              return null;
+          }
+
           const meals = []
 
           if (row.Breakfast && row.Breakfast !== "0" && row.Breakfast !== 0) {
@@ -569,6 +579,7 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
               roomId,
               date,
               type: "BREAKFAST" as MealType,
+              periodId: targetPeriod?.id || null,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -580,6 +591,7 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
               roomId,
               date,
               type: "LUNCH" as MealType,
+              periodId: targetPeriod?.id || null,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -591,19 +603,21 @@ export async function importMealsFromExcel(roomId: string, buffer: ArrayBuffer) 
               roomId,
               date,
               type: "DINNER" as MealType,
+              periodId: targetPeriod?.id || null,
               createdAt: new Date(),
               updatedAt: new Date(),
             })
           }
 
-          // Delete existing meals for this user on this date
+          // Delete existing meals for this user on this exact UTC midnight date using range for robustness
+          const nextDay = new Date(date.getTime() + 24 * 60 * 60 * 1000);
           await prisma.meal.deleteMany({
             where: {
               userId,
               roomId,
               date: {
-                gte: new Date(date.setHours(0, 0, 0, 0)),
-                lt: new Date(date.setHours(23, 59, 59, 999)),
+                gte: date,
+                lt: nextDay,
               },
             },
           })

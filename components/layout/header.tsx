@@ -119,7 +119,7 @@ export function Header() {
             variant="ghost"
             size="icon"
             onClick={toggleFullscreen}
-            className="hidden md:flex"
+            className="hidden md:flex rounded-full"
             title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             suppressHydrationWarning
           >

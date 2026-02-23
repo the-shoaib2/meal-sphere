@@ -13,7 +13,7 @@ import { invalidateMealCache } from "@/lib/cache/cache-invalidation";
 import { cacheDeletePattern } from '@/lib/cache/cache-service';
 import { CACHE_TTL, CACHE_PREFIXES, getMealsCacheKey } from '@/lib/cache/cache-keys';
 import { format, eachDayOfInterval } from 'date-fns';
-import { canUserEditMeal, formatDateSafe } from '@/lib/utils/period-utils-shared';
+import { canUserEditMeal, formatDateSafe, parseDateSafe } from '@/lib/utils/period-utils-shared';
 
 /**
  * Fetches all meal-related data for a user in a specific group
@@ -103,7 +103,17 @@ export async function fetchMealsData(
                 lte: currentPeriod!.endDate || new Date('2099-12-31')
               }
             },
-            include: { user: { select: { id: true, name: true, image: true } } },
+            select: {
+              id: true,
+              date: true,
+              type: true,
+              createdAt: true,
+              updatedAt: true,
+              userId: true,
+              roomId: true,
+              periodId: true,
+              user: { select: { id: true, name: true, image: true } } 
+            },
             orderBy: { date: 'desc' }
           }),
           prisma.guestMeal.findMany({
@@ -114,7 +124,18 @@ export async function fetchMealsData(
                 lte: currentPeriod!.endDate || new Date('2099-12-31')
               }
             },
-            include: { user: { select: { id: true, name: true, image: true } } },
+            select: {
+              id: true,
+              date: true,
+              type: true,
+              count: true,
+              createdAt: true,
+              updatedAt: true,
+              userId: true,
+              roomId: true,
+              periodId: true,
+              user: { select: { id: true, name: true, image: true } }
+            },
             orderBy: { date: 'desc' }
           }),
           prisma.mealSettings.findUnique({ where: { roomId: groupId } }),
@@ -441,40 +462,61 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
     const session = await getServerSession(authOptions);
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
-    if (userId !== session.user.id) {
-        try {
-            await assertAdminRights(session.user.id, roomId, "Unauthorized to edit others meals");
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
+    const [membership, settings] = await Promise.all([
+        prisma.roomMember.findUnique({ where: { userId_roomId: { userId: session.user.id, roomId } } }),
+        prisma.mealSettings.findUnique({ where: { roomId } })
+    ]);
+
+    const userRole = membership?.role || null;
+    const isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
+
+    if (userId !== session.user.id && !isPrivileged) {
+        return { success: false, error: "Unauthorized to edit others meals" };
     }
 
-    const startOfDay = new Date(dateStr);
-    startOfDay.setUTCHours(0, 0, 0, 0); 
+    // Standardize to UTC Midnight using the project's safe parser
+    const targetDate = parseDateSafe(dateStr);
+    
     let targetPeriodId = periodId;
-    if (!targetPeriodId) {
-        const targetPeriod = await getPeriodForDate(roomId, new Date(dateStr));
-        if (!targetPeriod) return { success: false, error: "No period found for this date" };
-        if (targetPeriod.isLocked) return { success: false, error: "This period is locked" };
-        targetPeriodId = targetPeriod.id;
+    let targetPeriod = null;
+    if (targetPeriodId) {
+        targetPeriod = await prisma.mealPeriod.findUnique({ where: { id: targetPeriodId } });
+    } else {
+        targetPeriod = await getPeriodForDate(roomId, targetDate);
+        targetPeriodId = targetPeriod?.id || undefined;
+    }
+
+    // Check if period is locked (if it exists)
+    if (targetPeriod?.isLocked) {
+        return { success: false, error: "This period is locked" };
+    }
+
+    // Time Cutoff Validation for regular users
+    if (!isPrivileged) {
+        const canEdit = canUserEditMeal(targetDate, type, userRole, settings, targetPeriod);
+        if (!canEdit) {
+            return { success: false, error: "Meal time cutoff has passed or period is locked" };
+        }
     }
 
     if (action === 'remove') {
         try {
-            await prisma.meal.delete({
+            // Use deleteMany with range to be resilient to potential timestamp shifts in existing data
+            const nextDay = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+            await prisma.meal.deleteMany({
                 where: {
-                    userId_roomId_date_type: {
-                        userId,
-                        roomId,
-                        date: startOfDay,
-                        type
+                    userId,
+                    roomId,
+                    type,
+                    date: {
+                        gte: targetDate,
+                        lt: nextDay
                     }
                 }
             });
-            await invalidateMealCache(roomId); // Invalidate cache after delete
+            await invalidateMealCache(roomId);
             return { success: true };
         } catch (error: any) {
-            if (error.code === 'P2025') return { success: true }; // Record to delete does not exist
             return { success: false, error: "Failed to remove meal" };
         }
     } else {
@@ -483,7 +525,7 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
                 data: {
                     roomId,
                     userId,
-                    date: startOfDay,
+                    date: targetDate,
                     type,
                     periodId: targetPeriodId
                 },
@@ -514,13 +556,25 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
         }
     }
 
-    const normalizedDate = new Date(dateStr);
-    normalizedDate.setUTCHours(0, 0, 0, 0);
+    // Standardize to UTC Midnight using the project's safe parser
+    const targetDate = parseDateSafe(dateStr);
+
+    // Determine target period first for validation
+    let targetPeriod = null;
+    if (periodId) {
+        targetPeriod = await prisma.mealPeriod.findUnique({ where: { id: periodId } });
+    } else {
+        targetPeriod = await getPeriodForDate(roomId, targetDate);
+    }
+
+    if (targetPeriod?.isLocked) {
+        return { success: false, error: "This period is locked" };
+    }
 
     // Fetch dependencies in parallel
     const [settings, todayGuestMeals, membership] = await Promise.all([
         prisma.mealSettings.findUnique({ where: { roomId } }),
-        prisma.guestMeal.findMany({ where: { userId, roomId, date: normalizedDate } }),
+        prisma.guestMeal.findMany({ where: { userId, roomId, date: targetDate } }),
         prisma.roomMember.findUnique({ where: { userId_roomId: { userId: session.user.id, roomId } } })
     ]);
 
@@ -528,7 +582,7 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
 
     // Time Cutoff Validation (Same as regular meals)
     if (!isPrivileged) {
-        const canEdit = canUserEditMeal(normalizedDate, type, membership?.role || null, settings, periodId ? { id: periodId } : null);
+        const canEdit = canUserEditMeal(targetDate, type, membership?.role || null, settings, targetPeriod);
         if (!canEdit) {
             return { success: false, error: "Guest meal time cutoff has passed" };
         }
@@ -554,7 +608,7 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
             await invalidateMealCache(roomId);
             return { success: true, data: { ...existing, count: 0 } as any };
         }
-        return { success: true, data: { count: 0, type, date: normalizedDate, userId, roomId } as any };
+        return { success: true, data: { count: 0, type, date: targetDate, userId, roomId } as any };
     }
 
     if (!isPrivileged && (otherTypesTotal + count > limit)) {
@@ -563,25 +617,20 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
     }
 
     // Determine period and lock status
-    let targetPeriodId = periodId;
-    if (!targetPeriodId) {
-        const targetPeriod = await getPeriodForDate(roomId, normalizedDate);
-        if (targetPeriod?.isLocked) {
-            return { success: false, error: "This period is locked" };
-        }
-        targetPeriodId = targetPeriod?.id;
-    }
+    const targetPeriodId = targetPeriod?.id || null;
 
     const guestMeal = await prisma.guestMeal.upsert({
-        where: { guestMealIdentifier: { userId, roomId, date: normalizedDate, type } } as any,
-        update: { count },
+        where: { guestMealIdentifier: { userId, roomId, date: targetDate, type } } as any,
+        update: { count, periodId: targetPeriodId, updatedAt: new Date() },
         create: {
             userId,
             roomId,
-            date: normalizedDate,
+            date: targetDate,
             type,
             count,
-            periodId: targetPeriodId
+            periodId: targetPeriodId,
+            createdAt: new Date(),
+            updatedAt: new Date()
         },
         include: { user: { select: { id: true, name: true, image: true } } }
     });
@@ -670,17 +719,35 @@ export async function deleteGuestMeal(guestMealId: string, userId: string, perio
         return { success: true };
     }
 
-    if (guestMeal.userId !== userId) {
-        try {
-            await assertAdminRights(userId, guestMeal.roomId, "Unauthorized to edit others guest meals");
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return { success: false, error: "Unauthorized" };
+
+    const [membership, settings, targetPeriod] = await Promise.all([
+        prisma.roomMember.findUnique({ where: { userId_roomId: { userId: session.user.id, roomId: guestMeal.roomId } } }),
+        prisma.mealSettings.findUnique({ where: { roomId: guestMeal.roomId } }),
+        (guestMeal.periodId || periodId)
+            ? prisma.mealPeriod.findUnique({ where: { id: guestMeal.periodId || periodId || "" } })
+            : getPeriodForDate(guestMeal.roomId, guestMeal.date)
+    ]);
+
+    const userRole = membership?.role || null;
+    const isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
+
+    if (guestMeal.userId !== session.user.id && !isPrivileged) {
+        return { success: false, error: "Unauthorized to edit others guest meals" };
     }
 
-    if (!periodId && !guestMeal.periodId) {
-        const targetPeriod = await getPeriodForDate(guestMeal.roomId, guestMeal.date);
-        if (targetPeriod?.isLocked) return { success: false, error: "This period is locked" };
+    // Time Cutoff and Period Lock check
+    if (!isPrivileged) {
+        const canEdit = canUserEditMeal(guestMeal.date, guestMeal.type as any, userRole, settings, targetPeriod);
+        if (!canEdit) {
+            return { success: false, error: "Guest meal time cutoff has passed or period is locked" };
+        }
+    } else {
+        // Even for privileged, check period lock
+        if (targetPeriod?.isLocked) {
+            return { success: false, error: "Cannot delete from a locked period" };
+        }
     }
 
     await prisma.guestMeal.delete({
@@ -798,41 +865,53 @@ export async function triggerAutoMeals(roomId: string, dateStr: string) {
           type: mealType,
           periodId: period?.id || null,
         });
+        
+        // Update local maps
         mealCountByUser.set(userId, currentCount + 1);
-        processedCount++
+        processedCount++;
 
+        // Handle Guest Meals if enabled
         if (autoSetting.guestMealEnabled) {
           const currentGuestCount = guestMealCountByUser.get(userId) || 0;
-          
           if (currentGuestCount < (mealSettings.guestMealLimit || 5)) {
             newGuestMealsToCreate.push({
-              userId: userId,
-              roomId: roomId,
+              userId,
+              roomId,
               date: startOfDayUTC,
-              type: mealType,
+              type: mealType as MealType,
               count: 1,
-              periodId: period?.id || null,
+              periodId: period?.id || null
             });
             guestMealCountByUser.set(userId, currentGuestCount + 1);
           }
         }
       }
     }
+
+    // Bulk creation
     if (newMealsToCreate.length > 0) {
-      await prisma.meal.createMany({ data: newMealsToCreate, skipDuplicates: true });
-    }
-    
-    if (newGuestMealsToCreate.length > 0) {
-      await prisma.guestMeal.createMany({ data: newGuestMealsToCreate, skipDuplicates: true });
+      await prisma.meal.createMany({
+        data: newMealsToCreate,
+        skipDuplicates: true,
+      });
     }
 
-    await invalidateMealCache(roomId);
-    
-    return {
-      success: true,
-      message: `Auto meals processed successfully`,
-      processed: processedCount,
-      skipped: skippedCount,
-      totalUsers: autoMealSettingsList.length,
+    if (newGuestMealsToCreate.length > 0) {
+      await prisma.guestMeal.createMany({
+        data: newGuestMealsToCreate,
+        skipDuplicates: true,
+      });
     }
+
+    if (processedCount > 0 || newGuestMealsToCreate.length > 0) {
+      await invalidateMealCache(roomId);
+    }
+
+    return { 
+      success: true, 
+      message: `Auto meals processed: ${processedCount} meals and ${newGuestMealsToCreate.length} guest meals added.`,
+      processedCount,
+      guestMealsCount: newGuestMealsToCreate.length,
+      skippedCount
+    };
 }
