@@ -15,6 +15,8 @@ interface DailyMealManagerCardProps {
     selectedDate: Date
     isLoading: boolean
     mealSettings: any
+    autoMealSettings: any
+    currentPeriod: any
     userHasMeal: (type: MealType) => boolean
     getUserMealCount: (date: Date, type: MealType) => number
     getUserGuestMealCount: (date: Date, type: MealType) => number
@@ -23,6 +25,8 @@ interface DailyMealManagerCardProps {
     canEditMeal: (type: MealType) => boolean
     canAddMeal: (date: Date, type: MealType) => boolean
     handleToggleMeal: (type: MealType) => void
+    addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>
+    canEditGuestMeal: (date: Date, type: MealType) => boolean
 }
 
 const DailyMealManagerCard = ({
@@ -30,6 +34,8 @@ const DailyMealManagerCard = ({
     selectedDate,
     isLoading,
     mealSettings,
+    autoMealSettings,
+    currentPeriod,
     userHasMeal,
     getUserMealCount,
     getUserGuestMealCount,
@@ -38,6 +44,8 @@ const DailyMealManagerCard = ({
     canEditMeal,
     canAddMeal,
     handleToggleMeal,
+    addGuestMeal,
+    canEditGuestMeal,
 }: DailyMealManagerCardProps) => {
     return (
         <Card>
@@ -46,7 +54,15 @@ const DailyMealManagerCard = ({
                     {format(selectedDate, "MMMM d, yyyy")}
                     {isToday(selectedDate) && " (Today)"}
                 </CardTitle>
-                <GuestMealForm roomId={roomId} date={selectedDate} />
+                <GuestMealForm
+                    roomId={roomId}
+                    date={selectedDate}
+                    addGuestMeal={addGuestMeal}
+                    canEditGuestMeal={canEditGuestMeal}
+                    mealSettings={mealSettings}
+                    autoMealSettings={autoMealSettings}
+                    currentPeriod={currentPeriod}
+                />
             </CardHeader>
             <CardContent>
                 <div className="space-y-3 sm:space-y-4">

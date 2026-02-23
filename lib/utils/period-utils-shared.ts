@@ -46,11 +46,12 @@ export function canUserEditMeal(
   const now = new Date();
   const targetDate = new Date(date);
   
-  // Standardize both to start of day for comparison
-  const d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const d2 = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
-  const isToday = d1.getTime() === d2.getTime();
-  const isPast = d2 < d1;
+  // Use UTC components to avoid local timezone shifting during comparison
+  const d1UTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const d2UTC = Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate());
+  
+  const isToday = d1UTC === d2UTC;
+  const isPast = d2UTC < d1UTC;
 
   // 3. Past Date Restriction: Regular members cannot edit past meals
   if (isPast) return false;
@@ -65,10 +66,12 @@ export function canUserEditMeal(
     if (type === 'DINNER') mealTimeStr = mealSettings.dinnerTime || '20:00';
 
     const [hours, minutes] = mealTimeStr.split(':').map(Number);
-    const mealTime = new Date(d2);
-    mealTime.setHours(hours, minutes, 0, 0);
+    
+    // Construct meal cutoff time for today in UTC for an absolute comparison
+    const cutoffTime = new Date(d2UTC);
+    cutoffTime.setUTCHours(hours, minutes, 0, 0);
 
-    if (now >= mealTime) {
+    if (now.getTime() >= cutoffTime.getTime()) {
       return false;
     }
   }
@@ -185,6 +188,9 @@ export function getPeriodStatusBadgeVariant(period: Period): 'default' | 'second
  * Formats a date to YYYY-MM-DD in a timezone-agnostic way (UTC midnight)
  */
 export function formatDateSafe(date: Date | string): string {
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+    return date.substring(0, 10);
+  }
   const d = new Date(date);
   if (isNaN(d.getTime())) return '';
   const year = d.getFullYear();

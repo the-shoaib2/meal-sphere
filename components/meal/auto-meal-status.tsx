@@ -10,15 +10,16 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "react-hot-toast"
-import { Clock, Zap, Settings, Check, AlertCircle } from "lucide-react"
+import { Clock, Zap, Settings, Check, AlertCircle, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { useMeal, type MealType } from "@/hooks/use-meal"
 
 interface AutoMealStatusProps {
-  roomId: string
+  roomId: string;
+  userRole?: string | null;
 }
 
-export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
+export default function AutoMealStatus({ roomId, userRole: userRoleFromProps }: AutoMealStatusProps) {
   const { data: session } = useSession()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -29,16 +30,24 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
     updateAutoMealSettings,
     triggerAutoMeals,
     shouldAutoAddMeal,
-    isAutoMealTime
+    isAutoMealTime,
+    userRole: userRoleFromHook
   } = useMeal(roomId)
 
+  const userRole = userRoleFromProps || userRoleFromHook;
+  const isPrivileged = !!(userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole));
+
+  const [isTriggering, setIsTriggering] = useState(false);
+
   const handleTriggerAutoMeals = async () => {
+    setIsTriggering(true);
     try {
       await triggerAutoMeals(new Date())
       toast.success("Auto meals triggered successfully")
     } catch (error) {
       // console.error("Error triggering auto meals:", error)
-      // toast already handled by use-meal
+    } finally {
+      setIsTriggering(false);
     }
   }
 
@@ -177,17 +186,40 @@ export default function AutoMealStatus({ roomId }: AutoMealStatusProps) {
           </div>
         )}
 
+        {isPrivileged && (
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-emerald-600"
+              onClick={handleTriggerAutoMeals}
+              disabled={!isSystemEnabled || isTriggering}
+            >
+              {isTriggering ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4" />
+              )}
+              {isTriggering ? "Processing..." : "Trigger Auto Meals Now"}
+            </Button>
+            {!isSystemEnabled && (
+              <p className="text-[10px] text-muted-foreground mt-1 text-center font-medium">
+                Enable system in group settings to trigger
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Warning */}
         {!isSystemEnabled && (
-          <div className="flex items-center gap-2 p-3  border rounded-md">
+          <div className="flex items-center gap-2 p-3  border rounded-md bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200/50">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <span className="text-sm text-yellow-800">
-              Auto meal system is disabled for this group. Contact an administrator to enable it.
+            <span className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+              Auto meal system is disabled for this group.
             </span>
           </div>
         )}
       </CardContent>
     </Card>
   )
-} 
+}

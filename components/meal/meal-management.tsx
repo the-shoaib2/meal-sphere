@@ -140,7 +140,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     shouldAutoAddMeal,
     isAutoMealTime,
     deleteGuestMeal,
-    isTogglingMeal
+    isTogglingMeal,
+    canEditGuestMeal
   } = useMeal(roomId, selectedDate, initialData, userRole)
 
   // Memoized and callback hooks (must be before any early return)
@@ -283,12 +284,12 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         {canAccessAutoMealSettings && (
           <Button
             variant="outline"
-
             className="h-9 w-9 shrink-0 hover:bg-primary/5 hover:text-primary active:scale-95 transition-all shadow-sm"
             onClick={() => setAutoSettingsOpen(true)}
-            title="Auto Meal Settings"
+            title={mealSettings?.autoMealEnabled ? "Auto Meal Settings" : "Auto Meal System Disabled"}
+            disabled={!mealSettings?.autoMealEnabled && userRole !== 'ADMIN'}
           >
-            <Clock className="h-4 w-4" />
+            <Clock className={cn("h-4 w-4", !mealSettings?.autoMealEnabled && "opacity-50")} />
           </Button>
         )}
       </div>
@@ -348,6 +349,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             canEditMeal={canEditMeal}
             canAddMeal={canAddMeal}
             handleToggleMeal={handleToggleMeal}
+            addGuestMeal={addGuestMeal}
+            canEditGuestMeal={canEditGuestMeal}
+            autoMealSettings={autoMealSettings}
+            currentPeriod={currentPeriod}
           />
         </div>
       </div>
@@ -393,6 +398,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         open={autoSettingsOpen}
         onOpenChange={setAutoSettingsOpen}
         autoMealSettings={autoMealSettings}
+        mealSettings={mealSettings}
         updateAutoMealSettings={updateAutoMealSettings}
       />
     </div>

@@ -1,56 +1,62 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useEffect, useState, useOptimistic, useTransition } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { 
-  fetchMealsData,
+  format, 
+  eachDayOfInterval, 
+  startOfDay, 
+  endOfDay
+} from 'date-fns';
+import { toast } from 'sonner';
+
+import { 
+  fetchMealsData 
+} from '@/lib/services/meals-service';
+import {
   toggleMeal as toggleMealAction, 
   addGuestMeal as patchGuestMealAction, 
-  deleteGuestMeal as deleteGuestMealAction, 
-  updateMealSettings as updateMealSettingsAction, 
-  updateAutoMealSettings as updateAutoMealSettingsAction, 
-  triggerAutoMeals as triggerAutoMealsAction,
-  fetchMealSettings,
-  fetchAutoMealSettings,
-  fetchUserMealStats
-} from '@/lib/services/meals-service';
+  deleteGuestMeal as deleteGuestMealAction,
+  updateMealSettings as updateMealSettingsAction,
+  updateAutoMealSettings as updateAutoMealSettingsAction,
+  triggerAutoMeals as triggerAutoMealsAction
+} from '@/lib/actions/meal.actions';
+import { useCurrentPeriod } from './use-periods';
+import { canUserEditMeal, formatDateSafe } from '@/lib/utils/period-utils-shared';
 
-import { toast } from 'react-hot-toast';
-import { format, isSameDay, startOfDay, endOfDay, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
-import { useCurrentPeriod } from '@/hooks/use-periods';
-import { 
-  isPeriodLocked, 
-  canUserEditMeal, 
-  formatDateSafe, 
-  parseDateSafe 
-} from '@/lib/utils/period-utils-shared';
+// Define local normalizeDateStr if it's not in utils
+const normalizeDateStr = (date: any): string => {
+  if (!date) return '';
+  return formatDateSafe(date);
+};
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER';
 
 export interface Meal {
   id: string;
-  date: string;
+  date: string | Date;
   type: MealType;
   userId: string;
   roomId: string;
-  createdAt: string;
-  updatedAt: string;
-  user: {
+  createdAt?: string;
+  updatedAt?: string;
+  user?: {
     id: string;
     name: string | null;
     image: string | null;
+    email?: string | null;
   };
 }
 
 export interface GuestMeal {
   id: string;
-  date: string;
+  date: string | Date;
   type: MealType;
   count: number;
   userId: string;
   roomId: string;
-  createdAt: string;
-  updatedAt: string;
-  user: {
+  createdAt?: string;
+  updatedAt?: string;
+  user?: {
     id: string;
     name: string | null;
     image: string | null;
@@ -68,8 +74,6 @@ export interface MealSettings {
   maxMealsPerDay: number;
   allowGuestMeals: boolean;
   guestMealLimit: number;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface AutoMealSettings {
@@ -81,12 +85,15 @@ export interface AutoMealSettings {
   lunchEnabled: boolean;
   dinnerEnabled: boolean;
   guestMealEnabled: boolean;
-  startDate: string;
-  endDate?: string;
-  excludedDates: string[];
   excludedMealTypes: MealType[];
-  createdAt: string;
-  updatedAt: string;
+  excludedDates: string[];
+}
+
+export interface UserMealStats {
+  breakfast: number;
+  lunch: number;
+  dinner: number;
+  total: number;
 }
 
 export interface MealSummary {
@@ -97,48 +104,20 @@ export interface MealSummary {
   total: number;
 }
 
-export interface UserMealStats {
-  breakfast: number;
-  lunch: number;
-  dinner: number;
-  total: number;
-  user?: {
-    id: string;
-    name: string | null;
-    image: string | null;
-  };
-  period?: {
-    startDate: string;
-    endDate: string;
-    month: string;
-  };
-}
-
 export interface MealsPageData {
   meals: Meal[];
   guestMeals: GuestMeal[];
   settings: MealSettings | null;
-  mealSettings?: MealSettings | null; 
   autoSettings: AutoMealSettings | null;
-  autoMealSettings?: AutoMealSettings | null; 
-  userStats: any;
-  userMealStats?: any; 
+  userStats: UserMealStats | null;
   currentPeriod: any;
-  roomData: any;
   userRole: string | null;
+  members: any[];
   groupId?: string;
-  members?: any[];
-  timestamp?: string;
+  timestamp?: string | number;
 }
 
-const normalizeDateStr = (dateVal: any): string => {
-  if (!dateVal) return '';
-  if (dateVal instanceof Date) return dateVal.toISOString();
-  if (typeof dateVal === 'string') return dateVal;
-  return String(dateVal);
-};
-
-interface UseMealReturn {
+export interface UseMealReturn {
   // Data
   meals: Meal[];
   guestMeals: GuestMeal[];
@@ -182,7 +161,7 @@ interface UseMealReturn {
   getUserMealCount: (date: Date, type: MealType, userId?: string) => number;
   userRole: string | null;
   currentPeriod: any;
-  optimisticToggles: Record<string, 'add' | 'remove' | null>;
+  isPending: boolean;
 }
 
 export function useMeal(roomId?: string, selectedDate?: Date, initialData?: MealsPageData, userRoleFromProps?: string | null, forceRefetch?: boolean): UseMealReturn {
@@ -190,17 +169,9 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   const queryClient = useQueryClient();
   const { data: currentPeriodFromHook } = useCurrentPeriod();
 
-  // 0. Optimistic State for debouncing
-  // Key format: `${dateStr}-${type}-${userId}`
-  const [optimisticToggles, setOptimisticToggles] = useState<Record<string, 'add' | 'remove' | null>>({});
-  const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
-
   // Priority: 1. Passed initialData, 2. Server-side currentPeriod
-  // Accept initialData if it has a matching groupId OR if groupId is missing (older format)
   const effectiveInitialData = initialData && (!initialData.groupId || initialData.groupId === roomId) ? initialData : null;
 
-  // The month key (yyyy-MM) used to cache entire periods in React Query.
-  // This enables instant navigation between days in the same period/month.
   const monthKey = selectedDate ? format(selectedDate, 'yyyy-MM') : null;
   const selectedDateStr = selectedDate ? formatDateSafe(selectedDate) : null;
 
@@ -209,34 +180,29 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     dateRef.current = selectedDateStr;
   }, [selectedDateStr]);
 
-  // 1. Fetch Meals and Period for the selected date via GET /api/meals
-  //    - initialData from SSR seeds the cache instantly on first render
-  //    - Subsequent date changes trigger a real network fetch
-  // We use periodId in the key to ensure different periods in the same month don't collide,
-  // but we fallback to monthKey for initial seeding to restore "dots" visibility.
   const periodIdInCache = effectiveInitialData?.currentPeriod?.id || initialData?.currentPeriod?.id || 'current';
   
-  // 1a. Fetch meals + guest meals + period (requires a selected date)
+  // 1a. Fetch meals + guest meals + period
   const { data: mealSystem = { meals: [], guestMeals: [], period: null, members: [] }, isLoading: isLoadingMeals } = useQuery<{ meals: Meal[], guestMeals: GuestMeal[], period: any, members: any[] }>({
     queryKey: ['meals-system', roomId, monthKey, periodIdInCache],
     queryFn: async ({ queryKey }): Promise<{ meals: Meal[], guestMeals: GuestMeal[], period: any, members: any[] }> => {
       const [_key, _roomId, _monthKey] = queryKey as [string, string, string];
       if (!_roomId || !selectedDate) return { meals: [], guestMeals: [], period: null, members: [] };
-      const res = await (await import('@/lib/services/meals-service')).fetchMealsData(session?.user?.id as string, _roomId, { date: selectedDate });
+      const res = await fetchMealsData(session?.user?.id as string, _roomId, { date: selectedDate });
       return {
-        meals: res.meals || [],
+        meals: (res.meals || []) as Meal[],
         period: res.currentPeriod || null,
-        guestMeals: res.guestMeals || [],
-        members: res.members || [],
+        guestMeals: (res.guestMeals || []) as GuestMeal[],
+        members: (res as any).members || [],
       };
     },
     enabled: !!roomId && !!monthKey,
     initialData: effectiveInitialData
       ? { 
-          meals: effectiveInitialData.meals || [], 
-          guestMeals: effectiveInitialData.guestMeals || [],
-          period: effectiveInitialData.currentPeriod || null,
-          members: effectiveInitialData.members || [],
+          meals: (effectiveInitialData.meals || []) as Meal[], 
+          guestMeals: (effectiveInitialData.guestMeals || []) as GuestMeal[],
+          period: (effectiveInitialData as any).currentPeriod || (effectiveInitialData as any).period || null,
+          members: (effectiveInitialData as any).members || [],
         }
       : undefined,
     initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
@@ -245,8 +211,11 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     refetchOnWindowFocus: false
   });
 
-  // 1b. Fetch settings, auto-settings, and user stats — fires on roomId alone (no date needed)
-  //     This keeps AutoMealStatus and other date-free consumers working correctly.
+  const meals = mealSystem?.meals || [];
+  const guestMeals = mealSystem?.guestMeals || [];
+  const targetPeriod = mealSystem?.period || null;
+
+  // 1b. Fetch settings, auto-settings, and user stats
   const mealConfigQuery = useQuery({
     queryKey: ['meal-config', roomId, session?.user?.id],
     queryFn: async () => {
@@ -257,14 +226,14 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         autoSettings: (res.autoSettings ?? null) as AutoMealSettings | null,
         userStats: res.userStats ?? null,
         userRole: res.userRole ?? null,
-      } as { settings: MealSettings | null, autoSettings: AutoMealSettings | null, userStats: any | null, userRole: string | null };
+      };
     },
     enabled: !!roomId && !!session?.user?.id,
     initialData: effectiveInitialData
       ? {
-          settings: (effectiveInitialData.settings || effectiveInitialData.mealSettings || null) as MealSettings | null,
-          autoSettings: (effectiveInitialData.autoSettings || effectiveInitialData.autoMealSettings || null) as AutoMealSettings | null,
-          userStats: effectiveInitialData.userStats || effectiveInitialData.userMealStats || null,
+          settings: (effectiveInitialData.settings || (effectiveInitialData as any).mealSettings || null) as MealSettings | null,
+          autoSettings: (effectiveInitialData.autoSettings || (effectiveInitialData as any).autoMealSettings || null) as AutoMealSettings | null,
+          userStats: effectiveInitialData.userStats || (effectiveInitialData as any).userMealStats || null,
           userRole: effectiveInitialData.userRole || null,
         }
       : undefined,
@@ -274,36 +243,53 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   });
 
   const mealConfig = mealConfigQuery.data || { settings: null, autoSettings: null, userStats: null, userRole: null };
-  const isLoadingConfig = mealConfigQuery.isLoading;
-
-
-  const meals = mealSystem?.meals || [];
-  const guestMeals = mealSystem?.guestMeals || [];
-  const targetPeriod = mealSystem?.period || null;
-
-  // Settings/stats come from the roomId-gated meal-config query.
-  // This works whether or not a selectedDate is provided (fixes AutoMealStatus and similar consumers).
-  const mealSettings: MealSettings | null = mealConfig?.settings ?? null;
-  const autoMealSettings: AutoMealSettings | null = mealConfig?.autoSettings ?? null;
-  const userMealStats: UserMealStats | null = mealConfig?.userStats ?? null;
-
-  // Expose loading state (merged: either query still loading counts as loading)
-  const isLoadingUserStats = isLoadingMeals || isLoadingConfig;
-
-
+  const mealSettings = mealConfig.settings;
+  const autoMealSettings = mealConfig.autoSettings;
+  const userMealStats = mealConfig.userStats;
+  const userRole = userRoleFromProps || mealConfig.userRole || effectiveInitialData?.userRole || null;
   const currentPeriod = targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod;
-  const userRole = userRoleFromProps || mealConfig?.userRole || effectiveInitialData?.userRole || null;
 
-  // Consolidated loading state — date-bound meals query is the primary signal
+  const isLoadingConfig = mealConfigQuery.isLoading;
+  const isLoadingUserStats = isLoadingMeals || isLoadingConfig;
   const isLoading = isLoadingMeals;
 
-  // Toggle meal mutation
+  // 0. Transition and Optimistic State
+  const [isPending, startTransition] = useTransition();
+  const [optimisticMeals, addOptimisticMeal] = useOptimistic(
+    meals,
+    (state: Meal[], update: { action: 'add' | 'remove', meal?: Meal, userId: string, type: MealType, dateStr: string }) => {
+      if (update.action === 'add') {
+        const alreadyHas = state.some(m => m.userId === update.userId && m.type === update.type && normalizeDateStr(m.date) === update.dateStr);
+        if (alreadyHas) return state;
+        return [update.meal!, ...state];
+      } else {
+        return state.filter(m => !(m.type === update.type && m.userId === update.userId && normalizeDateStr(m.date) === update.dateStr));
+      }
+    }
+  );
+
+  const [optimisticGuestMeals, addOptimisticGuestMeal] = useOptimistic(
+    guestMeals,
+    (state: GuestMeal[], update: { action: 'add' | 'remove' | 'update', meal?: GuestMeal, id?: string, count?: number, userId?: string, type?: MealType, dateStr?: string }) => {
+      if (update.action === 'add') {
+        return [...state, update.meal!];
+      } else if (update.action === 'update') {
+        return state.map(m => m.id === update.id ? { ...m, count: update.count! } : m);
+      } else {
+        return state.filter(m => m.id !== update.id);
+      }
+    }
+  );
+
+  const timeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Mutations
   const toggleMealMutation = useMutation({
     mutationFn: async ({ date, type, userId, action, silent }: { date: Date; type: MealType; userId: string; action: 'add' | 'remove'; silent?: boolean }) => {
-      const formattedDate = formatDateSafe(date);
-      const res = await toggleMealAction(roomId!, userId, formattedDate, type, action, currentPeriod?.id);
+      const dateStr = formatDateSafe(date);
+      const res = await toggleMealAction(roomId!, userId, dateStr, type, action, currentPeriod?.id);
       if (!res.success) {
-          const error = new Error(res.error );
+          const error = new Error(res.error);
           (error as any).conflict = res.conflict;
           throw error;
       }
@@ -316,38 +302,24 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
       const queryKey = ['meals-system', roomId, targetMonthKey, targetPeriodId];
 
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey });
-
-      // Snapshot previous value
       const previousData = queryClient.getQueryData(queryKey);
 
-      // Optimistically update
-      queryClient.setQueryData(queryKey, (old: { meals: Meal[], period: any, guestMeals: GuestMeal[], members: any[] } | undefined) => {
+      queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
-
         const dateOnly = dateString.split('T')[0];
-        const existingMealIndex = old.meals.findIndex(
-          m => normalizeDateStr(m.date).startsWith(dateOnly) && m.type === type && m.userId === userId
+        const alreadyHasMeal = old.meals?.some(
+          (m: Meal) => normalizeDateStr(m.date) === dateOnly && m.type === type && m.userId === userId
         );
 
-        let newMeals = [...old.meals];
-
-        if (existingMealIndex >= 0) {
-          // Remove meal (toggle off)
-          newMeals = newMeals.filter((_, i) => i !== existingMealIndex);
+        let newMeals = [...(old.meals || [])];
+        if (alreadyHasMeal) {
+          newMeals = newMeals.filter(m => !(normalizeDateStr(m.date) === dateOnly && m.type === type && m.userId === userId));
         } else {
-          // Add meal (toggle on)
-          // Resolve correct user metadata — skip entry if user can't be identified
           const memberUser = old.members?.find((m: any) => m.userId === userId)?.user;
-          const existingMealUser = old.meals?.find((m: Meal) => m.userId === userId)?.user;
-          const userObj = userId === session?.user?.id 
-            ? session.user 
-            : (memberUser || existingMealUser);
-
-          // Only add the optimistic entry if we know who the user is
+          const userObj = userId === session?.user?.id ? session.user : memberUser;
           if (userObj) {
-            const newMeal: Meal = {
+            newMeals.push({
               id: `temp-${type}-${dateOnly}-${Date.now()}`,
               date: dateString,
               type,
@@ -356,98 +328,42 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               user: userObj as any
-            };
-            newMeals = [newMeal, ...newMeals];
+            });
           }
         }
-
-        return {
-          ...old,
-          meals: newMeals
-        };
+        return { ...old, meals: newMeals };
       });
-
       return { previousData, queryKey };
     },
     onError: (error: any, variables, context: any) => {
-      // ROLLBACK LOGIC:
-      // - Conflict (P2002 duplicate): meal already exists, keep optimistic state (matches reality). No toast.
-      // - Silent flag: auto-triggered meals — never bother the user with a toast.
-      // - All other errors: rollback and show a toast.
-      if (variables.silent) {
-        return; // handle silently
-      }
-      if (context?.previousData && context?.queryKey) {
+      if (!variables.silent && context?.previousData && context?.queryKey) {
         queryClient.setQueryData(context.queryKey, context.previousData);
+        toast.error(error.message || 'Failed to toggle meal');
       }
-    },
-    onSuccess: (data: any, variables) => {
-      const { action, type, date } = variables;
-      const dateString = formatDateSafe(date);
-      const targetMonthKey = format(date, 'yyyy-MM');
-      const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
-      const queryKey = ['meals-system', roomId, targetMonthKey, targetPeriodId];
-      
-      if (action === 'add' && data.meal) {
-        queryClient.setQueryData(queryKey, (old: any) => {
-          if (!old) return old;
-          
-          const updatedMeals = old.meals.map((m: any) => {
-            if (m.id.startsWith('temp-') && m.type === type && normalizeDateStr(m.date).startsWith(dateString)) {
-              return data.meal;
-            }
-            return m;
-          });
-
-          return {
-            ...old,
-            meals: updatedMeals
-          };
-        });
-      }
-
-      // Cleanup optimistic toggle now that server data is arriving
-      const userId = variables.userId;
-      const dateStr = format(date, 'yyyy-MM-dd');
-      const optKey = `${dateStr}-${type}-${userId}`;
-      setOptimisticToggles((prev) => {
-        const next = { ...prev };
-        delete next[optKey];
-        return next;
-      });
     },
     onSettled: (_, __, variables) => {
       const targetMonthKey = format(variables.date, 'yyyy-MM');
       const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
-      // Mark as stale without immediately refetching — onSuccess already wrote the confirmed data
       queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey, targetPeriodId], refetchType: 'none' });
-      // Balance queries have no optimistic updates, so do invalidate them
       queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
       queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
     }
   });
 
-  // Consolidated guest meal mutation for add and update
   const patchGuestMealMutation = useMutation({
     mutationFn: async ({ date, type, count }: { date: Date; type: MealType; count: number }) => {
-      const formattedDate = formatDateSafe(date);
+      const dateStr = formatDateSafe(date);
       const res = await patchGuestMealAction({ 
         roomId: roomId!, 
         userId: session?.user?.id as string, 
-        dateStr: formattedDate, 
+        dateStr, 
         type, 
         count, 
         periodId: currentPeriod?.id 
       });
-      
       if (!res.success) throw new Error(res.error || "Failed to patch guest meal");
       const meal = res.data!;
-      return {
-        ...meal,
-        date: meal.date.toISOString(),
-        createdAt: meal.createdAt.toISOString(),
-        updatedAt: meal.updatedAt.toISOString(),
-      } as unknown as GuestMeal;
+      return meal;
     },
     onMutate: async (variables) => {
       const { date, type, count } = variables;
@@ -455,714 +371,199 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       const targetMonthKey = format(date, 'yyyy-MM');
       const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
       const queryKey = ['meals-system', roomId, targetMonthKey, targetPeriodId];
-      
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData(queryKey);
-      
-      queryClient.setQueryData(queryKey, (old: any | undefined) => {
+      queryClient.setQueryData(queryKey, (old: any) => {
         if (!old) return old;
-        
-        const existingMealIndex = (old.guestMeals || []).findIndex(
-          (m: any) => m.type === type && normalizeDateStr(m.date).startsWith(dateStr) && m.userId === session?.user?.id
-        );
-
         let newGuestMeals = [...(old.guestMeals || [])];
-
-        if (existingMealIndex >= 0) {
-          // Update existing
-          newGuestMeals[existingMealIndex] = { ...newGuestMeals[existingMealIndex], count };
+        const existingIdx = newGuestMeals.findIndex(m => m.type === type && normalizeDateStr(m.date) === dateStr.split('T')[0] && m.userId === session?.user?.id);
+        if (existingIdx >= 0) {
+          newGuestMeals[existingIdx] = { ...newGuestMeals[existingIdx], count };
         } else {
-          // Add new temp
-          const newGuestMeal: GuestMeal = {
-            id: `temp-${Date.now()}`,
+          newGuestMeals.push({
+            id: `temp-guest-${Date.now()}`,
             date: date.toISOString(),
             type,
             count,
             userId: session?.user?.id!,
             roomId: roomId!,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            user: {
-              id: session?.user?.id!,
-              name: session?.user?.name || null,
-              image: session?.user?.image || null,
-            }
-          };
-          newGuestMeals = [newGuestMeal, ...newGuestMeals];
+            user: session?.user as any
+          });
         }
-
         return { ...old, guestMeals: newGuestMeals };
       });
-      
       return { previousData, queryKey };
     },
-    onError: (error: any, variables, context) => {
-      if (context?.previousData && context?.queryKey) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
-      }
-      toast.error(error.message || 'Failed to update guest meal');
-    },
-    onSuccess: (data: GuestMeal, variables) => {
-      const dateStr = formatDateSafe(variables.date);
-      const targetMonthKey = format(variables.date, 'yyyy-MM');
-      const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
-      const queryKey = ['meals-system', roomId, targetMonthKey, targetPeriodId];
-      queryClient.setQueryData(queryKey, (old: any | undefined) => {
-        if (!old) return old;
-        const dateStr = data.date.split('T')[0];
-        const withoutMatching = (old.guestMeals || []).filter(
-          (m: any) => !(m.type === data.type && normalizeDateStr(m.date).startsWith(dateStr) && m.userId === data.userId) && !m.id.startsWith('temp-')
-        );
-
-        if (data.count === 0) {
-          return {
-            ...old,
-            guestMeals: withoutMatching
-          };
-        }
-
-        return {
-          ...old,
-          guestMeals: [data, ...withoutMatching]
-        };
-      });
+    onError: (error, variables, context) => {
+      if (context?.previousData) queryClient.setQueryData(context.queryKey, context.previousData);
+      toast.error(error.message);
     },
     onSettled: (_, __, variables) => {
-      const targetMonthKey = format(variables.date, 'yyyy-MM');
-      const targetPeriodId = mealSystem?.period?.id || 'current';
-      // Mark as stale without immediately refetching
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey, targetPeriodId], refetchType: 'none' });
-      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
+        const targetMonthKey = format(variables.date, 'yyyy-MM');
+        queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey], refetchType: 'none' });
     }
   });
 
   const deleteGuestMealMutation = useMutation({
     mutationFn: async ({ guestMealId }: { guestMealId: string; date?: Date }) => {
       const res = await deleteGuestMealAction(guestMealId, session?.user?.id as string, currentPeriod?.id);
-      if (!res.success) throw new Error(res.error || "Failed to delete guest meal");
+      if (!res.success) throw new Error(res.error);
       return res;
     },
-    onMutate: async (variables) => {
-      const { guestMealId, date } = variables;
-      const targetMonthKey = date ? format(date, 'yyyy-MM') : monthKey;
-      const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
-      const queryKey = ['meals-system', roomId, targetMonthKey, targetPeriodId];
-      
-      await queryClient.cancelQueries({ queryKey });
-      const previousData = queryClient.getQueryData(queryKey);
-      
-      queryClient.setQueryData(queryKey, (old: any | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          guestMeals: (old.guestMeals || []).filter((meal: any) => meal.id !== guestMealId)
-        };
-      });
-      
-      return { previousData, queryKey };
-    },
-    onError: (error: any, variables, context: any) => {
-      if (context?.previousData && context?.queryKey) {
-        queryClient.setQueryData(context.queryKey, context.previousData);
-      }
-      toast.error(error.message || 'Failed to delete guest meal');
-    },
-    onSuccess: (_, variables, context: any) => {
-      if (context?.queryKey) {
-        queryClient.setQueryData(context.queryKey, (old: any | undefined) => {
-          if (!old) return old;
-          return {
+    onMutate: async ({ guestMealId, date }) => {
+        const targetMonthKey = date ? format(date, 'yyyy-MM') : monthKey;
+        const queryKey = ['meals-system', roomId, targetMonthKey, periodIdInCache];
+        await queryClient.cancelQueries({ queryKey });
+        const previousData = queryClient.getQueryData(queryKey);
+        queryClient.setQueryData(queryKey, (old: any) => ({
             ...old,
-            guestMeals: (old.guestMeals || []).filter((meal: any) => meal.id !== variables.guestMealId)
-          };
-        });
-      }
+            guestMeals: (old?.guestMeals || []).filter((m: any) => m.id !== guestMealId)
+        }));
+        return { previousData, queryKey };
     },
-    onSettled: (_, __, variables, context: any) => {
-      const targetMonthKey = variables.date ? format(variables.date, 'yyyy-MM') : monthKey;
-      const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
-      // Mark as stale without immediately refetching
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey, targetPeriodId], refetchType: 'none' });
-      queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
-      queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });
+    onError: (error, variables, context) => {
+        if (context?.previousData) queryClient.setQueryData(context.queryKey, context.previousData);
+        toast.error(error.message);
     }
   });
 
-  // Update meal settings mutation
   const updateMealSettingsMutation = useMutation({
     mutationFn: async (settings: Partial<MealSettings>) => {
       const res = await updateMealSettingsAction(roomId!, settings);
-      if (!res.success) throw new Error(res.error || "Failed to update meal settings");
-      const data = res.data!;
-      return {
-        ...data,
-        createdAt: data.createdAt.toISOString(),
-        updatedAt: data.updatedAt.toISOString(),
-      } as unknown as MealSettings;
+      if (!res.success) throw new Error(res.error);
+      return res.data;
     },
-    onSuccess: (data: MealSettings) => {
-      // Update the meal-config cache so UI reflects new settings immediately
-      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => {
-        if (!old) return old;
-        return { ...old, settings: data };
-      });
-    },
-    onSettled: () => {
-      // Mark as stale without immediately refetching — onSuccess already wrote the confirmed data
-      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId], refetchType: 'none' });
+    onSuccess: (data: any) => {
+      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => ({ ...old, settings: data }));
     }
   });
 
-  // Update auto meal settings mutation
   const updateAutoMealSettingsMutation = useMutation({
     mutationFn: async (settings: Partial<AutoMealSettings>) => {
       const res = await updateAutoMealSettingsAction(roomId!, session?.user?.id as string, settings);
-      if (!res.success) throw new Error(res.error || "Failed to update auto meal settings");
-      const data = res.data!;
-      return {
-        ...data,
-        startDate: data.startDate.toISOString(),
-        endDate: data.endDate ? data.endDate.toISOString() : undefined,
-        createdAt: data.createdAt.toISOString(),
-        updatedAt: data.updatedAt.toISOString(),
-      } as unknown as AutoMealSettings;
+      if (!res.success) throw new Error(res.error);
+      return res.data;
     },
-    onMutate: async (newSettings) => {
-      const previousData = queryClient.getQueryData(['meal-config', roomId, session?.user?.id]);
-
-      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          autoSettings: { ...(old.autoSettings || {}), ...newSettings }
-        };
-      });
-
-      return { previousData };
-    },
-    onError: (err: any, newSettings, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(['meal-config', roomId, session?.user?.id], context.previousData);
-      }
-      toast.error(err.message || 'Failed to update auto meal settings');
-    },
-    onSuccess: (data: AutoMealSettings) => {
-      // Update the meal-config cache so UI reflects new auto-settings immediately
-      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => {
-        if (!old) return old;
-        return { ...old, autoSettings: data };
-      });
-    },
-    onSettled: () => {
-      // Mark as stale without immediately refetching — onSuccess already wrote the confirmed data
-      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId], refetchType: 'none' });
+    onSuccess: (data: any) => {
+      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => ({ ...old, autoSettings: data }));
     }
   });
 
-  // Trigger auto meals mutation
   const triggerAutoMealsMutation = useMutation({
     mutationFn: async (date: Date) => {
-      const formattedDate = formatDateSafe(date);
-      const res = await triggerAutoMealsAction(roomId!, formattedDate);
-      if (!res.success) throw new Error(res.error || "Failed to trigger auto meals");
+      const dateStr = formatDateSafe(date);
+      const res = await triggerAutoMealsAction(roomId!, dateStr);
+      if (!res.success) throw new Error(res.error);
       return res;
     },
-    onSuccess: (data: any, variables) => {
-      // For auto meals, we don't know exactly what changed, but if we have no GET API,
-      // we might need the server to return the updated meals list.
-      // Assuming for now it's a bulk action.
-      toast.success('Auto meals processed successfully');
-      const targetMonthKey = format(variables, 'yyyy-MM');
-      const targetPeriodId = mealSystem?.period?.id || 'current';
-      queryClient.invalidateQueries({ queryKey: ['meals-system', roomId, targetMonthKey, targetPeriodId] });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to trigger auto meals');
-    },
-    onSettled: () => {
-      // No need to invalidate here, already done in onSuccess
+    onSuccess: () => {
+        toast.success('Auto meals triggered');
+        queryClient.invalidateQueries({ queryKey: ['meals-system', roomId] });
     }
   });
 
-  // Utility functions: Filter the period-wide data locally for instant UI updates
+  // Utility functions
   const useMealsByDate = useCallback((date: Date): Meal[] => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const serverMeals = (meals as Meal[]).filter(meal => normalizeDateStr(meal?.date).startsWith(dateStr));
-    
-    // Merge with optimistic additions/removals
-    const userId = session?.user?.id;
-    if (!userId) return serverMeals;
+    const dateStr = formatDateSafe(date);
+    return (optimisticMeals as Meal[]).filter(meal => normalizeDateStr(meal?.date) === dateStr);
+  }, [optimisticMeals]);
 
-    let result = [...serverMeals];
-    
-    // Handle removals
-    Object.entries(optimisticToggles).forEach(([key, action]) => {
-      // Key format: `${dateStr}-${type}-${userId}`
-      if (key.startsWith(dateStr) && action === 'remove') {
-        const parts = key.split('-'); 
-        // parts: [year, month, day, type, uid]
-        const type = parts[3];
-        const uid = parts[4];
-        result = result.filter(m => !(m.type === type && m.userId === uid));
-      }
-    });
-
-    // Handle additions (simplified for local UI)
-    Object.entries(optimisticToggles).forEach(([key, action]) => {
-      if (key.startsWith(dateStr) && action === 'add') {
-        const parts = key.split('-');
-        const type = parts[3] as MealType;
-        const uid = parts[4];
-        
-        // Only add if not already in result (to avoid double-counting with server data)
-        const alreadyInResult = result.some(m => m.type === type && m.userId === uid);
-        
-        if (!alreadyInResult) {
-          // Robust Name Resolution Priority:
-          // 1. Session user (if it's the current user)
-          // 2. Member list from fetchMealsData (most reliable group source)
-          // 3. Existing meals in cache (fallback)
-          // If none can identify the user, skip the entry — counts still update via optimisticToggles
-          const members = (mealSystem as any)?.members || [];
-          const memberUser = members.find((m: any) => m.userId === uid)?.user;
-          const existingUser = (meals as Meal[]).find(m => m.userId === uid)?.user;
-          
-          const userObj = uid === session?.user?.id 
-            ? session.user 
-            : (memberUser || existingUser);
-
-          if (userObj) {
-            result.push({
-              id: `opt-${key}`,
-              date: dateStr,
-              type,
-              userId: uid,
-              roomId: roomId!,
-              user: userObj as any,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-          }
-        }
-      }
-    });
-
-    return result;
-  }, [meals, optimisticToggles, session?.user?.id, roomId]);
-
-  const stateRef = useRef({ meals, optimisticToggles });
+  const stateRef = useRef({ meals, optimisticMeals, guestMeals, optimisticGuestMeals });
   useEffect(() => {
-    stateRef.current = { meals, optimisticToggles };
-  }, [meals, optimisticToggles]);
+    stateRef.current = { meals, optimisticMeals, guestMeals, optimisticGuestMeals };
+  }, [meals, optimisticMeals, guestMeals, optimisticGuestMeals]);
 
   const useGuestMealsByDate = useCallback((date: Date): GuestMeal[] => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return (guestMeals as GuestMeal[]).filter(meal => normalizeDateStr(meal?.date).startsWith(dateStr));
-  }, [guestMeals]);
+    const dateStr = formatDateSafe(date);
+    return (optimisticGuestMeals as GuestMeal[]).filter(meal => normalizeDateStr(meal?.date) === dateStr);
+  }, [optimisticGuestMeals]);
 
   const useMealCount = useCallback((date: Date, type: MealType): number => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    
-    // 1. Regular meals: server + optimistic addons - optimistic removals
-    let regularCount = (meals || []).filter((meal: Meal) =>
-      normalizeDateStr(meal?.date).startsWith(dateStr) && meal.type === type
-    ).length;
-
-    // Adjust for ANY optimistic toggles on this date/type (handles admin multi-user toggles)
-    Object.entries(optimisticToggles).forEach(([key, action]) => {
-      if (!key.startsWith(dateStr)) return;
-      
-      const parts = key.split('-');
-      const optType = parts[3];
-      const uid = parts[4];
-      
-      if (optType !== type) return;
-
-      const serverHasIt = meals.some(m => 
-        normalizeDateStr(m.date).startsWith(dateStr) && m.type === type && m.userId === uid
-      );
-
-      if (action === 'add' && !serverHasIt) regularCount++;
-      if (action === 'remove' && serverHasIt) regularCount--;
-    });
-
-    // 2. Guest meals: includes both server-confirmed and temp ones
-    const guestMealsCount = (guestMeals || []).filter((meal: GuestMeal) =>
-      normalizeDateStr(meal?.date).startsWith(dateStr) && meal.type === type
-    ).reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
-
-    return Math.max(0, regularCount + guestMealsCount);
-  }, [meals, guestMeals, optimisticToggles]);
+    const dateStr = formatDateSafe(date);
+    const regularCount = (optimisticMeals || []).filter((meal: Meal) => normalizeDateStr(meal?.date) === dateStr && meal.type === type).length;
+    const guestMealsCount = (optimisticGuestMeals || []).filter((meal: GuestMeal) => normalizeDateStr(meal?.date) === dateStr && meal.type === type).reduce((sum, meal) => sum + meal.count, 0);
+    return regularCount + guestMealsCount;
+  }, [optimisticMeals, optimisticGuestMeals]);
 
   const useMealSummary = useCallback((startDate: Date, endDate: Date): MealSummary[] => {
     const dates = eachDayOfInterval({ start: startOfDay(startDate), end: endOfDay(endDate) });
-    return dates.map((date: Date) => {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      const breakfast = useMealCount(date, 'BREAKFAST');
-      const lunch = useMealCount(date, 'LUNCH');
-      const dinner = useMealCount(date, 'DINNER');
-
-      return {
-        date: dateStr,
-        breakfast,
-        lunch,
-        dinner,
-        total: breakfast + lunch + dinner
-      };
+    return dates.map(date => {
+        const dateStr = formatDateSafe(date);
+        return {
+            date: dateStr,
+            breakfast: useMealCount(date, 'BREAKFAST'),
+            lunch: useMealCount(date, 'LUNCH'),
+            dinner: useMealCount(date, 'DINNER'),
+            total: useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')
+        };
     });
   }, [useMealCount]);
 
-  const hasMeal = useCallback((date: Date, type: MealType, userId?: string): boolean => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const targetUserId = userId || session?.user?.id;
-
-    if (!targetUserId) return false;
-
-    // Check optimistic state first
-    const optKey = `${dateStr}-${type}-${targetUserId}`;
-    if (optimisticToggles[optKey] === 'add') return true;
-    if (optimisticToggles[optKey] === 'remove') return false;
-
-    return meals.some((meal: Meal) =>
-      normalizeDateStr(meal?.date).startsWith(dateStr) &&
-      meal.type === type &&
-      meal.userId === targetUserId
-    );
-  }, [meals, session?.user?.id, optimisticToggles]);
-
-  const canAddMeal = useCallback((date: Date, type: MealType): boolean => {
-    return canUserEditMeal(date, type, userRole, mealSettings, currentPeriod);
-  }, [mealSettings, currentPeriod, userRole]);
-
-  const canEditGuestMeal = useCallback((date: Date, type: MealType): boolean => {
-    return canUserEditMeal(date, type, userRole, mealSettings, currentPeriod);
-  }, [mealSettings, currentPeriod, userRole]);
-
-
-
-  const isAutoMealTime = useCallback((date: Date, type: MealType): boolean => {
-    // Check if auto meal system is enabled by admin
-    if (!mealSettings?.autoMealEnabled) return false;
-
-    // Check if user has auto meals enabled
-    if (!autoMealSettings?.isEnabled) return false;
-
-    const now = new Date();
-    const currentTime = format(now, 'HH:mm');
-    const mealTime = type === 'BREAKFAST' ? mealSettings.breakfastTime :
-      type === 'LUNCH' ? mealSettings.lunchTime :
-        mealSettings.dinnerTime;
-
-    return currentTime === mealTime;
-  }, [autoMealSettings, mealSettings]);
-
-  const shouldAutoAddMeal = useCallback((date: Date, type: MealType): boolean => {
-    // Check if auto meal system is enabled by admin
-    if (!mealSettings?.autoMealEnabled) return false;
-
-    // Check if user has auto meals enabled
-    if (!autoMealSettings?.isEnabled) return false;
-
-    // Check if this meal type is enabled for the user
-    const isEnabled = type === 'BREAKFAST' ? autoMealSettings.breakfastEnabled :
-      type === 'LUNCH' ? autoMealSettings.lunchEnabled :
-        autoMealSettings.dinnerEnabled;
-
-    if (!isEnabled) return false;
-
-    // Check if this meal type is excluded
-    if (autoMealSettings.excludedMealTypes.includes(type)) return false;
-
-    // Check if the date is excluded
-    const dateStr = format(date, 'yyyy-MM-dd');
-    if (autoMealSettings.excludedDates.includes(dateStr)) return false;
-
-    // Check if user already has this meal
-    if (hasMeal(date, type)) return false;
-
-    // Check if it's the right time
-    return isAutoMealTime(date, type);
-  }, [autoMealSettings, mealSettings, hasMeal, isAutoMealTime]);
-
-  // ─── Client-side Auto Meal Trigger ──────────────────────────────────────────
-  // Calculates the exact ms until each meal time and fires a one-shot timer.
-  // When it fires, if all conditions are still met it calls toggleMeal.
-  // This is the client-side counterpart to the server cron, ensuring auto-meals
-  // work even on Vercel hobby plans or when the cron misses the window.
-  const scheduledAutoMealsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const userId = session?.user?.id;
-    if (!userId || !roomId) return;
-    if (!mealSettings?.autoMealEnabled || !autoMealSettings?.isEnabled) return;
-
-    const MEAL_SCHEDULE: { type: MealType; timeStr: string | undefined; enabled: boolean | undefined }[] = [
-      { type: 'BREAKFAST', timeStr: mealSettings.breakfastTime, enabled: autoMealSettings.breakfastEnabled },
-      { type: 'LUNCH',     timeStr: mealSettings.lunchTime,     enabled: autoMealSettings.lunchEnabled },
-      { type: 'DINNER',    timeStr: mealSettings.dinnerTime,    enabled: autoMealSettings.dinnerEnabled },
-    ];
-
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-
-    for (const { type, timeStr, enabled } of MEAL_SCHEDULE) {
-      if (!enabled || !timeStr) continue;
-      if (autoMealSettings.excludedMealTypes?.includes(type)) continue;
-      if (autoMealSettings.excludedDates?.includes(todayStr)) continue;
-
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      const now = new Date();
-      const mealTimeToday = new Date(now);
-      mealTimeToday.setHours(hours, minutes, 0, 0);
-
-      let msUntilMealTime = mealTimeToday.getTime() - now.getTime();
-
-      // 5-minute grace window: if tab was suspended at the exact moment, still fire
-      if (msUntilMealTime < -(5 * 60 * 1000)) continue; // too late, skip
-      if (msUntilMealTime < 0) msUntilMealTime = 0;     // fire immediately within grace
-
-      const scheduleKey = `${todayStr}-${type}`;
-
-      const timer = setTimeout(async () => {
-        // Guard: avoid double-firing if effect re-runs before cleanup
-        if (scheduledAutoMealsRef.current.has(scheduleKey)) return;
-
-        // Read fresh meal state from the ref (prevents stale closure)
-        const { meals: currentMeals, optimisticToggles: currOpt } = stateRef.current;
-        const alreadyAdded =
-          currentMeals.some((m: Meal) =>
-            normalizeDateStr(m?.date).startsWith(todayStr) &&
-            m.type === type &&
-            m.userId === userId
-          ) || currOpt[`${todayStr}-${type}-${userId}`] === 'add';
-
-        if (alreadyAdded) return;
-
-        scheduledAutoMealsRef.current.add(scheduleKey);
-
-        try {
-          const mealDate = new Date();
-          mealDate.setHours(0, 0, 0, 0);
-          // Pass a silent onError so that server-side rejections (period locked,
-          // cutoff exceeded, etc.) never pop a toast at the user. The optimistic
-          // update already put the meal in the UI; if the server rejects it,
-          // the mutation's onError will roll it back silently.
-          await toggleMealMutation.mutateAsync(
-            { date: mealDate, type, userId, action: 'add', silent: true },
-            {
-              onError: () => {
-                scheduledAutoMealsRef.current.delete(scheduleKey);
-              },
-            }
-          );
-        } catch {
-          // mutateAsync re-throws — already handled in the per-call onError above
-          scheduledAutoMealsRef.current.delete(scheduleKey);
-        }
-      }, msUntilMealTime);
-
-      timers.push(timer);
-    }
-
-    return () => { timers.forEach(clearTimeout); };
-  }, [
-    session?.user?.id,
-    roomId,
-    mealSettings?.autoMealEnabled,
-    mealSettings?.breakfastTime,
-    mealSettings?.lunchTime,
-    mealSettings?.dinnerTime,
-    autoMealSettings?.isEnabled,
-    autoMealSettings?.breakfastEnabled,
-    autoMealSettings?.lunchEnabled,
-    autoMealSettings?.dinnerEnabled,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(autoMealSettings?.excludedMealTypes),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    JSON.stringify(autoMealSettings?.excludedDates),
-    selectedDate?.toDateString(),
-  ]);
-  // ──────────────────────────────────────────────────────────────────────────
-
-  // Get user's guest meals for a specific date
-  const getUserGuestMeals = useCallback((date: Date, userId?: string): GuestMeal[] => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const targetUserId = userId || session?.user?.id;
-
-    if (!targetUserId) return [];
-
-    return guestMeals.filter((meal: GuestMeal) =>
-      normalizeDateStr(meal?.date).startsWith(dateStr) &&
-      meal.userId === targetUserId
-    );
-  }, [guestMeals, session?.user?.id]);
-
-  // Get total guest meals for a user on a specific date and type
-  const getUserGuestMealCount = useCallback((date: Date, type: MealType, userId?: string): number => {
-    const userGuestMeals = getUserGuestMeals(date, userId);
-    return userGuestMeals
-      .filter((meal: GuestMeal) => meal.type === type)
-      .reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
-  }, [getUserGuestMeals]);
-
-  // Get user's meal count for a specific date and type
-  const getUserMealCount = useCallback((date: Date, type: MealType, userId?: string): number => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const targetUserId = userId || session?.user?.id;
-
-    if (!targetUserId) return 0;
-
-    // Regular meal part: respect optimistic state if it's the session user
-    let hasRegular = meals.some((meal: Meal) =>
-      normalizeDateStr(meal?.date).startsWith(dateStr) &&
-      meal.type === type &&
-      meal.userId === targetUserId
-    );
-
-    if (targetUserId) {
-      const optKey = `${dateStr}-${type}-${targetUserId}`;
-      if (optimisticToggles[optKey] === 'add') hasRegular = true;
-      else if (optimisticToggles[optKey] === 'remove') hasRegular = false;
-    }
-
-    const regularMeals = hasRegular ? 1 : 0;
-
-    const userGuestMeals = guestMeals.filter((meal: GuestMeal) =>
-      normalizeDateStr(meal?.date).startsWith(dateStr) &&
-      meal.type === type &&
-      meal.userId === targetUserId
-    );
-
-    const guestMealsCount = userGuestMeals.reduce((sum: number, meal: GuestMeal) => sum + meal.count, 0);
-
-    return regularMeals + guestMealsCount;
-  }, [meals, guestMeals, session?.user?.id, optimisticToggles]);
-
-  // Get user meal stats for a specific month with optimistic adjustments
   const useUserMealStats = useCallback((month?: string): UserMealStats | null => {
-    if (!userMealStats) return null;
+    return userMealStats;
+  }, [userMealStats]);
 
-    // Deep merge/clone to avoid mutating the original fetched data
-    let adjustedStats: UserMealStats = JSON.parse(JSON.stringify(userMealStats));
-    const userId = session?.user?.id;
-
-    if (!userId) return adjustedStats;
-
-    // Apply adjustments based on current optimistic toggles
-    Object.entries(optimisticToggles).forEach(([key, action]) => {
-      // Key format: `${dateStr}-${type}-${uid}`
-      const [y, m, d, type, uid] = key.split('-');
-      if (uid !== userId) return;
-
-      const dateStr = `${y}-${m}-${d}`;
-      
-      // We only adjust if the toggled meal is NOT already in the server data
-      const serverHasIt = meals.some((meal: Meal) => 
-        normalizeDateStr(meal.date).startsWith(dateStr) && 
-        meal.type === type && 
-        meal.userId === userId
-      );
-
-      if (action === 'add' && !serverHasIt) {
-        adjustedStats.total++;
-        const typeKey = type.toLowerCase() as 'breakfast' | 'lunch' | 'dinner';
-        adjustedStats[typeKey]++;
-      } else if (action === 'remove' && serverHasIt) {
-        adjustedStats.total = Math.max(0, adjustedStats.total - 1);
-        const typeKey = type.toLowerCase() as 'breakfast' | 'lunch' | 'dinner';
-        adjustedStats[typeKey] = Math.max(0, adjustedStats[typeKey] - 1);
-      }
-    });
-
-    return adjustedStats;
-  }, [userMealStats, optimisticToggles, session?.user?.id, meals]);
-
-  // Mutation wrappers with debouncing
   const toggleMeal = useCallback(async (date: Date, type: MealType, userId: string) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const key = `${dateStr}-${type}-${userId}`;
-    const { meals: currentMeals, optimisticToggles: currOpt } = stateRef.current;
-    
-    // Determine the next action based on current state (respecting optimistic state)
-    let currentHasMeal = false;
-    if (currOpt[key] === 'add') currentHasMeal = true;
-    else if (currOpt[key] === 'remove') currentHasMeal = false;
-    else {
-      currentHasMeal = currentMeals.some((m: Meal) =>
-        normalizeDateStr(m?.date).startsWith(dateStr) &&
-        m.type === type &&
-        m.userId === userId
-      );
-    }
-    
-    const nextAction = currentHasMeal ? 'remove' : 'add';
+    const dateStr = formatDateSafe(date);
+    const { optimisticMeals: currentOptimisticMeals } = stateRef.current;
+    const currentlyHasMeal = currentOptimisticMeals.some((m: Meal) => normalizeDateStr(m?.date) === dateStr && m.type === type && m.userId === userId);
+    const isAdding = !currentlyHasMeal;
 
-    // 1. Update UI Instantly
-    setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => ({ ...prev, [key]: nextAction }));
-
-    // 2. Clear existing debounce timer
-    if (timeoutRefs.current[key]) {
-      clearTimeout(timeoutRefs.current[key]);
-    }
-
-    // 3. Set new debounce timer
-    timeoutRefs.current[key] = setTimeout(async () => {
-      const latestAction = nextAction;
-
-      // Check if server state already matches what we want to achieve directly from queryClient cache for ultimate freshness
-      const targetMonthKey = format(date, 'yyyy-MM');
-      const targetPeriodId = mealSystem?.period?.id || 'current';
-      const data = queryClient.getQueryData(['meals-system', roomId, targetMonthKey, targetPeriodId]) as any;
-      const cachedMeals = data?.meals || [];
-      const serverHasMeal = cachedMeals.some((m: any) => 
-        normalizeDateStr(m.date).startsWith(dateStr) && m.type === type && m.userId === userId
-      );
-
-      if ((latestAction === 'add' && serverHasMeal) || (latestAction === 'remove' && !serverHasMeal)) {
-        setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => {
-          const newState = { ...prev };
-          delete newState[key];
-          return newState;
-        });
-        return;
-      }
-
-      try {
-        await toggleMealMutation.mutateAsync({ date, type, userId, action: latestAction });
-      } catch (err) {
-        // Rollback optimistic state on error
-        setOptimisticToggles((prev: Record<string, 'add' | 'remove' | null>) => {
-          const newState = { ...prev };
-          delete newState[key];
-          return newState;
-        });
-      } finally {
-        delete timeoutRefs.current[key];
-      }
-    }, 200); // Reduced from 400ms to 200ms for snappier UI
-  }, [toggleMealMutation, queryClient, roomId]);
+    startTransition(async () => {
+        if (isAdding) {
+            const memberUser = (mealSystem as any)?.members?.find((m: any) => m.userId === userId)?.user;
+            const userObj = userId === session?.user?.id ? session.user : memberUser;
+            if (userObj) {
+                addOptimisticMeal({
+                    action: 'add',
+                    meal: { id: `opt-${Date.now()}`, date: dateStr, type, userId, roomId: roomId!, user: userObj as any, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+                    userId, type, dateStr: dateStr
+                });
+            }
+        } else {
+            addOptimisticMeal({ action: 'remove', userId, type, dateStr: dateStr });
+        }
+        await toggleMealMutation.mutateAsync({ date, type, userId, action: isAdding ? 'add' : 'remove' });
+    });
+  }, [addOptimisticMeal, meals, session, roomId, toggleMealMutation, mealSystem]);
 
   const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {
-    await patchGuestMealMutation.mutateAsync({ date, type, count });
-  }, [patchGuestMealMutation]);
+    const dateStr = formatDateSafe(date);
+    const existing = (optimisticGuestMeals as GuestMeal[]).find(m => m.type === type && normalizeDateStr(m.date) === dateStr && m.userId === session?.user?.id);
+
+    startTransition(async () => {
+        if (existing) {
+            if (count <= 0) {
+                addOptimisticGuestMeal({ action: 'remove', id: existing.id });
+            } else {
+                addOptimisticGuestMeal({ action: 'update', id: existing.id, count });
+            }
+        } else if (count > 0) {
+            addOptimisticGuestMeal({
+                action: 'add',
+                meal: {
+                    id: `opt-guest-${Date.now()}`,
+                    date: dateStr,
+                    type,
+                    count,
+                    userId: session?.user?.id!,
+                    roomId: roomId!,
+                    user: session?.user as any,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }
+            });
+        }
+        await patchGuestMealMutation.mutateAsync({ date, type, count });
+    });
+  }, [patchGuestMealMutation, optimisticGuestMeals, session?.user?.id, roomId, startTransition, addOptimisticGuestMeal]);
 
   const deleteGuestMeal = useCallback(async (guestMealId: string, date?: Date) => {
-    // If it's a temp ID, we just need to update the client-side cache
-    if (guestMealId.startsWith('temp-')) {
-      const targetMonthKey = date ? format(date, 'yyyy-MM') : monthKey;
-      const targetPeriodId = mealSystem?.period?.id || periodIdInCache;
-      queryClient.setQueryData(['meals-system', roomId, targetMonthKey, targetPeriodId], (old: any | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          guestMeals: (old.guestMeals || []).filter((meal: any) => meal.id !== guestMealId)
-        };
-      });
-      return;
-    }
-    await deleteGuestMealMutation.mutateAsync({ guestMealId, date });
-  }, [deleteGuestMealMutation, roomId, monthKey, queryClient]);
+    startTransition(async () => {
+        addOptimisticGuestMeal({ action: 'remove', id: guestMealId });
+        await deleteGuestMealMutation.mutateAsync({ guestMealId, date });
+    });
+  }, [deleteGuestMealMutation, startTransition, addOptimisticGuestMeal]);
 
   const updateMealSettings = useCallback(async (settings: Partial<MealSettings>) => {
     await updateMealSettingsMutation.mutateAsync(settings);
@@ -1176,51 +577,76 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     await triggerAutoMealsMutation.mutateAsync(date);
   }, [triggerAutoMealsMutation]);
 
+  const hasMeal = useCallback((date: Date, type: MealType, userId?: string): boolean => {
+    const dateStr = formatDateSafe(date);
+    const targetUserId = userId || session?.user?.id;
+    return (optimisticMeals as Meal[]).some(m => normalizeDateStr(m.date) === dateStr && m.type === type && m.userId === targetUserId);
+  }, [optimisticMeals, session?.user?.id]);
+
+  const canAddMeal = useCallback((date: Date, type: MealType) => canUserEditMeal(date, type, userRole, mealSettings, currentPeriod), [userRole, mealSettings, currentPeriod]);
+  const canEditGuestMeal = useCallback((date: Date, type: MealType) => canUserEditMeal(date, type, userRole, mealSettings, currentPeriod), [userRole, mealSettings, currentPeriod]);
+
+  const isAutoMealTime = useCallback((date: Date, type: MealType) => {
+    if (!mealSettings?.autoMealEnabled || !autoMealSettings?.isEnabled) return false;
+    const now = new Date();
+    const time = type === 'BREAKFAST' ? mealSettings.breakfastTime : type === 'LUNCH' ? mealSettings.lunchTime : mealSettings.dinnerTime;
+    return format(now, 'HH:mm') === time;
+  }, [mealSettings, autoMealSettings]);
+
+  const shouldAutoAddMeal = useCallback((date: Date, type: MealType) => {
+    if (!mealSettings?.autoMealEnabled || !autoMealSettings?.isEnabled) return false;
+    const isTypeEnabled = type === 'BREAKFAST' ? autoMealSettings.breakfastEnabled : type === 'LUNCH' ? autoMealSettings.lunchEnabled : autoMealSettings.dinnerEnabled;
+    if (!isTypeEnabled || (autoMealSettings.excludedMealTypes as any).includes(type) || autoMealSettings.excludedDates.includes(format(date, 'yyyy-MM-dd')) || hasMeal(date, type)) return false;
+    return isAutoMealTime(date, type);
+  }, [mealSettings, autoMealSettings, hasMeal, isAutoMealTime]);
+
+  const getUserGuestMeals = useCallback((date: Date, userId?: string) => {
+    const dateStr = formatDateSafe(date);
+    return (optimisticGuestMeals as GuestMeal[]).filter(m => normalizeDateStr(m.date) === dateStr && m.userId === (userId || session?.user?.id));
+  }, [optimisticGuestMeals, session?.user?.id]);
+
+  const getUserGuestMealCount = useCallback((date: Date, type: MealType, userId?: string) => getUserGuestMeals(date, userId).filter(m => m.type === type).reduce((s, m) => s + m.count, 0), [getUserGuestMeals]);
+  const getUserMealCount = useCallback((date: Date, type: MealType, userId?: string) => (hasMeal(date, type, userId) ? 1 : 0) + getUserGuestMealCount(date, type, userId), [hasMeal, getUserGuestMealCount]);
+
+  // Effects for auto-trigger
+  const scheduledAutoMealsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !roomId || !mealSettings?.autoMealEnabled || !autoMealSettings?.isEnabled) return;
+    const schedule = [{ type: 'BREAKFAST', t: mealSettings.breakfastTime, e: autoMealSettings.breakfastEnabled }, { type: 'LUNCH', t: mealSettings.lunchTime, e: autoMealSettings.lunchEnabled }, { type: 'DINNER', t: mealSettings.dinnerTime, e: autoMealSettings.dinnerEnabled }];
+    const timers: any[] = [];
+    const today = format(new Date(), 'yyyy-MM-dd');
+    schedule.forEach(({ type, t, e }) => {
+        if (!e || !t || (autoMealSettings.excludedMealTypes as any).includes(type) || autoMealSettings.excludedDates.includes(today)) return;
+        const [h, m] = t.split(':').map(Number);
+        const mealTime = new Date(); mealTime.setHours(h, m, 0, 0);
+        let ms = mealTime.getTime() - Date.now();
+        if (ms < -300000 || ms > 86400000) return;
+        if (ms < 0) ms = 0;
+        timers.push(setTimeout(() => {
+            if (scheduledAutoMealsRef.current.has(`${today}-${type}`) || hasMeal(new Date(), type as any)) return;
+            scheduledAutoMealsRef.current.add(`${today}-${type}`);
+            toggleMealMutation.mutate({ date: new Date(), type: type as any, userId, action: 'add', silent: true }, { onError: () => scheduledAutoMealsRef.current.delete(`${today}-${type}`) });
+        }, ms));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [session?.user?.id, roomId, mealSettings, autoMealSettings, toggleMealMutation, hasMeal]);
+
   return {
-    // Data
-    meals,
-    guestMeals,
-    mealSettings,
-    autoMealSettings,
-    userMealStats,
-    isLoading: isLoadingMeals,
-    isLoadingUserStats,
+    meals: optimisticMeals, guestMeals: optimisticGuestMeals, mealSettings, autoMealSettings, userMealStats,
+    isLoading, isLoadingUserStats,
     isTogglingMeal: toggleMealMutation.isPending,
     isPatchingGuestMeal: patchGuestMealMutation.isPending,
     isDeletingGuestMeal: deleteGuestMealMutation.isPending,
     error: null,
-
-    // Queries
-    useMealsByDate,
-    useGuestMealsByDate,
-    useMealSummary,
-    useMealCount,
-    useUserMealStats,
-
-    // Mutations
-    toggleMeal,
-    addGuestMeal,
-    deleteGuestMeal,
-
-    // Settings
-    updateMealSettings,
-    updateAutoMealSettings,
-
-    // Auto Meal Functions
-    triggerAutoMeals,
-    isAutoMealTime,
-    shouldAutoAddMeal,
-
-    // Utilities
-    hasMeal,
-    canAddMeal,
-    canEditGuestMeal,
-    getUserGuestMeals,
-    getUserGuestMealCount,
-    getUserMealCount,
-    userRole,
-    currentPeriod: currentPeriod || effectiveInitialData?.currentPeriod,
-    optimisticToggles
+    isPending,
+    useMealsByDate, useGuestMealsByDate, useMealSummary, useMealCount, useUserMealStats,
+    toggleMeal, addGuestMeal, deleteGuestMeal,
+    updateMealSettings, updateAutoMealSettings, triggerAutoMeals,
+    isAutoMealTime, shouldAutoAddMeal,
+    hasMeal, canAddMeal, canEditGuestMeal,
+    getUserGuestMeals, getUserGuestMealCount, getUserMealCount,
+    userRole, currentPeriod
   };
 }
 

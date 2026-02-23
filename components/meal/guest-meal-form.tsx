@@ -27,15 +27,33 @@ interface GuestMealFormProps {
   roomId: string
   date?: Date
   onSuccess?: () => void
-  initialData?: any
+  // Props lifted from parent
+  addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>
+  canEditGuestMeal: (date: Date, type: MealType) => boolean
+  mealSettings: any
+  autoMealSettings: any
+  currentPeriod: any
 }
 
-function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormProps) {
+function GuestMealForm({
+  roomId,
+  onSuccess,
+  date,
+  addGuestMeal,
+  canEditGuestMeal,
+  mealSettings,
+  autoMealSettings,
+  currentPeriod
+}: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  const { addGuestMeal, mealSettings, autoMealSettings, isLoading, canEditGuestMeal, userRole, currentPeriod } = useMeal(roomId, undefined, initialData)
+  // Fix hydration mismatch by only rendering Dialog after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const form = useForm<GuestMealFormData>({
     resolver: zodResolver(guestMealSchema),
@@ -86,6 +104,15 @@ function GuestMealForm({ roomId, onSuccess, initialData, date }: GuestMealFormPr
       <Badge variant="outline" className="border-dashed text-red-500 bg-red-50 font-normal">
         Guest meals disabled
       </Badge>
+    )
+  }
+
+  if (!mounted) {
+    return (
+      <Button variant="default" className="w-auto">
+        <UserPlus className="h-4 w-4 mr-1" />
+        Guest Meal
+      </Button>
     )
   }
 

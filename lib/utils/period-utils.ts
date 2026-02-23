@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
 
 export * from './period-utils-shared';
+import { formatDateSafe } from './period-utils-shared';
 
 /**
  * Get the current active period for a room
@@ -34,17 +35,31 @@ export async function getCurrentPeriod(roomId: string) {
  * Get period for a specific date
  */
 export async function getPeriodForDate(roomId: string, date: Date) {
-  return await prisma.mealPeriod.findFirst({
-    where: {
-      roomId,
-      startDate: { lte: date },
-      OR: [
-        { endDate: { gte: date } },
-        { endDate: null }
-      ]
+  const dateKey = formatDateSafe(date);
+  const cacheKey = `period_for_date:${roomId}:${dateKey}`;
+
+  const cachedFn = unstable_cache(
+    async () => {
+      return await prisma.mealPeriod.findFirst({
+        where: {
+          roomId,
+          startDate: { lte: date },
+          OR: [
+            { endDate: { gte: date } },
+            { endDate: null }
+          ]
+        },
+        orderBy: { createdAt: 'desc' }
+      });
     },
-    orderBy: { createdAt: 'desc' }
-  });
+    [cacheKey],
+    { 
+      revalidate: CACHE_TTL.ACTIVE_PERIOD,
+      tags: [`group-${roomId}`, 'periods'] 
+    }
+  );
+
+  return await cachedFn();
 }
 
 /**

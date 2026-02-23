@@ -54,6 +54,7 @@ interface AccountTransactionDialogProps {
     transaction?: AccountTransaction | null;
     targetUser?: { name: string; image?: string | null; email?: string | null };
     onSuccess?: () => void;
+    onOptimisticUpdate?: (action: { type: 'add' | 'update' | 'delete', transaction: any }) => void;
 }
 
 export function AccountTransactionDialog({
@@ -63,7 +64,8 @@ export function AccountTransactionDialog({
     targetUserId: initialTargetUserId,
     transaction,
     targetUser,
-    onSuccess
+    onSuccess,
+    onOptimisticUpdate
 }: AccountTransactionDialogProps) {
     const [amount, setAmount] = React.useState('');
     const [description, setDescription] = React.useState('');
@@ -118,6 +120,12 @@ export function AccountTransactionDialog({
             }
 
             if (transaction) {
+                if (onOptimisticUpdate) {
+                    onOptimisticUpdate({
+                        type: 'update',
+                        transaction: { ...transaction, amount: parsedAmount, description: finalDescription, type: type }
+                    });
+                }
                 await updateTransactionMutation.mutateAsync({
                     id: transaction.id,
                     amount: parsedAmount,
@@ -126,6 +134,20 @@ export function AccountTransactionDialog({
                 });
                 toast.success('Transaction updated successfully');
             } else {
+                if (onOptimisticUpdate) {
+                    onOptimisticUpdate({
+                        type: 'add',
+                        transaction: {
+                            id: `temp-${Date.now()}`,
+                            amount: parsedAmount,
+                            description: finalDescription,
+                            type: type,
+                            targetUserId: targetUserId,
+                            createdAt: new Date().toISOString(),
+                            user: targetUser || { name: 'New Transaction' }
+                        }
+                    });
+                }
                 await addTransactionMutation.mutateAsync({
                     targetUserId: targetUserId,
                     roomId: groupId,

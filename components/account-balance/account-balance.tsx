@@ -190,6 +190,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
 
 export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole }: { initialData?: BalancePageData, targetUserId: string, viewerRole?: string }) {
   const router = useRouter();
+  const [isPending, startTransition] = React.useTransition();
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
 
@@ -242,10 +243,10 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   }
 
   // Fetch current user's balance to get their role (for privilege check)
-  const { data: currentUserBalance } = useGetBalance(activeGroup?.id || '', session?.user?.id || '', false, initialData);
+  const { data: currentUserBalance } = useGetBalance(activeGroup?.id || '', (session?.user as any)?.id || '', false, initialData);
 
   // Get current user's role - PREFER SERVER PROP
-  const currentUserMember = activeGroup?.members?.find(m => m.userId === session?.user?.id);
+  const currentUserMember = activeGroup?.members?.find(m => m.userId === (session?.user as any)?.id);
   const userRole = viewerRole || currentUserBalance?.role || currentUserMember?.role || 'MEMBER';
 
   // Get target user's role
@@ -275,6 +276,22 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   const updateTransactionMutation = useUpdateTransaction();
   const deleteTransactionMutation = useDeleteTransaction();
 
+  const [optimisticTransactions, addOptimisticTransaction] = React.useOptimistic(
+    filteredTransactions,
+    (state: AccountTransaction[], action: { type: 'add' | 'update' | 'delete', transaction: any }) => {
+      switch (action.type) {
+        case 'add':
+          return [action.transaction, ...state];
+        case 'update':
+          return state.map(t => t.id === action.transaction.id ? { ...t, ...action.transaction } : t);
+        case 'delete':
+          return state.filter(t => t.id !== action.transaction.id);
+        default:
+          return state;
+      }
+    }
+  );
+
   const openAddBalanceDialog = () => {
     setEditingTransaction(null);
     setIsTransactionDialogOpen(true);
@@ -300,6 +317,10 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
   };
 
   const handleDeleteTransaction = async (transactionId: string) => {
+    startTransition(() => {
+      addOptimisticTransaction({ type: 'delete', transaction: { id: transactionId } });
+    });
+
     try {
       await deleteTransactionMutation.mutateAsync(transactionId);
       toast.success('Transaction deleted successfully');
@@ -336,7 +357,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
         />
 
         <TransactionList
-          transactions={filteredTransactions}
+          transactions={optimisticTransactions}
           hasPrivilege={hasPrivilege}
           isAdmin={isAdmin}
           onEdit={openEditTransactionDialog}
@@ -402,6 +423,11 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
           targetUser={userBalance?.user}
           transaction={editingTransaction}
           onSuccess={handleTransactionSuccess}
+          onOptimisticUpdate={(action) => {
+            startTransition(() => {
+              addOptimisticTransaction(action);
+            });
+          }}
         />
       </div>
     </LoadingWrapper>

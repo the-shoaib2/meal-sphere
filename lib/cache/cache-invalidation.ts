@@ -212,6 +212,11 @@ export async function invalidatePeriodCache(
 
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
+  // Also invalidate Next.js tags
+  revalidateTag(`group-${roomId}`);
+  revalidateTag('periods');
+  revalidateTag('active-period');
+  
   console.log(`🗑️  Invalidated all caches for period ${periodId} in room ${roomId}`);
 }
 
