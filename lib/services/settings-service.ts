@@ -22,6 +22,6 @@ export async function updatePrivacySettings(userId: string, data: { isSearchable
         }
     });
 
-    revalidateTag(`user-${userId}`, 'max');
+    revalidateTag(`user-${userId}`);
     return user;
 }

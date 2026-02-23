@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { SidebarContent } from "@/components/layout/sidebar-content"
 
 export function AppSidebar() {

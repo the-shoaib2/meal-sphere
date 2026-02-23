@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, LayoutDashboard, Sun, Moon, Laptop } from "lucide-react";
+import { Settings, LayoutDashboard, Sun, Moon, Laptop, User, LogIn } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -45,19 +45,19 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
     );
   }
 
-  // 2. Not Logged In
-  if (user === null) return null;
+  // 2. Unauthenticated State (Show Guest Avatar)
+  const isAuthenticated = status === "authenticated" && !!user;
 
   // 3. User initials logic
-  const initials = user.name
+  const initials = isAuthenticated && user?.name
     ? user.name
       .split(" ")
-      .filter(n => n.length > 0)
+      .filter(n => (n && typeof n === 'string' && n.length > 0))
       .map((n) => n[0])
       .slice(0, 2)
       .join("")
       .toUpperCase()
-    : "U";
+    : "";
 
   return (
     <>
@@ -68,14 +68,16 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
             size="icon"
             className={`group rounded-full flex-shrink-0 relative focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${className}`}
           >
-            <Avatar className="h-8 w-8 border border-border/50 ring-offset-background">
-              <AvatarImage
-                src={user.image || ""}
-                alt={user.name || "User"}
-                className="object-cover"
-              />
+            <Avatar className="h-9 w-9 border border-border/50 ring-offset-background transition-shadow group-hover:shadow-md">
+              {isAuthenticated && user?.image ? (
+                <AvatarImage
+                  src={user.image}
+                  alt={user.name || "User"}
+                  className="object-cover"
+                />
+              ) : null}
               <AvatarFallback className="bg-muted text-muted-foreground font-semibold text-[11px] select-none" suppressHydrationWarning>
-                {initials}
+                {initials || <User className="h-4 w-4" />}
               </AvatarFallback>
             </Avatar>
           </Button>
@@ -84,37 +86,57 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
           <DropdownMenuLabel className="p-2.5 font-normal">
             <div className="flex items-center gap-3 text-left">
               <Avatar className="h-10 w-10 rounded-full border border-border/50">
-                <AvatarImage src={user.image || ""} alt={user.name || "User"} className="object-cover" />
+                {isAuthenticated && user?.image ? (
+                  <AvatarImage src={user.image} alt={user.name || "User"} className="object-cover" />
+                ) : null}
                 <AvatarFallback className="rounded-full bg-muted text-muted-foreground font-bold" suppressHydrationWarning>
-                  {initials}
+                  {initials || <User className="h-5 w-5" />}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 leading-tight">
-                <span className="truncate font-semibold text-sm text-foreground">{user.name || "User"}</span>
-                {user.email && <span className="truncate text-xs text-muted-foreground">{user.email}</span>}
+                <span className="truncate font-semibold text-sm text-foreground">
+                  {isAuthenticated ? (user?.name || "User") : "Guest User"}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {isAuthenticated ? user?.email : "Sign in to manage meals"}
+                </span>
               </div>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator className="my-1.5" />
           <DropdownMenuGroup className="space-y-0.5">
-            <DropdownMenuItem asChild>
-              <button
-                className="w-full flex items-center px-2.5 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent transition-colors"
-                onClick={() => handleNavigation('/dashboard')}
-              >
-                <LayoutDashboard className="h-4 w-4 mr-2.5 text-muted-foreground" />
-                <span>Dashboard</span>
-              </button>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <button
-                className="w-full flex items-center px-2.5 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent transition-colors"
-                onClick={() => handleNavigation('/settings')}
-              >
-                <Settings className="h-4 w-4 mr-2.5 text-muted-foreground" />
-                <span>Settings</span>
-              </button>
-            </DropdownMenuItem>
+            {isAuthenticated ? (
+              <>
+                <DropdownMenuItem asChild>
+                  <button
+                    className="w-full flex items-center px-2.5 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => handleNavigation('/dashboard')}
+                  >
+                    <LayoutDashboard className="h-4 w-4 mr-2.5 text-muted-foreground" />
+                    <span>Dashboard</span>
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button
+                    className="w-full flex items-center px-2.5 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                    onClick={() => handleNavigation('/settings')}
+                  >
+                    <Settings className="h-4 w-4 mr-2.5 text-muted-foreground" />
+                    <span>Settings</span>
+                  </button>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem asChild>
+                <button
+                  className="w-full flex items-center px-2.5 py-2 text-sm rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                  onClick={() => handleNavigation('/login')}
+                >
+                  <LogIn className="h-4 w-4 mr-2.5 text-muted-foreground" />
+                  <span>Sign In</span>
+                </button>
+              </DropdownMenuItem>
+            )}
 
             <DropdownMenuItem className="px-2.5 py-2 rounded-lg focus:bg-transparent" onSelect={(e) => e.preventDefault()}>
               <div className="flex items-center justify-between w-full">
@@ -135,12 +157,14 @@ export function UserAvatar({ user, className = '' }: UserAvatarProps) {
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator className="my-1.5" />
-          <DropdownMenuItem
-            className="p-0 focus:bg-transparent"
-            onSelect={(e) => e.preventDefault()}
-          >
-            <SignOutDialog variant="avatar" className="w-full" />
-          </DropdownMenuItem>
+          {isAuthenticated && (
+            <DropdownMenuItem
+              className="p-0 focus:bg-transparent"
+              onSelect={(e) => e.preventDefault()}
+            >
+              <SignOutDialog variant="avatar" className="w-full" />
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

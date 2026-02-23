@@ -112,7 +112,6 @@ export function Header() {
             />
           )}
         </div>
-        {/* Right side actions - Always visible */}
         <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
           {/* Fullscreen toggle - Desktop only */}
           <Button

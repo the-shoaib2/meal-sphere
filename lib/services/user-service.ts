@@ -82,6 +82,6 @@ export async function updateUserProfile(userId: string, data: any) {
         }
     });
 
-    revalidateTag(`user-${userId}`, 'max');
+    revalidateTag(`user-${userId}`);
     return user;
 }

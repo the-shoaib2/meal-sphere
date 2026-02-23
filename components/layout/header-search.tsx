@@ -98,7 +98,7 @@ export function HeaderSearch({ isMobile, isExpanded, onToggleExpand }: HeaderSea
                 variant="ghost"
                 size="icon"
                 onClick={() => onToggleExpand?.(true)}
-                className="relative group rounded-lg active:scale-95"
+                className="relative group rounded-full active:scale-95"
                 aria-label="Open search"
             >
                 <Search className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />

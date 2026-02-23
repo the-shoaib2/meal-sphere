@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { prisma } from './prisma'; // Final verification of lint-free state
 import { PeriodStatus, Role } from '@prisma/client';
 import { createNotification, notifyRoomMembersBatch } from '../utils/notification-utils';
 import { NotificationType } from '@prisma/client';
@@ -13,10 +13,10 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
  */
 function invalidatePeriodCaches(roomId: string, periodId?: string) {
   // 1. Invalidate Tags for unstable_cache
-  revalidateTag(`group-${roomId}`, 'max');
-  revalidateTag('periods', 'max');
+  revalidateTag(`group-${roomId}`);
+  revalidateTag('periods');
   if (periodId) {
-    revalidateTag(`period-${periodId}`, 'max');
+    revalidateTag(`period-${periodId}`);
   }
 
   // 2. Invalidate Paths for SSR Pages

@@ -712,8 +712,8 @@ export async function createGroup(data: CreateGroupData) {
 
     if (!group) throw new Error("Failed to create group");
 
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     await cacheDeletePattern('groups_list:*');
 
     return group;
@@ -765,8 +765,8 @@ export async function updateGroup(groupId: string, data: UpdateGroupData) {
     ]);
     
     // Also revalidate next tags
-    revalidateTag(`group-${groupId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag('groups');
 
     return updatedGroup;
 }
@@ -829,9 +829,9 @@ export async function deleteGroup(groupId: string, userId: string) {
 
     await prisma.room.delete({ where: { id: groupId } });
 
-    revalidateTag(`group-${groupId}`, 'max');
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     await cacheDeletePattern('groups_list:*');
 
     return true;
@@ -924,8 +924,8 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
 
         const [joinRequest] = await prisma.$transaction(mutations);
 
-        revalidateTag(`group-${groupId}`, 'max');
-        revalidateTag(`user-${userId}`, 'max');
+        revalidateTag(`group-${groupId}`);
+        revalidateTag(`user-${userId}`);
 
         return {
             requestCreated: true,
@@ -990,9 +990,9 @@ export async function joinGroup(groupId: string, userId: string, password?: stri
         });
     }
 
-    revalidateTag(`group-${groupId}`, 'max');
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('groups', 'max');
+    revalidateTag(`group-${groupId}`);
+    revalidateTag(`user-${userId}`);
+    revalidateTag('groups');
     
     return {
         requestCreated: false,
@@ -1072,7 +1072,7 @@ export async function leaveGroup(groupId: string, userId: string) {
         }
     }
 
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     return true;
 }
 
@@ -1206,10 +1206,10 @@ export async function processJoinRequest(requestId: string, action: 'approve' | 
         ]);
     }
 
-    revalidateTag(`group-${request.roomId}`, 'max');
-    revalidateTag(`user-${request.userId}`, 'max');
-    revalidateTag('join-requests', 'max'); 
-    revalidateTag(`group-${request.roomId}-join-requests`, 'max'); 
+    revalidateTag(`group-${request.roomId}`);
+    revalidateTag(`user-${request.userId}`);
+    revalidateTag('join-requests'); 
+    revalidateTag(`group-${request.roomId}-join-requests`); 
 
     return { success: true };
 }
@@ -1291,7 +1291,7 @@ export async function generateGroupInvite(groupId: string, userId: string, role:
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const inviteUrl = `${baseUrl}/groups/join/${token}`;
 
-    revalidateTag(`group-${groupId}-invites`, 'max');
+    revalidateTag(`group-${groupId}-invites`);
     
     return {
       token: inviteToken.token,
@@ -1516,7 +1516,7 @@ export async function updatePeriodMode(groupId: string, mode: 'MONTHLY' | 'CUSTO
         }
     }
 
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     
     return updatedRoom;
 }
@@ -1630,7 +1630,7 @@ export async function removeMemberFromGroup(groupId: string, adminUserId: string
         data: { memberCount: count }
     });
 
-    revalidateTag(`group-${groupId}`, 'max');
+    revalidateTag(`group-${groupId}`);
     return true;
 }
 

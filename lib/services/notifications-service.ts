@@ -70,8 +70,8 @@ export async function markNotificationAsRead(notificationId: string, userId: str
 
     // Invalidate
     await cacheDelete(`notifications:${userId}:list`); // Legacy cache support if needed
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('notifications', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('notifications');
 
     return updated;
 }
@@ -84,8 +84,8 @@ export async function markAllNotificationsAsRead(userId: string) {
 
     // Invalidate
     await cacheDelete(`notifications:${userId}:list`);
-    revalidateTag(`user-${userId}`, 'max');
-    revalidateTag('notifications', 'max');
+    revalidateTag(`user-${userId}`);
+    revalidateTag('notifications');
 
     return { success: true };
 }

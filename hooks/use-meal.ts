@@ -609,7 +609,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId] });
+      // Mark as stale without immediately refetching — onSuccess already wrote the confirmed data
+      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId], refetchType: 'none' });
     }
   });
 
@@ -654,7 +655,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId] });
+      // Mark as stale without immediately refetching — onSuccess already wrote the confirmed data
+      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId], refetchType: 'none' });
     }
   });
 
