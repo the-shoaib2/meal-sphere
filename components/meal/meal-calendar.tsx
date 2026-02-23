@@ -50,18 +50,18 @@ function MealCalendar({ selected, onSelect, getMealCount, isLoading }: MealCalen
       {/* Header */}
       <div className="flex items-center justify-between mb-4 px-1">
         <button
-          className="p-2 rounded-lg hover:bg-accent transition-colors duration-200"
+          className="p-2 rounded-full cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors duration-200"
           onClick={prevMonth}
           aria-label="Previous Month"
           type="button"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="font-semibold text-lg text-foreground">
+        <div className="font-semibold text-lg sm:text-xl text-center text-foreground">
           {format(viewDate, "MMMM yyyy")}
         </div>
         <button
-          className="p-2 rounded-lg hover:bg-accent transition-colors duration-200"
+          className="p-2 rounded-full cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors duration-200"
           onClick={nextMonth}
           aria-label="Next Month"
           type="button"
