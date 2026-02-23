@@ -13,8 +13,6 @@ interface PageHeaderProps {
     className?: string
     showBackButton?: boolean
     backHref?: string
-    /** @deprecated use description instead */
-    text?: string | ReactNode
     badgesNextToTitle?: boolean
     collapsible?: boolean
 }
@@ -27,7 +25,6 @@ export function PageHeader({
     className,
     showBackButton,
     backHref,
-    text,
     badgesNextToTitle = false,
     collapsible = true,
 }: PageHeaderProps) {
@@ -36,7 +33,7 @@ export function PageHeader({
     const [isOverflowing, setIsOverflowing] = useState(false)
     const textRef = useRef<HTMLDivElement>(null)
 
-    const resolvedDescription = description || text
+    const resolvedDescription = description
 
     // Measure overflow in collapsed state — works on any screen size
     useEffect(() => {

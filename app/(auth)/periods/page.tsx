@@ -29,7 +29,7 @@ export default async function PeriodsPage() {
         <div className="space-y-2">
           <PageHeader
             heading="Periods"
-            text="Manage your group's meal periods"
+            description="Manage your group's meal periods"
           />
           <NoGroupState />
         </div>

@@ -9,7 +9,7 @@ import { Loader2, Check, X, UserPlus, Activity, RefreshCcw, Mail } from 'lucide-
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
-import { processJoinRequestAction } from '@/lib/actions/group.actions';
+import { handleJoinRequestAction } from '@/lib/actions/group.actions';
 import { Loader } from '@/components/ui/loader';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -56,7 +56,7 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
       setProcessingId(requestId);
       setActionType(action);
 
-      const data = await processJoinRequestAction(requestId, action);
+      const data = await handleJoinRequestAction(groupId, requestId, action);
 
       if (!data.success) {
         throw new Error(data.message || 'Failed to process request');

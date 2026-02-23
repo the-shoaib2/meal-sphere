@@ -31,7 +31,7 @@ export default async function ExpensesPage() {
       <div className="space-y-2">
         <PageHeader
           heading="Extra Expenses"
-          text="Track additional expenses"
+          description="Track additional expenses"
         />
         <NoGroupState />
       </div>
@@ -51,7 +51,7 @@ export default async function ExpensesPage() {
       <div className="space-y-2">
         <PageHeader
           heading="Extra Expenses"
-          text={`Track additional expenses for ${activeGroup.name}`}
+          description={`Track additional expenses for ${activeGroup.name}`}
         />
         <NoPeriodState
           isPrivileged={isPrivileged}

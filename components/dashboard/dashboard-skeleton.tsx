@@ -23,7 +23,7 @@ export function DashboardSkeleton({ hideHeader = false }: DashboardSkeletonProps
             {!hideHeader && (
                 <PageHeader
                     heading="Dashboard"
-                    text="Overview of your group's meal activity and analytics."
+                    description="Overview of your group's meal activity and analytics."
                 >
                     <RefreshButton refresh={() => { }} isRefreshing={true} />
                 </PageHeader>

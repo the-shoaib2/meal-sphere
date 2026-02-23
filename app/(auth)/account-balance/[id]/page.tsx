@@ -38,7 +38,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
       <div className="space-y-2">
         <PageHeader
           heading="Account Details"
-          text="Manage user balances and transactions"
+          description="Manage user balances and transactions"
         />
         <NoGroupState />
       </div>
@@ -56,7 +56,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
       <div className="space-y-2">
         <PageHeader
           heading="Account Details"
-          text="Security & Permissions"
+          description="Security & Permissions"
         />
         <InsufficientPermissionsState
           description="You don't have the required permissions to view this user's account details. Only admins and the account owner can view this page."
@@ -73,7 +73,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
       <div className="space-y-2">
         <PageHeader
           heading="Account Details"
-          text={`Manage balances for ${activeGroup.name}`}
+          description={`Manage balances for ${activeGroup.name}`}
         />
         <NoPeriodState
           isPrivileged={hasPrivilege}
@@ -88,7 +88,7 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
     <div className="space-y-2">
       <PageHeader
         heading="Account Details"
-        text="View and manage specific user accounts"
+        description="View and manage specific user accounts"
         showBackButton
         backHref="/account-balance"
       />

@@ -554,6 +554,8 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
   }
 
   let finalMemberCount = memberCount;
+  // Use the memberCount from Promise.all if roomId was provided,
+  // otherwise fetch it here.
   if (!roomId) {
     finalMemberCount = await prisma.roomMember.count({
       where: {

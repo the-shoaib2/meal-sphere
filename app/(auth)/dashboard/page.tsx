@@ -60,7 +60,7 @@ export default async function DashboardPage() {
     if (!summaryData?.currentPeriod) {
         const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
         return (
-            <Dashboard heading="Dashboard" text="Overview of your group's meal activity and analytics.">
+            <Dashboard heading="Dashboard" description="Overview of your group's meal activity and analytics.">
                 <NoPeriodState
                     isPrivileged={isPrivileged}
                     periodMode={summaryData?.periodMode}
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
     return (
         <Dashboard
             heading="Dashboard"
-            text="Overview of your group's meal activity and analytics."
+            description="Overview of your group's meal activity and analytics."
         // We no longer pass activities/chartData to the Shell if it doesn't use them directly (it passed them as children in original code? No, let's check Dashboard comopnent)
         >
             <div className="space-y-4 sm:space-y-2">

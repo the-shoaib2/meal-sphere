@@ -203,55 +203,87 @@ export function GroupPageContent(
 
     return (
         <div className="flex flex-col gap-4">
-            <PageHeader
-                heading={resolvedGroup.name}
-                showBackButton
-                backHref="/groups"
-                description={
-                    <div className="flex flex-col gap-1.5">
-                        <div className="flex sm:hidden flex-wrap items-center gap-1.5 mb-1">
-                            {category && <Badge variant="secondary" className="shadow-sm text-[10px] px-2 py-0.5">{category}</Badge>}
-                            {tags.length > 0 && tags.map((tag: string) => (
-                                <Badge key={tag} variant="outline" className="shadow-sm text-[10px] px-2 py-0.5">{tag}</Badge>
-                            ))}
+            <div className="flex flex-col gap-0 -mx-4 sm:mx-0 overflow-hidden sm:rounded-2xl border-b sm:border bg-card shadow-sm mb-4">
+                {/* Banner Section */}
+                <div className="relative h-40 sm:h-56 w-full bg-muted overflow-hidden">
+                    {resolvedGroup.bannerUrl ? (
+                        <>
+                            <img
+                                src={resolvedGroup.bannerUrl}
+                                alt={resolvedGroup.name}
+                                className="object-cover w-full h-full"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-primary/5 to-primary/10">
+                            <Users className="h-16 w-16 text-primary/10" />
                         </div>
-                        <span className="text-muted-foreground/90 font-medium text-sm">
-                            {resolvedGroup.description}
-                        </span>
-                    </div>
-                }
-                badgesNextToTitle={true}
-                collapsible={false}
-                badges={
-                    <div className="flex items-center gap-2">
-                        <RoleBadge role={userRole} />
-                        <div className="hidden sm:flex items-center gap-2">
-                            {category && <Badge variant="secondary" className="shadow-sm">{category}</Badge>}
-                            {tags.length > 0 && tags.map((tag: string) => (
-                                <Badge key={tag} variant="outline" className="shadow-sm">{tag}</Badge>
-                            ))}
-                        </div>
-                    </div>
-                }
-            >
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    {showActivityLog && isMember && (
-                        <Button size="icon" variant="outline" className="h-9 w-9 rounded-full shadow-sm" onClick={() => setShowActivityDialog(true)} title="Activity Log">
-                            <Activity className="h-4 w-4" />
-                        </Button>
                     )}
-                    {!isMember && (
-                        <Button
 
-                            className="gap-2 shadow-md hover:shadow-lg transition-all"
-                            onClick={() => router.push(`/groups/join/${groupId}`)}
+                    {/* Back Button Overlay */}
+                    <div className="absolute top-4 left-4 z-20">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md border-none text-white transition-all shadow-md h-9 w-9"
+                            onClick={() => router.push('/groups')}
                         >
-                            <LogIn className="h-4 w-4" />
-                            Join
+                            <ArrowLeft className="h-5 w-5" />
                         </Button>
-                    )}
+                    </div>
                 </div>
-            </PageHeader>
+
+                {/* Content Overlap Section */}
+                <div className="px-4 sm:px-6 pb-6 pt-4 relative z-10 -mt-10 sm:-mt-12">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                        <div className="space-y-3 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h1 className="text-2xl sm:text-3xl font-bold text-white sm:text-foreground drop-shadow-md sm:drop-shadow-none">
+                                    {resolvedGroup.name}
+                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <RoleBadge role={userRole} />
+                                    <div className="hidden sm:flex items-center gap-2">
+                                        {category && <Badge variant="secondary" className="shadow-sm h-5 text-[10px] uppercase font-bold tracking-wider">{category}</Badge>}
+                                        {tags.length > 0 && tags.map((tag: string) => (
+                                            <Badge key={tag} variant="outline" className="shadow-sm h-5 text-[10px] bg-background/50 backdrop-blur-sm">{tag}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex sm:hidden flex-wrap items-center gap-2 pt-1">
+                                {category && <Badge variant="secondary" className="shadow-sm h-5 text-[10px] uppercase font-bold tracking-wider">{category}</Badge>}
+                                {tags.length > 0 && tags.map((tag: string) => (
+                                    <Badge key={tag} variant="outline" className="shadow-sm h-5 text-[10px] bg-background/50 backdrop-blur-sm">{tag}</Badge>
+                                ))}
+                            </div>
+
+                            <p className="text-sm sm:text-base text-muted-foreground max-w-2xl line-clamp-2">
+                                {resolvedGroup.description || "No description provided."}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 sm:shrink-0">
+                            {showActivityLog && isMember && (
+                                <Button size="icon" variant="outline" className="h-10 w-10 rounded-full shadow-sm bg-background/50 backdrop-blur-sm hover:bg-background transition-all" onClick={() => setShowActivityDialog(true)} title="Activity Log">
+                                    <Activity className="h-5 w-5" />
+                                </Button>
+                            )}
+                            {!isMember && (
+                                <Button
+                                    className="gap-2 shadow-lg transition-all h-10 px-6 rounded-full"
+                                    onClick={() => router.push(`/groups/join/${groupId}`)}
+                                >
+                                    <LogIn className="h-4 w-4" />
+                                    Join Group
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {isMember ? (
                 <Tabs defaultValue="members" value={displayActiveTab} onValueChange={handleTabChange} className="w-full">

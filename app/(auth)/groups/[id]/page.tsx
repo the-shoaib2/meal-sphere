@@ -48,7 +48,7 @@ export default async function GroupPage(props: {
 
   const isMember = !!userMembership && !userMembership.isBanned;
   const isAdmin = userMembership?.role === 'ADMIN' || userMembership?.role === 'MANAGER';
-  const isCreator = group.createdById === userId;
+  const isCreator = group.createdBy === userId;
 
   if (group.isPrivate && !isMember) {
     redirect(`/groups/join/${groupId}`);

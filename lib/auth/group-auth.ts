@@ -3,6 +3,7 @@ import { authOptions } from "./auth";
 import prisma from "@/lib/services/prisma";
 import { Role } from "@prisma/client";
 import { Permission, hasPermission } from "./permissions";
+import { cache } from "react";
 
 export { Permission };
 
@@ -27,8 +28,9 @@ export interface GroupPermissionResult extends GroupAuthResult {
 
 /**
  * Check if user is authenticated and has access to a specific group
+ * Memoized per request for performance
  */
-export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult> {
+export const checkGroupAccess = cache(async (groupId: string): Promise<GroupAuthResult> => {
   try {
     // Get user session
     const session = await getServerSession(authOptions);
@@ -144,7 +146,7 @@ export async function checkGroupAccess(groupId: string): Promise<GroupAuthResult
       error: "Internal server error"
     };
   }
-}
+});
 
 /**
  * Check if user has specific role-based permissions

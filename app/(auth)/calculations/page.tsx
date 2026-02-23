@@ -31,7 +31,7 @@ export default async function CalculationsPage() {
       <div className="space-y-2">
         <PageHeader
           heading="Calculations"
-          text="View meal calculations and balances"
+          description="View meal calculations and balances"
         />
         <NoGroupState />
       </div>
@@ -51,7 +51,7 @@ export default async function CalculationsPage() {
       <div className="space-y-2">
         <PageHeader
           heading="Calculations"
-          text={`View detailed meal rates for ${activeGroup.name}`}
+          description={`View detailed meal rates for ${activeGroup.name}`}
         />
         <NoPeriodState
           isPrivileged={isPrivileged}

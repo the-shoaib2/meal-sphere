@@ -52,7 +52,7 @@ export default async function MealListPage({ searchParams }: { searchParams: Pro
                 heading="Meal List"
                 showBackButton
                 backHref="/meals"
-                text={
+                description={
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
                         <span className="text-muted-foreground/90 font-medium text-sm">
                             Detailed meal view for <span className="text-foreground font-semibold">{activeGroup.name}</span>

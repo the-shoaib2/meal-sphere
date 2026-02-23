@@ -216,53 +216,22 @@ export async function handleJoinRequestAction(groupId: string, requestId: string
       return { success: false, message: "Authentication required" };
     }
 
+    const request = await prisma.joinRequest.findUnique({
+      where: { id: requestId }
+    });
+
+    if (!request || request.roomId !== groupId) {
+       return { success: false, message: "Request not found" };
+    }
+
+    // Validate admin access for the group
     const validation = await validateAdminAccess(groupId);
     if (!validation.success) {
       return { success: false, message: validation.error || "Forbidden" };
     }
 
-    const joinReq = await prisma.joinRequest.findUnique({
-      where: { id: requestId }
-    });
-
-    if (!joinReq || joinReq.roomId !== groupId) {
-       return { success: false, message: "Request not found" };
-    }
-
-    if (action === 'approve') {
-       // Create member
-       await prisma.roomMember.create({
-         data: {
-           userId: joinReq.userId,
-           roomId: groupId,
-           role: 'MEMBER'
-         }
-       });
-       // increment count
-       await prisma.room.update({
-         where: { id: groupId },
-         data: { memberCount: { increment: 1 } }
-       });
-       
-       await prisma.joinRequest.update({
-         where: { id: requestId },
-         data: { status: 'APPROVED' }
-       });
-
-       // Trigger Notification
-       await prisma.notification.create({
-           data: {
-               userId: joinReq.userId,
-               type: 'GENERAL',
-               message: `Your request to join the group has been approved.`
-           }
-       });
-    } else {
-       await prisma.joinRequest.update({
-         where: { id: requestId },
-         data: { status: 'REJECTED' }
-       });
-    }
+    // Use the service which handles transactions, member counts, and notifications
+    await processJoinRequest(requestId, action);
 
     return { success: true, message: `Request ${action}d successfully` };
   } catch (error: any) {
@@ -490,29 +459,6 @@ export async function getGroupActivityAction(groupId: string) {
   }
 }
 
-export async function processJoinRequestAction(requestId: string, action: 'approve' | 'reject') {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, message: "Authentication required" };
-    }
-
-    const request = await prisma.joinRequest.findUnique({
-      where: { id: requestId }
-    });
-
-    if (!request) return { success: false, message: "Request not found" };
-
-    const access = await validateAdminAccess(request.roomId);
-    if (!access.success) return { success: false, message: access.error };
-
-    const result = await processJoinRequest(requestId, action);
-    return { success: true, message: "Request processed successfully", result };
-  } catch (error: any) {
-    console.error("Error processing request:", error);
-    return { success: false, message: error.message || "Failed to process request" };
-  }
-}
 
 const fineSettingsSchema = z.object({
   fineAmount: z.number().min(0),

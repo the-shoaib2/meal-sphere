@@ -31,7 +31,7 @@ export default async function ShoppingPage() {
       <div className="space-y-2">
         <PageHeader
           heading="Shopping List"
-          text="Manage your shopping items"
+          description="Manage your shopping items"
         />
         <NoGroupState />
       </div>
@@ -51,7 +51,7 @@ export default async function ShoppingPage() {
       <div className="space-y-2">
         <PageHeader
           heading="Shopping List"
-          text={`Manage your shopping items for ${activeGroup.name}`}
+          description={`Manage your shopping items for ${activeGroup.name}`}
         />
         <NoPeriodState
           isPrivileged={isPrivileged}

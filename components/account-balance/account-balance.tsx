@@ -102,7 +102,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
       <div className="space-y-6">
         <PageHeader
           heading="Account Balance"
-          text="Access restriction"
+          description="Access restriction"
         />
         <InsufficientPermissionsState
           title="Access Restricted"
@@ -118,7 +118,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
       <div className="space-y-6">
         <PageHeader
           heading="Account Balance"
-          text="Track your meal expenses and payments"
+          description="Track your meal expenses and payments"
         />
         <NoGroupState />
       </div>

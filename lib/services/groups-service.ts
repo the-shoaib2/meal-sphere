@@ -24,36 +24,15 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
           return await getPublicGroups(50, userId);
         }
 
-        // For 'all' filter - Optimized Split Query
+        // For 'all' filter - Optimized Single Query
         if (filter === 'all') {
-          const [publicGroups, myGroups] = await Promise.all([
-             // 1. Fetch all public groups
-             prisma.room.findMany({
-                where: { isPrivate: false, isActive: true },
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                  isPrivate: true,
-                  createdAt: true,
-                  _count: { select: { members: true } },
-                  createdByUser: {
-                    select: { id: true, name: true, image: true }
-                  },
-                  members: {
-                    select: { role: true, joinedAt: true, isCurrent: true, user: { select: { id: true, name: true, image: true } } },
-                    take: 5,
-                    orderBy: { role: 'asc' }
-                  }
-                },
-                orderBy: { createdAt: 'desc' },
-                take: 50
-             }),
-             // 2. Fetch my groups (private or public)
-             prisma.room.findMany({
+             const groups = await prisma.room.findMany({
                 where: { 
                     isActive: true,
-                    members: { some: { userId: userId } }
+                    OR: [
+                        { isPrivate: false },
+                        { members: { some: { userId: userId } } }
+                    ]
                 },
                 select: {
                   id: true,
@@ -73,25 +52,11 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
                   }
                 },
                 orderBy: { createdAt: 'desc' },
-                take: 50
-             })
-          ]);
-
-          // Merge and Deduplicate (by ID)
-          const allGroupsMap = new Map();
-          myGroups.forEach(g => allGroupsMap.set(g.id, g));
-          publicGroups.forEach(g => {
-              if (!allGroupsMap.has(g.id)) {
-                  allGroupsMap.set(g.id, g);
-              }
-          });
-          
-          const combinedGroups = Array.from(allGroupsMap.values())
-             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                take: 100
+             });
 
           // Standardize response format
-          return combinedGroups.map((group: any) => {
-             // Let's determine the current user's role from the arrays, or use the first member if no matching
+          return groups.map((group: any) => {
             const myMembership = group.members?.find((m: any) => m.userId === userId);
             const role = (myMembership?.role as Role) || null;
             return {
@@ -116,11 +81,7 @@ export async function fetchGroupsList(userId: string | undefined, filter: string
       }
     );
 
-    const cachedData = await cachedFn() as any;
-    if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
-        try { return decryptData(cachedData); } catch (e) { return cachedData; }
-    }
-    return cachedData;
+    return await cachedFn();
 }
 
 export async function fetchGroupsData(userId: string) {
@@ -274,7 +235,7 @@ export async function fetchGroupsData(userId: string) {
         executionTime
       };
 
-      return encryptData(result);
+      return result;
     },
     [cacheKey, 'groups-data'],
     { 
@@ -283,11 +244,7 @@ export async function fetchGroupsData(userId: string) {
     }
   );
 
-  const cachedData = await cachedFn() as any;
-  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
-      try { return decryptData(cachedData); } catch (e) { return cachedData; }
-  }
-  return cachedData;
+  return await cachedFn();
 }
 
 export async function fetchGroupDetails(groupId: string, userId: string) {
@@ -372,7 +329,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         email: canViewSensitive ? group.createdByUser.email : null
       };
 
-      return encryptData({
+      return {
         group: {
             ...group,
             createdByUser: sanitizedCreator,
@@ -381,7 +338,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         userMembership,
         timestamp: new Date().toISOString(),
         executionTime: performance.now() - start
-      });
+      };
     },
     [cacheKey, 'v1-group-details'],
     { 
@@ -390,11 +347,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
     }
   );
 
-  const cachedData = await cachedFn() as any;
-  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
-      try { return decryptData(cachedData); } catch (e) { return cachedData; }
-  }
-  return cachedData;
+  return await cachedFn();
 }
 export async function fetchGroupAccessData(groupId: string, userId: string) {
   const cacheKey = `group-access-${groupId}-${userId}`;
@@ -438,7 +391,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
       ]);
 
       if (!group) {
-        return encryptData({
+        return {
           isMember: false,
           userRole: null,
           permissions: [],
@@ -450,7 +403,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
           error: "Group not found",
           timestamp: new Date().toISOString(),
           executionTime: performance.now() - start
-        });
+        };
       }
 
       const isMember = !!membership && !membership.isBanned;
@@ -489,7 +442,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
         executionTime
       };
 
-      return encryptData(result);
+      return result;
     },
     [cacheKey, 'group-access'],
     { 
@@ -498,11 +451,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
     }
   );
 
-  const cachedData = await cachedFn() as any;
-  if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
-      try { return decryptData(cachedData); } catch (e) { return cachedData; }
-  }
-  return cachedData;
+  return await cachedFn();
 }
 
 export async function fetchGroupJoinDetails(groupId: string, userId: string) {
@@ -522,6 +471,7 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
             isPrivate: true,
             memberCount: true,
             maxMembers: true,
+            bannerUrl: true,
             createdAt: true,
             fineEnabled: true,
             fineAmount: true,
@@ -589,7 +539,7 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
         executionTime
       };
 
-      return encryptData(result);
+      return result;
     },
     [cacheKey, 'group-join-details'],
     { 
@@ -598,8 +548,7 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  return await cachedFn();
 }
 
 export async function fetchGroupInviteTokens(groupId: string, userId: string) {
@@ -618,12 +567,12 @@ export async function fetchGroupInviteTokens(groupId: string, userId: string) {
       });
 
       if (!membership) {
-        return encryptData({
+        return {
           error: "Unauthorized",
           data: [],
           timestamp: new Date().toISOString(),
           executionTime: performance.now() - start
-        });
+        };
       }
 
       const inviteTokens = await prisma.inviteToken.findMany({
@@ -663,7 +612,7 @@ export async function fetchGroupInviteTokens(groupId: string, userId: string) {
         executionTime
       };
 
-      return encryptData(result);
+      return result;
     },
     [cacheKey, 'group-invites'],
     { 
@@ -672,8 +621,7 @@ export async function fetchGroupInviteTokens(groupId: string, userId: string) {
     }
   );
 
-  const encrypted = await cachedFn();
-  return decryptData(encrypted);
+  return await cachedFn();
 }
 
 export async function resolveInviteToken(token: string) {
@@ -857,7 +805,7 @@ export async function fetchGroupActivityLogs(groupId: string, userId: string) {
                 orderBy: { createdAt: 'desc' },
                 take: 50
             });
-            return encryptData(data);
+            return data;
         },
         [cacheKey],
         { 
@@ -866,11 +814,7 @@ export async function fetchGroupActivityLogs(groupId: string, userId: string) {
         }
     );
 
-    const cachedData = await cachedFn() as any;
-    if (typeof cachedData === 'string' && (cachedData.includes(':') || cachedData.length > 50)) {
-        try { return decryptData(cachedData); } catch (e) { return cachedData; }
-    }
-    return cachedData;
+    return await cachedFn();
 }
 
 export async function deleteGroup(groupId: string, userId: string) {

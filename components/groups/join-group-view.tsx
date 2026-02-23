@@ -19,7 +19,7 @@ import { AlertCircle, CheckCircle2, Lock, Users, UserPlus, Loader2, AlertTriangl
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGroupAccess } from '@/hooks/use-group-access';
-import { isValidId } from '@/lib/utils';
+import { isValidId, cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { RoleBadge } from '@/components/shared/role-badge';
@@ -45,6 +45,7 @@ interface Group {
   category?: string;
   fineEnabled: boolean;
   fineAmount?: number;
+  bannerUrl?: string | null;
   createdAt: Date;
   tags?: string[];
   inviter?: {
@@ -385,11 +386,11 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         <div className="flex items-center justify-center pt-8">
           <Card className="w-full max-w-2xl border bg-card shadow-sm rounded-lg">
             <CardHeader className="text-center pb-8 pt-8 bg-muted/30 border-b">
-              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary animate-in zoom-in duration-300">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
-              <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back!</CardTitle>
-              <CardDescription className="text-sm max-w-[400px] mx-auto">
+              <CardTitle className="text-2xl font-bold tracking-tight text-pretty">Welcome Back!</CardTitle>
+              <CardDescription className="text-sm md:text-base max-w-[400px] mx-auto text-pretty">
                 You are currently an active member of <strong>{group?.name}</strong>. Step back in to see what's new.
               </CardDescription>
             </CardHeader>
@@ -455,57 +456,77 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
           {/* Main Card */}
           <Card className="md:col-span-8 border bg-card shadow-sm rounded-lg overflow-hidden">
             {/* Banner Placeholder or Group Image */}
-            <div className="h-40 w-full bg-muted flex items-center justify-center border-b">
-              {group?.isPrivate ? (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
-                  <Lock className="h-10 w-10" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Private Space</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
-                  <Users className="h-10 w-10" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Public Community</span>
-                </div>
-              )}
+            <div
+              className="h-40 w-full bg-muted flex items-center justify-center border-b relative overflow-hidden bg-cover bg-center"
+              style={{ backgroundImage: group?.bannerUrl ? `url(${group.bannerUrl})` : undefined }}
+            >
+              {/* Overlay for better readability when image is present */}
+              {group?.bannerUrl && <div className="absolute inset-0 bg-black/40" />}
+
+              <div className="relative z-10">
+                {group?.isPrivate ? (
+                  <div className={cn(
+                    "flex flex-col items-center gap-2",
+                    group?.bannerUrl ? "text-white" : "text-muted-foreground/40"
+                  )}>
+                    <Lock className="h-10 w-10" />
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest",
+                      group?.bannerUrl ? "text-white/90" : "text-muted-foreground"
+                    )}>Private Space</span>
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "flex flex-col items-center gap-2",
+                    group?.bannerUrl ? "text-white" : "text-muted-foreground/40"
+                  )}>
+                    <Users className="h-10 w-10" />
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase tracking-widest",
+                      group?.bannerUrl ? "text-white/90" : "text-muted-foreground"
+                    )}>Public Community</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <CardHeader className="px-8 pt-8">
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <CardTitle className="text-3xl font-extrabold tracking-tight">{group?.name}</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl font-extrabold tracking-tight text-pretty">{group?.name}</CardTitle>
                 <div className="flex gap-2">
-                  <Badge variant="outline" className="rounded-full px-3 py-0.5 border-primary/20 bg-primary/5 text-primary">
+                  <Badge variant="outline" className="rounded-full px-3 py-0.5 border-primary/20 bg-primary/5 text-primary text-[10px] md:text-xs">
                     {group?.isPrivate ? 'Protected' : 'Open Access'}
                   </Badge>
                 </div>
               </div>
-              <CardDescription className="text-base leading-relaxed">
+              <CardDescription className="text-sm md:text-base leading-relaxed text-pretty">
                 {group?.description || 'This community hasn\'t provided a description yet, but they\'re excited to have you!'}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="px-8 pb-8 space-y-8">
               {/* Group Details Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
-                <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Members</p>
-                  <p className="text-lg font-bold">{group?.memberCount} / {group?.maxMembers}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 pt-4">
+                <div className="space-y-1 p-3 md:p-0 bg-muted/30 md:bg-transparent rounded-lg md:rounded-none">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Members</p>
+                  <p className="text-base md:text-lg font-bold">{group?.memberCount} / {group?.maxMembers}</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Founded</p>
-                  <p className="text-lg font-bold">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : 'N/A'}</p>
+                <div className="space-y-1 p-3 md:p-0 bg-muted/30 md:bg-transparent rounded-lg md:rounded-none">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Founded</p>
+                  <p className="text-base md:text-lg font-bold">{group?.createdAt ? new Date(group.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : 'N/A'}</p>
                 </div>
                 {group?.fineEnabled && (
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Security</p>
-                    <p className="text-lg font-bold flex items-center gap-1">
+                  <div className="space-y-1 p-3 md:p-0 bg-muted/30 md:bg-transparent rounded-lg md:rounded-none">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Security</p>
+                    <p className="text-base md:text-lg font-bold flex items-center gap-1">
                       ₹{group?.fineAmount}
                       <AlertCircle className="h-3 w-3 text-muted-foreground" />
                     </p>
                   </div>
                 )}
-                <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Category</p>
-                  <p className="text-lg font-bold">{group?.category || 'General'}</p>
+                <div className="space-y-1 p-3 md:p-0 bg-muted/30 md:bg-transparent rounded-lg md:rounded-none">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Category</p>
+                  <p className="text-base md:text-lg font-bold">{group?.category || 'General'}</p>
                 </div>
               </div>
 
@@ -527,7 +548,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
               <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t border-muted/30">
                 {group?.hasPassword && !inviteToken && (
                   <div className="space-y-3">
-                    <Label htmlFor="password text-sm font-semibold">Immediate Access Password</Label>
+                    <Label htmlFor="password" className="text-sm font-semibold">Immediate Access Password</Label>
                     <div className="relative group">
                       <KeyRound className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-blue-600" />
                       <Input
@@ -609,36 +630,54 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
           {/* Sidebar / Info */}
           <div className="md:col-span-4 space-y-6">
-            <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10 space-y-4">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Users className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-foreground">What to expect</h3>
-              <ul className="space-y-3">
-                <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
-                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Coordinate shared meals effortlessly
-                </li>
-                <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
-                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Split expenses with total transparency
-                </li>
-                <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
-                  <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
-                  Stay synced with real-time notifications
-                </li>
-              </ul>
-            </div>
-
-            <div className="p-6 rounded-3xl border border-muted-foreground/10 flex items-center gap-4">
-              <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Global Reputation</p>
-                <div className="flex items-center gap-0.5 text-orange-400">
-                  {[1, 2, 3, 4, 5].map(i => <Sparkles key={i} className="h-3 w-3 fill-current" />)}
-                  <span className="text-xs font-bold text-foreground ml-2">Trusted Community</span>
+            <Card className="border-2 border-dashed transition-all hover:border-primary/40 hover:bg-primary/5 group/expect">
+              <CardHeader>
+                <div className="flex items-center gap-2 text-primary">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover/expect:scale-110 transition-transform">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <CardTitle className="font-bold text-foreground">What to expect</CardTitle>
                 </div>
-              </div>
-            </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
+                    <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span className="group-hover/expect:text-foreground transition-colors">Coordinate shared meals effortlessly</span>
+                  </li>
+                  <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
+                    <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span className="group-hover/expect:text-foreground transition-colors">Split expenses with total transparency</span>
+                  </li>
+                  <li className="flex gap-3 text-sm text-muted-foreground leading-snug">
+                    <div className="mt-1 flex-shrink-0 h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span className="group-hover/expect:text-foreground transition-colors">Stay synced with real-time notifications</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-dashed transition-all hover:border-orange-400/40 hover:bg-orange-400/5 group/reputation">
+              <CardHeader>
+                <div className="flex items-center gap-2 text-primary">
+                  <div className="h-10 w-10 rounded-full bg-orange-400/10 flex items-center justify-center text-primary group-hover/reputation:scale-110 transition-transform">
+                    <Sparkles className="h-5 w-5 fill-current text-orange-400 " />
+                  </div>
+                  <CardTitle className="font-bold text-foreground">Global Reputation</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-0.5 text-orange-400">
+                    {[1, 2, 3, 4, 5].map(i => <Sparkles key={i} className="h-3 w-3 fill-current animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />)}
+                    <span className="text-xs font-bold text-foreground ml-2">Trusted Community</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground group-hover/reputation:text-foreground/80 transition-colors">
+                    Join over 5,000+ groups managing meals daily.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -675,9 +714,9 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
       <div className="flex items-center justify-center pt-8">
         <Card className="w-full max-w-3xl border bg-card shadow-sm rounded-lg overflow-hidden">
-          <CardHeader className="text-center px-8 pt-12 pb-8">
-            <CardTitle className="text-2xl font-bold">Application Status</CardTitle>
-            <CardDescription className="text-base max-w-[450px] mx-auto">
+          <CardHeader className="text-center px-6 md:px-8 pt-10 md:pt-12 pb-6 md:pb-8">
+            <CardTitle className="text-xl md:text-2xl font-bold text-pretty">Application Status</CardTitle>
+            <CardDescription className="text-sm md:text-base max-w-[450px] mx-auto text-pretty">
               Your request to join <strong>{group?.name}</strong> is in progress. Check back soon for updates.
             </CardDescription>
           </CardHeader>
@@ -712,22 +751,22 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
             )}
 
             {/* Quick Group Info Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6 border-y border-muted-foreground/10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 py-6 border-y border-muted-foreground/10">
               <div className="text-center space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Community</p>
-                <p className="font-bold text-sm truncate px-2">{group?.name}</p>
+                <p className="font-bold text-xs md:text-sm truncate px-2">{group?.name}</p>
               </div>
               <div className="text-center space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Type</p>
-                <p className="font-bold text-sm">Protected</p>
+                <p className="font-bold text-xs md:text-sm">Protected</p>
               </div>
               <div className="text-center space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Capacity</p>
-                <p className="font-bold text-sm">{group?.memberCount} / {group?.maxMembers}</p>
+                <p className="font-bold text-xs md:text-sm">{group?.memberCount} / {group?.maxMembers}</p>
               </div>
               <div className="text-center space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Submitted</p>
-                <p className="font-bold text-sm">Recently</p>
+                <p className="font-bold text-xs md:text-sm">Recently</p>
               </div>
             </div>
 

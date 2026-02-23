@@ -108,7 +108,7 @@ export default function CreateGroupPage() {
     <div className="space-y-2">
       <PageHeader
         heading="Create Group"
-        text="Set up your group with a name, description, and privacy settings."
+        description="Set up your group with a name, description, and privacy settings."
         showBackButton
         backHref="/groups"
       />
