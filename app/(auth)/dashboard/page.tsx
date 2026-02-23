@@ -4,8 +4,7 @@ import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
 
 // Services
-import { fetchDashboardSummary } from '@/lib/services/dashboard-service';
-import { fetchGroupAccessData } from '@/lib/services/groups-service';
+import { fetchDashboardPageData } from '@/lib/services/dashboard-service';
 
 // UI Components
 import { NoGroupState } from '@/components/empty-states/no-group-state';
@@ -48,26 +47,23 @@ export default async function DashboardPage() {
         );
     }
 
-    // 2. Fetch Initial Critical Data (Summary)
-    // We await this to ensure the basic dashboard shell and summary are consistent
-    // before streaming the heavy parts.
-    const [summaryData, accessData] = await Promise.all([
-        fetchDashboardSummary(session.user.id, activeGroupId),
-        fetchGroupAccessData(activeGroupId, session.user.id)
-    ]);
+    // 2. Fetch All Dashboard Data in One Unified Cached Batch
+    const dashboardData = await fetchDashboardPageData(session.user.id, activeGroupId);
+
+    if (!dashboardData) return <NoGroupState />;
+
+    const { summary: summaryData, userRole, currentPeriod } = dashboardData;
 
     // 3. Handle No Period State
-    if (!summaryData?.currentPeriod) {
-        const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(accessData.userRole || '');
+    if (!currentPeriod) {
+        const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole || '');
         return (
-            <Dashboard heading="Dashboard" description="Overview of your group's meal activity and analytics.">
                 <NoPeriodState
                     isPrivileged={isPrivileged}
                     periodMode={summaryData?.periodMode}
                     title="No Active Period"
                     description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
                 />
-            </Dashboard >
         );
     }
 
@@ -82,19 +78,17 @@ export default async function DashboardPage() {
                 {/* Overview Section - Loaded Instantly */}
                 <DashboardOverview summaryData={summaryData} />
 
-                {/* Activity Section - Loaded Instantly */}
+                {/* Activity Section - Reuses pre-fetched data */}
                 <ActivityWrapper
-                    userId={session.user.id}
-                    groupId={activeGroupId}
+                    data={dashboardData}
                 />
 
                 {/* Quick Actions Section - Static */}
                 <DashboardQuickActions />
 
-                {/* Detailed Analytics Section - Loaded Instantly */}
+                {/* Detailed Analytics Section - Reuses pre-fetched data */}
                 <AnalyticsWrapper
-                    userId={session.user.id}
-                    groupId={activeGroupId}
+                    data={dashboardData}
                 />
             </div>
         </Dashboard>

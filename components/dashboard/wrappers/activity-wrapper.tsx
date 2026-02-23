@@ -3,15 +3,11 @@ import { fetchDashboardActivities, fetchDashboardCharts } from '@/lib/services/d
 import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 
 interface ActivityWrapperProps {
-    userId: string;
-    groupId: string;
+    data: any;
 }
 
-export async function ActivityWrapper({ userId, groupId }: ActivityWrapperProps) {
-    const [activities, chartData] = await Promise.all([
-        fetchDashboardActivities(userId, groupId),
-        fetchDashboardCharts(userId, groupId)
-    ]);
+export function ActivityWrapper({ data }: ActivityWrapperProps) {
+    const { activities, chartData } = data;
 
     return (
         <DashboardActivity

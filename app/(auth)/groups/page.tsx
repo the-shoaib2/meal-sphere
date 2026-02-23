@@ -28,7 +28,11 @@ export default async function GroupsPage(props: {
         description="Join or create groups to plan meals together."
       />
 
-      <GroupsView initialData={data} initialTab={initialTab} />
+      <GroupsView 
+      initialData={data} 
+      initialTab={initialTab} 
+      />
+      
     </div>
   );
 }

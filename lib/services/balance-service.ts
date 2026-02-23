@@ -1,10 +1,67 @@
-
 import { prisma } from '@/lib/services/prisma';
 import { unstable_cache } from 'next/cache';
 import { encryptData, decryptData } from '@/lib/encryption';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
 import { ROLE_PERMISSIONS } from '@/lib/auth/permissions';
 import { CACHE_TTL } from '@/lib/cache/cache-keys';
+
+export type RoomContext = {
+  member: {
+    id: string;
+    role: string;
+    isBanned: boolean;
+    isCurrent: boolean;
+  } | null;
+  room: {
+    id: string;
+    name: string;
+    periodMode: string;
+    isPrivate: boolean;
+  } | null;
+  currentPeriod: {
+    id: string;
+    name: string;
+    startDate: Date;
+    endDate: Date | null;
+    status: string;
+    isLocked: boolean;
+  } | null;
+};
+
+/**
+ * Consolidates common lookups for financial pages to reduce DB roundtrips.
+ */
+export async function getRoomContext(userId: string, roomId: string): Promise<RoomContext> {
+  const cacheKey = `room-context:${userId}:${roomId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const [member, room, currentPeriod] = await Promise.all([
+        prisma.roomMember.findUnique({
+          where: { userId_roomId: { userId, roomId } },
+          select: { id: true, role: true, isBanned: true, isCurrent: true }
+        }),
+        prisma.room.findUnique({
+          where: { id: roomId },
+          select: { id: true, name: true, periodMode: true, isPrivate: true }
+        }),
+        prisma.mealPeriod.findFirst({
+          where: { roomId, status: 'ACTIVE' },
+          select: { id: true, name: true, startDate: true, endDate: true, status: true, isLocked: true }
+        })
+      ]);
+      
+      return encryptData({ member, room, currentPeriod });
+    },
+    [cacheKey],
+    { revalidate: 60, tags: [`group-${roomId}`, `user-${userId}`, 'context'] }
+  );
+  
+  const decrypted = decryptData(await cachedFn());
+  // Ensure dates are parsed back to Date objects if needed, though decryptData might handle it depending on implementation.
+  // lib/encryption.ts usually returns JSON.parse.
+  return decrypted;
+}
 
 // Uses DB Aggregation
 export async function calculateBalance(userId: string, roomId: string, periodId: string | null | undefined): Promise<number> {
@@ -496,32 +553,39 @@ export async function deleteTransaction(
 /**
  * Unified fetcher for Account Balance page SSR
  */
-export async function fetchAccountBalanceData(userId: string, groupId: string) {
-  const cacheKey = `account-balance-data-${userId}-${groupId}`;
+/**
+ * Targeted fetcher for the user-specific balance detail page.
+ * Avoids fetching the entire group summary.
+ */
+export async function fetchUserBalanceDetailData(targetUserId: string, groupId: string, viewerUserId: string) {
+  const cacheKey = `user-balance-detail-${targetUserId}-${groupId}`;
   
   const cachedFn = unstable_cache(
     async () => {
       const start = performance.now();
       
-      const currentPeriod = await getCurrentPeriod(groupId);
+      const { member: viewerMember, room, currentPeriod } = await getRoomContext(viewerUserId, groupId);
       const periodId = currentPeriod?.id;
 
-      const [summary, roomData, membership, sentTransactions, receivedTransactions, history] = await Promise.all([
-        getGroupBalanceSummary(groupId, true),
-        prisma.room.findUnique({
-          where: { id: groupId },
-          select: { id: true, name: true }
-        }),
+      if (!room || !viewerMember) throw new Error("Unauthorized");
+
+      // Parallel queries for user-specific data
+      const [targetMember, balance, mealCount, mealRateData, transactions, history] = await Promise.all([
         prisma.roomMember.findUnique({
-          where: { userId_roomId: { userId, roomId: groupId } },
-          select: { role: true }
+          where: { userId_roomId: { userId: targetUserId, roomId: groupId } },
+          include: { user: { select: { id: true, name: true, image: true, email: true } } }
         }),
-        // Fetch sent transactions
+        calculateBalance(targetUserId, groupId, periodId),
+        calculateUserMealCount(targetUserId, groupId, periodId),
+        calculateMealRate(groupId, periodId),
         prisma.accountTransaction.findMany({
           where: {
             roomId: groupId,
-            userId: userId,
-            periodId: periodId
+            periodId: periodId,
+            OR: [
+              { userId: targetUserId },
+              { targetUserId: targetUserId }
+            ]
           },
           include: {
             creator: { select: { id: true, name: true, image: true, email: true } },
@@ -529,14 +593,86 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
             user: { select: { id: true, name: true, image: true, email: true } }
           },
           orderBy: { createdAt: 'desc' },
-          take: 10
+          take: 20
         }),
-        // Fetch received transactions
+        prisma.transactionHistory.findMany({
+          where: { 
+            roomId: groupId,
+            periodId: periodId,
+            OR: [
+              { userId: targetUserId },
+              { targetUserId: targetUserId }
+            ]
+          },
+          include: { changedByUser: { select: { id: true, name: true, image: true, email: true } } },
+          orderBy: { changedAt: 'desc' },
+          take: 10
+        })
+      ]);
+
+      if (!targetMember) throw new Error("User not found in group");
+
+      const mealRate = mealRateData.mealRate;
+      const totalSpent = mealCount * mealRate;
+      const availableBalance = balance - totalSpent;
+
+      const userData = {
+        user: targetMember.user,
+        balance,
+        role: targetMember.role,
+        availableBalance,
+        totalSpent,
+        mealCount,
+        mealRate,
+        currentPeriod
+      };
+
+      const executionTime = performance.now() - start;
+
+      const result = {
+        userData,
+        transactions,
+        history,
+        currentPeriod,
+        roomData: room,
+        viewerRole: viewerMember.role,
+        timestamp: new Date().toISOString(),
+        executionTime
+      };
+
+      return encryptData(result);
+    },
+    [cacheKey],
+    { revalidate: 30, tags: [`user-${targetUserId}`, `group-${groupId}`, 'balance'] }
+  );
+
+  return decryptData(await cachedFn());
+}
+
+export async function fetchAccountBalanceData(userId: string, groupId: string) {
+  const cacheKey = `account-balance-data-${userId}-${groupId}`;
+  
+  const cachedFn = unstable_cache(
+    async () => {
+      const start = performance.now();
+      
+      const { member: membership, room: roomData, currentPeriod } = await getRoomContext(userId, groupId);
+      const periodId = currentPeriod?.id;
+
+      if (!roomData || !membership) throw new Error("Unauthorized");
+
+      // Fetch summary and transactions in parallel
+      const [summary, transactions, history] = await Promise.all([
+        getGroupBalanceSummary(groupId, true),
+        // Fetch recent transactions for this user
         prisma.accountTransaction.findMany({
           where: {
             roomId: groupId,
-            targetUserId: userId,
-            periodId: periodId
+            periodId: periodId,
+            OR: [
+              { userId: userId },
+              { targetUserId: userId }
+            ]
           },
           include: {
             creator: { select: { id: true, name: true, image: true, email: true } },
@@ -555,27 +691,14 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
               { targetUserId: userId }
             ]
           },
-          include: {
-            changedByUser: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-                email: true
-              }
-            }
-          },
+          include: { changedByUser: { select: { id: true, name: true, image: true, email: true } } },
           orderBy: { changedAt: 'desc' },
-          take: 10 // Limit to last 10 actions initially
+          take: 10
         })
       ]);
 
-      const ownTransactions = [...sentTransactions, ...receivedTransactions]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 10);
-
-      // Calculate own balance from summary or separately
-      const ownMemberData = summary?.members?.find((m: any) => m.userId === userId);
+      // Extract own balance from summary
+      const ownMemberData = (summary as any)?.members?.find((m: any) => m.userId === userId);
       const ownBalance = ownMemberData ? {
         user: ownMemberData.user,
         balance: ownMemberData.balance,
@@ -592,11 +715,11 @@ export async function fetchAccountBalanceData(userId: string, groupId: string) {
       const result = {
         summary,
         ownBalance,
-        ownTransactions,
+        ownTransactions: transactions,
         history,
         currentPeriod: summary?.currentPeriod || currentPeriod,
         roomData,
-        userRole: membership?.role || null,
+        userRole: membership.role,
         timestamp: new Date().toISOString(),
         executionTime
       };

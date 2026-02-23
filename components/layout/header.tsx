@@ -46,27 +46,33 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center backdrop-blur-md border-b border-border/40" suppressHydrationWarning>
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center gap-2 md:gap-4" suppressHydrationWarning>
-        {/* Mobile Sidebar Trigger - Always visible */}
+        {/* Mobile Sidebar Trigger - Always visible but guarded for hydration */}
         <div className="lg:hidden flex-shrink-0">
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild suppressHydrationWarning>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64">
-              <SheetHeader className="px-4 py-4 border-b">
-                <SheetTitle className="text-left flex items-center gap-2">
-                  <Utensils className="h-5 w-5" />
-                  MealSphere
-                </SheetTitle>
-              </SheetHeader>
-              <div className="h-full overflow-y-auto">
-                <SidebarContent onNavigate={() => setIsMobileMenuOpen(false)} />
-              </div>
-            </SheetContent>
-          </Sheet>
+          {isMounted ? (
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64">
+                <SheetHeader className="px-4 py-4 border-b">
+                  <SheetTitle className="text-left flex items-center gap-2">
+                    <Utensils className="h-5 w-5" />
+                    MealSphere
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="h-full overflow-y-auto">
+                  <SidebarContent onNavigate={() => setIsMobileMenuOpen(false)} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <Button variant="ghost" size="icon">
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
         </div>
 
         {/* Title - Hidden when search is expanded on mobile */}
@@ -135,10 +141,14 @@ export function Header() {
           )}
 
           {/* Notification - Always visible on desktop, hidden on mobile when search is expanded */}
-          {(!isMobile || !isSearchExpanded) && <NotificationBell />}
+          {isMounted && (!isMobile || !isSearchExpanded) && <NotificationBell />}
 
           {/* User Avatar - Always visible */}
-          <UserAvatar user={session?.user} />
+          {isMounted ? (
+            <UserAvatar user={session?.user} />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-muted border border-border/50 animate-pulse" />
+          )}
         </div>
       </div>
     </header>

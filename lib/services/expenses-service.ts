@@ -2,6 +2,7 @@ import { prisma } from '@/lib/services/prisma';
 import { unstable_cache } from 'next/cache';
 import { encryptData, decryptData } from '@/lib/encryption';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
+import { getRoomContext } from '@/lib/services/balance-service';
 
 /**
  * Fetches all expense-related data for a user in a specific group
@@ -15,19 +16,14 @@ export async function fetchExpensesData(userId: string, groupId: string) {
     async () => {
       const start = performance.now();
       
-      // Get current period first
-      const currentPeriod = await getCurrentPeriod(groupId);
+      const { member: membership, room: roomData, currentPeriod } = await getRoomContext(userId, groupId);
+      const periodId = currentPeriod?.id;
       
-      if (!currentPeriod) {
-        // No active period - return empty data
+      if (!currentPeriod || !membership || !roomData) {
         return encryptData({
           expenses: [],
           expenseDistribution: [],
-          statistics: {
-            total: 0,
-            totalAmount: 0,
-            byType: {}
-          },
+          statistics: { total: 0, totalAmount: 0, byType: {} },
           currentPeriod: null,
           roomData: null,
           userRole: null,
@@ -40,10 +36,7 @@ export async function fetchExpensesData(userId: string, groupId: string) {
       const [
         expenses,
         expenseDistribution,
-        expenseStats,
-        expensesByType,
-        roomData,
-        membership
+        expenseStats
       ] = await Promise.all([
         // All expenses for current period
         prisma.extraExpense.findMany({
@@ -94,58 +87,6 @@ export async function fetchExpensesData(userId: string, groupId: string) {
           },
           _avg: {
             amount: true
-          }
-        }),
-        
-        // Expenses grouped by type with details
-        prisma.extraExpense.findMany({
-          where: {
-            roomId: groupId,
-            periodId: currentPeriod.id
-          },
-          select: {
-            id: true,
-            type: true,
-            amount: true,
-            description: true,
-            date: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: {
-            date: 'desc'
-          }
-        }),
-        
-        // Room data
-        prisma.room.findUnique({
-          where: {
-            id: groupId
-          },
-          select: {
-            id: true,
-            name: true,
-            memberCount: true,
-            isPrivate: true
-          }
-        }),
-        
-        // User membership and role
-        prisma.roomMember.findUnique({
-          where: {
-            userId_roomId: {
-              userId: userId,
-              roomId: groupId
-            }
-          },
-          select: {
-            role: true,
-            isBanned: true
           }
         })
       ]);

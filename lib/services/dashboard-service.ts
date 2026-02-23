@@ -4,6 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { encryptData, decryptData } from '@/lib/encryption';
 import { 
   getGroupBalanceSummary, 
+  getRoomContext
 } from '@/lib/services/balance-service';
 import { getCurrentPeriod } from '@/lib/utils/period-utils';
 import { DashboardActivity, DashboardChartData } from '@/types/dashboard';
@@ -39,7 +40,7 @@ async function resolveGroupId(userId: string, groupId?: string): Promise<string 
  * Fetches Summary Data (Top Cards)
  */
 export async function fetchDashboardSummary(userId: string, groupId?: string) {
-  const resolvedGroupId = await resolveGroupId(userId, groupId);
+  const resolvedGroupId = groupId || await resolveGroupId(userId);
 
   if (!resolvedGroupId) return null;
 
@@ -96,7 +97,7 @@ export async function fetchDashboardSummary(userId: string, groupId?: string) {
  * Fetches Activities (Recent Activity Feed)
  */
 export async function fetchDashboardActivities(userId: string, groupId?: string) {
-  const resolvedGroupId = await resolveGroupId(userId, groupId);
+  const resolvedGroupId = groupId || await resolveGroupId(userId);
   if (!resolvedGroupId) return [];
 
   const cacheKey = `dashboard-activities-${resolvedGroupId}`;
@@ -203,7 +204,7 @@ export async function fetchDashboardActivities(userId: string, groupId?: string)
  * Fetches Chart Data
  */
 export async function fetchDashboardCharts(userId: string, groupId?: string) {
-    const resolvedGroupId = await resolveGroupId(userId, groupId);
+    const resolvedGroupId = groupId || await resolveGroupId(userId);
     if (!resolvedGroupId) return [];
   
     const cacheKey = `dashboard-charts-${resolvedGroupId}`;
@@ -259,7 +260,7 @@ export async function fetchDashboardCharts(userId: string, groupId?: string) {
  * Fetches Analytics Data
  */
 export async function fetchDashboardAnalytics(userId: string, groupId?: string) {
-    const resolvedGroupId = await resolveGroupId(userId, groupId);
+    const resolvedGroupId = groupId || await resolveGroupId(userId);
     if (!resolvedGroupId) return {
         mealDistribution: [],
         expenseDistribution: [],
@@ -320,46 +321,83 @@ export async function fetchDashboardAnalytics(userId: string, groupId?: string) 
 }
 
 /**
+ * HIGH-PERFORMANCE UNIFIED FETCHER FOR DASHBOARD
+ * Consolidates all dashboard data into a single cached payload.
+ * Reuses RoomContext to minimize DB roundtrips.
+ */
+export async function fetchDashboardPageData(userId: string, groupId?: string) {
+    const start = performance.now();
+    const resolvedGroupId = groupId || (await resolveGroupId(userId)) || "";
+    if (!resolvedGroupId) return null;
+
+    const cacheKey = `dashboard-page-data-${userId}-${resolvedGroupId}`;
+
+    const cachedFn = unstable_cache(
+        async () => {
+            // 1. Critical Path: Get Context & Summary in Parallel
+            const [context, summaryRaw] = await Promise.all([
+                getRoomContext(userId, resolvedGroupId),
+                fetchDashboardSummary(userId, resolvedGroupId)
+            ]);
+
+            const { currentPeriod, room: roomData, member: membership } = context;
+            const periodId = currentPeriod?.id;
+
+            if (!roomData || !membership) throw new Error("Unauthorized");
+
+            // 2. Heavy Data: Activities, Charts, Analytics in Parallel
+            const [activities, chartData, analytics] = await Promise.all([
+                fetchDashboardActivities(userId, resolvedGroupId),
+                fetchDashboardCharts(userId, resolvedGroupId),
+                // Optimized analytics: Reuse existing summary calculations
+                (async () => {
+                    const [mealDistributionRaw, expenseDistributionRaw] = await Promise.all([
+                        prisma.meal.groupBy({
+                            by: ['type'],
+                            where: { roomId: resolvedGroupId, periodId },
+                            _count: { type: true }
+                        }),
+                        prisma.extraExpense.groupBy({
+                            by: ['type'],
+                            where: { roomId: resolvedGroupId, periodId },
+                            _sum: { amount: true }
+                        })
+                    ]);
+
+                    return {
+                        mealDistribution: mealDistributionRaw.map(m => ({ name: m.type, value: m._count.type })),
+                        expenseDistribution: expenseDistributionRaw.map(e => ({ name: e.type, value: e._sum.amount || 0 })),
+                        mealRateTrend: [{ name: 'Current', value: summaryRaw?.currentRate || 0 }],
+                        monthlyExpenses: [],
+                        roomStats: []
+                    };
+                })()
+            ]);
+
+            const executionTime = performance.now() - start;
+
+            return encryptData({
+                summary: summaryRaw,
+                activities,
+                chartData,
+                analytics,
+                currentPeriod,
+                roomData,
+                userRole: membership.role,
+                timestamp: new Date().toISOString(),
+                executionTime
+            });
+        },
+        [cacheKey],
+        { revalidate: DASHBOARD_TTL, tags: [`group-${resolvedGroupId}`, `user-${userId}`, 'dashboard-full'] }
+    );
+
+    return decryptData(await cachedFn());
+}
+
+/**
  * Legacy Support / Aggregator
  */
 export async function fetchDashboardData(userId: string, groupId?: string) {
-    const start = performance.now();
-    const resolvedGroupId = await resolveGroupId(userId, groupId);
-    
-    if (!resolvedGroupId) {
-        return {
-          summary: null,
-          activities: [],
-          chartData: [],
-          analytics: {
-            mealDistribution: [],
-            expenseDistribution: [],
-            monthlyExpenses: [],
-            mealRateTrend: [],
-            roomStats: []
-          },
-          groupBalance: null,
-          timestamp: new Date().toISOString(),
-          executionTime: 0
-        };
-    }
-
-    const [summary, activities, chartData, analytics] = await Promise.all([
-        fetchDashboardSummary(userId, resolvedGroupId),
-        fetchDashboardActivities(userId, resolvedGroupId),
-        fetchDashboardCharts(userId, resolvedGroupId),
-        fetchDashboardAnalytics(userId, resolvedGroupId)
-    ]);
-
-    const end = performance.now();
-    
-    return {
-        summary,
-        activities,
-        chartData,
-        analytics,
-        groupBalance: summary?.groupBalance, // Included in summary now
-        timestamp: new Date().toISOString(),
-        executionTime: end - start
-    };
+    return fetchDashboardPageData(userId, groupId);
 }

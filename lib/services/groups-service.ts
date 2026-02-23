@@ -106,15 +106,7 @@ export async function fetchGroupsData(userId: string) {
               }
             }
           },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            bannerUrl: true,
-            isPrivate: true,
-            memberCount: true,
-            maxMembers: true,
-            createdAt: true,
+          include: {
             createdByUser: {
               select: {
                 id: true,
@@ -155,15 +147,7 @@ export async function fetchGroupsData(userId: string) {
             isPrivate: false,
             isActive: true
           },
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            bannerUrl: true,
-            isPrivate: true,
-            memberCount: true,
-            maxMembers: true,
-            createdAt: true,
+          include: {
             createdByUser: {
               select: {
                 id: true,
@@ -227,8 +211,20 @@ export async function fetchGroupsData(userId: string) {
       const executionTime = end - start;
 
       const result = {
-        myGroups: myGroupsRaw,
-        publicGroups: publicGroupsRaw,
+        myGroups: myGroupsRaw.map(group => ({
+          ...group,
+          members: group.members.map(m => ({
+            ...m,
+            joinedAt: m.joinedAt.toISOString()
+          }))
+        })),
+        publicGroups: publicGroupsRaw.map(group => ({
+          ...group,
+          members: group.members.map(m => ({
+            ...m,
+            joinedAt: m.joinedAt.toISOString()
+          }))
+        })),
         joinRequests: joinRequestsRaw,
         activeGroup: activeGroup || null,
         timestamp: new Date().toISOString(),
@@ -329,7 +325,7 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         email: canViewSensitive ? group.createdByUser.email : null
       };
 
-      return {
+      return encryptData({
         group: {
             ...group,
             createdByUser: sanitizedCreator,
@@ -338,16 +334,17 @@ export async function fetchGroupDetails(groupId: string, userId: string) {
         userMembership,
         timestamp: new Date().toISOString(),
         executionTime: performance.now() - start
-      };
+      });
     },
-    [cacheKey, 'v1-group-details'],
+    [cacheKey, 'group-details'],
     { 
       revalidate: 30, 
       tags: [`group-${groupId}`, `user-${userId}`] 
     }
   );
 
-  return await cachedFn();
+  const encrypted = await cachedFn();
+  return encrypted ? decryptData(encrypted) : null;
 }
 export async function fetchGroupAccessData(groupId: string, userId: string) {
   const cacheKey = `group-access-${groupId}-${userId}`;
@@ -391,7 +388,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
       ]);
 
       if (!group) {
-        return {
+        return encryptData({
           isMember: false,
           userRole: null,
           permissions: [],
@@ -403,7 +400,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
           error: "Group not found",
           timestamp: new Date().toISOString(),
           executionTime: performance.now() - start
-        };
+        });
       }
 
       const isMember = !!membership && !membership.isBanned;
@@ -442,7 +439,7 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
         executionTime
       };
 
-      return result;
+      return encryptData(result);
     },
     [cacheKey, 'group-access'],
     { 
@@ -451,7 +448,8 @@ export async function fetchGroupAccessData(groupId: string, userId: string) {
     }
   );
 
-  return await cachedFn();
+  const encrypted = await cachedFn();
+  return encrypted ? decryptData(encrypted) : null;
 }
 
 export async function fetchGroupJoinDetails(groupId: string, userId: string) {
@@ -539,7 +537,7 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
         executionTime
       };
 
-      return result;
+      return encryptData(result);
     },
     [cacheKey, 'group-join-details'],
     { 
@@ -548,7 +546,8 @@ export async function fetchGroupJoinDetails(groupId: string, userId: string) {
     }
   );
 
-  return await cachedFn();
+  const encrypted = await cachedFn();
+  return encrypted ? decryptData(encrypted) : null;
 }
 
 export async function fetchGroupInviteTokens(groupId: string, userId: string) {
@@ -567,12 +566,12 @@ export async function fetchGroupInviteTokens(groupId: string, userId: string) {
       });
 
       if (!membership) {
-        return {
+        return encryptData({
           error: "Unauthorized",
           data: [],
           timestamp: new Date().toISOString(),
           executionTime: performance.now() - start
-        };
+        });
       }
 
       const inviteTokens = await prisma.inviteToken.findMany({
@@ -612,7 +611,7 @@ export async function fetchGroupInviteTokens(groupId: string, userId: string) {
         executionTime
       };
 
-      return result;
+      return encryptData(result);
     },
     [cacheKey, 'group-invites'],
     { 
@@ -621,7 +620,8 @@ export async function fetchGroupInviteTokens(groupId: string, userId: string) {
     }
   );
 
-  return await cachedFn();
+  const encrypted = await cachedFn();
+  return encrypted ? decryptData(encrypted) : null;
 }
 
 export async function resolveInviteToken(token: string) {

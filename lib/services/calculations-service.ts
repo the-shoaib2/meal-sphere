@@ -7,7 +7,8 @@ import {
   calculateBalance,
   calculateUserMealCount,
   calculateMealRate,
-  calculateTotalExpenses
+  calculateTotalExpenses,
+  getRoomContext
 } from '@/lib/services/balance-service';
 
 /**
@@ -22,27 +23,15 @@ export async function fetchCalculationsData(userId: string, groupId: string) {
     async () => {
       const start = performance.now();
       
-      // Get current period first
-      const currentPeriod = await getCurrentPeriod(groupId);
+      const { member: membership, room: roomData, currentPeriod } = await getRoomContext(userId, groupId);
       const periodId = currentPeriod?.id;
       
-      if (!currentPeriod) {
-        // No active period - return empty data
+      if (!currentPeriod || !membership || !roomData) {
         return encryptData({
           groupBalanceSummary: null,
-          userBalance: {
-            balance: 0,
-            mealCount: 0,
-            totalSpent: 0,
-            availableBalance: 0,
-            mealRate: 0
-          },
+          userBalance: { balance: 0, mealCount: 0, totalSpent: 0, availableBalance: 0, mealRate: 0 },
           memberBalances: [],
-          mealRateInfo: {
-            mealRate: 0,
-            totalMeals: 0,
-            totalExpenses: 0
-          },
+          mealRateInfo: { mealRate: 0, totalMeals: 0, totalExpenses: 0 },
           payments: [],
           currentPeriod: null,
           roomData: null,
@@ -56,8 +45,6 @@ export async function fetchCalculationsData(userId: string, groupId: string) {
       const [
         totalExpenses,
         totalMeals,
-        roomData,
-        membership,
         payments
       ] = await Promise.all([
         // Total expenses for current period
@@ -68,33 +55,6 @@ export async function fetchCalculationsData(userId: string, groupId: string) {
           where: {
             roomId: groupId,
             periodId: periodId
-          }
-        }),
-        
-        // Room data
-        prisma.room.findUnique({
-          where: {
-            id: groupId
-          },
-          select: {
-            id: true,
-            name: true,
-            memberCount: true,
-            isPrivate: true
-          }
-        }),
-        
-        // User membership and role
-        prisma.roomMember.findUnique({
-          where: {
-            userId_roomId: {
-              userId: userId,
-              roomId: groupId
-            }
-          },
-          select: {
-            role: true,
-            isBanned: true
           }
         }),
         
@@ -190,10 +150,10 @@ export async function fetchMemberBreakdown(userId: string, groupId: string) {
     async () => {
       const start = performance.now();
       
-      const currentPeriod = await getCurrentPeriod(groupId);
+      const { member: membership, room: roomData, currentPeriod } = await getRoomContext(userId, groupId);
       const periodId = currentPeriod?.id;
       
-      if (!currentPeriod) {
+      if (!currentPeriod || !membership || !roomData) {
         return encryptData({
           members: [],
           timestamp: new Date().toISOString(),

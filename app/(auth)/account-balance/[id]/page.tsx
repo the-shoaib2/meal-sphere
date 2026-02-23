@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
-import { fetchAccountBalanceData } from '@/lib/services/balance-service';
+import { fetchAccountBalanceData, fetchUserBalanceDetailData } from '@/lib/services/balance-service';
 import { UserAccountBalanceDetail } from '@/components/account-balance/account-balance';
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
@@ -65,8 +65,8 @@ export default async function UserAccountBalancePage({ params }: { params: Promi
     );
   }
 
-  // 3. Fetch Initial Data for the target user in the active group
-  const balanceData = await fetchAccountBalanceData(userId, activeGroup.id);
+  // 3. Fetch Targeted User Data in the active group
+  const balanceData = await fetchUserBalanceDetailData(userId, activeGroup.id, session.user.id);
   // 3. Handle No Period State server-side
   if (!balanceData.currentPeriod) {
     return (

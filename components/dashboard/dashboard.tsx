@@ -16,10 +16,8 @@ export const useDashboardLoading = () => useContext(DashboardLoadingContext);
 
 interface DashboardProps {
     heading?: string;
-    text?: string | ReactNode;
+    description?: string | ReactNode;
     children: ReactNode;
-    activities?: DashboardActivity[];
-    chartData?: DashboardChartData[];
 }
 
 /**
@@ -28,7 +26,7 @@ interface DashboardProps {
  */
 export function Dashboard({
     heading,
-    text,
+    description,
     children,
 }: DashboardProps) {
     const router = useRouter();
@@ -50,7 +48,7 @@ export function Dashboard({
             {heading && (
                 <PageHeader
                     heading={heading}
-                    description={text}
+                    description={description}
                     badges={<RoleBadge role={userRole} />}
                     badgesNextToTitle={true}
                     collapsible={false}

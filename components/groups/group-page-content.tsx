@@ -203,9 +203,10 @@ export function GroupPageContent(
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-0 -mx-4 sm:mx-0 overflow-hidden sm:rounded-2xl border-b sm:border bg-card shadow-sm mb-4">
+            <div className="flex flex-col gap-0 -mx-4 sm:mx-0 overflow-hidden sm:rounded-lg border-b sm:border bg-card shadow-sm mb-4 ">
+               
                 {/* Banner Section */}
-                <div className="relative h-40 sm:h-56 w-full bg-muted overflow-hidden">
+                <div className="relative h-20 sm:h-36 w-full bg-muted bg-white/10 dark:bg-black/50 backdrop-blur-[4px] overflow-hidden">
                     {resolvedGroup.bannerUrl ? (
                         <>
                             <img
@@ -213,7 +214,7 @@ export function GroupPageContent(
                                 alt={resolvedGroup.name}
                                 className="object-cover w-full h-full"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 bg-white/10 dark:bg-black/10 backdrop-blur-[4px] via-black/20 to-transparent" />
                         </>
                     ) : (
                         <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-primary/5 to-primary/10">
@@ -226,10 +227,10 @@ export function GroupPageContent(
                         <Button
                             variant="secondary"
                             size="icon"
-                            className="rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md border-none text-white transition-all shadow-md h-9 w-9"
+                            className="rounded-full bg-black/20 hover:bg-primary backdrop-blur-md border-none text-white transition-all shadow-md h-9 w-9"
                             onClick={() => router.push('/groups')}
                         >
-                            <ArrowLeft className="h-5 w-5" />
+                            <ArrowLeft className="h-6 w-6" />
                         </Button>
                     </div>
                 </div>

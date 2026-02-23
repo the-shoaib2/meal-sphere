@@ -2,24 +2,20 @@ import { fetchDashboardAnalytics, fetchDashboardCharts } from '@/lib/services/da
 import DetailedAnalytics from '@/components/dashboard/detailed-analytics';
 
 interface AnalyticsWrapperProps {
-    userId: string;
-    groupId: string;
+    data: any;
 }
 
-export async function AnalyticsWrapper({ userId, groupId }: AnalyticsWrapperProps) {
-    const [analytics, chartData] = await Promise.all([
-        fetchDashboardAnalytics(userId, groupId),
-        fetchDashboardCharts(userId, groupId)
-    ]);
+export function AnalyticsWrapper({ data }: AnalyticsWrapperProps) {
+    const { analytics, chartData } = data;
 
     return (
         <DetailedAnalytics
-            mealDistribution={analytics.mealDistribution}
-            expenseDistribution={analytics.expenseDistribution}
-            monthlyExpenses={analytics.monthlyExpenses}
-            mealRateTrend={analytics.mealRateTrend}
-            roomStats={analytics.roomStats}
-            chartData={chartData}
+            mealDistribution={analytics.mealDistribution || []}
+            expenseDistribution={analytics.expenseDistribution || []}
+            monthlyExpenses={analytics.monthlyExpenses || []}
+            mealRateTrend={analytics.mealRateTrend || []}
+            roomStats={analytics.roomStats || []}
+            chartData={chartData || []}
         />
     );
 }
