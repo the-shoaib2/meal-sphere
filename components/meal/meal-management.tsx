@@ -331,6 +331,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             onSelect={handleDateSelect}
             getMealCount={getMealCountForCalendar}
             isLoading={isAnyLoading}
+            period={currentPeriod}
           />
           <DailyMealManagerCard
             roomId={roomId}
