@@ -462,6 +462,7 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
     const session = await getServerSession(authOptions);
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
+    // Fetch membership and settings in a single parallel round-trip
     const [membership, settings] = await Promise.all([
         prisma.roomMember.findUnique({ where: { userId_roomId: { userId: session.user.id, roomId } } }),
         prisma.mealSettings.findUnique({ where: { roomId } })
@@ -534,10 +535,10 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
             await invalidateMealCache(roomId); // Invalidate cache after create
             return { success: true, meal: newMeal };
         } catch (error: any) {
-            if (error.code === 'P2002') return { success: false, error: "Meal already exists for this time" };
+            if (error.code === 'P2002') return { success: false };
             console.error('[toggleMeal error]', error);
-            if (error.code === 'P2002') return { success: false, error: "Meal already exists for this time", conflict: true };
-            return { success: false, error: "Failed to add meal" };
+            if (error.code === 'P2002') return { success: false, conflict: true };
+            return { success: false };
         }
     }
 }
@@ -667,16 +668,11 @@ export async function updateAutoMealSettings(roomId: string, userId: string, dat
 
     if (userId !== session.user.id) return { success: false, error: "Unauthorized" };
 
-    let autoSettings = await prisma.autoMealSettings.findUnique({ where: { userId_roomId: { userId, roomId } } });
-    if (!autoSettings) {
-        autoSettings = await prisma.autoMealSettings.create({ 
-            data: { ...createDefaultAutoSettings(userId, roomId) } 
-        });
-    }
-
-    const updated = await prisma.autoMealSettings.update({
-        where: { id: autoSettings.id },
-        data: { ...data, updatedAt: new Date() }
+    // Single upsert replaces the old findUnique → conditional create → update chain
+    const updated = await prisma.autoMealSettings.upsert({
+        where: { userId_roomId: { userId, roomId } },
+        create: { ...createDefaultAutoSettings(userId, roomId), ...data },
+        update: { ...data, updatedAt: new Date() },
     });
 
     await invalidateMealCache(roomId);
@@ -710,16 +706,18 @@ async function assertAdminRights(userId: string, roomId: string, customMessage =
 
 
 export async function deleteGuestMeal(guestMealId: string, userId: string, periodId?: string) {
-    const guestMeal = await prisma.guestMeal.findUnique({
-        where: { id: guestMealId },
-    });
+    // Run session fetch and DB lookup in parallel for the first round-trip
+    const [sessionResult, guestMeal] = await Promise.all([
+        getServerSession(authOptions),
+        prisma.guestMeal.findUnique({ where: { id: guestMealId } }),
+    ]);
 
     if (!guestMeal) {
         console.log(`[GuestMeal] Not found (already deleted): ${guestMealId}`);
         return { success: true };
     }
 
-    const session = await getServerSession(authOptions);
+    const session = sessionResult;
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     const [membership, settings, targetPeriod] = await Promise.all([

@@ -1,43 +1,47 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React from "react"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Plus, Minus, Trash2, Users, Save, Check } from "lucide-react"
+import { Plus, Minus, Trash2, Users } from "lucide-react"
 import { format } from "date-fns"
-import { useMeal, type MealType } from "@/hooks/use-meal"
+import type { MealType, GuestMeal, MealSettings } from "@/hooks/use-meal"
 import { toast } from "react-hot-toast"
 
 interface GuestMealManagerProps {
   roomId: string
   date: Date
   onUpdate?: () => void
-  initialData?: any
   isLoading?: boolean
   canEdit?: boolean
+  // Props passed down from parent's useMeal instance — no second hook needed
+  guestMeals: GuestMeal[]
+  getUserGuestMeals: (date: Date, userId?: string) => GuestMeal[]
+  addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>
+  deleteGuestMeal: (guestMealId: string, date?: Date) => Promise<void>
+  mealSettings: MealSettings | null
 }
 
-function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canEdit = true }: GuestMealManagerProps) {
+function GuestMealManager({
+  roomId,
+  date,
+  onUpdate,
+  isLoading,
+  canEdit = true,
+  guestMeals,
+  getUserGuestMeals,
+  addGuestMeal,
+  deleteGuestMeal,
+  mealSettings,
+}: GuestMealManagerProps) {
   const { data: session } = useSession()
-  const [isUpdating, setIsUpdating] = useState<string | null>(null)
-
-  const {
-    guestMeals,
-    getUserGuestMeals,
-    addGuestMeal,
-    deleteGuestMeal,
-    mealSettings,
-    isLoading: isMealLoading
-  } = useMeal(roomId, date, initialData)
 
   const userGuestMeals = getUserGuestMeals(date)
   const guestMealLimit = mealSettings?.guestMealLimit || 10
-
-
 
   const handleCountChange = async (type: string, currentCount: number, delta: number) => {
     const newCount = currentCount + delta
@@ -48,13 +52,12 @@ function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canE
       onUpdate?.()
     } catch (error: any) {
       console.error("Failed to update guest meal count:", error)
-      // use-meal hook handles the standard toast, but we should clear any local spinner states here if we had them.
     }
   }
 
   const handleDelete = async (guestMealId: string) => {
     try {
-      await deleteGuestMeal(guestMealId)
+      await deleteGuestMeal(guestMealId, date)
       onUpdate?.()
     } catch (error) {
       console.error("Error deleting guest meal:", error)
@@ -171,14 +174,12 @@ function GuestMealManager({ roomId, date, onUpdate, initialData, isLoading, canE
                         size="icon"
                         className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleDelete(guestMeal.id)}
-                        disabled={!canEdit || isUpdating === guestMeal.id}
+                        disabled={!canEdit}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
-
-
                 </div>
               )
             })}

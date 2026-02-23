@@ -40,9 +40,9 @@ export async function invalidateMealCache(
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
   // Also invalidate Next.js tags
-  revalidateTag(`group-${roomId}`);
-  revalidateTag(`meals-${roomId}`);
-  if (userId) revalidateTag(`user-${userId}`);
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag(`meals-${roomId}`, 'max');
+  if (userId) revalidateTag(`user-${userId}`, 'max');
   
   console.log(`🗑️  Invalidated meal cache for room ${roomId}${userId ? ` and user ${userId}` : ''}`);
 }
@@ -70,8 +70,8 @@ export async function invalidatePaymentCache(
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
   // Also invalidate Next.js tags
-  revalidateTag(`user-${userId}`);
-  if (roomId) revalidateTag(`group-${roomId}`);
+  revalidateTag(`user-${userId}`, 'max');
+  if (roomId) revalidateTag(`group-${roomId}`, 'max');
   
   console.log(`🗑️  Invalidated payment cache for user ${userId}`);
 }
@@ -145,8 +145,8 @@ export async function invalidateExpenseCache(
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
   // Also invalidate Next.js tags
-  revalidateTag(`group-${roomId}`);
-  revalidateTag('expenses');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag('expenses', 'max');
   
   console.log(`🗑️  Invalidated expense cache for room ${roomId}`);
 }
@@ -168,9 +168,8 @@ export async function invalidateShoppingCache(
   await Promise.all(patterns.map(pattern => cacheDeletePattern(pattern)));
   
   // Also invalidate Next.js tags
-  revalidateTag(`group-${roomId}`);
-  revalidateTag(`shopping-${roomId}`);
-  
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag(`shopping-${roomId}`, 'max');  
   console.log(`🗑️  Invalidated shopping cache for room ${roomId}`);
 }
 

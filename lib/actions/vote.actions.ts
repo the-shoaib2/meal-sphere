@@ -32,7 +32,7 @@ export async function createVoteAction(groupId: string, data: {
     const result = await createVote(groupId, session.user.id, data);
     
     revalidatePath(`/groups/${groupId}`, 'page');
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     // Return serializable data
     return JSON.parse(JSON.stringify(result));
@@ -53,7 +53,7 @@ export async function castVoteAction(groupId: string, voteId: string, candidateI
     const result = await castVote(voteId, session.user.id, candidateId);
     
     revalidatePath(`/groups/${groupId}`, 'page');
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     // Return serializable data
     return JSON.parse(JSON.stringify(result));
@@ -76,7 +76,7 @@ export async function deleteVoteAction(groupId: string, voteId: string) {
     const result = await deleteVote(voteId, session.user.id, access.authResult.isAdmin);
     
     revalidatePath(`/groups/${groupId}`, 'page');
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     return { success: true };
   } catch (error: any) {
@@ -120,7 +120,7 @@ export async function updateVoteAction(groupId: string, voteId: string, updateDa
     });
 
     revalidatePath(`/groups/${groupId}`, 'page');
-    revalidateTag(`votes-${groupId}`);
+    revalidateTag(`votes-${groupId}`, 'max');
 
     // Return serializable data (Dates to ISO strings)
     return { 

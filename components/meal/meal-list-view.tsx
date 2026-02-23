@@ -24,14 +24,16 @@ export default function MealListView({ roomId, selectedDate, userRole, initialDa
     const {
         toggleMeal,
         deleteGuestMeal,
+        addGuestMeal,
         useMealsByDate,
         useGuestMealsByDate,
+        guestMeals,
+        getUserGuestMeals,
+        mealSettings,
         isLoading,
         isLoadingUserStats,
         isTogglingMeal,
         isDeletingGuestMeal
-        // forceRefetch: always fetch fresh data on mount (bypasses stale client-side cache
-        // from /meals page when navigating via button click without a full page reload)
     } = useMeal(roomId, selectedDate, initialData, userRole, true)
 
     const mealsForDate = useMemo(() => useMealsByDate(selectedDate), [useMealsByDate, selectedDate])
@@ -86,9 +88,13 @@ export default function MealListView({ roomId, selectedDate, userRole, initialDa
             <GuestMealManager
                 roomId={roomId}
                 date={selectedDate}
-                initialData={initialData}
                 isLoading={isAnyLoading}
                 canEdit={canEditGuestMeals}
+                guestMeals={guestMeals}
+                getUserGuestMeals={getUserGuestMeals}
+                addGuestMeal={addGuestMeal}
+                deleteGuestMeal={deleteGuestMeal}
+                mealSettings={mealSettings}
                 onUpdate={() => {
                     const userId = session?.user?.id;
                     queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });

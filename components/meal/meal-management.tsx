@@ -129,7 +129,9 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     useMealCount,
     getUserMealCount,
     getUserGuestMealCount,
+    getUserGuestMeals,
     toggleMeal,
+    addGuestMeal,
     updateMealSettings,
     updateAutoMealSettings,
     hasMeal,
@@ -366,9 +368,13 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
         <GuestMealManager
           roomId={roomId}
           date={selectedDate}
-          initialData={initialData}
-          isLoading={isAnyLoading}
+          isLoading={isLoading}
           canEdit={canEditGuestMeals}
+          guestMeals={guestMeals}
+          getUserGuestMeals={getUserGuestMeals}
+          addGuestMeal={addGuestMeal}
+          deleteGuestMeal={deleteGuestMeal}
+          mealSettings={mealSettings}
           onUpdate={() => {
             queryClient.invalidateQueries({ queryKey: ['group-balances', roomId] });
             queryClient.invalidateQueries({ queryKey: ['user-balance', roomId, session?.user?.id] });

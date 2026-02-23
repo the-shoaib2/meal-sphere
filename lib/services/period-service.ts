@@ -13,10 +13,10 @@ import { startOfMonth, endOfMonth, format } from 'date-fns';
  */
 function invalidatePeriodCaches(roomId: string, periodId?: string) {
   // 1. Invalidate Tags for unstable_cache
-  revalidateTag(`group-${roomId}`);
-  revalidateTag('periods');
+  revalidateTag(`group-${roomId}`, 'max');
+  revalidateTag('periods', 'max');
   if (periodId) {
-    revalidateTag(`period-${periodId}`);
+    revalidateTag(`period-${periodId}`, 'max');
   }
 
   // 2. Invalidate Paths for SSR Pages

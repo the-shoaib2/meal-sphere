@@ -215,20 +215,25 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   // but we fallback to monthKey for initial seeding to restore "dots" visibility.
   const periodIdInCache = effectiveInitialData?.currentPeriod?.id || initialData?.currentPeriod?.id || 'current';
   
+  // 1a. Fetch meals + guest meals + period (requires a selected date)
   const { data: mealSystem = { meals: [], guestMeals: [], period: null }, isLoading: isLoadingMeals } = useQuery<{ meals: Meal[], guestMeals: GuestMeal[], period: any }>({
     queryKey: ['meals-system', roomId, monthKey, periodIdInCache],
     queryFn: async ({ queryKey }) => {
-      const [_key, _roomId, _monthKey, _periodId] = queryKey as [string, string, string, string];
+      const [_key, _roomId, _monthKey] = queryKey as [string, string, string];
       if (!_roomId || !selectedDate) return { meals: [], guestMeals: [], period: null };
       const res = await fetchMealsData(session?.user?.id as string, _roomId, { date: selectedDate });
-      return { meals: res.meals, period: res.currentPeriod, guestMeals: res.guestMeals };
+      return {
+        meals: res.meals,
+        period: res.currentPeriod,
+        guestMeals: res.guestMeals,
+      };
     },
     enabled: !!roomId && !!monthKey,
     initialData: effectiveInitialData
       ? { 
           meals: effectiveInitialData.meals || [], 
           guestMeals: effectiveInitialData.guestMeals || [],
-          period: effectiveInitialData.currentPeriod || null 
+          period: effectiveInitialData.currentPeriod || null,
         }
       : undefined,
     initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
@@ -237,59 +242,52 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     refetchOnWindowFocus: false
   });
 
+  // 1b. Fetch settings, auto-settings, and user stats — fires on roomId alone (no date needed)
+  //     This keeps AutoMealStatus and other date-free consumers working correctly.
+  const { data: mealConfig = { settings: null, autoSettings: null, userStats: null }, isLoading: isLoadingConfig } = useQuery<{ settings: MealSettings | null, autoSettings: AutoMealSettings | null, userStats: any | null }>({
+    queryKey: ['meal-config', roomId, session?.user?.id],
+    queryFn: async () => {
+      if (!roomId || !session?.user?.id) return { settings: null, autoSettings: null, userStats: null };
+      const res = await fetchMealsData(session.user.id, roomId);
+      return {
+        settings: (res.settings ?? null) as MealSettings | null,
+        autoSettings: (res.autoSettings ?? null) as AutoMealSettings | null,
+        userStats: res.userStats ?? null,
+      };
+    },
+    enabled: !!roomId && !!session?.user?.id,
+    initialData: effectiveInitialData
+      ? {
+          settings: (effectiveInitialData.settings || effectiveInitialData.mealSettings || null) as MealSettings | null,
+          autoSettings: (effectiveInitialData.autoSettings || effectiveInitialData.autoMealSettings || null) as AutoMealSettings | null,
+          userStats: effectiveInitialData.userStats || effectiveInitialData.userMealStats || null,
+        }
+      : undefined,
+    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false
+  });
+
 
   const meals = mealSystem?.meals || [];
   const guestMeals = mealSystem?.guestMeals || [];
   const targetPeriod = mealSystem?.period || null;
 
-  // 2. Fetch Meal Settings
-  const { data: mealSettings = null, isLoading: isLoadingSettings } = useQuery<MealSettings | null>({
-    queryKey: ['meal-settings', roomId],
-    queryFn: async () => {
-      if (!roomId) return null;
-      return await fetchMealSettings(roomId);
-    },
-    enabled: !!roomId,
-    initialData: effectiveInitialData?.settings || effectiveInitialData?.mealSettings,
-    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
+  // Settings/stats come from the roomId-gated meal-config query.
+  // This works whether or not a selectedDate is provided (fixes AutoMealStatus and similar consumers).
+  const mealSettings: MealSettings | null = mealConfig?.settings ?? null;
+  const autoMealSettings: AutoMealSettings | null = mealConfig?.autoSettings ?? null;
+  const userMealStats: UserMealStats | null = mealConfig?.userStats ?? null;
 
-  // 4. Fetch Auto Meal Settings
-  const { data: autoMealSettings = null, isLoading: isLoadingAutoSettings } = useQuery<AutoMealSettings | null>({
-    queryKey: ['auto-meal-settings', roomId, session?.user?.id],
-    queryFn: async () => {
-      if (!roomId || !session?.user?.id) return null;
-      return await fetchAutoMealSettings(session.user.id, roomId);
-    },
-    enabled: !!roomId && !!session?.user?.id,
-    initialData: effectiveInitialData?.autoSettings || effectiveInitialData?.autoMealSettings,
-    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
-
-  // 5. Fetch User Meal Stats
-  const { data: userMealStats = null, isLoading: isLoadingUserStats } = useQuery<UserMealStats | null>({
-    queryKey: ['user-meal-stats', roomId, session?.user?.id],
-    queryFn: async () => {
-      if (!roomId || !session?.user?.id) return null;
-      return await fetchUserMealStats(session.user.id, roomId);
-    },
-    enabled: !!roomId && !!session?.user?.id,
-    initialData: effectiveInitialData?.userStats || effectiveInitialData?.userMealStats,
-    initialDataUpdatedAt: effectiveInitialData ? new Date(effectiveInitialData.timestamp || Date.now()).getTime() : undefined,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false
-  });
+  // Expose loading state (merged: either query still loading counts as loading)
+  const isLoadingUserStats = isLoadingMeals || isLoadingConfig;
 
 
   const currentPeriod = targetPeriod || currentPeriodFromHook || effectiveInitialData?.currentPeriod;
   const userRole = userRoleFromProps || effectiveInitialData?.userRole || null;
 
-  // Consolidated loading state
-  const isLoading = isLoadingMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats;
+  // Consolidated loading state — date-bound meals query is the primary signal
+  const isLoading = isLoadingMeals;
 
   // Toggle meal mutation
   const toggleMealMutation = useMutation({
@@ -359,14 +357,16 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       return { previousData, queryKey };
     },
     onError: (error: any, variables, context: any) => {
-      // ROLLBACK LOGIC REFINED:
-      // If it's a conflict (already exists), we DON'T rollback to "not added" state.
-      // Instead, we let the optimistic state stand (it matches reality).
-      // Only rollback for real errors (network, validation, etc).
-      if (!error.conflict && context?.previousData && context?.queryKey) {
+      // ROLLBACK LOGIC:
+      // - Conflict (P2002 duplicate): meal already exists, keep optimistic state (matches reality). No toast.
+      // - Silent flag: auto-triggered meals — never bother the user with a toast.
+      // - All other errors: rollback and show a toast.
+      if (error.conflict || error.silent) {
+        return; // keep optimistic add, no toast
+      }
+      if (context?.previousData && context?.queryKey) {
         queryClient.setQueryData(context.queryKey, context.previousData);
       }
-      
       toast.error(error.message || 'Failed to update meal');
     },
     onSuccess: (data: any, variables) => {
@@ -576,13 +576,17 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       } as unknown as MealSettings;
     },
     onSuccess: (data: MealSettings) => {
-      queryClient.setQueryData(['meal-settings', roomId], data);
+      // Update the meal-config cache so UI reflects new settings immediately
+      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => {
+        if (!old) return old;
+        return { ...old, settings: data };
+      });
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update meal settings');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['meal-settings', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId] });
     }
   });
 
@@ -601,13 +605,13 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
       } as unknown as AutoMealSettings;
     },
     onMutate: async (newSettings) => {
-      const previousData = queryClient.getQueryData(['auto-meal-settings', roomId, session?.user?.id]);
+      const previousData = queryClient.getQueryData(['meal-config', roomId, session?.user?.id]);
 
-      queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], (old: any) => {
+      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => {
         if (!old) return old;
         return {
           ...old,
-          ...newSettings
+          autoSettings: { ...(old.autoSettings || {}), ...newSettings }
         };
       });
 
@@ -615,15 +619,19 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     },
     onError: (err: any, newSettings, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], context.previousData);
+        queryClient.setQueryData(['meal-config', roomId, session?.user?.id], context.previousData);
       }
       toast.error(err.message || 'Failed to update auto meal settings');
     },
     onSuccess: (data: AutoMealSettings) => {
-      queryClient.setQueryData(['auto-meal-settings', roomId, session?.user?.id], data);
+      // Update the meal-config cache so UI reflects new auto-settings immediately
+      queryClient.setQueryData(['meal-config', roomId, session?.user?.id], (old: any) => {
+        if (!old) return old;
+        return { ...old, autoSettings: data };
+      });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['auto-meal-settings', roomId, session?.user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['meal-config', roomId] });
     }
   });
 
@@ -816,6 +824,108 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     return isAutoMealTime(date, type);
   }, [autoMealSettings, mealSettings, hasMeal, isAutoMealTime]);
 
+  // ─── Client-side Auto Meal Trigger ──────────────────────────────────────────
+  // Calculates the exact ms until each meal time and fires a one-shot timer.
+  // When it fires, if all conditions are still met it calls toggleMeal.
+  // This is the client-side counterpart to the server cron, ensuring auto-meals
+  // work even on Vercel hobby plans or when the cron misses the window.
+  const scheduledAutoMealsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !roomId) return;
+    if (!mealSettings?.autoMealEnabled || !autoMealSettings?.isEnabled) return;
+
+    const MEAL_SCHEDULE: { type: MealType; timeStr: string | undefined; enabled: boolean | undefined }[] = [
+      { type: 'BREAKFAST', timeStr: mealSettings.breakfastTime, enabled: autoMealSettings.breakfastEnabled },
+      { type: 'LUNCH',     timeStr: mealSettings.lunchTime,     enabled: autoMealSettings.lunchEnabled },
+      { type: 'DINNER',    timeStr: mealSettings.dinnerTime,    enabled: autoMealSettings.dinnerEnabled },
+    ];
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+    for (const { type, timeStr, enabled } of MEAL_SCHEDULE) {
+      if (!enabled || !timeStr) continue;
+      if (autoMealSettings.excludedMealTypes?.includes(type)) continue;
+      if (autoMealSettings.excludedDates?.includes(todayStr)) continue;
+
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const now = new Date();
+      const mealTimeToday = new Date(now);
+      mealTimeToday.setHours(hours, minutes, 0, 0);
+
+      let msUntilMealTime = mealTimeToday.getTime() - now.getTime();
+
+      // 5-minute grace window: if tab was suspended at the exact moment, still fire
+      if (msUntilMealTime < -(5 * 60 * 1000)) continue; // too late, skip
+      if (msUntilMealTime < 0) msUntilMealTime = 0;     // fire immediately within grace
+
+      const scheduleKey = `${todayStr}-${type}`;
+
+      const timer = setTimeout(async () => {
+        // Guard: avoid double-firing if effect re-runs before cleanup
+        if (scheduledAutoMealsRef.current.has(scheduleKey)) return;
+
+        // Read fresh meal state from the ref (prevents stale closure)
+        const { meals: currentMeals, optimisticToggles: currOpt } = stateRef.current;
+        const alreadyAdded =
+          currentMeals.some((m: Meal) =>
+            normalizeDateStr(m?.date).startsWith(todayStr) &&
+            m.type === type &&
+            m.userId === userId
+          ) || currOpt[`${todayStr}-${type}-${userId}`] === 'add';
+
+        if (alreadyAdded) return;
+
+        scheduledAutoMealsRef.current.add(scheduleKey);
+
+        try {
+          const mealDate = new Date();
+          mealDate.setHours(0, 0, 0, 0);
+          // Pass a silent onError so that server-side rejections (period locked,
+          // cutoff exceeded, etc.) never pop a toast at the user. The optimistic
+          // update already put the meal in the UI; if the server rejects it,
+          // the mutation's onError will roll it back silently.
+          await toggleMealMutation.mutateAsync(
+            { date: mealDate, type, userId, action: 'add' },
+            {
+              onError: (err: any) => {
+                // Mark as silent so the global onError skips the toast
+                err.silent = true;
+                scheduledAutoMealsRef.current.delete(scheduleKey);
+              },
+            }
+          );
+        } catch {
+          // mutateAsync re-throws — already handled in the per-call onError above
+          scheduledAutoMealsRef.current.delete(scheduleKey);
+        }
+      }, msUntilMealTime);
+
+      timers.push(timer);
+    }
+
+    return () => { timers.forEach(clearTimeout); };
+  }, [
+    session?.user?.id,
+    roomId,
+    mealSettings?.autoMealEnabled,
+    mealSettings?.breakfastTime,
+    mealSettings?.lunchTime,
+    mealSettings?.dinnerTime,
+    autoMealSettings?.isEnabled,
+    autoMealSettings?.breakfastEnabled,
+    autoMealSettings?.lunchEnabled,
+    autoMealSettings?.dinnerEnabled,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    JSON.stringify(autoMealSettings?.excludedMealTypes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    JSON.stringify(autoMealSettings?.excludedDates),
+    selectedDate?.toDateString(),
+  ]);
+  // ──────────────────────────────────────────────────────────────────────────
+
   // Get user's guest meals for a specific date
   const getUserGuestMeals = useCallback((date: Date, userId?: string): GuestMeal[] => {
     const dateStr = format(date, 'yyyy-MM-dd');
@@ -975,7 +1085,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     mealSettings,
     autoMealSettings,
     userMealStats,
-    isLoading: isLoadingMeals || isLoadingSettings || isLoadingAutoSettings || isLoadingUserStats,
+    isLoading: isLoadingMeals,
     isLoadingUserStats,
     isTogglingMeal: toggleMealMutation.isPending,
     isPatchingGuestMeal: patchGuestMealMutation.isPending,
