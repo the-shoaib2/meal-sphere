@@ -117,15 +117,20 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
     refetchOnWindowFocus: false,
   });
 
+  // Shopping mutation context type
+  type ShoppingContext = {
+    previousItems: ShoppingItem[] | undefined;
+  };
+
   // Add a new item to the shopping list
-  const addItem = useMutation<ShoppingItem, Error, AddShoppingItemInput>({
+  const addItem = useMutation<ShoppingItem, Error, AddShoppingItemInput, ShoppingContext>({
     mutationFn: async (newItem): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
 
       const formData = new FormData();
       formData.append('roomId', groupId);
       formData.append('description', newItem.name);
-      formData.append('amount', (newItem.quantity || 0).toString());
+      formData.append('amount', (newItem.quantity || 1).toString());
       formData.append('date', new Date().toISOString());
 
       const result = await createShoppingItemAction(formData);
@@ -134,13 +139,37 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
       }
       return result.shoppingItem as unknown as ShoppingItem;
     },
-    onSuccess: () => {
+    onMutate: async (newItem) => {
+      await queryClient.cancelQueries({ queryKey: ['shopping', groupId] });
+      const previousItems = queryClient.getQueryData<ShoppingItem[]>(['shopping', groupId]);
+      
+      const optimisticItem: ShoppingItem = {
+        id: `temp-${Date.now()}`,
+        name: newItem.name,
+        quantity: newItem.quantity || 1,
+        unit: newItem.unit,
+        purchased: false,
+        addedById: 'me', // Generic placeholder
+        addedBy: { id: 'me', name: 'You', image: null },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData(['shopping', groupId], (old: ShoppingItem[] = []) => [optimisticItem, ...old]);
+      return { previousItems };
+    },
+    onError: (err, newItem, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(['shopping', groupId], context.previousItems);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
     },
   });
 
   // Update an existing item
-  const updateItem = useMutation<ShoppingItem, Error, UpdateShoppingItemInput>({
+  const updateItem = useMutation<ShoppingItem, Error, UpdateShoppingItemInput, ShoppingContext>({
     mutationFn: async (updatedItem): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
       const result = await updateShoppingItemAction(updatedItem.id, groupId, updatedItem);
@@ -149,13 +178,26 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
       }
       return result.shoppingItem as unknown as ShoppingItem;
     },
-    onSuccess: () => {
+    onMutate: async (updatedItem) => {
+      await queryClient.cancelQueries({ queryKey: ['shopping', groupId] });
+      const previousItems = queryClient.getQueryData<ShoppingItem[]>(['shopping', groupId]);
+      queryClient.setQueryData(['shopping', groupId], (old: ShoppingItem[] = []) => 
+        old.map(item => item.id === updatedItem.id ? { ...item, ...updatedItem } : item)
+      );
+      return { previousItems };
+    },
+    onError: (err, updatedItem, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(['shopping', groupId], context.previousItems);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
     },
   });
 
   // Toggle item's purchased status
-  const togglePurchased = useMutation<ShoppingItem, Error, { id: string; purchased: boolean }>({
+  const togglePurchased = useMutation<ShoppingItem, Error, { id: string; purchased: boolean }, ShoppingContext>({
     mutationFn: async ({ id, purchased }): Promise<ShoppingItem> => {
       if (!groupId) throw new Error('No active group selected');
       const result = await updateShoppingItemAction(id, groupId, { purchased });
@@ -164,13 +206,26 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
       }
       return result.shoppingItem as unknown as ShoppingItem;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, purchased }) => {
+      await queryClient.cancelQueries({ queryKey: ['shopping', groupId] });
+      const previousItems = queryClient.getQueryData<ShoppingItem[]>(['shopping', groupId]);
+      queryClient.setQueryData(['shopping', groupId], (old: ShoppingItem[] = []) => 
+        old.map(item => item.id === id ? { ...item, purchased } : item)
+      );
+      return { previousItems };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(['shopping', groupId], context.previousItems);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
     },
   });
 
   // Delete an item
-  const deleteItem = useMutation<void, Error, string>({
+  const deleteItem = useMutation<void, Error, string, ShoppingContext>({
     mutationFn: async (itemId) => {
       if (!groupId) throw new Error('No active group selected');
       const result = await deleteShoppingItemAction(itemId, groupId);
@@ -178,7 +233,20 @@ export function useShopping(periodId?: string, initialData?: ShoppingPageData) {
         throw new Error(result.message || 'Failed to delete item');
       }
     },
-    onSuccess: () => {
+    onMutate: async (itemId) => {
+      await queryClient.cancelQueries({ queryKey: ['shopping', groupId] });
+      const previousItems = queryClient.getQueryData<ShoppingItem[]>(['shopping', groupId]);
+      queryClient.setQueryData(['shopping', groupId], (old: ShoppingItem[] = []) => 
+        old.filter(item => item.id !== itemId)
+      );
+      return { previousItems };
+    },
+    onError: (err, itemId, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(['shopping', groupId], context.previousItems);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping', groupId] });
     },
   });

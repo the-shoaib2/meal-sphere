@@ -767,6 +767,7 @@ export async function updateGroup(groupId: string, data: UpdateGroupData) {
     // Also revalidate next tags
     revalidateTag(`group-${groupId}`);
     revalidateTag('groups');
+    revalidateTag(`user-${updatedGroup.createdBy}`);
 
     return updatedGroup;
 }

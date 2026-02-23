@@ -23,7 +23,7 @@ export async function getCurrentSessionInfo(userId: string) {
 
     return currentSession;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return null;
   }
 }
@@ -46,7 +46,7 @@ export async function getAllActiveSessions(userId: string) {
 
     return sessions;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return [];
   }
 }
@@ -121,7 +121,7 @@ export async function updateSessionInfo(
 
     return true;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return false;
   }
 }
@@ -144,7 +144,7 @@ export async function revokeSession(sessionId: string, userId: string) {
 
     return result.count > 0;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return false;
   }
 }
@@ -169,7 +169,7 @@ export async function revokeMultipleSessions(sessionIds: string[], userId: strin
 
     return result.count;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return 0;
   }
 }
@@ -191,7 +191,7 @@ export async function revokeAllSessions(userId: string) {
 
     return result.count;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return 0;
   }
 }
@@ -202,7 +202,7 @@ export async function isCurrentSessionById(sessionId: string, userId: string) {
     const currentSession = await getCurrentSessionInfo(userId);
     return currentSession?.id === sessionId;
   } catch (error) {
-    // Comment out all console.log and debugging statements
+    // Error handled silently
     return false;
   }
 }

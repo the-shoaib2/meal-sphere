@@ -108,7 +108,7 @@ export function ExtraExpenseDialog({ open, onOpenChange, expense, onSuccess }: E
         await updateExpense.mutateAsync({
           id: expense.id,
           ...expenseData,
-          date: expenseData.date.toISOString(),
+          date: expenseData.date,
           receipt: receipt as File | undefined,
         });
         toast.success("Expense updated successfully!");

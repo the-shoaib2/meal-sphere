@@ -120,7 +120,7 @@ export async function updateVoteAction(groupId: string, voteId: string, updateDa
     });
 
     revalidatePath(`/groups/${groupId}`, 'page');
-    revalidateTag(`votes-${groupId}`, 'max');
+    revalidateTag(`votes-${groupId}`);
 
     // Return serializable data (Dates to ISO strings)
     return { 

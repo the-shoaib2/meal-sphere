@@ -30,8 +30,9 @@ export interface AddExtraExpenseInput {
   receipt?: File;
 }
 
-export interface UpdateExtraExpenseInput extends Partial<Omit<ExtraExpense, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'user' | 'receiptUrl'>> {
+export interface UpdateExtraExpenseInput extends Partial<Omit<ExtraExpense, 'id' | 'date' | 'createdAt' | 'updatedAt' | 'userId' | 'user' | 'receiptUrl'>> {
   id: string;
+  date?: Date;
   receipt?: File;
 }
 
@@ -78,8 +79,13 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
     refetchOnWindowFocus: false,
   });
 
+  // Expense mutation context type
+  type ExpenseContext = {
+    previousExpenses: ExtraExpense[] | undefined;
+  };
+
   // Add a new extra expense
-  const addExpense = useMutation<ExtraExpense, Error, AddExtraExpenseInput>({
+  const addExpense = useMutation<ExtraExpense, Error, AddExtraExpenseInput, ExpenseContext>({
     mutationFn: async (newExpense): Promise<ExtraExpense> => {
       if (!groupId) throw new Error('No active group selected');
 
@@ -101,13 +107,39 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
 
       return result.expense as unknown as ExtraExpense;
     },
-    onSuccess: () => {
+    onMutate: async (newExpense) => {
+      await queryClient.cancelQueries({ queryKey: ['extraExpenses', groupId] });
+      const previousExpenses = queryClient.getQueryData<ExtraExpense[]>(['extraExpenses', groupId]);
+      
+      const optimisticExpense: ExtraExpense = {
+        id: `temp-${Date.now()}`,
+        description: newExpense.description,
+        amount: newExpense.amount,
+        date: newExpense.date.toISOString(),
+        type: newExpense.type,
+        receiptUrl: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        userId: 'me',
+        roomId: groupId!,
+        user: { id: 'me', name: 'You', image: null },
+      };
+
+      queryClient.setQueryData(['extraExpenses', groupId], (old: ExtraExpense[] = []) => [optimisticExpense, ...old]);
+      return { previousExpenses };
+    },
+    onError: (err, newExpense, context) => {
+      if (context?.previousExpenses) {
+        queryClient.setQueryData(['extraExpenses', groupId], context.previousExpenses);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['extraExpenses', groupId] });
     },
   });
 
   // Update an existing expense
-  const updateExpense = useMutation<ExtraExpense, Error, UpdateExtraExpenseInput>({
+  const updateExpense = useMutation<ExtraExpense, Error, UpdateExtraExpenseInput, ExpenseContext>({
     mutationFn: async (updatedExpense): Promise<ExtraExpense> => {
       const { id, receipt, ...rest } = updatedExpense;
 
@@ -129,20 +161,50 @@ export function useExtraExpense(initialData?: ExpensesPageData) {
 
       return result.expense as unknown as ExtraExpense;
     },
-    onSuccess: () => {
+    onMutate: async (updatedExpense) => {
+      await queryClient.cancelQueries({ queryKey: ['extraExpenses', groupId] });
+      const previousExpenses = queryClient.getQueryData<ExtraExpense[]>(['extraExpenses', groupId]);
+      queryClient.setQueryData(['extraExpenses', groupId], (old: ExtraExpense[] = []) => 
+        old.map(e => e.id === updatedExpense.id ? { 
+          ...e, 
+          ...updatedExpense, 
+          date: updatedExpense.date instanceof Date ? updatedExpense.date.toISOString() : e.date 
+        } as unknown as ExtraExpense : e)
+      );
+      return { previousExpenses };
+    },
+    onError: (err, updatedExpense, context) => {
+      if (context?.previousExpenses) {
+        queryClient.setQueryData(['extraExpenses', groupId], context.previousExpenses);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['extraExpenses', groupId] });
     },
   });
 
   // Delete an expense
-  const deleteExpense = useMutation<void, Error, string>({
+  const deleteExpense = useMutation<void, Error, string, ExpenseContext>({
     mutationFn: async (expenseId): Promise<void> => {
       const result = await deleteExpenseAction(expenseId);
       if (!result.success) {
         throw new Error(result.message || 'Failed to delete expense');
       }
     },
-    onSuccess: () => {
+    onMutate: async (expenseId) => {
+      await queryClient.cancelQueries({ queryKey: ['extraExpenses', groupId] });
+      const previousExpenses = queryClient.getQueryData<ExtraExpense[]>(['extraExpenses', groupId]);
+      queryClient.setQueryData(['extraExpenses', groupId], (old: ExtraExpense[] = []) => 
+        old.filter(e => e.id !== expenseId)
+      );
+      return { previousExpenses };
+    },
+    onError: (err, expenseId, context) => {
+      if (context?.previousExpenses) {
+        queryClient.setQueryData(['extraExpenses', groupId], context.previousExpenses);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['extraExpenses', groupId] });
     },
   });

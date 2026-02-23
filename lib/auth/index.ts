@@ -40,5 +40,3 @@ export {
   isCurrentSessionById,
   updateSessionWithDeviceInfo
 } from './session-manager'
-
-// Comment out all console.log and debugging statements 

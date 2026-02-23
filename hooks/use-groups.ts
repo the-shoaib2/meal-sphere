@@ -286,7 +286,15 @@ export function useGroups(): UseGroupsReturn {
   });
 
   // Update a group
-  const updateGroup = useMutation<Group, Error, { groupId: string; data: UpdateGroupInput }>({
+  type UpdateGroupContext = {
+    previousUserGroups: Group[] | undefined;
+    previousMyGroups: Group[] | undefined;
+    previousPublicGroups: Group[] | undefined;
+    previousAllGroups: Group[] | undefined;
+    previousGroupDetails: Group | undefined;
+  };
+
+  const updateGroup = useMutation<Group, Error, { groupId: string; data: UpdateGroupInput }, UpdateGroupContext>({
     mutationFn: async ({ groupId, data }) => {
       const response = {
         ...data,
@@ -296,23 +304,69 @@ export function useGroups(): UseGroupsReturn {
       if (!result.success || !result.group) throw new Error(result.message || 'Failed to update group');
       return result.group as unknown as Group;
     },
-    onSuccess: async (data: Group) => {
-      // Optimistically update the user-groups list
-      queryClient.setQueryData(['user-groups', session?.user?.id], (old: Group[] = []) => {
-        return old.map(g => g.id === data.id ? { ...g, ...data } : g);
-      });
+    onMutate: async ({ groupId, data: updateData }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['user-groups', session?.user?.id] });
+      await queryClient.cancelQueries({ queryKey: ['groups'] });
+      await queryClient.cancelQueries({ queryKey: ['group', groupId] });
+
+      // Snapshot the previous values
+      const previousUserGroups = queryClient.getQueryData<Group[]>(['user-groups', session?.user?.id]);
+      const previousMyGroups = queryClient.getQueryData<Group[]>(['groups', 'my']);
+      const previousPublicGroups = queryClient.getQueryData<Group[]>(['groups', 'public']);
+      const previousAllGroups = queryClient.getQueryData<Group[]>(['groups', 'all']);
+      const previousGroupDetails = queryClient.getQueryData<Group>(['group', groupId]);
+
+      // Optimistically update everywhere
+      const updater = (old: Group[] = []) => old.map(g => g.id === groupId ? { ...g, ...updateData } : g);
       
-      // Update specific group details
+      if (previousUserGroups) queryClient.setQueryData(['user-groups', session?.user?.id], updater(previousUserGroups));
+      if (previousMyGroups) queryClient.setQueryData(['groups', 'my'], updater(previousMyGroups));
+      if (previousPublicGroups) queryClient.setQueryData(['groups', 'public'], updater(previousPublicGroups));
+      if (previousAllGroups) queryClient.setQueryData(['groups', 'all'], updater(previousAllGroups));
+      
+      if (previousGroupDetails) {
+        queryClient.setQueryData(['group', groupId], { ...previousGroupDetails, ...updateData });
+      }
+
+      return { 
+        previousUserGroups, 
+        previousMyGroups, 
+        previousPublicGroups, 
+        previousAllGroups,
+        previousGroupDetails
+      };
+    },
+    onSuccess: async (data: Group) => {
+      toast.success('Group updated successfully');
+      
+      // Update specific group details with the real server response
       queryClient.setQueryData(['group', data.id], data);
 
-      // Invalidate and AWAIT to ensure consistency before any navigation
+      // Invalidate and AWAIT to ensure consistency
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['groups'] }),
         queryClient.invalidateQueries({ queryKey: ['user-groups'] }),
       ]);
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables, context) => {
       console.error('Error updating group:', error);
+      // Rollback on error
+      if (context?.previousUserGroups) {
+        queryClient.setQueryData(['user-groups', session?.user?.id], context.previousUserGroups);
+      }
+      if (context?.previousMyGroups) {
+        queryClient.setQueryData(['groups', 'my'], context.previousMyGroups);
+      }
+      if (context?.previousPublicGroups) {
+        queryClient.setQueryData(['groups', 'public'], context.previousPublicGroups);
+      }
+      if (context?.previousAllGroups) {
+        queryClient.setQueryData(['groups', 'all'], context.previousAllGroups);
+      }
+      if (context?.previousGroupDetails) {
+        queryClient.setQueryData(['group', variables.groupId], context.previousGroupDetails);
+      }
       toast.error(error.message || 'Failed to update group');
     },
   });
