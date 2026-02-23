@@ -560,3 +560,28 @@ export async function getJoinRequestsAction(groupId: string) {
   }
 }
 
+/**
+ * Server Action replacement for GET /api/groups/[id]/access
+ * Returns the authenticated user's access level for a specific group.
+ */
+export async function getGroupAccessAction(groupId: string) {
+  try {
+    const { checkGroupAccess } = await import("@/lib/auth/group-auth");
+    const result = await checkGroupAccess(groupId);
+
+    return {
+      success: true,
+      isMember: result.isMember,
+      userRole: result.userRole,
+      permissions: result.permissions || [],
+      canAccess: result.canAccess,
+      isAdmin: result.isAdmin,
+      isCreator: result.isCreator,
+      groupId: result.groupId,
+      error: result.error,
+    };
+  } catch (error: any) {
+    console.error("Error in getGroupAccessAction:", error);
+    return { success: false, message: error.message || "Failed to check group access" };
+  }
+}

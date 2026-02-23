@@ -54,6 +54,9 @@ export function useGroupAccess({
   // Determine if this is an invite token
   const isInviteToken = useMemo(() => checkIsInviteToken(groupId), [groupId]);
 
+  // If SSR data was provided for this exact group, skip the client-side fetch entirely
+  const hasInitialData = !!(initialData && initialData.groupId === groupId);
+
   // Fetch group access data using React Query
   const {
     data: accessData,
@@ -90,24 +93,24 @@ export function useGroupAccess({
         throw new Error('Invalid group ID format. Please check the URL and try again.');
       }
 
-      // Regular group access check
-      const groupResponse = await fetch(`/api/groups/${groupId}/access`, { cache: 'no-store' });
-      const groupData = await groupResponse.json();
+      // Regular group access check via Server Action (replaces fetch /api/groups/[id]/access)
+      const { getGroupAccessAction } = await import('@/lib/actions/group.actions');
+      const groupData = await getGroupAccessAction(groupId);
 
-      if (!groupResponse.ok) {
-        throw new Error(groupData.error || 'Failed to check group access');
+      if (!groupData.success) {
+        throw new Error(groupData.message || 'Failed to check group access');
       }
 
       return {
-        isMember: groupData.isMember,
-        userRole: groupData.userRole,
-        permissions: groupData.permissions || [],
-        canAccess: groupData.canAccess,
+        isMember: groupData.isMember ?? false,
+        userRole: groupData.userRole ?? null,
+        permissions: (groupData.permissions as string[]) || [],
+        canAccess: groupData.canAccess ?? false,
         actualGroupId: groupId,
         groupData,
       };
     },
-    enabled: !!groupId && status !== 'loading',
+    enabled: !!groupId && status !== 'loading' && !hasInitialData,
     initialData: initialData && initialData.groupId === groupId ? initialData : undefined,
     staleTime: 10 * 60 * 1000, // 10 minutes - access permissions don't change frequently
     refetchOnWindowFocus: false,

@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, Calendar, DollarSign, BarChart3, Info, Utensils } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { NumberTicker } from '@/components/ui/number-ticker';
@@ -105,8 +104,8 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
               <Loader />
             </div>
           ) : chartData ? (
-            <ScrollArea className="h-[180px] sm:h-[220px] lg:h-[250px] xl:h-[280px] w-full pr-2">
-              <div className="h-full flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-4">
+            <div className="h-[160px] sm:h-[200px] lg:h-[230px] xl:h-[260px] w-full overflow-x-auto">
+              <div className="h-full flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-4 min-w-0">
                 {chartData.map((day, index) => {
                   const height = maxMeals > 0 ? (day.meals / maxMeals) * 100 : 0;
                   const isToday = new Date(day.date).toDateString() === new Date().toDateString();
@@ -116,7 +115,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
                     <Tooltip key={index}>
                       <TooltipTrigger asChild>
                         <div className="flex-1 flex flex-col items-center group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : day.date)}>
-                          <div className="relative w-full h-full flex flex-col justify-end">
+                          <div className="relative w-full flex flex-col justify-end" style={{ height: '100%' }}>
                             <div
                               className={`w-full transition-all duration-300 rounded-t-md relative ${day.meals > 0
                                 ? (isToday
@@ -157,7 +156,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           ) : null}
         </CardContent>
       </Card>
