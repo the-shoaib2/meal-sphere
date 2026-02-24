@@ -17,14 +17,14 @@ export function RoleBadge({ role, className }: RoleBadgeProps) {
         <Badge
             variant="destructive"
             className={cn(
-                "shadow-sm transition-all uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0 cursor-default",
+                "transition-all  uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0 cursor-default",
                 isAdmin
                     ? ""
-                    : "bg-primary/10 text-primary border-primary/20",
+                    : "bg-primary/10 text-primary",
                 className
             )}
         >
-            <Shield className={cn("h-3 w-3", isAdmin ? "fill-[#EA4335]" : "fill-primary")} />
+            <Shield className={cn("h-3 w-3")} />
             {role}
         </Badge>
     )

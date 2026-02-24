@@ -47,8 +47,7 @@ const AllMealsCard = ({
                         if (totalGuestMeals === 0) return null
                         return (
                             <Badge
-                                variant="outline"
-                                className="bg-purple-50 text-purple-700 border-purple-200/80 text-xs px-2 py-0.5 ml-2 shrink-0"
+                                variant="default"
                             >
                                 {totalGuestMeals} guest meal{totalGuestMeals > 1 ? "s" : ""}
                             </Badge>

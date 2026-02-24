@@ -78,7 +78,7 @@ function GuestMealManager({
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-3 text-lg">
           <div className="p-2 bg-primary/10 rounded-full">
-            <Users className="h-5 w-5 text-primary" />
+            <Users className="h-3.5 w-3.5 text-primary" />
           </div>
           <div>
             <span>Guest Meals</span>
@@ -86,7 +86,7 @@ function GuestMealManager({
               {getTotalGuestMeals()}
             </Badge>
           </div>
-        </CardTitle>
+        </CardTitle>  
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
@@ -121,7 +121,7 @@ function GuestMealManager({
               const currentCount = guestMeal.count
 
               return (
-                <div key={guestMeal.id} className="group relative p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors">
+                <div key={guestMeal.id} className="group relative p-4 cursor-pointer rounded-xl bg-muted hover:bg-primary/10 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-10 h-10 ring-2 ring-primary/20">
@@ -172,7 +172,7 @@ function GuestMealManager({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-8 w-8 rounded-full hover:bg-red-600/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleDelete(guestMeal.id)}
                         disabled={!canEdit}
                       >

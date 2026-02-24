@@ -210,7 +210,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
           <div className="flex sm:hidden flex-wrap items-center gap-1.5">
             {mealSettings?.autoMealEnabled && (
               <Badge
-                variant="outline"
+                variant="default"
                 className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 shadow-sm transition-all cursor-default uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
               >
                 <Zap className="h-3 w-3 fill-emerald-500" />
@@ -219,7 +219,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             )}
             {currentPeriod && (
               <Badge
-                variant="outline"
+                variant="default"
                 className={cn(
                   "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5 cursor-default",
                   isPeriodLocked(currentPeriod)
@@ -243,8 +243,8 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
           <div className="hidden sm:flex items-center gap-2">
             {mealSettings?.autoMealEnabled && (
               <Badge
-                variant="outline"
-                className="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 shadow-sm transition-all cursor-default uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
+                variant="default"
+                className="bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 transition-all cursor-default uppercase tracking-widest text-[10px] font-bold px-2 py-0.5 flex items-center gap-1.5 shrink-0"
               >
                 <Zap className="h-3 w-3 fill-emerald-500" />
                 Auto meals
@@ -252,12 +252,12 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
             )}
             {currentPeriod && (
               <Badge
-                variant="outline"
+                variant="default"
                 className={cn(
-                  "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm transition-all shrink-0 flex items-center gap-1.5 cursor-default",
+                  "text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest transition-all shrink-0 flex items-center gap-1.5 cursor-default",
                   isPeriodLocked(currentPeriod)
-                    ? "bg-stone-50 text-stone-600 border-stone-200"
-                    : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                    ? "bg-stone-50 hover:bg-stone-100 dark:hover:bg-stone-900/20 text-slate-600"
+                    : "bg-emerald-50 hover:bg-emerald-100 dark:hover:bg-emerald-900/20 text-emerald-700"
                 )}
               >
                 {!isPeriodLocked(currentPeriod) && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}

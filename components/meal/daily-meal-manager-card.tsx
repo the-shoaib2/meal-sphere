@@ -82,12 +82,7 @@ const DailyMealManagerCard = ({
                                         : mealType === "LUNCH"
                                             ? "☀️"
                                             : "🌙"
-                                // const mealTypeColor =
-                                //     mealType === "BREAKFAST"
-                                //         ? "bg-orange-100 text-orange-700"
-                                //         : mealType === "LUNCH"
-                                //             ? "bg-yellow-100 text-yellow-700"
-                                //             : "bg-blue-100 text-blue-700"
+                      
                                 const shouldAutoAdd = shouldAutoAddForUser(mealType)
                                 const isAutoTime = isAutoTimeForMeal(mealType)
 
@@ -109,11 +104,10 @@ const DailyMealManagerCard = ({
                                 return (
                                     <div
                                         key={mealType}
-                                        className="flex items-center justify-between p-3 sm:p-4 border rounded-xl bg-card hover:bg-accent/50 transition-colors gap-3 sm:gap-4"
+                                        className="flex items-center justify-between p-3 sm:p-4 bg-muted/80 hover:bg-muted rounded-xl transition-colors gap-3 sm:gap-4"
                                     >
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                             <div
-                                                // className={`p-1.5 sm:p-2 rounded-full ${mealTypeColor} flex-shrink-0`}
                                                 className={`p-1.5 sm:p-2 rounded-full flex-shrink-0`}
                                             >
                                                 <span className="text-base sm:text-lg">
@@ -134,15 +128,15 @@ const DailyMealManagerCard = ({
                                                     {hasMealSelected && (
                                                         <Badge
                                                             variant="default"
-                                                            className="bg-green-100 text-green-700 border-green-200 text-xs px-1.5 py-0.5 h-5"
+                                                            className="bg-green-200/20 hover:bg-green-200/20 text-green-500 text-xs px-1.5 py-0.5 h-5"
                                                         >
                                                             ✓ You&apos;re in
                                                         </Badge>
                                                     )}
                                                     {guestCount > 0 && (
                                                         <Badge
-                                                            variant="outline"
-                                                            className="bg-purple-50 text-purple-700 border-purple-200 text-xs px-1.5 py-0.5 h-5"
+                                                            variant="default"
+                                                            className="text-xs px-1.5 py-0.5 h-5"
                                                         >
                                                             +{guestCount} guest
                                                         </Badge>
@@ -181,7 +175,7 @@ const DailyMealManagerCard = ({
                                             <Button
                                                 variant={hasMealSelected ? "destructive" : "default"}
 
-                                                className="rounded-full px-3 sm:px-6 text-xs sm:text-sm h-8 sm:h-9"
+                                                className="rounded-full px-4 text-xs sm:text-sm "
                                                 onClick={() => handleToggleMeal(mealType)}
                                                 disabled={
                                                     isLoading ||
@@ -192,12 +186,12 @@ const DailyMealManagerCard = ({
                                             >
                                                 {hasMealSelected ? (
                                                     <>
-                                                        <Minus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                                        <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                         Remove
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                         Add
                                                     </>
                                                 )}

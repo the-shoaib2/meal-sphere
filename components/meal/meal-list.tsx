@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Utensils, Minus } from "lucide-react";
+import { Utensils, Minus, Trash2 } from "lucide-react";
 import type { MealType } from "@/hooks/use-meal";
 
 interface MealWithUser {
@@ -111,7 +111,7 @@ function MealList({ mealsForDate, guestMealsForDate, currentUserId, isLoading, u
 
             <div className="space-y-2">
               {typeMeals.map((meal: any) => (
-                <div key={meal.id} className="group flex items-center justify-between p-2.5 sm:p-3 border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                <div key={meal.id} className="group flex items-center cursor-pointer justify-between p-2.5 sm:p-3 rounded-lg bg-muted/80 hover:bg-muted">
                   <div className="flex items-center gap-2 sm:gap-3">
                     <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
                       <AvatarImage src={meal.user.image} alt={meal.user.name || undefined} />
@@ -139,7 +139,7 @@ function MealList({ mealsForDate, guestMealsForDate, currentUserId, isLoading, u
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 sm:h-7 sm:w-7 rounded-full hover:bg-destructive/10 hover:text-destructive opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6 sm:h-7 sm:w-7 rounded-full hover:bg-red-600/10 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => {
                           if (meal.count) {
                             handleDeleteGuestMeal(meal.id);
@@ -149,7 +149,7 @@ function MealList({ mealsForDate, guestMealsForDate, currentUserId, isLoading, u
                         }}
                         disabled={isLoading}
                       >
-                        <Minus className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
