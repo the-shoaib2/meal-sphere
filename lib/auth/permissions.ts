@@ -13,6 +13,9 @@ export enum Permission {
   MANAGE_FINANCE = "manage_finance",
   MANAGE_MARKET = "manage_market",
   VIEW_FINANCE = "view_finance",
+  MANAGE_JOIN_REQUESTS = "manage_join_requests",
+  CREATE_INVITES = "create_invites",
+  VIEW_ACTIVITY_LOGS = "view_activity_logs",
 }
 
 // Default permissions for each GROUP role
@@ -24,6 +27,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.MANAGE_MEMBERS,
     Permission.MANAGE_MEALS,
     Permission.VIEW_FINANCE,
+    Permission.MANAGE_JOIN_REQUESTS,
+    Permission.CREATE_INVITES,
+    Permission.VIEW_ACTIVITY_LOGS,
   ],
   MANAGER: [
     Permission.VIEW_GROUP,
@@ -31,6 +37,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.MANAGE_MEALS,
     Permission.MANAGE_MARKET,
     Permission.VIEW_FINANCE,
+    Permission.CREATE_INVITES,
+    Permission.VIEW_ACTIVITY_LOGS,
   ],
   LEADER: [
     Permission.VIEW_GROUP,

@@ -5,39 +5,20 @@ import { authOptions } from "@/lib/auth/auth";
 import { prisma } from "@/lib/services/prisma";
 import * as PeriodService from "@/lib/services/period-service";
 import { PeriodStatus } from "@prisma/client";
+import { validateAction, Permission } from "@/lib/auth/group-auth";
 
 // Re-export types from service
 export type { CreatePeriodData } from "@/lib/services/period-service";
 
 /**
- * Validates that the current user is authenticated and is a member of the specified group.
- * Optional role check for administrative actions.
+ * Validates basic membership access for viewing periods.
  */
-async function validateAccess(groupId: string, requiresAdmin: boolean = false): Promise<string> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+async function validateMembership(groupId: string): Promise<string> {
+  const result = await validateAction(groupId, Permission.VIEW_GROUP);
+  if (!result.success) {
+    throw new Error(result.error);
   }
-
-  const userId = session.user.id;
-  const member = await prisma.roomMember.findUnique({
-    where: {
-      userId_roomId: {
-        userId,
-        roomId: groupId,
-      },
-    },
-  });
-
-  if (!member) {
-    throw new Error("Access denied to this group");
-  }
-
-  if (requiresAdmin && !['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(member.role)) {
-    throw new Error("You do not have permission to manage periods in this group");
-  }
-
-  return userId;
+  return result.userId;
 }
 
 export async function createPeriodAction(
@@ -45,7 +26,9 @@ export async function createPeriodAction(
   data: PeriodService.CreatePeriodData
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     
     // Convert startDate/endDate strings to Dates if they aren't already
     const startDate = new Date(data.startDate);
@@ -72,7 +55,9 @@ export async function endPeriodAction(
   endDate?: Date
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     const result = await PeriodService.endPeriod(groupId, userId, endDate, periodId);
     return { success: true, period: result };
   } catch (error: any) {
@@ -86,7 +71,9 @@ export async function lockPeriodAction(
   periodId: string
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     const result = await PeriodService.lockPeriod(groupId, userId, periodId);
     
     if (typeof result === "string") {
@@ -106,7 +93,9 @@ export async function unlockPeriodAction(
   status: PeriodStatus = PeriodStatus.ENDED
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     const result = await PeriodService.unlockPeriod(groupId, userId, periodId, status);
     return { success: true, period: result };
   } catch (error: any) {
@@ -120,7 +109,9 @@ export async function archivePeriodAction(
   periodId: string
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     const result = await PeriodService.archivePeriod(groupId, userId, periodId);
     return { success: true, period: result };
   } catch (error: any) {
@@ -135,7 +126,9 @@ export async function updatePeriodAction(
     data: Partial<PeriodService.CreatePeriodData>
 ) {
     try {
-        const userId = await validateAccess(groupId, true);
+        const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
         
         // Convert dates if needed
         const updateData = { ...data };
@@ -157,7 +150,9 @@ export async function restartPeriodAction(
   withData: boolean = false
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     const result = await PeriodService.restartPeriod(groupId, userId, periodId, newName, withData);
     return { success: true, period: result };
   } catch (error: any) {
@@ -171,7 +166,9 @@ export async function deletePeriodAction(
   periodId: string
 ) {
   try {
-    const userId = await validateAccess(groupId, true);
+    const auth = await validateAction(groupId, Permission.MANAGE_MEALS);
+    if (!auth.success) throw new Error(auth.error);
+    const userId = auth.userId;
     const result = await PeriodService.deletePeriod(groupId, userId, periodId);
     return { success: true, result };
   } catch (error: any) {
@@ -182,7 +179,7 @@ export async function deletePeriodAction(
 
 export async function getPeriodsAction(groupId: string, includeArchived: boolean = false) {
   try {
-    const userId = await validateAccess(groupId);
+    const userId = await validateMembership(groupId);
     
     // Lazy check: Ensure monthly period logic is enforced when listing periods
     try {
@@ -206,7 +203,7 @@ export async function getPeriodsAction(groupId: string, includeArchived: boolean
 
 export async function getPeriodAction(groupId: string, periodId: string) {
   try {
-    await validateAccess(groupId);
+    await validateMembership(groupId);
     const period = await PeriodService.getPeriod(periodId, groupId);
     
     if (!period) {
@@ -224,7 +221,7 @@ export async function getPeriodAction(groupId: string, periodId: string) {
 
 export async function getPeriodSummaryAction(groupId: string, periodId: string) {
   try {
-    await validateAccess(groupId);
+    await validateMembership(groupId);
     const summary = await PeriodService.calculatePeriodSummary(periodId, groupId);
     return { success: true, summary };
   } catch (error: any) {
@@ -238,7 +235,7 @@ export async function getPeriodSummaryAction(groupId: string, periodId: string) 
 
 export async function getPeriodsByMonthAction(groupId: string, year: number, month: number) {
   try {
-    await validateAccess(groupId);
+    await validateMembership(groupId);
     const periods = await PeriodService.getPeriodsByMonth(groupId, year, month);
     return { success: true, periods };
   } catch (error: any) {

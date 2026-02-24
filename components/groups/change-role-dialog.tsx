@@ -27,7 +27,7 @@ interface ChangeRoleDialogProps {
     role: Role;
   } | null;
   groupId: string;
-  onSuccess: () => void;
+  onSuccess: (role: Role) => void;
 }
 
 const ROLE_OPTIONS = [
@@ -117,7 +117,7 @@ export function ChangeRoleDialog({
       });
 
       // Call onSuccess immediately for optimistic feel
-      onSuccess();
+      onSuccess(selectedRole);
       onClose();
     } catch (error) {
       toast({

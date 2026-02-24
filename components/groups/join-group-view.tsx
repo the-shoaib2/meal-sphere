@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useOptimistic, useTransition } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -128,6 +128,12 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   const [isJoining, setIsJoining] = useState(false);
   const [requestStatus, setRequestStatus] = useState(initialRequestStatus);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(
+    requestStatus,
+    (_, newStatus: 'pending' | 'approved' | 'rejected' | null) => newStatus
+  );
 
   // Form handling
   const [formValues, setFormValues] = useState<JoinRoomFormValues>({
@@ -198,23 +204,27 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   const handleCancelRequest = useCallback(async () => {
     if (!groupId) return;
 
-    try {
+    startTransition(async () => {
+      setOptimisticStatus(null);
       setIsJoining(true);
-      const result = await cancelJoinRequestAction(groupId);
+      try {
+        const result = await cancelJoinRequestAction(groupId);
 
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to cancel request');
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to cancel request');
+        }
+
+        toast.success('Join request cancelled');
+        setRequestStatus(null);
+      } catch (error: any) {
+        console.error('Error cancelling request:', error);
+        toast.error(error.message || 'Failed to cancel request');
+        setRequestStatus(requestStatus); // Revert on failure
+      } finally {
+        setIsJoining(false);
       }
-
-      toast.success('Join request cancelled');
-      setRequestStatus(null);
-    } catch (error: any) {
-      console.error('Error cancelling request:', error);
-      toast.error(error.message || 'Failed to cancel request');
-    } finally {
-      setIsJoining(false);
-    }
-  }, [groupId]);
+    });
+  }, [groupId, requestStatus, setOptimisticStatus]);
 
 
   // Handle sending a new request after rejection
@@ -224,41 +234,35 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       return;
     }
 
-    try {
+    startTransition(async () => {
+      setOptimisticStatus('pending');
       setIsJoining(true);
       setError(null);
 
-      // We are just supporting direct joins for now as the invite token logic was complex and client-side specific
-      // If we need invite tokens, we'd pass that data down via props as well.
+      try {
+        const targetGroupId = groupId;
+        const result = await createJoinRequestAction(targetGroupId, { message: values.message });
 
-      const targetGroupId = groupId; // Simplified for SSR version
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to send join request');
+        }
 
-      const result = await createJoinRequestAction(targetGroupId, { message: values.message });
+        setRequestStatus('pending');
+        toast('Join request sent, waiting for admin approval...', {
+          icon: <AlertCircle className="h-4 w-4" />,
+        });
 
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to send join request');
+        await checkJoinRequestStatus(targetGroupId);
+      } catch (error: any) {
+        console.error('Error sending join request:', error);
+        setError(error.message || 'Failed to send join request');
+        toast.error(error.message || 'Failed to send join request');
+        setRequestStatus(requestStatus); // Revert
+      } finally {
+        setIsJoining(false);
       }
-
-      setRequestStatus('pending');
-
-      toast('Join request sent, waiting for admin approval...', {
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-
-      // Check the actual status from API
-      await checkJoinRequestStatus(targetGroupId);
-
-      return;
-    } catch (error: any) {
-      console.error('Error sending join request:', error);
-      setError(error.message || 'Failed to send join request');
-      toast.error(error.message || 'Failed to send join request', {
-        icon: <AlertCircle className="h-4 w-4" />,
-      });
-    } finally {
-      setIsJoining(false);
-    }
-  }, [groupId, router, checkJoinRequestStatus]);
+    });
+  }, [groupId, requestStatus, setOptimisticStatus, checkJoinRequestStatus]);
 
   // Handle join request submission
   const handleJoinRequest = useCallback(async (values: JoinRoomFormValues) => {
@@ -267,73 +271,56 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
       return;
     }
 
-    try {
+    startTransition(async () => {
       setIsJoining(true);
       setError(null);
 
       const targetGroupId = groupId;
 
-      // Check if this is a public join or private request
-      // If we have an invite token, it's a direct join even if private
-      if (group?.isPrivate && !inviteToken) {
-        // Check if user is trying to join with password
-        if (values.password && group.hasPassword) {
-          const result = await joinGroupAction({ groupId: targetGroupId, password: values.password });
+      try {
+        if (group?.isPrivate && !inviteToken) {
+          setOptimisticStatus('pending');
+          if (values.password && group.hasPassword) {
+            const result = await joinGroupAction({ groupId: targetGroupId, password: values.password });
+            if (!result.success) throw new Error(result.message || 'Failed to join group');
 
-          if (!result.success) {
-            throw new Error(result.message || 'Failed to join group');
-          }
-
-          if (result.requestCreated) {
-            setRequestStatus('pending');
-            toast('Join request sent, waiting for admin approval...', {
-              icon: <AlertCircle className="h-4 w-4" />,
-            });
+            if (result.requestCreated) {
+              setRequestStatus('pending');
+              toast('Join request sent...', { icon: <AlertCircle className="h-4 w-4" /> });
+              return;
+            }
+            toast.success('Successfully joined the group!');
+            router.push(`/groups/${targetGroupId}`);
             return;
           }
 
+          const result = await createJoinRequestAction(targetGroupId, { message: values.message });
+          if (!result.success) throw new Error(result.message || 'Failed to send join request');
+          setRequestStatus('pending');
+          toast.success('Join request sent successfully!');
+        } else {
+          const result = await joinGroupAction({ groupId: targetGroupId, token: inviteToken || undefined });
+          if (!result.success) throw new Error(result.message || 'Failed to join group');
+
+          if (result.requestCreated) {
+            setOptimisticStatus('pending');
+            setRequestStatus('pending');
+            toast('Join request sent...', { icon: <AlertCircle className="h-4 w-4" /> });
+            return;
+          }
           toast.success('Successfully joined the group!');
           router.push(`/groups/${targetGroupId}`);
-          return;
         }
-
-        // Otherwise Private Group Request Flow
-        const result = await createJoinRequestAction(targetGroupId, { message: values.message });
-
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to send join request');
-        }
-
-        setRequestStatus('pending');
-        toast.success('Join request sent successfully!');
-      } else {
-        // Public Group Flow OR Invite Token Flow
-        const result = await joinGroupAction({ groupId: targetGroupId, token: inviteToken || undefined });
-
-        if (!result.success) {
-          throw new Error(result.message || 'Failed to join group');
-        }
-
-        if (result.requestCreated) {
-          setRequestStatus('pending');
-          toast('Join request sent, waiting for admin approval...', {
-            icon: <AlertCircle className="h-4 w-4" />,
-          });
-          return;
-        }
-
-        toast.success('Successfully joined the group!');
-        router.push(`/groups/${targetGroupId}`);
+      } catch (error: any) {
+        console.error('Error joining group:', error);
+        setError(error.message || 'Failed to join group');
+        toast.error(error.message || 'Failed to join group');
+        setRequestStatus(requestStatus); // Revert
+      } finally {
+        setIsJoining(false);
       }
-
-    } catch (error: any) {
-      console.error('Error joining group:', error);
-      setError(error.message || 'Failed to join group');
-      toast.error(error.message || 'Failed to join group');
-    } finally {
-      setIsJoining(false);
-    }
-  }, [groupId, router, group?.isPrivate, inviteToken]);
+    });
+  }, [groupId, router, group?.isPrivate, group?.hasPassword, inviteToken, requestStatus, setOptimisticStatus]);
 
   // Handle form submission
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -440,7 +427,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
   const { name, isPrivate } = group;
 
   // Show join form if no status or if user wants to send new request
-  if (!requestStatus) {
+  if (!optimisticStatus) {
     return (
       <div className="max-w-4xl mx-auto space-y-12 pb-20 px-4 sm:px-6">
         <PageHeader
@@ -695,13 +682,13 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
         className="pt-4"
         badges={
           <div className="flex items-center gap-2">
-            {requestStatus === 'pending' && (
+            {optimisticStatus === 'pending' && (
               <Badge variant="secondary" className="rounded-full px-4 py-1 font-bold">
                 <Loader2 className="h-3 w-3 mr-2 animate-spin text-muted-foreground" />
                 Under Review
               </Badge>
             )}
-            {requestStatus === 'rejected' && (
+            {optimisticStatus === 'rejected' && (
               <Badge variant="destructive" className="rounded-full px-4 py-1 font-bold">
                 <XCircle className="h-3 w-3 mr-2" />
                 Entry Declined
@@ -723,7 +710,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
           <CardContent className="px-10 pb-12 space-y-10">
             {/* Status Logic Visuals */}
-            {requestStatus === 'pending' ? (
+            {optimisticStatus === 'pending' ? (
               <div className="flex flex-col items-center gap-6 py-8 px-6 bg-muted/50 rounded-lg border border-border">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse" />
@@ -772,7 +759,7 @@ export function JoinGroupView({ initialGroup, initialIsMember, initialRequestSta
 
             {/* Action Controls */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              {requestStatus === 'pending' ? (
+              {optimisticStatus === 'pending' ? (
                 <>
                   <Button
                     onClick={() => groupId && checkJoinRequestStatus(groupId)}

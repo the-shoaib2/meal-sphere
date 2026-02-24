@@ -116,7 +116,7 @@ export function GroupMembers({
 
   const updateMemberRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string, role: string }) => {
-      const result = await updateMemberRoleAction(groupId, userId, role);
+      const result = await updateMemberRoleAction(groupId, userId, role as Role);
 
       if (!result.success) {
         throw new Error(result.message || 'Failed to update member role');

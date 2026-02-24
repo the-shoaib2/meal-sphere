@@ -189,31 +189,11 @@ export async function checkGroupPermission(
   };
 }
 
-/**
- * Check if user has a specific granular permission
- */
 export async function checkActionPermission(
   groupId: string,
   action: Permission
 ): Promise<GroupPermissionResult> {
   const authResult = await checkGroupAccess(groupId);
-
-  // Member permissions also come from the DB fetch in checkGroupAccess
-  // But currently checkGroupAccess doesn't fetch the `permissions` JSON column.
-  // Optimally, we should fetch it there. For now, we rely on the role default + global override.
-
-  // However, to support CUSTOM roles fully, we need that JSON.
-  // Let's rely on hasPermission helper which does the logic.
-  // Since we don't have the custom permissions loaded in authResult yet, we might miss them.
-  // For this refactor, let's assume standard role behavior + SUPER_ADMIN override is the priority.
-
-  // We can fetch custom permissions here if needed or update checkGroupAccess to select them.
-  // Let's update checkGroupAccess to select them in a follow-up if needed, 
-  // but looking at checkGroupAccess code:
-  // select: { role: true, isBanned: true } -> It bypasses 'permissions'.
-
-  // Ideally, we should update checkGroupAccess to fetch permissions too.
-
   const hasPerm = hasPermission(authResult.userRole, action, authResult.permissions);
 
   return {
@@ -251,12 +231,11 @@ export async function validateGroupAccess(groupId: string) {
   };
 }
 
-/**
- * Middleware function to validate admin permissions
- * SECURITY FIX: Now properly checks membership and ban status
- */
-export async function validateAdminAccess(groupId: string) {
-  const authResult = await checkGroupPermission(groupId, [Role.ADMIN]);
+export async function validateAction(groupId: string, action: Permission): Promise<
+  | { success: true; authResult: GroupPermissionResult; userId: string }
+  | { success: false; error: string; status: number }
+> {
+  const authResult = await checkActionPermission(groupId, action);
 
   if (!authResult.isAuthenticated) {
     return {
@@ -266,7 +245,6 @@ export async function validateAdminAccess(groupId: string) {
     };
   }
 
-  // CRITICAL FIX: Verify user is actually a member
   if (!authResult.isMember) {
     return {
       success: false,
@@ -275,28 +253,35 @@ export async function validateAdminAccess(groupId: string) {
     };
   }
 
-  // CRITICAL FIX: Verify user is not banned and has a role
-  if (authResult.userRole === null) {
+  if (authResult.userRole === null || authResult.error) {
     return {
       success: false,
-      error: "No role assigned in this group",
+      error: authResult.error || "Access denied",
       status: 403
     };
   }
 
-  // Check admin permission
   if (!authResult.hasPermission) {
     return {
       success: false,
-      error: "Admin access required",
+      error: `Permission denied: ${action.replace('_', ' ')} required`,
       status: 403
     };
   }
 
   return {
     success: true,
-    authResult
+    authResult,
+    userId: authResult.userId as string
   };
+}
+
+/**
+ * Middleware function to validate admin permissions
+ * SECURITY FIX: Now properly checks membership and ban status
+ */
+export async function validateAdminAccess(groupId: string) {
+  return validateAction(groupId, Permission.MANAGE_SETTINGS);
 }
 
 /**

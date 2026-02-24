@@ -29,13 +29,13 @@ import type { UserBalance, AccountTransaction } from '@/hooks/use-account-balanc
 import { NumberTicker } from "@/components/ui/number-ticker";
 
 import { Session } from 'next-auth';
-
 import { useInView } from 'react-intersection-observer';
+import { Role } from '@prisma/client';
 
 interface MemberViewProps {
   balance: UserBalance | undefined;
   transactions: AccountTransaction[];
-  userRole: string;
+  userRole: Role;
   session: Session | null;
   groupId?: string;
   onFetchNextPage?: () => void;

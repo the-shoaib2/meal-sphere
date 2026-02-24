@@ -16,6 +16,7 @@ import {
 import { getCurrentPeriod } from "@/lib/utils/period-utils";
 import { hasBalancePrivilege, canViewUserBalance, canModifyTransactions, canDeleteTransactions } from "@/lib/auth/balance-permissions";
 import { invalidateCacheForMutation } from "@/lib/cache/cache-invalidation";
+import { validateAction, Permission } from "@/lib/auth/group-auth";
 
 async function getUserId() {
   const session = await getServerSession(authOptions);
@@ -25,19 +26,8 @@ async function getUserId() {
 
 export async function getGroupBalanceSummaryAction(roomId: string, includeDetails: boolean = false) {
   try {
-    const userId = await getUserId();
-    const member = await prisma.roomMember.findFirst({
-      where: { userId, roomId },
-      select: { role: true },
-    });
-
-    if (!member) {
-      return { success: false, message: "You are not a member of this room" };
-    }
-
-    if (!hasBalancePrivilege(member.role)) {
-      return { success: false, message: "Insufficient permissions" };
-    }
+    const auth = await validateAction(roomId, Permission.VIEW_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
 
     const data = await getGroupBalanceSummary(roomId, includeDetails);
     return { success: true, summary: data };
@@ -49,19 +39,12 @@ export async function getGroupBalanceSummaryAction(roomId: string, includeDetail
 
 export async function getUserBalanceAction(roomId: string, targetUserId?: string, includeDetails: boolean = false) {
   try {
-    const userId = await getUserId();
+    const auth = await validateAction(roomId, Permission.VIEW_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
+    const userId = auth.userId;
     const resolvedTargetUserId = targetUserId || userId;
 
-    const member = await prisma.roomMember.findFirst({
-      where: { userId, roomId },
-      select: { role: true },
-    });
-
-    if (!member) {
-      return { success: false, message: "You are not a member of this room" };
-    }
-
-    if (!canViewUserBalance(member.role, userId, resolvedTargetUserId)) {
+    if (resolvedTargetUserId !== userId && !hasBalancePrivilege(auth.authResult.userRole)) {
       return { success: false, message: "Insufficient permissions to view this balance" };
     }
 
@@ -122,26 +105,17 @@ export async function createTransactionAction(data: {
   description?: string;
 }) {
   try {
-    const userId = await getUserId();
+    const auth = await validateAction(data.roomId, Permission.VIEW_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
+    const userId = auth.userId;
     const { roomId, targetUserId, amount, type, description } = data;
 
-    const member = await prisma.roomMember.findFirst({
-      where: { userId, roomId },
-      select: { role: true },
-    });
-
-    if (!member) {
-      return { success: false, message: "You are not a member of this room" };
-    }
-
-    if (!hasBalancePrivilege(member.role)) {
+    if (!hasBalancePrivilege(auth.authResult.userRole)) {
       if (type !== 'PAYMENT') {
         return { success: false, message: "Members can only create payment transactions." };
       }
-      if (userId !== targetUserId && userId !== data.targetUserId) {
-         // Wait, the API checked if userId !== body.userId...
-         // "You can only make payments for yourself."
-         // Actually, if target user is different, they are paying to privileged member.
+      if (userId !== targetUserId) {
+         // Standard: Users can only pay for themselves or to privileged members
       }
       const targetMember = await prisma.roomMember.findFirst({ where: { userId: targetUserId, roomId } });
       if (!targetMember || !hasBalancePrivilege(targetMember.role)) {
@@ -173,15 +147,12 @@ export async function createTransactionAction(data: {
 
 export async function updateTransactionAction(transactionId: string, data: { amount: number; description?: string; type: string }) {
   try {
-    const userId = await getUserId();
     const transaction = await prisma.accountTransaction.findUnique({ where: { id: transactionId } });
-    
     if (!transaction) return { success: false, message: "Transaction not found" };
 
-    const userInRoom = await prisma.roomMember.findFirst({ where: { userId, roomId: transaction.roomId }, select: { role: true } });
-    if (!userInRoom || !canModifyTransactions(userInRoom.role)) {
-      return { success: false, message: "Insufficient permissions" };
-    }
+    const auth = await validateAction(transaction.roomId, Permission.MANAGE_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
+    const userId = auth.userId;
 
     const updated = await updateTransaction(transactionId, { ...data, changedBy: userId });
 
@@ -201,14 +172,16 @@ export async function updateTransactionAction(transactionId: string, data: { amo
 
 export async function deleteTransactionAction(transactionId: string) {
   try {
-    const userId = await getUserId();
     const transaction = await prisma.accountTransaction.findUnique({ where: { id: transactionId } });
-    
     if (!transaction) return { success: false, message: "Transaction not found" };
 
-    const userInRoom = await prisma.roomMember.findFirst({ where: { userId, roomId: transaction.roomId }, select: { role: true } });
-    if (!userInRoom || !canDeleteTransactions(userInRoom.role)) {
-      return { success: false, message: "Only ADMIN can delete transactions" };
+    const auth = await validateAction(transaction.roomId, Permission.MANAGE_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
+    const userId = auth.userId;
+
+    // Check if role is ADMIN for deletion
+    if (auth.authResult.userRole !== 'ADMIN') {
+        return { success: false, message: "Only ADMIN can delete transactions" };
     }
 
     await deleteTransaction(transactionId, userId);
@@ -229,10 +202,11 @@ export async function deleteTransactionAction(transactionId: string) {
 
 export async function getAccountHistoryAction(roomId: string, targetUserId: string, periodId?: string, cursor?: string, limit: number = 10) {
   try {
-    const userId = await getUserId();
-    const member = await prisma.roomMember.findFirst({ where: { userId, roomId }, select: { role: true } });
+    const auth = await validateAction(roomId, Permission.VIEW_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
+    const userId = auth.userId;
     
-    if (!member || !canViewUserBalance(member.role, userId, targetUserId)) {
+    if (userId !== targetUserId && !hasBalancePrivilege(auth.authResult.userRole)) {
       return { success: false, message: "Insufficient permissions" };
     }
 
@@ -265,10 +239,11 @@ export async function getAccountHistoryAction(roomId: string, targetUserId: stri
 
 export async function getTransactionsAction(roomId: string, targetUserId: string, periodId?: string, cursor?: string, limit: number = 10) {
   try {
-    const userId = await getUserId();
-    const member = await prisma.roomMember.findFirst({ where: { userId, roomId } });
+    const auth = await validateAction(roomId, Permission.VIEW_FINANCE);
+    if (!auth.success) return { success: false, message: auth.error };
+    const userId = auth.userId;
 
-    if (!member || !canViewUserBalance(member.role, userId, targetUserId)) {
+    if (userId !== targetUserId && !hasBalancePrivilege(auth.authResult.userRole)) {
       return { success: false, message: "Insufficient permissions" };
     }
 

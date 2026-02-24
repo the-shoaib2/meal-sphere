@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Role } from "@prisma/client";
 import { generateGroupInviteAction, sendGroupInvitationsAction } from "@/lib/actions/group.actions";
 
 
@@ -157,7 +158,7 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
       const expiryTime = activeTab === 'custom' ? customExpiry : expiresInDays;
 
       // Replacing API call with Server Action
-      const data = await generateGroupInviteAction(groupId, selectedRole, expiryTime);
+      const data = await generateGroupInviteAction(groupId, selectedRole as Role, expiryTime);
 
       if (!data.success) {
         throw new Error(data.message || 'Failed to generate link');
@@ -260,7 +261,7 @@ export function InviteCard({ groupId, group: initialGroup, className = '', initi
       setInviteStatus(null);
 
       // Sending via Server Action
-      const data = await sendGroupInvitationsAction(group.id, emails, 'MEMBER');
+      const data = await sendGroupInvitationsAction(group.id, emails, Role.MEMBER);
 
       if (!data.success) {
         throw new Error(data.message || 'Failed to send invitations');

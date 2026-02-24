@@ -1,11 +1,9 @@
-'use client';
-
-import { useState } from 'react';
+import { useState, useOptimistic, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X, UserPlus, Activity, RefreshCcw, Mail } from 'lucide-react';
+import { Loader2, Check, X, UserPlus, Activity, RefreshCcw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -42,6 +40,12 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const [optimisticRequests, addOptimisticRequest] = useOptimistic(
+    initialRequests || [],
+    (state, requestId: string) => state.filter(r => r.id !== requestId)
+  );
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -49,28 +53,32 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
     setTimeout(() => setIsRefreshing(false), 800);
   };
 
-  const pendingRequests = initialRequests?.filter(r => r.status === 'PENDING') || [];
+  const pendingRequests = optimisticRequests.filter(r => r.status === 'PENDING');
 
   const handleRequest = async (requestId: string, action: 'approve' | 'reject') => {
-    try {
+    startTransition(async () => {
       setProcessingId(requestId);
       setActionType(action);
+      addOptimisticRequest(requestId);
 
-      const data = await handleJoinRequestAction(groupId, requestId, action);
+      try {
+        const data = await handleJoinRequestAction(groupId, requestId, action);
 
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to process request');
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to process request');
+        }
+
+        toast.success(action === 'approve' ? 'Request approved' : 'Request rejected');
+        router.refresh();
+      } catch (error: any) {
+        console.error('Error processing request:', error);
+        toast.error(error.message || 'Failed to process request');
+        router.refresh(); // Sync back to server state on error
+      } finally {
+        setProcessingId(null);
+        setActionType(null);
       }
-
-      toast.success(action === 'approve' ? 'Request approved' : 'Request rejected');
-      router.refresh();
-    } catch (error: any) {
-      console.error('Error processing request:', error);
-      toast.error(error.message || 'Failed to process request');
-    } finally {
-      setProcessingId(null);
-      setActionType(null);
-    }
+    });
   };
 
   if (!isAdmin) {
@@ -92,9 +100,9 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
           variant="outline"
           size="sm"
           onClick={handleRefresh}
-          disabled={isRefreshing || isLoading}
+          disabled={isRefreshing || isLoading || isPending}
         >
-          <RefreshCcw className={cn("h-4 w-4 mr-2", (isRefreshing || isLoading) && "animate-spin")} />
+          <RefreshCcw className={cn("h-4 w-4 mr-2", (isRefreshing || isLoading || isPending) && "animate-spin")} />
           Refresh
         </Button>
       </CardHeader>
@@ -120,7 +128,7 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
                 <div key={request.id}>
                   {index > 0 && <Separator />}
                   <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 transition-all hover:bg-muted/30",
-                    isProcessing && "opacity-50 pointer-events-none"
+                    (isProcessing || isPending) && "opacity-70 pointer-events-none"
                   )}>
                     <div className="flex items-center gap-4 flex-1 overflow-hidden">
                       <Avatar className="h-12 w-12 border shadow-sm shrink-0">
@@ -164,7 +172,7 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
                         variant="ghost"
                         className="flex-1 sm:flex-none rounded-full bg-green-500/15 text-green-700 hover:bg-green-500/25 hover:text-green-800 dark:bg-green-500/20 dark:text-green-400 dark:hover:bg-green-500/30 dark:hover:text-green-300 transition-colors"
                         onClick={() => handleRequest(request.id, 'approve')}
-                        disabled={isProcessing}
+                        disabled={isProcessing || isPending}
                       >
                         {isProcessing && actionType === 'approve' ? (
                           <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
@@ -178,7 +186,7 @@ export function JoinRequestsTab({ groupId, isAdmin, initialRequests = [], isLoad
                         variant="ghost"
                         className="flex-1 sm:flex-none rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive transition-colors"
                         onClick={() => handleRequest(request.id, 'reject')}
-                        disabled={isProcessing}
+                        disabled={isProcessing || isPending}
                       >
                         {isProcessing && actionType === 'reject' ? (
                           <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />

@@ -17,12 +17,10 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, ArrowRight } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
 import { Button } from '@/components/ui/button';
-import { BALANCE_PRIVILEGED_ROLES, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
+import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
+import { Role } from '@prisma/client';
 
-// Using centralized configuration
-const PRIVILEGED_ROLES = BALANCE_PRIVILEGED_ROLES;
-
-function isPrivileged(role?: string) {
+function isPrivileged(role?: Role | null) {
   return hasBalancePrivilege(role);
 }
 
@@ -48,7 +46,7 @@ const getRoleBadgeStyle = (role: string) => {
 
 interface PrivilegedViewProps {
   groupData: GroupBalanceSummary;
-  userRole: string;
+  userRole: Role;
 }
 
 export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {

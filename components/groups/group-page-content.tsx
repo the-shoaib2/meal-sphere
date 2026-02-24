@@ -102,7 +102,7 @@ export function GroupPageContent(
         // router.refresh(); // Only if we need to sync server state
     };
 
-    const { isMember, isAdmin, userRole, isCreator } = initialAccessData;
+    const { isMember, isAdmin, userRole, isCreator, permissions } = initialAccessData;
 
     // Stabilize the loading state: if we have initialData, don't show skeleton during hydration
     if ((isLoading || !group) && !initialData) {
@@ -204,7 +204,7 @@ export function GroupPageContent(
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-0 -mx-4 sm:mx-0 overflow-hidden sm:rounded-lg border-b sm:border bg-card shadow-sm mb-4 ">
-               
+
                 {/* Banner Section */}
                 <div className="relative h-20 sm:h-36 w-full bg-muted bg-white/10 dark:bg-black/50 backdrop-blur-[4px] overflow-hidden">
                     {resolvedGroup.bannerUrl ? (
@@ -322,6 +322,7 @@ export function GroupPageContent(
                                 onMemberUpdate={() => refetch()}
                                 initialInviteTokens={initialInviteTokens}
                                 canInvite={canInvite}
+                                permissions={permissions}
                             />
                         </TabsContent>
 

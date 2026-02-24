@@ -4,9 +4,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/auth";
 import { z } from "zod";
 import { createGroup, updateGroup, deleteGroup, joinGroup, leaveGroup, updatePeriodMode, createJoinRequest, setCurrentGroup, removeMemberFromGroup, updateMemberRole, generateGroupInvite, sendGroupInvitations, fetchGroupActivityLogs, processJoinRequest, fetchGroupsList, fetchGroupDetails } from "@/lib/services/groups-service";
-import { prisma } from "@/lib/services/prisma";
-import { unstable_cache } from "next/cache";
-import { validateAdminAccess, validateGroupAccess } from "@/lib/auth/group-auth";
+import prisma from "@/lib/services/prisma";
+import { Role, PeriodStatus } from "@prisma/client";
+import { revalidatePath, unstable_cache } from "next/cache";
+import { validateAdminAccess, validateAction, Permission } from "@/lib/auth/group-auth";
+import { hash, compare } from "bcryptjs";
 
 const createGroupSchema = z.object({
   name: z.string().min(3).max(100),
@@ -71,7 +73,7 @@ export async function updateGroupAction(id: string, data: z.infer<typeof updateG
     }
 
     // Validate admin access
-    const validation = await validateAdminAccess(id);
+    const validation = await validateAction(id, Permission.EDIT_GROUP);
     if (!validation.success) {
       return { success: false, message: validation.error || "Forbidden" };
     }
@@ -90,6 +92,11 @@ export async function deleteGroupAction(id: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
        return { success: false, message: "Authentication required" };
+    }
+
+    const validation = await validateAction(id, Permission.DELETE_GROUP);
+    if (!validation.success) {
+      return { success: false, message: validation.error || "Forbidden" };
     }
 
     await deleteGroup(id, session.user.id);
@@ -117,7 +124,6 @@ export async function joinGroupAction(data: { groupId?: string; token?: string; 
 
     let targetGroupId = data.groupId;
 
-    // If only token is provided, we need to resolve it to find the groupId first
     // This handles the case where the frontend only has the invite code
     if (data.token && !targetGroupId) {
       const invite = await prisma.inviteToken.findUnique({
@@ -176,7 +182,7 @@ export async function updatePeriodModeAction(groupId: string, data: { mode: "MON
       return { success: false, message: "Invalid data" };
     }
 
-    const validation = await validateAdminAccess(groupId);
+    const validation = await validateAction(groupId, Permission.EDIT_GROUP);
     if (!validation.success) {
       return { success: false, message: validation.error || "Forbidden" };
     }
@@ -226,7 +232,7 @@ export async function handleJoinRequestAction(groupId: string, requestId: string
     }
 
     // Validate admin access for the group
-    const validation = await validateAdminAccess(groupId);
+    const validation = await validateAction(groupId, Permission.MANAGE_JOIN_REQUESTS);
     if (!validation.success) {
       return { success: false, message: validation.error || "Forbidden" };
     }
@@ -356,6 +362,11 @@ export async function removeMemberAction(groupId: string, targetMemberId: string
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
 
+    const validation = await validateAction(groupId, Permission.MANAGE_MEMBERS);
+    if (!validation.success) {
+      return { success: false, message: validation.error || "Forbidden" };
+    }
+
     await removeMemberFromGroup(groupId, session.user.id, targetMemberId);
     return { success: true, message: "Member removed successfully" };
   } catch (error: any) {
@@ -364,10 +375,15 @@ export async function removeMemberAction(groupId: string, targetMemberId: string
   }
 }
 
-export async function updateMemberRoleAction(groupId: string, targetMemberId: string, newRole: any) {
+export async function updateMemberRoleAction(groupId: string, targetMemberId: string, newRole: Role) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
+
+    const validation = await validateAction(groupId, Permission.MANAGE_MEMBERS);
+    if (!validation.success) {
+      return { success: false, message: validation.error || "Forbidden" };
+    }
 
     await updateMemberRole(groupId, session.user.id, targetMemberId, newRole);
     return { success: true, message: "Role updated successfully" };
@@ -377,10 +393,15 @@ export async function updateMemberRoleAction(groupId: string, targetMemberId: st
   }
 }
 
-export async function generateGroupInviteAction(groupId: string, role: string, expiresInDays: number) {
+export async function generateGroupInviteAction(groupId: string, role: Role, expiresInDays: number) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
+
+    const validation = await validateAction(groupId, Permission.CREATE_INVITES);
+    if (!validation.success) {
+      return { success: false, message: validation.error || "Forbidden" };
+    }
 
     const inviteLink = await generateGroupInvite(groupId, session.user.id, role, expiresInDays);
     return { success: true, inviteLink };
@@ -390,10 +411,15 @@ export async function generateGroupInviteAction(groupId: string, role: string, e
   }
 }
 
-export async function sendGroupInvitationsAction(groupId: string, emails: string[], role: string) {
+export async function sendGroupInvitationsAction(groupId: string, emails: string[], role: Role) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
+
+    const validation = await validateAction(groupId, Permission.CREATE_INVITES);
+    if (!validation.success) {
+      return { success: false, message: validation.error || "Forbidden" };
+    }
 
     const result = await sendGroupInvitations(groupId, session.user.id, emails, role);
     return result;
@@ -431,7 +457,7 @@ export async function getGroupStatsAction(groupId: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
 
-    const access = await validateGroupAccess(groupId);
+    const access = await validateAction(groupId, Permission.VIEW_GROUP);
     if (!access.success) return { success: false, message: access.error };
 
     const stats = await getCachedStats(groupId);
@@ -448,7 +474,7 @@ export async function getGroupActivityAction(groupId: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
 
-    const access = await validateGroupAccess(groupId);
+    const access = await validateAction(groupId, Permission.VIEW_ACTIVITY_LOGS);
     if (!access.success) return { success: false, message: access.error };
 
     const logs = await fetchGroupActivityLogs(groupId, session.user.id);
@@ -478,7 +504,7 @@ export async function updateFineSettingsAction(groupId: string, data: z.infer<ty
       return { success: false, message: "Invalid request data" };
     }
 
-    const validation = await validateAdminAccess(groupId);
+    const validation = await validateAction(groupId, Permission.EDIT_GROUP);
     if (!validation.success) {
       return { success: false, message: validation.error || "Forbidden" };
     }
@@ -516,7 +542,7 @@ export async function getGroupDetailsAction(groupId: string, password?: string) 
 
     // Pass password to validation if needed, but currently fetchGroupDetails just uses userId
     // If the group is private and the user is not a member, access validation should handle it
-    const access = await validateGroupAccess(groupId);
+    const access = await validateAction(groupId, Permission.VIEW_GROUP);
     if (!access.success) {
       return { 
         success: false, 
@@ -541,7 +567,7 @@ export async function getJoinRequestsAction(groupId: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return { success: false, message: "Authentication required" };
 
-    const validation = await validateAdminAccess(groupId);
+    const validation = await validateAction(groupId, Permission.MANAGE_JOIN_REQUESTS);
     if (!validation.success) return { success: false, message: validation.error || "Forbidden" };
 
     const joinRequests = await prisma.joinRequest.findMany({

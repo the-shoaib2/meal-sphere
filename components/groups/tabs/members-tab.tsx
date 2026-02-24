@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useOptimistic, useTransition } from 'react';
+import { Permission } from '@/lib/auth/permissions';
+import { removeMemberAction, updateMemberRoleAction } from '@/lib/actions/group.actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Role } from '@prisma/client';
-import { MoreVertical, UserPlus, Shield, Crown, UserCog, UserX, User } from 'lucide-react';
+import { MoreVertical, UserPlus, Shield, Crown, UserCog, UserX, User, ChefHat, BadgeDollarSign, ShoppingCart } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
-// import { useGroups } from '@/hooks/use-groups';
+import { cn } from '@/lib/utils';
 import { InviteCard } from '@/components/groups/invite-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserProfileDialog } from '@/components/groups/user-profile-dialog';
@@ -55,6 +57,7 @@ interface MembersTabProps {
   initialInviteTokens?: any[];
   canInvite?: boolean;
   isMember?: boolean;
+  permissions?: Permission[];
 }
 
 export function MembersTab({
@@ -68,55 +71,136 @@ export function MembersTab({
   initialInviteTokens = [],
   canInvite = true,
   isMember = true,
+  permissions = [],
 }: MembersTabProps) {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
-  // const { isLoading } = useGroups();
-  const isLoading = false;
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const isLoading = false; // Set to true if actually fetching
+
+  const [optimisticMembers, addOptimisticMember] = useOptimistic(
+    members,
+    (state, { type, payload }: { type: 'remove' | 'updateRole', payload: any }) => {
+      if (type === 'remove') {
+        return state.filter(m => m.userId !== payload);
+      }
+      if (type === 'updateRole') {
+        return state.map(m => m.userId === payload.userId ? { ...m, role: payload.role } : m);
+      }
+      return state;
+    }
+  );
+
+  const canManageMember = (member: Member) => {
+    if (member.isCurrent) return false;
+    if (isCreator) return true;
+
+    // Check if user has MANAGE_MEMBERS permission
+    const hasManagePermission = permissions.includes(Permission.MANAGE_MEMBERS);
+    if (!hasManagePermission) return false;
+
+    // Only creator can manage Admins
+    if (member.role === Role.ADMIN) return false;
+
+    return true;
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    startTransition(async () => {
+      addOptimisticMember({ type: 'remove', payload: userId });
+      try {
+        const result = await removeMemberAction(groupId, userId);
+        if (!result.success) {
+          toast({ title: 'Error', description: result.message || 'Failed to remove member', variant: 'destructive' });
+          onMemberUpdate(); // Revert on error
+        } else {
+          toast({ title: 'Success', description: 'Member removed successfully' });
+          onMemberUpdate();
+        }
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to remove member', variant: 'destructive' });
+        onMemberUpdate();
+      }
+    });
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: Role) => {
+    startTransition(async () => {
+      addOptimisticMember({ type: 'updateRole', payload: { userId, role: newRole } });
+      try {
+        const result = await updateMemberRoleAction(groupId, userId, newRole);
+        if (!result.success) {
+          toast({ title: 'Error', description: result.message || 'Failed to update role', variant: 'destructive' });
+          onMemberUpdate();
+        } else {
+          toast({ title: 'Success', description: 'Role updated successfully' });
+          onMemberUpdate();
+        }
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to update role', variant: 'destructive' });
+        onMemberUpdate();
+      }
+    });
+  };
 
   const getRoleBadge = (role: Role) => {
     switch (role) {
       case Role.MANAGER:
         return (
-          <Badge variant="default" className="bg-purple-500">
+          <Badge variant="default" className="bg-purple-500 text-white">
             <Crown className="h-3 w-3 mr-1" />
             Owner
           </Badge>
         );
       case Role.ADMIN:
         return (
-          <Badge variant="default" className="bg-red-500">
+          <Badge variant="default" className="bg-red-500 text-white">
             <Shield className="h-3 w-3 mr-1" />
             Admin
           </Badge>
         );
       case Role.MODERATOR:
         return (
-          <Badge variant="default" className="bg-blue-500">
+          <Badge variant="default" className="bg-blue-500 text-white">
             <UserCog className="h-3 w-3 mr-1" />
             Moderator
           </Badge>
         );
       case Role.MEMBER:
         return (
-          <Badge variant="default" className="bg-gray-500">
+          <Badge variant="default" className="bg-gray-500 text-white">
             Member
           </Badge>
         );
       case Role.MEAL_MANAGER:
         return (
-          <Badge variant="default" className="bg-green-500">
-            <UserCog className="h-3 w-3 mr-1" />
+          <Badge variant="default" className="bg-green-500 text-white">
+            <ChefHat className="h-3 w-3 mr-1" />
             Meal Manager
+          </Badge>
+        );
+      case Role.ACCOUNTANT:
+        return (
+          <Badge variant="default" className="bg-emerald-500 text-white">
+            <BadgeDollarSign className="h-3 w-3 mr-1" />
+            Accountant
+          </Badge>
+        );
+      case Role.MARKET_MANAGER:
+        return (
+          <Badge variant="default" className="bg-purple-500 text-white">
+            <ShoppingCart className="h-3 w-3 mr-1" />
+            Market Manager
           </Badge>
         );
       default:
         return (
           <Badge variant="secondary">
-            Member
+            {role}
           </Badge>
         );
     }
@@ -165,7 +249,7 @@ export function MembersTab({
             <div>
               <h2 className="text-lg font-semibold">Members</h2>
               <p className="text-sm text-muted-foreground">
-                {members.length} {members.length === 1 ? 'member' : 'members'} in this group
+                {optimisticMembers.length} {optimisticMembers.length === 1 ? 'member' : 'members'} in this group
               </p>
             </div>
             {isMember && (
@@ -179,8 +263,8 @@ export function MembersTab({
           </div>
 
           <div className="divide-y">
-            {members.map((member, index) => (
-              <div key={member.id} className="p-3">
+            {optimisticMembers.map((member) => (
+              <div key={member.id} className={cn("p-3 transition-opacity", isPending && "opacity-70")}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
@@ -203,10 +287,10 @@ export function MembersTab({
                     </div>
                   </div>
 
-                  {(isAdmin || isCreator) && !member.isCurrent && (
+                  {canManageMember(member) && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isPending}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -286,7 +370,7 @@ export function MembersTab({
         }}
         member={selectedMember}
         groupId={groupId}
-        onSuccess={onMemberUpdate}
+        onSuccess={(newRole: Role) => { handleUpdateRole(selectedMember?.userId!, newRole); }}
       />
 
       {/* Remove Member Dialog */}
@@ -298,8 +382,8 @@ export function MembersTab({
         }}
         member={selectedMember}
         groupId={groupId}
-        onSuccess={onMemberUpdate}
+        onSuccess={() => handleRemoveMember(selectedMember?.userId!)}
       />
     </Card>
   );
-} 
+}

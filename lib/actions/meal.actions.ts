@@ -11,6 +11,7 @@ import {
   parseDateSafe 
 } from '@/lib/utils/period-utils-shared';
 import { getPeriodForDate } from '@/lib/utils/period-utils';
+import { validateAction, Permission } from "@/lib/auth/group-auth";
 
 /**
  * --- Mutation Actions ---
@@ -32,10 +33,13 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
     ]);
 
     const userRole = membership?.role || null;
-    const isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
+    let isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
 
-    if (userId !== (session.user as any).id && !isPrivileged) {
-        return { success: false, error: "Unauthorized to edit others meals" };
+    if (userId !== (session.user as any).id) {
+        // Checking permission for editing OTHERS meals
+        const auth = await validateAction(roomId, Permission.MANAGE_MEALS);
+        if (!auth.success) return { success: false, error: auth.error };
+        isPrivileged = true; // Use the verified privilege
     }
 
     const targetPeriodId = targetPeriod?.id || undefined;
@@ -122,12 +126,11 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
     // Authorization check
+    let isPrivileged = false;
     if (userId !== (session.user as any).id) {
-        try {
-            await assertAdminRights((session.user as any).id, roomId, "Unauthorized to edit others guest meals");
-        } catch (error: any) {
-            return { success: false, error: error.message };
-        }
+        const auth = await validateAction(roomId, Permission.MANAGE_MEALS);
+        if (!auth.success) return { success: false, error: auth.error };
+        isPrivileged = true;
     }
 
     // Standardize to UTC Midnight using the project's safe parser
@@ -147,7 +150,10 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
         return { success: false, error: "This period is locked" };
     }
 
-    const isPrivileged = membership && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(membership.role);
+    if (!isPrivileged) {
+        const userRole = membership?.role || null;
+        isPrivileged = !!(userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole));
+    }
 
     // Time Cutoff Validation (Same as regular meals)
     if (!isPrivileged) {
@@ -214,11 +220,8 @@ export async function updateMealSettings(roomId: string, data: any) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
-    try {
-        await assertAdminRights((session.user as any).id, roomId, "Unauthorized");
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    const auth = await validateAction(roomId, Permission.MANAGE_SETTINGS);
+    if (!auth.success) return { success: false, error: auth.error };
 
     let settings = await prisma.mealSettings.findUnique({ where: { roomId } });
     if (!settings) settings = await prisma.mealSettings.create({ data: { ...createDefaultSettings(), roomId } });
@@ -273,10 +276,12 @@ export async function deleteGuestMeal(guestMealId: string, userId: string, perio
     ]);
 
     const userRole = membership?.role || null;
-    const isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
+    let isPrivileged = userRole && ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole);
 
-    if (guestMeal.userId !== (session.user as any).id && !isPrivileged) {
-        return { success: false, error: "Unauthorized to edit others guest meals" };
+    if (guestMeal.userId !== (session.user as any).id) {
+        const auth = await validateAction(guestMeal.roomId, Permission.MANAGE_MEALS);
+        if (!auth.success) return { success: false, error: auth.error };
+        isPrivileged = true;
     }
 
     // Time Cutoff and Period Lock check
@@ -304,11 +309,8 @@ export async function triggerAutoMeals(roomId: string, dateStr: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
-    try {
-        await assertAdminRights((session.user as any).id, roomId, "You don't have permission to trigger auto meals");
-    } catch (error: any) {
-        return { success: false, error: error.message };
-    }
+    const auth = await validateAction(roomId, Permission.MANAGE_MEALS);
+    if (!auth.success) return { success: false, error: auth.error };
 
     const mealSettings = await prisma.mealSettings.findUnique({
       where: { roomId: roomId },
@@ -476,8 +478,6 @@ function createDefaultAutoSettings(userId: string, roomId: string) {
 }
 
 async function assertAdminRights(userId: string, roomId: string, customMessage = "Unauthorized") {
-    const membership = await prisma.roomMember.findUnique({ where: { userId_roomId: { userId, roomId } } });
-    if (!membership || !['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(membership.role)) {
-        throw new Error(customMessage);
-    }
+    const auth = await validateAction(roomId, Permission.MANAGE_SETTINGS);
+    if (!auth.success) throw new Error(customMessage);
 }

@@ -1,31 +1,13 @@
-/**
- * Centralized Account Balance Permission Configuration
- * 
- * This file defines the roles and permissions for the account balance system.
- * All balance-related API endpoints and components should import from this file
- * to ensure consistent permission checks across the application.
- */
-
-/**
- * Roles that have full access to account balance management:
- * - View all group member balances
- * - Add/edit/delete transactions for any user
- * - View transaction history for any user
- */
-export const BALANCE_PRIVILEGED_ROLES = [
-  'ADMIN',
-  'ACCOUNTANT',
-  'MANAGER',
-  'MEAL_MANAGER',
-] as const;
+import { Permission, hasPermission } from "./permissions";
+import { Role } from "@prisma/client";
 
 /**
  * Check if a user role has privileged access to balance management
  * @param role - The user's role in the group
  * @returns true if the role has privileged access, false otherwise
  */
-export function hasBalancePrivilege(role?: string | null): boolean {
-  return !!role && BALANCE_PRIVILEGED_ROLES.includes(role as any);
+export function hasBalancePrivilege(role?: Role | null): boolean {
+  return hasPermission(role || null, Permission.VIEW_FINANCE);
 }
 
 /**
@@ -36,7 +18,7 @@ export function hasBalancePrivilege(role?: string | null): boolean {
  * @returns true if the viewer can access the target user's balance
  */
 export function canViewUserBalance(
-  viewerRole: string | null | undefined,
+  viewerRole: Role | null | undefined,
   viewerId: string,
   targetUserId: string
 ): boolean {
@@ -45,8 +27,8 @@ export function canViewUserBalance(
     return true;
   }
   
-  // Privileged users can view any user's balance
-  return hasBalancePrivilege(viewerRole);
+  // Use permission check
+  return hasPermission(viewerRole || null, Permission.VIEW_FINANCE);
 }
 
 /**
@@ -54,15 +36,16 @@ export function canViewUserBalance(
  * @param role - The user's role in the group
  * @returns true if the user can modify transactions
  */
-export function canModifyTransactions(role?: string | null): boolean {
-  return hasBalancePrivilege(role);
+export function canModifyTransactions(role?: Role | null): boolean {
+  return hasPermission(role || null, Permission.MANAGE_FINANCE);
 }
 
 /**
- * Check if a user can delete transactions (ADMIN only)
+ * Check if a user can delete transactions
  * @param role - The user's role in the group
  * @returns true if the user can delete transactions
  */
-export function canDeleteTransactions(role?: string | null): boolean {
-  return role === 'ADMIN';
+export function canDeleteTransactions(role?: Role | null): boolean {
+  // Use MANAGE_FINANCE for deletion as well, or MANAGE_SETTINGS if strictly ADMIN
+  return hasPermission(role || null, Permission.MANAGE_FINANCE);
 }

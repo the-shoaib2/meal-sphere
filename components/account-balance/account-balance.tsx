@@ -42,7 +42,9 @@ import { InsufficientPermissionsState } from '@/components/empty-states/insuffic
 import { AccountTransactionDialog } from '@/components/account-balance/account-transaction-dialog';
 import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
 
-function isPrivileged(role?: string) {
+import { Role } from '@prisma/client';
+
+function isPrivileged(role?: Role | null) {
   return hasBalancePrivilege(role);
 }
 
@@ -54,7 +56,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
 
   const userRoleFromHook = (activeGroup as any)?.userRole || activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role;
   const userRole = (initialData && initialData.groupId === activeGroup?.id) ? initialData.userRole : userRoleFromHook;
-  const hasPrivilege = isPrivileged(userRole);
+  const hasPrivilege = isPrivileged(userRole as Role);
 
   const { data: currentPeriodFromHook, isLoading: isPeriodLoading } = useCurrentPeriod();
 
@@ -136,7 +138,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
     return (
       <div className="space-y-6">
         <PeriodNotFoundCard
-          userRole={userRole}
+          userRole={userRole as Role}
           isLoading={isPeriodLoading}
           groupId={activeGroup?.id}
           userId={session?.user?.id}
@@ -160,13 +162,13 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
         {hasPrivilege ? (
           <PrivilegedView
             groupData={groupData!}
-            userRole={userRole!}
+            userRole={userRole as Role}
           />
         ) : (
           <MemberView
             balance={ownBalance}
             transactions={ownTransactions || []}
-            userRole={userRole!}
+            userRole={userRole as Role}
             session={session}
             groupId={activeGroup?.id}
             onFetchNextPage={fetchNextOwn}
@@ -254,7 +256,7 @@ export function UserAccountBalanceDetail({ initialData, targetUserId, viewerRole
     activeGroup?.members?.find(m => m.userId === userId)?.role ||
     'MEMBER';
 
-  const hasPrivilege = isPrivileged(userRole);
+  const hasPrivilege = isPrivileged(userRole as Role);
   const isAdmin = userRole === 'ADMIN';
 
   // Filter transactions
