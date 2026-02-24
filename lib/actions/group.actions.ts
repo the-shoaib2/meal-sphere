@@ -24,7 +24,8 @@ const updateGroupSchema = z.object({
   bannerUrl: z.string().nullable().optional(),
   category: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  features: z.record(z.string(), z.boolean()).optional()
+  features: z.record(z.string(), z.boolean()).optional(),
+  password: z.string().min(4).nullable().optional(),
 });
 
 export async function createGroupAction(data: z.infer<typeof createGroupSchema>) {

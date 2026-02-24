@@ -122,9 +122,11 @@ export async function ensureMonthPeriod(groupId: string, userId: string): Promis
 }
 
 /**
- * Validate period uniqueness for a group
+ * Validate period uniqueness and date overlap for a group.
+ * Handles overlaps even when dates are null (infinite).
  */
 export async function validatePeriodUniqueness(roomId: string, data: CreatePeriodData, excludePeriodId?: string) {
+  // 1. Ensure unique name within the room
   let originalName = data.name;
   let counter = 1;
   let finalName = originalName;
@@ -149,116 +151,105 @@ export async function validatePeriodUniqueness(roomId: string, data: CreatePerio
     finalName = `${originalName} (${counter})`;
   }
 
-  if (data.endDate) {
-    const overlappingPeriod = await prisma.mealPeriod.findFirst({
-      where: {
-        roomId,
-        deletedAt: null,
-        ...(excludePeriodId && { id: { not: excludePeriodId } }),
-        OR: [
-          {
-            startDate: { lte: data.startDate },
-            endDate: { gte: data.startDate },
-          },
-          {
-            startDate: { lte: data.endDate },
-            endDate: { gte: data.endDate },
-          },
-          {
-            startDate: { gte: data.startDate },
-            endDate: { lte: data.endDate },
-          },
-        ],
-      },
-    });
+  // 2. Strict Date Overlap Validation
+  const periods = await prisma.mealPeriod.findMany({
+    where: {
+      roomId,
+      deletedAt: null,
+      ...(excludePeriodId && { id: { not: excludePeriodId } }),
+    },
+    select: { id: true, name: true, startDate: true, endDate: true }
+  });
 
-    if (overlappingPeriod) {
-      const endDateStr = overlappingPeriod.endDate ? overlappingPeriod.endDate.toLocaleDateString() : 'No end date';
-      throw new Error(`Period dates overlap with existing period "${overlappingPeriod.name}" (${overlappingPeriod.startDate.toLocaleDateString()} - ${endDateStr}). Each group can only have one period active at a time.`);
+  for (const p of periods) {
+    const startA = data.startDate.getTime();
+    const endA = data.endDate ? data.endDate.getTime() : Infinity;
+    const startB = p.startDate.getTime();
+    const endB = p.endDate ? p.endDate.getTime() : Infinity;
+
+    // Standard overlap check: (StartA < EndB) && (EndA > StartB)
+    if (startA < endB && endA > startB) {
+      const bEndStr = p.endDate ? p.endDate.toLocaleDateString() : 'Ongoing';
+      throw new Error(`Period dates overlap with existing period "${p.name}" (${p.startDate.toLocaleDateString()} - ${bEndStr}). Operations must be sequential.`);
     }
   }
 }
 
 /**
- * Start a new meal period
+ * Start a new meal period. 
+ * Uses a transaction to ensure atomicity and prevent race conditions.
  */
 export async function startPeriod(
   roomId: string,
   userId: string,
   data: CreatePeriodData
 ) {
-  // 1. Run all validation checks in parallel
-  const [existingActivePeriod, overlappingPeriod, uniqueName] = await Promise.all([
-    // Check for existing active period
-    prisma.mealPeriod.findFirst({
+  return await prisma.$transaction(async (tx) => {
+    // 1. Check for existing active period
+    const existingActivePeriod = await tx.mealPeriod.findFirst({
       where: {
         roomId,
         status: PeriodStatus.ACTIVE,
         deletedAt: null,
       },
-    }),
-    // Check for date overlaps (if end date exists)
-    data.endDate ? prisma.mealPeriod.findFirst({
-      where: {
+    });
+
+    if (existingActivePeriod) {
+      throw new Error(`There is already an active period "${existingActivePeriod.name}" for this group. Please end it first.`);
+    }
+
+    // 2. Date Overlap & Name Uniqueness Check
+    // We fetch all non-deleted periods for this room to check overlaps in memory (usually few periods per room)
+    const periods = await tx.mealPeriod.findMany({
+      where: { roomId, deletedAt: null },
+      select: { id: true, name: true, startDate: true, endDate: true }
+    });
+
+    const startA = data.startDate.getTime();
+    const endA = data.endDate ? data.endDate.getTime() : Infinity;
+
+    if (data.endDate && startA >= endA) {
+      throw new Error('Start date must be before end date');
+    }
+
+    for (const p of periods) {
+      const startB = p.startDate.getTime();
+      const endB = p.endDate ? p.endDate.getTime() : Infinity;
+
+      if (startA < endB && endA > startB) {
+        throw new Error(`Dates overlap with "${p.name}" (${p.startDate.toLocaleDateString()} - ${p.endDate ? p.endDate.toLocaleDateString() : 'Ongoing'})`);
+      }
+    }
+
+    // 3. Unique Name generation
+    let finalName = data.name;
+    let counter = 1;
+    while (true) {
+      const nameMatch = periods.find(p => p.name === finalName);
+      if (!nameMatch) break;
+      counter++;
+      finalName = `${data.name} (${counter})`;
+    }
+
+    // 4. Create the period
+    const period = await tx.mealPeriod.create({
+      data: {
+        name: finalName,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        openingBalance: data.openingBalance || 0,
+        carryForward: data.carryForward || false,
+        notes: data.notes,
         roomId,
-        deletedAt: null,
-        OR: [
-          { startDate: { lte: data.startDate }, endDate: { gte: data.startDate }, },
-          { startDate: { lte: data.endDate }, endDate: { gte: data.endDate }, },
-          { startDate: { gte: data.startDate }, endDate: { lte: data.endDate }, },
-        ],
+        createdBy: userId,
+        status: PeriodStatus.ACTIVE,
       },
-    }) : Promise.resolve(null),
-    // Calculate unique name
-    (async () => {
-       let originalName = data.name;
-       let counter = 1;
-       let finalName = originalName;
-       while (true) {
-         const existing = await prisma.mealPeriod.findFirst({
-           where: { roomId, name: finalName, deletedAt: null },
-           select: { id: true }
-         });
-         if (!existing) return finalName;
-         counter++;
-         finalName = `${originalName} (${counter})`;
-       }
-    })()
-  ]);
+    });
 
-  // 2. Process validation results
-  if (existingActivePeriod) {
-    throw new Error(`There is already an active period "${existingActivePeriod.name}" for this group. Please end it first before starting a new period.`);
-  }
+    invalidatePeriodCaches(roomId, period.id);
 
-  if (data.endDate && data.startDate >= data.endDate) {
-    throw new Error('Start date must be before end date');
-  }
-
-  if (overlappingPeriod) {
-    const endDateStr = overlappingPeriod.endDate ? overlappingPeriod.endDate.toLocaleDateString() : 'No end date';
-    throw new Error(`Period dates overlap with existing period "${overlappingPeriod.name}" (${overlappingPeriod.startDate.toLocaleDateString()} - ${endDateStr}). Each group can only have one period active at a time.`);
-  }
-
-  const period = await prisma.mealPeriod.create({
-    data: {
-      name: uniqueName,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      openingBalance: data.openingBalance || 0,
-      carryForward: data.carryForward || false,
-      notes: data.notes,
-      roomId,
-      createdBy: userId,
-      status: PeriodStatus.ACTIVE,
-    },
+    return { period };
   });
-
-  invalidatePeriodCaches(roomId, period.id);
-
-  return {
-    period,
-  };
 }
 
 /**

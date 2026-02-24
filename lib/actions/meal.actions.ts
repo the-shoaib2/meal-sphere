@@ -51,6 +51,27 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
         if (!canEdit) {
             return { success: false, error: "Meal time cutoff has passed or period is locked" };
         }
+
+        // Daily Meal Limit Check
+        if (action === 'add') {
+            const dayStart = new Date(targetDate);
+            dayStart.setUTCHours(0, 0, 0, 0);
+            const dayEnd = new Date(targetDate);
+            dayEnd.setUTCHours(23, 59, 59, 999);
+
+            const dailyMealCount = await prisma.meal.count({
+                where: {
+                    userId,
+                    roomId,
+                    date: { gte: dayStart, lte: dayEnd }
+                }
+            });
+
+            const limit = settings?.maxMealsPerDay || 3;
+            if (dailyMealCount >= limit) {
+                return { success: false, error: `Daily limit of ${limit} meals reached` };
+            }
+        }
     }
 
     if (action === 'remove') {
