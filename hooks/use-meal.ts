@@ -272,6 +272,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     guestMeals,
     (state: GuestMeal[], update: { action: 'add' | 'remove' | 'update', meal?: GuestMeal, id?: string, count?: number, userId?: string, type?: MealType, dateStr?: string }) => {
       if (update.action === 'add') {
+        const alreadyHas = state.some(m => m.userId === update.meal!.userId && m.type === update.meal!.type && normalizeDateStr(m.date) === normalizeDateStr(update.meal!.date));
+        if (alreadyHas) return state;
         return [...state, update.meal!];
       } else if (update.action === 'update') {
         return state.map(m => m.id === update.id ? { ...m, count: update.count! } : m);
@@ -378,8 +380,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         let newGuestMeals = [...(old.guestMeals || [])];
         const existingIdx = newGuestMeals.findIndex(m => m.type === type && normalizeDateStr(m.date) === dateStr.split('T')[0] && m.userId === session?.user?.id);
         if (existingIdx >= 0) {
-          newGuestMeals[existingIdx] = { ...newGuestMeals[existingIdx], count };
-        } else {
+          if (count <= 0) {
+            newGuestMeals.splice(existingIdx, 1);
+          } else {
+            newGuestMeals[existingIdx] = { ...newGuestMeals[existingIdx], count };
+          }
+        } else if (count > 0) {
           newGuestMeals.push({
             id: `temp-guest-${Date.now()}`,
             date: date.toISOString(),
