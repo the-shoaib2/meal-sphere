@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
 import { RoleBadge } from '@/components/shared/role-badge';
 
-export const dynamic = 'force-dynamic';
 
 export default async function AccountBalancePage() {
   const session = await getServerSession(authOptions);

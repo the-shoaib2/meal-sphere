@@ -8,7 +8,6 @@ import { GroupPageContent } from '@/components/groups/group-page-content';
 import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { PageHeader } from '@/components/shared/page-header';
 
-export const dynamic = 'force-dynamic';
 
 export default async function GroupPage(props: {
   params: Promise<{ id: string }>,

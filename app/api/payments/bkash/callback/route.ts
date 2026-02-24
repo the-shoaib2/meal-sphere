@@ -5,7 +5,6 @@ import { createCustomNotification } from "@/lib/utils/notification-utils"
 
 
 // Force dynamic rendering - don't pre-render during build
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)

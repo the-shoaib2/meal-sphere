@@ -9,7 +9,6 @@ import { NoGroupState } from "@/components/empty-states/no-group-state";
 import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { PageHeader } from "@/components/shared/page-header";
 
-export const dynamic = 'force-dynamic';
 
 export default async function ExpensesPage() {
   const session = await getServerSession(authOptions);

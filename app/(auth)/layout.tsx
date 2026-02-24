@@ -65,13 +65,13 @@ export default async function AuthLayout({
   return (
     <GroupProvider initialGroups={initialGroups} initialActiveGroup={initialActiveGroup}>
       <PeriodProvider initialData={initialPeriodData}>
-        <div className="flex flex-col min-h-screen w-full">
+        <div className="flex flex-col min-h-screen w-full max-w-[1440px] mx-auto">
           <Header />
-          <div className="flex flex-1 max-w-7xl mx-auto w-full">
+          <div className="flex flex-1 w-full">
             <div className="flex flex-1 w-full">
               <AppSidebar />
               <main className="flex-1 bg-background overflow-auto h-full flex flex-col">
-                <div className="w-full mx-auto px-4 sm:px-6 py-4 min-w-0 flex flex-col flex-1">
+                <div className="w-full px-4 sm:px-6 py-4 min-w-0 flex flex-col flex-1">
                   <GroupSwitchLoader>
                     {children}
                   </GroupSwitchLoader>

@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 
 import { ShieldCheck } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
 
 export default async function MealsPage({ searchParams }: { searchParams: Promise<any> }) {
   const resolvedSearchParams = await searchParams;

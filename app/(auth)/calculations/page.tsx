@@ -9,7 +9,6 @@ import { NoPeriodState } from "@/components/empty-states/no-period-state";
 import { fetchGroupAccessData } from '@/lib/services/groups-service';
 import { PageHeader } from "@/components/shared/page-header";
 
-export const dynamic = 'force-dynamic';
 
 export default async function CalculationsPage() {
   const session = await getServerSession(authOptions);

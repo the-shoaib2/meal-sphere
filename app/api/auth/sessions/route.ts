@@ -12,7 +12,6 @@ import { getLocationFromIP } from '@/lib/utils/location-utils'
 
 
 // Force dynamic rendering - don't pre-render during build
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {

@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from '@/components/ui/badge';
 import MealListView from '@/components/meal/meal-list-view';
 
-export const dynamic = 'force-dynamic';
 
 export default async function MealListPage({ searchParams }: { searchParams: Promise<any> }) {
     const resolvedSearchParams = await searchParams;

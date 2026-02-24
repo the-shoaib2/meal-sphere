@@ -6,7 +6,6 @@ import { format } from 'date-fns'
 
 
 // Force dynamic rendering - don't pre-render during build
-export const dynamic = 'force-dynamic';
 
 // This route would be called by a cron job (e.g., Vercel Cron) every minute
 export async function GET(request: Request) {

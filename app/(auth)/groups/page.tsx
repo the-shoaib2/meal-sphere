@@ -5,7 +5,6 @@ import { fetchGroupsData } from '@/lib/services/groups-service';
 import { GroupsView } from '@/components/groups/groups-view';
 import { PageHeader } from '@/components/shared/page-header';
 
-export const dynamic = 'force-dynamic';
 
 export default async function GroupsPage(props: {
   searchParams: Promise<{ tab?: string }>;

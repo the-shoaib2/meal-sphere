@@ -18,7 +18,6 @@ import { PageHeader } from '@/components/shared/page-header';
 import { ActivityWrapper } from '@/components/dashboard/wrappers/activity-wrapper';
 import { AnalyticsWrapper } from '@/components/dashboard/wrappers/analytics-wrapper';
 
-export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);

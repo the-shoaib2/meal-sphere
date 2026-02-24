@@ -7,7 +7,6 @@ import { PeriodDetails } from '@/components/periods/period-details';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { PageHeader } from '@/components/shared/page-header';
 
-export const dynamic = 'force-dynamic';
 
 export default async function PeriodDetailsPage({
     params

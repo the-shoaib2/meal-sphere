@@ -10,11 +10,7 @@ import { InsufficientPermissionsState } from "@/components/empty-states/insuffic
 import { PageHeader } from "@/components/shared/page-header";
 import { canViewUserBalance, hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
 
-export const dynamic = 'force-dynamic';
 
 export default async function UserAccountBalancePage({ params }: { params: Promise<any> }) {
   const resolvedParams = await params;

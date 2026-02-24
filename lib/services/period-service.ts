@@ -473,8 +473,23 @@ export async function getPeriod(periodId: string, roomId?: string) {
  * Calculate period summary with all financial and meal data
  */
 export async function calculatePeriodSummary(periodId: string, roomId?: string): Promise<PeriodSummary> {
+  // Step 1: Fetch the period first to get its room context if not provided
+  const period = await prisma.mealPeriod.findFirst({
+    where: { id: periodId, deletedAt: null },
+  });
+
+  if (!period) {
+    throw new Error('Period not found');
+  }
+
+  const activeRoomId = roomId || period.roomId;
+
+  if (roomId && period.roomId !== roomId) {
+    throw new Error('Period does not belong to the specified group');
+  }
+
+  // Step 2: Consolidated parallel queries for summary data
   const [
-    period,
     mealsCount,
     guestMealsAgg,
     shoppingAgg,
@@ -482,21 +497,17 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
     extraExpensesAgg,
     memberCount
   ] = await Promise.all([
-    prisma.mealPeriod.findFirst({
-      where: { id: periodId, deletedAt: null },
-    }),
-
     prisma.meal.count({
       where: {
         periodId,
-        ...(roomId && { roomId }),
+        roomId: activeRoomId,
       },
     }),
 
     prisma.guestMeal.aggregate({
       where: {
         periodId,
-        ...(roomId && { roomId }),
+        roomId: activeRoomId,
       },
       _sum: { count: true },
     }),
@@ -505,7 +516,7 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
       where: {
         periodId,
         purchased: true,
-        ...(roomId && { roomId }),
+        roomId: activeRoomId,
       },
       _sum: { quantity: true },
     }),
@@ -514,7 +525,7 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
       where: {
         periodId,
         status: 'COMPLETED',
-        ...(roomId && { roomId }),
+        roomId: activeRoomId,
       },
       _sum: { amount: true },
     }),
@@ -522,40 +533,19 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
     prisma.extraExpense.aggregate({
       where: {
         periodId,
-        ...(roomId && { roomId }),
+        roomId: activeRoomId,
       },
       _sum: { amount: true },
     }),
 
-    roomId ? prisma.roomMember.count({
+    prisma.roomMember.count({
       where: {
-        roomId: roomId,
+        roomId: activeRoomId,
         isCurrent: true,
         isBanned: false,
       },
-    }) : Promise.resolve(0)
+    })
   ]);
-
-  if (!period) {
-    throw new Error('Period not found');
-  }
-
-  if (roomId && period.roomId !== roomId) {
-    throw new Error('Period does not belong to the specified group');
-  }
-
-  let finalMemberCount = memberCount;
-  // Use the memberCount from Promise.all if roomId was provided,
-  // otherwise fetch it here.
-  if (!roomId) {
-    finalMemberCount = await prisma.roomMember.count({
-      where: {
-        roomId: period.roomId,
-        isCurrent: true,
-        isBanned: false
-      }
-    });
-  }
 
   const { id, name, startDate, endDate, status, isLocked, openingBalance, closingBalance, carryForward } = period;
 
@@ -571,8 +561,8 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
     totalShoppingAmount: shoppingAgg._sum.quantity || 0,
     totalPayments: paymentsAgg._sum.amount || 0,
     totalExtraExpenses: extraExpensesAgg._sum.amount || 0,
-    memberCount: finalMemberCount,
-    activeMemberCount: finalMemberCount,
+    memberCount,
+    activeMemberCount: memberCount,
     openingBalance,
     closingBalance,
     carryForward,
@@ -896,11 +886,21 @@ export async function fetchPeriodsData(userId: string, groupId: string, includeA
     async () => {
       const start = performance.now();
       
+      const roomData = await prisma.room.findUnique({
+        where: { id: groupId },
+        select: {
+          id: true,
+          name: true,
+          memberCount: true,
+          isPrivate: true,
+          periodMode: true
+        }
+      });
+
       const [
         periods,
         activePeriod,
         periodStats,
-        roomData,
         membership
       ] = await Promise.all([
         getPeriods(groupId, includeArchived),
@@ -915,18 +915,6 @@ export async function fetchPeriodsData(userId: string, groupId: string, includeA
           },
           _sum: {
             openingBalance: true
-          }
-        }),
-        prisma.room.findUnique({
-          where: {
-            id: groupId
-          },
-          select: {
-            id: true,
-            name: true,
-            memberCount: true,
-            isPrivate: true,
-            periodMode: true
           }
         }),
         prisma.roomMember.findUnique({

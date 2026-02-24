@@ -12,9 +12,6 @@ import { ToastProvider } from "@/components/providers/toast-provider"
 import InternetStatusBanner from "@/components/shared/internet-status-card"
 import { LoadingBar } from "@/components/shared/loading-bar"
 
-// Force all routes to be dynamic - prevents build-time pre-rendering
-export const dynamic = 'force-dynamic'
-export const dynamicParams = true
 
 const inter = Inter({ subsets: ["latin"] })
 

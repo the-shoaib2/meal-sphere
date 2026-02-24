@@ -7,7 +7,6 @@ import { PeriodManagement } from '@/components/periods/period-management';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { PageHeader } from '@/components/shared/page-header';
 
-export const dynamic = 'force-dynamic';
 
 export default async function PeriodsPage() {
   const session = await getServerSession(authOptions);
