@@ -111,9 +111,9 @@ function MealList({ mealsForDate, guestMealsForDate, currentUserId, isLoading, u
 
             <div className="space-y-2">
               {typeMeals.map((meal: any) => (
-                <div key={meal.id} className="group flex items-center cursor-pointer justify-between p-2.5 sm:p-3 rounded-lg bg-muted/80 hover:bg-muted">
+                <div key={meal.id} className="group flex items-center cursor-pointer justify-between p-2.5 sm:p-3 rounded-xl bg-muted/80 hover:bg-primary/10">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
+                    <Avatar className="w-8 h-8 sm:w-10 sm:h-10 ring-2 ring-muted-foreground/20">
                       <AvatarImage src={meal.user.image} alt={meal.user.name || undefined} />
                       <AvatarFallback className="text-[10px] sm:text-xs">
                         {meal.user.name?.charAt(0) || "U"}
@@ -139,7 +139,7 @@ function MealList({ mealsForDate, guestMealsForDate, currentUserId, isLoading, u
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 sm:h-7 sm:w-7 rounded-full hover:bg-red-600/10 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-600/10 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => {
                           if (meal.count) {
                             handleDeleteGuestMeal(meal.id);

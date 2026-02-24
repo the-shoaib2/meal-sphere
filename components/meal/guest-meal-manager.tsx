@@ -86,7 +86,7 @@ function GuestMealManager({
               {getTotalGuestMeals()}
             </Badge>
           </div>
-        </CardTitle>  
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
@@ -121,64 +121,62 @@ function GuestMealManager({
               const currentCount = guestMeal.count
 
               return (
-                <div key={guestMeal.id} className="group relative p-4 cursor-pointer rounded-xl bg-muted hover:bg-primary/10 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                        <AvatarImage src={session.user?.image || "/placeholder.svg"} alt={session.user?.name || undefined} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {session.user?.name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold text-base">{guestMeal.type}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(guestMeal.date), 'MMM d, yyyy')}
-                        </p>
-                      </div>
+                <div key={guestMeal.id} className="group flex items-center cursor-pointer justify-between p-2.5 sm:p-3 rounded-xl bg-muted/80 hover:bg-primary/10 transition-colors">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <Avatar className="w-8 h-8 sm:w-10 sm:h-10 ring-2 ring-muted-foreground/20">
+                      <AvatarImage src={session.user?.image || "/placeholder.svg"} alt={session.user?.name || undefined} />
+                      <AvatarFallback className="text-[10px] sm:text-xs bg-primary/10 text-primary font-semibold">
+                        {session.user?.name?.charAt(0) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{guestMeal.type}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                        {format(new Date(guestMeal.date), 'MMM d, yyyy')}
+                      </p>
                     </div>
+                  </div>
 
                     <div className="flex items-center gap-3">
-                      {/* Count Controls */}
+                    {/* Count Controls */}
                       <div className="flex items-center gap-2 bg-background border rounded-full p-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-full hover:bg-primary/10"
-                          onClick={() => handleCountChange(guestMeal.type, currentCount, -1)}
-                          disabled={!canEdit || currentCount <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-
-                        <div className="flex items-center gap-1 min-w-[3rem] justify-center">
-                          <span className="font-bold text-lg">
-                            {currentCount}
-                          </span>
-                        </div>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-full hover:bg-primary/10"
-                          onClick={() => handleCountChange(guestMeal.type, currentCount, 1)}
-                          disabled={!canEdit || currentCount >= guestMealLimit}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-
-                      {/* Delete Button */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-full hover:bg-red-600/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handleDelete(guestMeal.id)}
-                        disabled={!canEdit}
+                          className="h-8 w-8 rounded-full hover:bg-primary/10"
+                        onClick={() => handleCountChange(guestMeal.type, currentCount, -1)}
+                        disabled={!canEdit || currentCount <= 1}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Minus className="h-3 w-3" />
+                      </Button>
+
+                        <div className="flex items-center gap-1 min-w-[3rem] justify-center">
+                          <span className="font-bold text-lg">
+                          {currentCount}
+                        </span>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                          className="h-8 w-8 rounded-full hover:bg-primary/10"
+                        onClick={() => handleCountChange(guestMeal.type, currentCount, 1)}
+                        disabled={!canEdit || currentCount >= guestMealLimit}
+                      >
+                        <Plus className="h-3 w-3" />
                       </Button>
                     </div>
+
+                    {/* Delete Button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-600/10 hover:text-red-500 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDelete(guestMeal.id)}
+                      disabled={!canEdit}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               )
@@ -193,7 +191,7 @@ function GuestMealManager({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </Card >
   )
 }
 

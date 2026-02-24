@@ -107,7 +107,7 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
   })
 
   // Get current period
-  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod()
+  const { data: currentPeriod, isLoading: isPeriodLoading } = useCurrentPeriod(initialData as any)
 
   // Check if user can manage meal settings (only when not loading)
   const canManageMealSettings = !isAccessLoading && userRole && ['ADMIN', 'MEAL_MANAGER', 'MANAGER'].includes(userRole)
@@ -296,8 +296,10 @@ export default function MealManagement({ roomId, groupName, searchParams: propSe
     </PageHeader>
   );
 
-  // Consolidated loading state
-  const isAnyLoading = isLoading || isAccessLoading || isPeriodLoading || isLoadingUserStats;
+  // Consolidated loading state 
+  // If we have initialData, we only show loading if a significant refetch is happening OR 
+  // if some of the essential config/access is actually missing.
+  const isAnyLoading = (isLoading && !initialData) || (isAccessLoading && !initialAccessData) || (isPeriodLoading && !initialData) || (isLoadingUserStats && !initialData);
 
   // Helper: check if user can edit meal for a type (not after meal time unless privileged)
   const canEditMeal = useCallback((type: MealType) => {

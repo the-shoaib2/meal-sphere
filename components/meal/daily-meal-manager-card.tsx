@@ -68,8 +68,22 @@ const DailyMealManagerCard = ({
                 <div className="space-y-3 sm:space-y-4">
                     <div className="grid grid-cols-1 gap-3 sm:gap-4">
                         {isLoading ? (
-                            <div className="flex justify-center items-center py-12">
-                                <Loader />
+                            <div className="space-y-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 sm:p-4 bg-muted/40 rounded-xl gap-3 sm:gap-4">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <div className="p-1.5 sm:p-2 rounded-full bg-muted-foreground/10 animate-pulse w-8 h-8 sm:w-10 sm:h-10" />
+                                            <div className="flex-1 space-y-2">
+                                                <div className="h-4 w-24 bg-muted-foreground/10 rounded animate-pulse" />
+                                                <div className="flex gap-2">
+                                                    <div className="h-4 w-12 bg-muted-foreground/10 rounded animate-pulse" />
+                                                    <div className="h-4 w-16 bg-muted-foreground/10 rounded animate-pulse" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="h-9 w-24 bg-muted-foreground/10 rounded-full animate-pulse" />
+                                    </div>
+                                ))}
                             </div>
                         ) : (
                             (["BREAKFAST", "LUNCH", "DINNER"] as MealType[]).map((mealType) => {
@@ -82,7 +96,7 @@ const DailyMealManagerCard = ({
                                         : mealType === "LUNCH"
                                             ? "☀️"
                                             : "🌙"
-                      
+
                                 const shouldAutoAdd = shouldAutoAddForUser(mealType)
                                 const isAutoTime = isAutoTimeForMeal(mealType)
 
@@ -104,7 +118,7 @@ const DailyMealManagerCard = ({
                                 return (
                                     <div
                                         key={mealType}
-                                        className="flex items-center justify-between p-3 sm:p-4 bg-muted/80 hover:bg-muted rounded-xl transition-colors gap-3 sm:gap-4"
+                                        className="flex items-center justify-between p-2 sm:p-3 bg-muted/80 hover:bg-muted rounded-xl transition-colors gap-3 sm:gap-4"
                                     >
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                             <div
