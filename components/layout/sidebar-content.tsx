@@ -10,7 +10,7 @@ import {
     Receipt,
     PieChart,
     Calculator,
-    Settings2,
+    Settings,
     type LucideIcon,
 } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
@@ -57,7 +57,7 @@ const data: {
         { title: "Calculations", url: "/calculations", icon: Calculator },
 
         { category: "Account" },
-        { title: "Settings", url: "/settings", icon: Settings2 },
+        { title: "Settings", url: "/settings", icon: Settings},
     ],
 
     account: [
@@ -113,13 +113,13 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
                                 <div key={item.title}>
                                     <button
                                         onClick={() => handleNavigation(item.url)}
-                                        className={`w-full flex items-center px-3 py-1.5 text-sm font-medium rounded-sm hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
+                                        className={`w-full flex items-center px-3 py-2 h-9 text-sm font-medium rounded-md hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group relative cursor-pointer ${isActive(item.url) ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' : 'text-muted-foreground'
                                             }`}
                                     >
                                         {isActive(item.url) && (
                                             <div className="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
                                         )}
-                                        <item.icon className={`mr-3 h-4 w-4 transition-colors ${isActive(item.url) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
+                                        <item.icon className={`mr-3 h-5 w-5 transition-colors ${isActive(item.url) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
                                         <span>{item.title}</span>
                                     </button>
                                 </div>

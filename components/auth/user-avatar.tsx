@@ -22,10 +22,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SignOutDialog } from "@/components/auth/sign-out-dialog";
 interface UserAvatarProps {
   user: {
-    id: string;
-    name?: string | undefined;
-    email?: string | undefined;
-    image?: string | undefined;
+    id?: string;
+    name?: string | null | undefined;
+    email?: string | null | undefined;
+    image?: string | null | undefined;
     role?: string;
   } | null | undefined;
   className?: string;

@@ -120,8 +120,8 @@ export async function toggleMeal(roomId: string, userId: string, dateStr: string
     }
 }
 
-export async function addGuestMeal(data: { roomId: string; userId: string; dateStr: string; type: MealType; count: number; periodId?: string }) {
-    const { roomId, userId, dateStr, type, count, periodId } = data;
+export async function addGuestMeal(data: { roomId: string; userId: string; dateStr: string; type: MealType; count: number; periodId?: string; isUpdate?: boolean }) {
+    const { roomId, userId, dateStr, type, count, periodId, isUpdate } = data;
     const session = await getServerSession(authOptions);
     if (!session?.user) return { success: false, error: "Unauthorized" };
 
@@ -195,6 +195,12 @@ export async function addGuestMeal(data: { roomId: string; userId: string; dateS
 
     // Determine period and lock status
     const targetPeriodId = targetPeriod?.id || null;
+
+    const existingMeal = todayGuestMeals.find(m => m.type === type);
+
+    if (existingMeal && !isUpdate) {
+        return { success: false, error: "Guest meal already exists for this type" };
+    }
 
     const guestMeal = await prisma.guestMeal.upsert({
         where: { guestMealIdentifier: { userId, roomId, date: targetDate, type } } as any,

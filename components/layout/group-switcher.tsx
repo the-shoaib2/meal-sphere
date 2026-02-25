@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useGroups } from "@/hooks/use-groups"
 import { Group } from "@/types/group"
 import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
@@ -53,7 +52,7 @@ export function GroupSwitcher() {
           suppressHydrationWarning
           className="flex w-full items-center gap-2 rounded-lg p-2 text-left text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground transition-colors outline-none cursor-pointer"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
+          <div className="flex aspect-square size-9 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
             {hasGroups && activeGroup?.bannerUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -118,7 +117,7 @@ export function GroupSwitcher() {
                 <div className="absolute left-0 top-1 bottom-1 w-1 bg-blue-600 dark:bg-blue-400 rounded-full" />
               )}
               <div className="flex items-center gap-3 min-w-0 w-full">
-                <div className="relative h-5 w-5 rounded-full overflow-hidden shrink-0">
+                <div className="relative h-6 w-6 rounded-full overflow-hidden shrink-0">
                   {group.bannerUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -129,7 +128,7 @@ export function GroupSwitcher() {
                   ) : (
                     <div className="flex items-center justify-center w-full h-full bg-primary/10">
                       <Users className={cn(
-                        "h-4 w-4 transition-colors",
+                        "h-5 w-5 transition-colors",
                         activeGroup?.id === group.id
                           ? "text-blue-600 dark:text-blue-400"
                           : "text-muted-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400"

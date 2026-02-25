@@ -21,7 +21,7 @@ interface GuestMealManagerProps {
   // Props passed down from parent's useMeal instance — no second hook needed
   guestMeals: GuestMeal[]
   getUserGuestMeals: (date: Date, userId?: string) => GuestMeal[]
-  addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>
+  addGuestMeal: (date: Date, type: MealType, count: number, isUpdate?: boolean) => Promise<void>
   deleteGuestMeal: (guestMealId: string, date?: Date) => Promise<void>
   mealSettings: MealSettings | null
 }
@@ -48,7 +48,7 @@ function GuestMealManager({
     if (newCount < 1 || newCount > guestMealLimit) return
 
     try {
-      await addGuestMeal(date, type as any, newCount)
+      await addGuestMeal(date, type as any, newCount, true)
       onUpdate?.()
     } catch (error: any) {
       console.error("Failed to update guest meal count:", error)
@@ -137,21 +137,21 @@ function GuestMealManager({
                     </div>
                   </div>
 
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     {/* Count Controls */}
-                      <div className="flex items-center gap-2 bg-background border rounded-full p-1">
+                    <div className="flex items-center gap-2 bg-background border rounded-full p-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                          className="h-8 w-8 rounded-full hover:bg-primary/10"
+                        className="h-8 w-8 rounded-full hover:bg-primary/10"
                         onClick={() => handleCountChange(guestMeal.type, currentCount, -1)}
                         disabled={!canEdit || currentCount <= 1}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
 
-                        <div className="flex items-center gap-1 min-w-[3rem] justify-center">
-                          <span className="font-bold text-lg">
+                      <div className="flex items-center gap-1 min-w-[3rem] justify-center">
+                        <span className="font-bold text-lg">
                           {currentCount}
                         </span>
                       </div>
@@ -159,7 +159,7 @@ function GuestMealManager({
                       <Button
                         variant="ghost"
                         size="icon"
-                          className="h-8 w-8 rounded-full hover:bg-primary/10"
+                        className="h-8 w-8 rounded-full hover:bg-primary/10"
                         onClick={() => handleCountChange(guestMeal.type, currentCount, 1)}
                         disabled={!canEdit || currentCount >= guestMealLimit}
                       >

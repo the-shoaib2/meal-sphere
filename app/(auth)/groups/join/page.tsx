@@ -15,7 +15,7 @@ export default async function JoinLandingPage() {
     const session = await getServerSession(authOptions);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 pb-20 px-4 sm:px-6">
+        <>
             <PageHeader
                 heading="Community Discovery"
                 description="Connect with your roommates or find a new community to share your journey."
@@ -37,6 +37,6 @@ export default async function JoinLandingPage() {
                     <PublicGroupsDiscovery userId={session?.user?.id} />
                 </div>
             </div>
-        </div>
+        </>
     )
 }

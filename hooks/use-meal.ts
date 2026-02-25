@@ -140,7 +140,7 @@ export interface UseMealReturn {
 
   // Mutations
   toggleMeal: (date: Date, type: MealType, userId: string) => Promise<void>;
-  addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>;
+  addGuestMeal: (date: Date, type: MealType, count: number, isUpdate?: boolean) => Promise<void>;
   deleteGuestMeal: (guestMealId: string, date?: Date) => Promise<void>;
 
   // Settings
@@ -353,7 +353,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   });
 
   const patchGuestMealMutation = useMutation({
-    mutationFn: async ({ date, type, count }: { date: Date; type: MealType; count: number }) => {
+    mutationFn: async ({ date, type, count, isUpdate }: { date: Date; type: MealType; count: number; isUpdate?: boolean }) => {
       const dateStr = formatDateSafe(date);
       const res = await patchGuestMealAction({ 
         roomId: roomId!, 
@@ -361,7 +361,8 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         dateStr, 
         type, 
         count, 
-        periodId: currentPeriod?.id 
+        periodId: currentPeriod?.id,
+        isUpdate
       });
       if (!res.success) throw new Error(res.error || "Failed to patch guest meal");
       const meal = res.data!;
@@ -533,7 +534,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     });
   }, [addOptimisticMeal, meals, session, roomId, toggleMealMutation, mealSystem]);
 
-  const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number) => {
+  const addGuestMeal = useCallback(async (date: Date, type: MealType, count: number, isUpdate?: boolean) => {
     const dateStr = formatDateSafe(date);
     const existing = (optimisticGuestMeals as GuestMeal[]).find(m => m.type === type && normalizeDateStr(m.date) === dateStr && m.userId === session?.user?.id);
 
@@ -560,7 +561,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
                 }
             });
         }
-        await patchGuestMealMutation.mutateAsync({ date, type, count });
+        await patchGuestMealMutation.mutateAsync({ date, type, count, isUpdate });
     });
   }, [patchGuestMealMutation, optimisticGuestMeals, session?.user?.id, roomId, startTransition, addOptimisticGuestMeal]);
 

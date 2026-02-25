@@ -14,7 +14,7 @@ export function RefreshButton({ refresh, isRefreshing }: RefreshButtonProps) {
       variant="outline"
       onClick={refresh}
       disabled={isRefreshing}
-      className="flex items-center gap-2 h-8 px-3"
+      className="flex items-center gap-2 px-3"
     >
       <RefreshCw
         className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}

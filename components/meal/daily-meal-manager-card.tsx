@@ -62,6 +62,7 @@ const DailyMealManagerCard = ({
                     mealSettings={mealSettings}
                     autoMealSettings={autoMealSettings}
                     currentPeriod={currentPeriod}
+                    getUserGuestMealCount={getUserGuestMealCount}
                 />
             </CardHeader>
             <CardContent>

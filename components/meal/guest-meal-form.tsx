@@ -33,6 +33,7 @@ interface GuestMealFormProps {
   mealSettings: any
   autoMealSettings: any
   currentPeriod: any
+  getUserGuestMealCount?: (date: Date, type: MealType) => number
 }
 
 function GuestMealForm({
@@ -43,7 +44,8 @@ function GuestMealForm({
   canEditGuestMeal,
   mealSettings,
   autoMealSettings,
-  currentPeriod
+  currentPeriod,
+  getUserGuestMealCount
 }: GuestMealFormProps) {
   const [open, setOpen] = useState(false)
   const [guestCount, setGuestCount] = useState(1)
@@ -71,6 +73,10 @@ function GuestMealForm({
   }, [date, form])
 
   const onSubmit = async (data: GuestMealFormData) => {
+    if (getUserGuestMealCount && getUserGuestMealCount(data.date, data.type) > 0) {
+      return; // Do nothing if already added (safety measure since UI button shouldn't allow it mostly)
+    }
+
     setIsSubmitting(true)
     try {
       await addGuestMeal(data.date, data.type, guestCount)
@@ -170,18 +176,20 @@ function GuestMealForm({
                     <div className="flex flex-col sm:flex-row justify-center sm:justify-start gap-2">
                       {(["BREAKFAST", "LUNCH", "DINNER"] as const).map((type) => {
                         const isLocked = !canEditGuestMeal(form.watch("date"), type);
+                        const isAlreadyAdded = getUserGuestMealCount ? getUserGuestMealCount(form.watch("date"), type) > 0 : false;
+                        const isDisabled = isLocked || isAlreadyAdded;
                         const isSelected = field.value === type;
 
                         return (
                           <div key={type} className="flex-1 flex flex-col gap-1">
                             <Button
                               type="button"
-                              disabled={isLocked}
+                              disabled={isDisabled}
                               variant={isSelected ? "default" : "outline"}
                               className={cn(
                                 "w-full h-11 cursor-pointer rounded-full sm:h-10 transition-all font-medium",
                                 isSelected ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm border-transparent" : "hover:bg-primary/10 hover:text-primary",
-                                isLocked && "opacity-50 grayscale-[0.5]"
+                                isDisabled && "opacity-50 grayscale-[0.5]"
                               )}
                               onClick={() => field.onChange(type)}
                             >
@@ -190,9 +198,9 @@ function GuestMealForm({
                               </span>
                               {type === "BREAKFAST" ? "Breakfast" : type === "LUNCH" ? "Lunch" : "Dinner"}
                             </Button>
-                            {isLocked && (
+                            {(isLocked || isAlreadyAdded) && (
                               <span className="text-[9px] text-red-500 font-bold text-center uppercase tracking-tighter">
-                                {isPeriodLocked(currentPeriod) ? "Locked" : "Time Passed"}
+                                {isAlreadyAdded ? "Already Added" : isPeriodLocked(currentPeriod) ? "Locked" : "Time Passed"}
                               </span>
                             )}
                           </div>
@@ -270,7 +278,7 @@ function GuestMealForm({
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !canEditGuestMeal(form.getValues("date"), form.getValues("type"))}
+                disabled={isSubmitting || !canEditGuestMeal(form.getValues("date"), form.getValues("type")) || (getUserGuestMealCount ? getUserGuestMealCount(form.getValues("date"), form.getValues("type")) > 0 : false)}
                 className="w-full sm:w-auto hover:bg-primary/90">
                 {isSubmitting ? (
                   <>
