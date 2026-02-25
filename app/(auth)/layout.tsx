@@ -68,7 +68,7 @@ export default async function AuthLayout({
         <div className="flex flex-col w-full">
           <Header />
           <div className="flex flex-1 w-full">
-            <div className="flex flex-1 w-full max-w-[1440px] mx-auto">
+            <div className="flex flex-1 w-full">
               <AppSidebar />
               <main className="flex-1 bg-background flex flex-col">
                 <div className="w-full px-4 sm:px-6 py-4 min-w-0 flex flex-col flex-1">

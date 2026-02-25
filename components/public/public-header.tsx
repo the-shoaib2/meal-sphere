@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, Utensils } from "lucide-react"
+import { Menu, Utensils, Home } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -40,7 +40,7 @@ export function PublicHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 backdrop-blur-md px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 backdrop-blur-md">
       <div className="w-full flex h-16 items-center justify-between">
         <div className="flex items-center">
           <button
@@ -123,12 +123,39 @@ export function PublicHeader() {
                     ))}
                   </div>
                   <div className="pt-4 border-t space-y-3">
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link href="/login" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
-                    </Button>
-                    <Button className="w-full" asChild>
-                      <Link href="/register" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
-                    </Button>
+                    {session ? (
+                      <div className="flex flex-col space-y-3">
+                        <div className="flex items-center gap-3 px-3 py-2 bg-muted rounded-xl">
+                          <UserAvatar user={session.user} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold truncate max-w-[120px]">
+                              {session?.user?.name || "User"}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                              {session?.user?.email}
+                            </span>
+                          </div>
+                        </div>
+                        <Button className="w-full justify-start rounded-full" variant="outline" onClick={() => {
+                          handleNavigation('/dashboard')
+                          setIsMenuOpen(false)
+                        }}>
+                          <span className="flex items-center gap-2">
+                            <Home />
+                            Dashboard
+                          </span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Button variant="outline" className="w-full rounded-full" asChild>
+                          <Link href="/login" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
+                        </Button>
+                        <Button className="w-full rounded-full" asChild>
+                          <Link href="/register" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </nav>
               </div>

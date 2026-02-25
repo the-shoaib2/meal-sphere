@@ -61,7 +61,7 @@ export default async function RootLayout({
                     <LoadingBar />
                     <InternetStatusBanner />
                     <div className="flex-1 flex flex-col w-full bg-background">
-                      <div className="flex-1 flex flex-col w-full relative">
+                      <div className="flex-1 flex flex-col w-full max-w-[1440px] mx-auto relative">
                         {children}
                       </div>
                     </div>
