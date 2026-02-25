@@ -140,17 +140,12 @@ const HeroSection = () => {
         {/* Hero Header */}
         <div className='grid grid-cols-1 gap-6 gap-y-12 md:gap-y-16 lg:grid-cols-5'>
           <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-95.5'>
-            <div className='flex flex-col gap-2 max-lg:items-center'>
-              <span className='text-primary font-medium tracking-wider uppercase text-sm'>
-                Welcome to MealSphere
-              </span>
-              <h1 className='text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl transition-opacity duration-500'>
-                {menudata[current]?.imgAlt}
-              </h1>
-            </div>
+            <h1 className='text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
+              Welcome to MealSphere
+            </h1>
 
-            <p className='text-muted-foreground max-w-xl text-xl max-lg:text-center transition-opacity duration-500 min-h-[60px]'>
-              {menudata[current]?.userComment}
+            <p className='text-muted-foreground max-w-xl text-xl max-lg:text-center'>
+              Experience the ultimate meal management platform. Plan, organize, and savor every bite from breakfast to beverages, all thoughtfully tailored to your lifestyle.
             </p>
 
             <div className='flex items-center gap-3.5'>
