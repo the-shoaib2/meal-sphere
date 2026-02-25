@@ -10,10 +10,10 @@ export default function PublicLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col w-full">
       <LoadingBar />
       <PublicHeader />
-      <main className="flex-1 w-full overflow-y-auto">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto">
         {children}
         <PublicFooter />
       </main>

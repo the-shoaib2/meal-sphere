@@ -2,6 +2,10 @@
 @config "../tailwind.config.ts";
 
 /* Scrollbar Styling - Matching ScrollArea Component */
+html {
+  scrollbar-gutter: stable;
+}
+
 /* Firefox */
 * {
   scrollbar-width: thin;
@@ -10,12 +14,12 @@
 
 /* Webkit (Chrome, Safari, Edge) */
 *::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border) / 0.9);
+  background-color: hsl(var(--border) / 0.7);
   border-radius: 9999px;
   border: none;
   margin: 0;

@@ -50,8 +50,8 @@ export default async function RootLayout({
 }>) {
   const session = await getServerAuthSession()
   return (
-    <html lang="en" suppressHydrationWarning className="h-full">
-      <body className={`${inter.className} h-full flex flex-col`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} min-h-screen flex flex-col`} suppressHydrationWarning>
         <SessionProvider session={session}>
           <QueryProvider>
             <ThemeProvider>
@@ -60,8 +60,10 @@ export default async function RootLayout({
                   <>
                     <LoadingBar />
                     <InternetStatusBanner />
-                    <div className="flex-1 flex flex-col">
-                      {children}
+                    <div className="flex-1 flex flex-col w-full bg-background">
+                      <div className="flex-1 flex flex-col w-full relative">
+                        {children}
+                      </div>
                     </div>
                     <ToastProvider />
                   </>
