@@ -27,42 +27,42 @@ const menudata: MenuData[] = [
     id: 1,
     img: "/images/hero-section/Breakfast.svg",
     imgAlt: "Breakfast",
-    userAvatar: "/images/hero-section/avatar-01.webp",
+    userAvatar: "/images/hero-section/avatar-01.png",
     userComment: "Start your day right with a healthy breakfast.",
   },
   {
     id: 2,
     img: "/images/hero-section/Lunch.svg",
     imgAlt: "Lunch",
-    userAvatar: "/images/hero-section/avatar-02.webp",
+    userAvatar: "/images/hero-section/avatar-02.png",
     userComment: "Power through your afternoon with a nutritious lunch.",
   },
   {
     id: 3,
     img: "/images/hero-section/Dinner.svg",
     imgAlt: "Dinner",
-    userAvatar: "/images/hero-section/avatar-03.webp",
+    userAvatar: "/images/hero-section/avatar-03.png",
     userComment: "Unwind with a comforting and delicious dinner.",
   },
   {
     id: 4,
     img: "/images/hero-section/Snacks.svg",
     imgAlt: "Snacks",
-    userAvatar: "/images/hero-section/avatar-04.webp",
+    userAvatar: "/images/hero-section/avatar-04.png",
     userComment: "Keep your energy up with healthy snacks.",
   },
   {
     id: 5,
     img: "/images/hero-section/Desserts.svg",
     imgAlt: "Desserts",
-    userAvatar: "/images/hero-section/avatar-01.webp",
+    userAvatar: "/images/hero-section/avatar-01.png",
     userComment: "Treat yourself to a sweet dessert.",
   },
   {
     id: 6,
     img: "/images/hero-section/Special.svg",
     imgAlt: "Special",
-    userAvatar: "/images/hero-section/avatar-02.webp",
+    userAvatar: "/images/hero-section/avatar-02.png",
     userComment: "Stay hydrated with refreshing beverages.",
   }
 ];
@@ -139,6 +139,8 @@ const HeroSection = () => {
       <div className='mx-auto flex h-full max-w-7xl flex-col gap-8 sm:gap-12 px-4 sm:px-6 lg:px-8'>
         {/* Hero Header */}
         <div className='grid grid-cols-1 gap-6 gap-y-8 md:gap-y-10 lg:grid-cols-5'>
+         
+
           <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-[22rem]'>
             <h1 className='flex flex-col gap-1 text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
               <span className="text-lg font-medium text-primary sm:text-lg lg:text-xl">Welcome to</span>
@@ -170,14 +172,18 @@ const HeroSection = () => {
             </div>
           </div>
 
-          <Carousel
-            className='w-full lg:col-span-2'
+           <Carousel
+            className='relative w-full lg:col-span-2'
             setApi={setMainApi}
             plugins={[plugin.current]}
             opts={{
               loop: true
             }}
           >
+            {/* Fade Gradients */}
+            <div className='from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r to-transparent' />
+            <div className='from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l to-transparent' />
+
             <CarouselContent>
               {menudata.map(item => (
                 <CarouselItem key={item.id} className='flex w-full items-center justify-center'>
