@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings, LayoutDashboard, Sun, Moon, Laptop, User, LogIn } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,14 +33,18 @@ interface UserAvatarProps {
 
 export function UserAvatar({ user, className = '' }: UserAvatarProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const { data: session, status } = useSession();
+  const [mounted, setMounted] = useState(false);
 
-  const { status } = useSession();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 1. Loading State (Hydration/Session Fetching)
-  if (user === undefined || status === "loading") {
+  if (!mounted || status === "loading") {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <Skeleton className="h-8 w-8 rounded-full bg-muted/60" />
+        <Skeleton className="h-9 w-9 rounded-full bg-muted/60" />
       </div>
     );
   }

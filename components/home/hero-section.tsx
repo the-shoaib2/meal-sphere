@@ -136,7 +136,7 @@ const HeroSection = () => {
       id='home'
       className='relative flex-1 py-8 sm:py-12 lg:py-16'
     >
-      <div className='mx-auto flex h-full max-w-7xl flex-col gap-8 sm:gap-12 px-4 sm:px-6 lg:px-8'>
+      <div className='mx-auto flex h-full max-w-7xl flex-col'>
         {/* Hero Header */}
         <div className='grid grid-cols-1 gap-6 gap-y-8 md:gap-y-10 lg:grid-cols-5'>
 
