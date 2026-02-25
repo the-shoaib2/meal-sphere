@@ -60,7 +60,7 @@ export function Header() {
                 <SheetHeader className="px-4 py-4 border-b">
                   <SheetTitle className="text-left flex items-center gap-2">
                     <Utensils className="h-5 w-5" />
-                    MealSphere
+                    Meal<span className="text-primary">Sphere</span>
                   </SheetTitle>
                 </SheetHeader>
                 <div className="h-full overflow-y-auto">
@@ -84,7 +84,7 @@ export function Header() {
             } md:flex flex-shrink-0`}
         >
           <Utensils className="h-6 w-6 hidden md:block" />
-          <span className="text-xl">MealSphere</span>
+          <span className="text-xl">Meal<span className="text-primary">Sphere</span></span>
         </Link>
 
         {/* Search - Centered on desktop only */}
