@@ -85,7 +85,7 @@ export function PublicHeader() {
             className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
           >
             <Utensils className="h-8 w-8" />
-            <span className="font-bold text-xl">MealSphere</span>
+            <span className="font-bold text-xl">Meal<span className="text-primary">Sphere</span></span>
           </button>
           <nav className="hidden md:flex items-center ml-8 space-x-2 text-sm font-medium">
             {navLinks.map((link) => (
