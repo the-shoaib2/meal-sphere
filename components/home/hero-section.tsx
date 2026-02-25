@@ -139,7 +139,7 @@ const HeroSection = () => {
       <div className='mx-auto flex h-full max-w-7xl flex-col gap-8 sm:gap-12 px-4 sm:px-6 lg:px-8'>
         {/* Hero Header */}
         <div className='grid grid-cols-1 gap-6 gap-y-8 md:gap-y-10 lg:grid-cols-5'>
-         
+
 
           <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-[22rem]'>
             <h1 className='flex flex-col gap-1 text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
@@ -172,7 +172,7 @@ const HeroSection = () => {
             </div>
           </div>
 
-           <Carousel
+          <Carousel
             className='relative w-full lg:col-span-2'
             setApi={setMainApi}
             plugins={[plugin.current]}
@@ -181,13 +181,13 @@ const HeroSection = () => {
             }}
           >
             {/* Fade Gradients */}
-            <div className='from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r to-transparent' />
-            <div className='from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l to-transparent' />
+            <div className='from-background pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r to-transparent' />
+            <div className='from-background pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l to-transparent' />
 
             <CarouselContent>
               {menudata.map(item => (
                 <CarouselItem key={item.id} className='flex w-full items-center justify-center'>
-                  <img src={item.img} alt={item.imgAlt} className='size-64 sm:size-72 md:size-80 lg:size-80 xl:size-95 object-contain' />
+                  <img src={item.img} alt={item.imgAlt} className='size-80 sm:size-96 md:size-[400px] lg:size-[450px] xl:size-[500px] object-contain' />
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -202,8 +202,8 @@ const HeroSection = () => {
               loop: true
             }}
           >
-            <div className='from-background pointer-events-none absolute inset-y-0 left-0 z-1 w-25 bg-gradient-to-r via-85% to-transparent' />
-            <div className='from-background pointer-events-none absolute inset-y-0 right-0 z-1 w-25 bg-gradient-to-l via-85% to-transparent' />
+            <div className='from-background pointer-events-none absolute inset-y-0 left-0 z-1 w-10 bg-gradient-to-r via-85% to-transparent' />
+            <div className='from-background pointer-events-none absolute inset-y-0 right-0 z-1 w-10 bg-gradient-to-l via-85% to-transparent' />
             <CarouselContent className='my-1 flex'>
               {menudata.map((item, index) => (
                 <CarouselItem
