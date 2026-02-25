@@ -134,12 +134,12 @@ const HeroSection = () => {
   return (
     <section
       id='home'
-      className='relative flex-1 py-12 sm:py-16 lg:py-24'
+      className='relative flex-1 py-8 sm:py-12 lg:py-16'
     >
-      <div className='mx-auto flex h-full max-w-7xl flex-col gap-16 px-4 sm:px-6 lg:px-8'>
+      <div className='mx-auto flex h-full max-w-7xl flex-col gap-8 sm:gap-12 px-4 sm:px-6 lg:px-8'>
         {/* Hero Header */}
-        <div className='grid grid-cols-1 gap-6 gap-y-12 md:gap-y-16 lg:grid-cols-5'>
-          <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-95.5'>
+        <div className='grid grid-cols-1 gap-6 gap-y-8 md:gap-y-10 lg:grid-cols-5'>
+          <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-[22rem]'>
             <h1 className='flex flex-col gap-1 text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
               <span className="text-lg font-medium text-primary sm:text-lg lg:text-xl">Welcome to</span>
               <span>MealSphere</span>
@@ -181,14 +181,14 @@ const HeroSection = () => {
             <CarouselContent>
               {menudata.map(item => (
                 <CarouselItem key={item.id} className='flex w-full items-center justify-center'>
-                  <img src={item.img} alt={item.imgAlt} className='size-95 object-contain' />
+                  <img src={item.img} alt={item.imgAlt} className='size-64 sm:size-72 md:size-80 lg:size-80 xl:size-95 object-contain' />
                 </CarouselItem>
               ))}
             </CarouselContent>
           </Carousel>
         </div>
 
-        <div className='grid grid-cols-1 gap-24 gap-y-12 md:gap-y-16 lg:grid-cols-5'>
+        <div className='grid grid-cols-1 gap-12 md:gap-16 lg:gap-24 gap-y-8 md:gap-y-10 lg:grid-cols-5'>
           <Carousel
             className='relative w-full max-lg:order-2 lg:col-span-3'
             setApi={setThumbApi}
@@ -205,8 +205,8 @@ const HeroSection = () => {
                   className={cn('basis-1/2 sm:basis-1/3 md:basis-1/4 lg:basis-1/3 xl:basis-1/4')}
                   onClick={() => handleThumbClick(index)}
                 >
-                  <div className='relative flex h-33 items-center justify-center'>
-                    <div className={cn('absolute bottom-0 -z-1 transition-all duration-300', current === index ? 'text-primary' : 'text-border')}>
+                  <div className='relative flex h-28 md:h-33 items-center justify-center'>
+                    <div className={cn('absolute bottom-0 -z-1 transition-all duration-300 scale-75 sm:scale-100', current === index ? 'text-primary' : 'text-border')}>
                       <svg xmlns='http://www.w3.org/2000/svg' width='161' height='92' viewBox='0 0 161 92' fill='none'>
                         <path
                           d='M0.682517 80.6118L0.501193 39.6946C0.480127 34.9409 3.80852 30.8294 8.46241 29.8603L148.426 0.713985C154.636 -0.579105 160.465 4.16121 160.465 10.504V80.7397C160.465 86.2674 155.98 90.7465 150.453 90.7397L10.6701 90.5674C5.16936 90.5607 0.706893 86.1125 0.682517 80.6118Z'
@@ -215,7 +215,7 @@ const HeroSection = () => {
                         />
                       </svg>
                     </div>
-                    <img src={item.img} alt={item.imgAlt} className='size-25 transition-transform duration-300 hover:scale-110' />
+                    <img src={item.img} alt={item.imgAlt} className='size-20 sm:size-24 md:size-25 transition-transform duration-300 hover:scale-110' />
                     <span
                       className={cn(
                         "absolute bottom-1 left-2 text-sm font-semibold tracking-wide drop-shadow-sm transition-colors duration-300",
