@@ -21,8 +21,8 @@ interface ShowcaseData {
   }
 }
 
-export default function ShowcaseSection() {
-  const { data, error } = usePublicData<ShowcaseData>({ endpoint: "showcase" })
+export default function ShowcaseSection({ initialData }: { initialData?: ShowcaseData | null }) {
+  const { data, error } = usePublicData<ShowcaseData>({ endpoint: "showcase", initialData })
 
 
   if (error || !data || !data.screenshots || !data.screenshots.desktop || !data.screenshots.mobile) {

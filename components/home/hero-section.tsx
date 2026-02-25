@@ -141,7 +141,7 @@ const HeroSection = () => {
         <div className='grid grid-cols-1 gap-6 gap-y-8 md:gap-y-10 lg:grid-cols-5'>
 
 
-          <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-[22rem]'>
+          <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-[18rem]'>
             <h1 className='flex flex-col gap-1 text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
               <span className="text-lg font-medium text-primary sm:text-lg lg:text-xl">Welcome to</span>
               <span>Meal<span className="text-primary">Sphere</span></span>

@@ -14,7 +14,7 @@ export default function PublicLayout({
     <div className="flex flex-col w-full min-h-full">
       <LoadingBar />
       <PublicHeader />
-      <main className="flex-1 w-full pt-16">
+      <main className="flex-1 w-full sm:pt-16">
         <FadeIn>
           {children}
         </FadeIn>

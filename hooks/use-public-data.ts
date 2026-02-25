@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 
-interface UsePublicDataOptions {
+interface UsePublicDataOptions<T> {
   endpoint: string
   enabled?: boolean
+  initialData?: T | null
 }
 
 interface UsePublicDataReturn<T> {
@@ -12,13 +13,14 @@ interface UsePublicDataReturn<T> {
   refetch: () => void
 }
 
-export function usePublicData<T>({ endpoint, enabled = true }: UsePublicDataOptions): UsePublicDataReturn<T> {
-  const [data, setData] = useState<T | null>(null)
+export function usePublicData<T>({ endpoint, enabled = true, initialData = null }: UsePublicDataOptions<T>): UsePublicDataReturn<T> {
+  const [data, setData] = useState<T | null>(initialData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!enabled) return
+    if (isInitial && initialData) return
 
     setLoading(true)
     setError(null)
@@ -37,10 +39,10 @@ export function usePublicData<T>({ endpoint, enabled = true }: UsePublicDataOpti
     } finally {
       setLoading(false)
     }
-  }, [endpoint, enabled])
+  }, [endpoint, enabled, initialData])
 
   useEffect(() => {
-    fetchData()
+    fetchData(true)
   }, [fetchData])
 
   const refetch = useCallback(() => {
@@ -48,4 +50,5 @@ export function usePublicData<T>({ endpoint, enabled = true }: UsePublicDataOpti
   }, [fetchData])
 
   return { data, loading, error, refetch }
-} 
+}
+ 

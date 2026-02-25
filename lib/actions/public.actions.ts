@@ -2,8 +2,7 @@
 
 export async function getPublicDataAction(endpoint: string) {
   try {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // No artificial delay for ultra-fast performance
 
     switch (endpoint) {
       case "hero":
@@ -155,12 +154,12 @@ export async function getPublicDataAction(endpoint: string) {
             ctaSecondary: { text: "View Meal Plans", href: "/meal-plans" },
           },
           recipeCategories: [
-            { name: "Breakfast", icon: "🌅", count: 45 },
-            { name: "Lunch", icon: "☀️", count: 67 },
-            { name: "Dinner", icon: "🌙", count: 89 },
-            { name: "Snacks", icon: "🍎", count: 34 },
-            { name: "Desserts", icon: "🍰", count: 23 },
-            { name: "Special", icon: "☕", count: 28 },
+            { name: "Breakfast", icon: "/images/hero-section/Breakfast.svg", count: 45 },
+            { name: "Lunch", icon: "/images/hero-section/Lunch.svg", count: 67 },
+            { name: "Dinner", icon: "/images/hero-section/Dinner.svg", count: 89 },
+            { name: "Snacks", icon: "/images/hero-section/Snacks.svg", count: 34 },
+            { name: "Desserts", icon: "/images/hero-section/Desserts.svg", count: 23 },
+            { name: "Special", icon: "/images/hero-section/Special.svg", count: 28 },
           ],
           featuredRecipes: [
             { id: 1, title: "Spicy Chicken Biryani", description: "Aromatic rice dish with tender chicken and fragrant spices", time: "45 min", servings: 4, difficulty: "Medium", rating: 4.8, image: "/placeholder.jpg", tags: ["Indian", "Rice", "Spicy"] },

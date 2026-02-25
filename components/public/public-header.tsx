@@ -13,11 +13,14 @@ import { useRouter } from "next/navigation"
 import { NotificationBell } from "@/components/layout/notification-bell"
 import { UserAvatar } from "@/components/auth/user-avatar"
 import { handleNavigation } from "@/lib/utils"
+import { useScrollSpy } from "@/hooks/use-scroll-spy"
+
 const navLinks = [
-  { name: 'Recipes', href: '/recipes' },
-  { name: 'Meal Plans', href: '/meal-plans' },
-  { name: 'About', href: '/about' },
-  { name: 'Contact', href: '/contact' },
+  { name: 'Features', href: '/#features' },
+  { name: 'Recipes', href: '/#recipes' },
+  { name: 'Meal Plans', href: '/#meal-plans' },
+  { name: 'About', href: '/#about' },
+  { name: 'Contact', href: '/#contact' },
 ]
 
 export function PublicHeader() {
@@ -27,6 +30,7 @@ export function PublicHeader() {
   const isMobile = useIsMobile()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
+  const activeSection = useScrollSpy(['features', 'recipes', 'meal-plans', 'about', 'contact'])
   const lastScrollY = useRef(0)
 
   useEffect(() => {
@@ -64,10 +68,24 @@ export function PublicHeader() {
   // Check if a link is active
   const isActive = (href: string) => {
     if (!pathname) return false
-    if (href === '/') {
-      return pathname === '/'
+    if (pathname !== '/') return false
+
+    const sectionId = href.split('#')[1]
+    return activeSection === sectionId
+  }
+
+  const navigateToSection = (href: string) => {
+    if (pathname === '/') {
+      const sectionId = href.split('#')[1]
+      const element = document.getElementById(sectionId)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+        setIsMenuOpen(false)
+        return
+      }
     }
-    return pathname.startsWith(href)
+    handleNavigation(href)
+    setIsMenuOpen(false)
   }
 
   return (
@@ -91,7 +109,7 @@ export function PublicHeader() {
             {navLinks.map((link) => (
               <Button
                 key={link.name}
-                onClick={() => handleNavigation(link.href)}
+                onClick={() => navigateToSection(link.href)}
                 variant={isActive(link.href) ? "secondary" : "ghost"}
                 className={cn(
                   "rounded-full transition-all px-3",
@@ -140,10 +158,7 @@ export function PublicHeader() {
                     {navLinks.map((link) => (
                       <Button
                         key={link.name}
-                        onClick={() => {
-                          handleNavigation(link.href)
-                          setIsMenuOpen(false)
-                        }}
+                        onClick={() => navigateToSection(link.href)}
                         variant={isActive(link.href) ? "secondary" : "ghost"}
                         className={cn(
                           "w-full justify-start rounded-full transition-all",

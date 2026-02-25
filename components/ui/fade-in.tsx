@@ -11,20 +11,20 @@ interface FadeInProps {
     className?: string
 }
 
-export function FadeIn({ children, delay = 0, duration = 0.6, className = "" }: FadeInProps) {
+export function FadeIn({ children, delay = 0, duration = 0.08, className = "" }: FadeInProps) {
     // Use pathname as key to force re-render/re-animation on route change
     const pathname = usePathname()
 
     return (
         <motion.div
             key={pathname}
-            initial={{ opacity: 0, filter: "blur(10px)", y: 20 }}
-            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-            exit={{ opacity: 0, filter: "blur(10px)", y: -20 }}
+            initial={{ opacity: 0, filter: "blur(1px)" }}
+            animate={{ opacity: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, filter: "blur(1px)" }}
             transition={{
                 duration: duration,
                 delay: delay,
-                ease: [0.22, 1, 0.36, 1], // Custom easing for premium feel
+                ease: "easeOut",
             }}
             className={className}
         >

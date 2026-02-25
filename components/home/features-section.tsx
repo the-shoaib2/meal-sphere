@@ -25,8 +25,8 @@ const iconMap = {
   Shield
 }
 
-export default function FeaturesSection() {
-  const { data, error } = usePublicData<FeaturesData>({ endpoint: "features" })
+export default function FeaturesSection({ initialData }: { initialData?: FeaturesData | null }) {
+  const { data, error } = usePublicData<FeaturesData>({ endpoint: "features", initialData })
 
 
   if (error || !data) {
