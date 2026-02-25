@@ -65,7 +65,7 @@ export default async function AuthLayout({
   return (
     <GroupProvider initialGroups={initialGroups} initialActiveGroup={initialActiveGroup}>
       <PeriodProvider initialData={initialPeriodData}>
-        <div className="flex flex-col w-full pt-14">
+        <div className="flex flex-col w-full">
           <Header />
           <div className="flex flex-1 w-full">
             <div className="flex flex-1 w-full">
