@@ -1,13 +1,16 @@
-import { Suspense } from 'react';
 import { fetchDashboardActivities, fetchDashboardCharts } from '@/lib/services/dashboard-service';
 import { DashboardActivity } from '@/components/dashboard/dashboard-activity';
 
 interface ActivityWrapperProps {
-    data: any;
+    userId: string;
+    groupId: string;
 }
 
-export function ActivityWrapper({ data }: ActivityWrapperProps) {
-    const { activities, chartData } = data;
+export async function ActivityWrapper({ userId, groupId }: ActivityWrapperProps) {
+    const [activities, chartData] = await Promise.all([
+        fetchDashboardActivities(userId, groupId),
+        fetchDashboardCharts(userId, groupId)
+    ]);
 
     return (
         <DashboardActivity

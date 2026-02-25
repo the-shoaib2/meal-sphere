@@ -18,13 +18,15 @@ export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewP
                         <h2 className="text-base sm:text-lg font-bold tracking-tight">Overview</h2>
                     </div>
                 </div>
-                <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 rounded-full px-2 py-1">
-                    <span className="relative flex h-2 w-2 mr-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    Live
-                </Badge>
+                <div className="flex items-center gap-2 group cursor-default">
+                    <div className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                    </div>
+                    <Badge variant="secondary" className="bg-emerald-50/50 text-emerald-700 border-emerald-200/50 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20">
+                        Live Tracking
+                    </Badge>
+                </div>
             </div>
 
             <DashboardSummaryCards

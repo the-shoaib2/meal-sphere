@@ -86,11 +86,36 @@ export default function DetailedAnalytics({
                                     />
                                     <YAxis axisLine={false} tickLine={false} />
                                     <Tooltip
-                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                        contentStyle={{
+                                            borderRadius: '12px',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                                            backgroundColor: 'rgba(255,255,255,0.95)',
+                                            backdropFilter: 'blur(4px)',
+                                            padding: '12px'
+                                        }}
+                                        cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }}
                                     />
                                     <Legend verticalAlign="top" height={36} />
-                                    <Area type="monotone" dataKey="meals" fill="url(#colorMeals)" stroke="#3b82f6" name="Meals" />
-                                    <Bar dataKey="expenses" fill="#10b981" barSize={10} radius={[4, 4, 0, 0]} name="Expenses" />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="meals"
+                                        fill="url(#colorMeals)"
+                                        stroke="#3b82f6"
+                                        strokeWidth={2}
+                                        name="Meals"
+                                        animationDuration={1500}
+                                        animationEasing="ease-in-out"
+                                    />
+                                    <Bar
+                                        dataKey="expenses"
+                                        fill="#10b981"
+                                        barSize={8}
+                                        radius={[4, 4, 0, 0]}
+                                        name="Expenses"
+                                        animationDuration={1500}
+                                        animationEasing="ease-in-out"
+                                    />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         ) : (

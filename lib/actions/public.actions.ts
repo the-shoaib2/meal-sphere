@@ -160,7 +160,7 @@ export async function getPublicDataAction(endpoint: string) {
             { name: "Dinner", icon: "🌙", count: 89 },
             { name: "Snacks", icon: "🍎", count: 34 },
             { name: "Desserts", icon: "🍰", count: 23 },
-            { name: "Beverages", icon: "☕", count: 28 },
+            { name: "Special", icon: "☕", count: 28 },
           ],
           featuredRecipes: [
             { id: 1, title: "Spicy Chicken Biryani", description: "Aromatic rice dish with tender chicken and fragrant spices", time: "45 min", servings: 4, difficulty: "Medium", rating: 4.8, image: "/placeholder.jpg", tags: ["Indian", "Rice", "Spicy"] },

@@ -2,11 +2,15 @@ import { fetchDashboardAnalytics, fetchDashboardCharts } from '@/lib/services/da
 import DetailedAnalytics from '@/components/dashboard/detailed-analytics';
 
 interface AnalyticsWrapperProps {
-    data: any;
+    userId: string;
+    groupId: string;
 }
 
-export function AnalyticsWrapper({ data }: AnalyticsWrapperProps) {
-    const { analytics, chartData } = data;
+export async function AnalyticsWrapper({ userId, groupId }: AnalyticsWrapperProps) {
+    const [analytics, chartData] = await Promise.all([
+        fetchDashboardAnalytics(userId, groupId),
+        fetchDashboardCharts(userId, groupId)
+    ]);
 
     return (
         <DetailedAnalytics

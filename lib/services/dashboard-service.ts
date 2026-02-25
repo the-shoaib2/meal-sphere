@@ -257,6 +257,66 @@ export async function fetchDashboardCharts(userId: string, groupId?: string) {
 }
 
 /**
+ * Fetches Monthly Expenses for the last 6 months
+ */
+export async function fetchMonthlyExpenses(resolvedGroupId: string) {
+    const months = 6;
+    const now = new Date();
+    const monthlyExpenses: { name: string; value: number }[] = [];
+
+    for (let i = months - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const start = new Date(d.getFullYear(), d.getMonth(), 1);
+        const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        const monthName = d.toLocaleString('default', { month: 'short' });
+
+        const expenses = await prisma.extraExpense.aggregate({
+            where: { roomId: resolvedGroupId, date: { gte: start, lte: end } },
+            _sum: { amount: true }
+        });
+
+        monthlyExpenses.push({
+            name: monthName,
+            value: Number(expenses._sum.amount || 0)
+        });
+    }
+
+    return monthlyExpenses;
+}
+
+/**
+ * Fetches Meal Rate Trend for the last 6 periods
+ */
+export async function fetchMealRateTrend(resolvedGroupId: string) {
+    const periods = await prisma.mealPeriod.findMany({
+        where: { roomId: resolvedGroupId, status: 'ENDED' as any }, // Assuming ENDED is the equivalent of COMPLETED in the schema
+        orderBy: { startDate: 'desc' },
+        take: 5,
+        select: { id: true, name: true }
+    });
+
+    const trend = await Promise.all(periods.reverse().map(async (p) => {
+        const summary = await getGroupBalanceSummary(resolvedGroupId, true, { periodId: p.id } as any);
+        return {
+            name: p.name.split(' ').pop() || p.name, // Just the month/short name
+            value: summary.mealRate || 0
+        };
+    }));
+
+    // Add current period if it exists and isn't completed
+    const current = await getCurrentPeriod(resolvedGroupId);
+    if (current && current.status !== 'ENDED') {
+        const summary = await getGroupBalanceSummary(resolvedGroupId, true);
+        trend.push({
+            name: 'Current',
+            value: summary.mealRate || 0
+        });
+    }
+
+    return trend;
+}
+
+/**
  * Fetches Analytics Data
  */
 export async function fetchDashboardAnalytics(userId: string, groupId?: string) {
@@ -276,7 +336,7 @@ export async function fetchDashboardAnalytics(userId: string, groupId?: string) 
         const currentPeriod = await getCurrentPeriod(resolvedGroupId);
         const periodId = currentPeriod?.id;
 
-        const [mealDistributionRaw, expenseDistributionRaw] = await Promise.all([
+        const [mealDistributionRaw, expenseDistributionRaw, monthlyExpenses, mealRateTrend] = await Promise.all([
             prisma.meal.groupBy({
               by: ['type'],
               where: { roomId: resolvedGroupId, periodId: periodId },
@@ -286,7 +346,9 @@ export async function fetchDashboardAnalytics(userId: string, groupId?: string) 
               by: ['type'],
               where: { roomId: resolvedGroupId, periodId: periodId },
               _sum: { amount: true }
-            })
+            }),
+            fetchMonthlyExpenses(resolvedGroupId),
+            fetchMealRateTrend(resolvedGroupId)
         ]);
 
         const mealDistribution = mealDistributionRaw.map(m => ({
@@ -299,17 +361,19 @@ export async function fetchDashboardAnalytics(userId: string, groupId?: string) 
             value: e._sum.amount || 0
         }));
 
-        // We can add meal rate trend here if we want to fetch historical periods
-        // For now, keeping it basic as per original
         const summary = await getGroupBalanceSummary(resolvedGroupId, true);
-        const mealRateTrend = [{ name: 'Current', value: summary.mealRate || 0 }];
 
         return encryptData({
             mealDistribution,
             expenseDistribution,
-            monthlyExpenses: [], // Placeholder if needed
+            monthlyExpenses,
             mealRateTrend,
-            roomStats: []
+            roomStats: summary.members?.map((m: any) => ({
+                name: m.name,
+                meals: m.mealCount,
+                balance: m.balance,
+                spent: m.totalSpent
+            })) || []
         });
       },
       [cacheKey],

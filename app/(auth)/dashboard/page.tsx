@@ -1,10 +1,11 @@
+import { Suspense } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
 import { prisma } from '@/lib/services/prisma';
 import { redirect } from 'next/navigation';
 
 // Services
-import { fetchDashboardPageData } from '@/lib/services/dashboard-service';
+import { fetchDashboardSummary } from '@/lib/services/dashboard-service';
 
 // UI Components
 import { NoGroupState } from '@/components/empty-states/no-group-state';
@@ -46,23 +47,23 @@ export default async function DashboardPage() {
         );
     }
 
-    // 2. Fetch All Dashboard Data in One Unified Cached Batch
-    const dashboardData = await fetchDashboardPageData(session.user.id, activeGroupId);
+    // 2. Fetch Initial Critical Data (Summary)
+    const summaryData = await fetchDashboardSummary(session.user.id, activeGroupId);
 
-    if (!dashboardData) return <NoGroupState />;
+    if (!summaryData) return <NoGroupState />;
 
-    const { summary: summaryData, userRole, currentPeriod } = dashboardData;
+    const { userRole, currentPeriod } = summaryData;
 
     // 3. Handle No Period State
     if (!currentPeriod) {
         const isPrivileged = ['ADMIN', 'MANAGER', 'MEAL_MANAGER'].includes(userRole || '');
         return (
-                <NoPeriodState
-                    isPrivileged={isPrivileged}
-                    periodMode={summaryData?.periodMode}
-                    title="No Active Period"
-                    description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
-                />
+            <NoPeriodState
+                isPrivileged={isPrivileged}
+                periodMode={summaryData?.periodMode}
+                title="No Active Period"
+                description="Your dashboard is currently empty because there is no active meal period. Start a new period to see analytics, meal rates, and activity."
+            />
         );
     }
 
@@ -71,25 +72,56 @@ export default async function DashboardPage() {
         <Dashboard
             heading="Dashboard"
             description="Overview of your group's meal activity and analytics."
-        // We no longer pass activities/chartData to the Shell if it doesn't use them directly (it passed them as children in original code? No, let's check Dashboard comopnent)
         >
             <div className="space-y-4 sm:space-y-2">
                 {/* Overview Section - Loaded Instantly */}
                 <DashboardOverview summaryData={summaryData} />
 
-                {/* Activity Section - Reuses pre-fetched data */}
-                <ActivityWrapper
-                    data={dashboardData}
-                />
+                {/* Activity Section - Streams in */}
+                <Suspense fallback={<ActivitySkeleton />}>
+                    <ActivityWrapper
+                        userId={session.user.id}
+                        groupId={activeGroupId}
+                    />
+                </Suspense>
 
                 {/* Quick Actions Section - Static */}
                 <DashboardQuickActions />
 
-                {/* Detailed Analytics Section - Reuses pre-fetched data */}
-                <AnalyticsWrapper
-                    data={dashboardData}
-                />
+                {/* Detailed Analytics Section - Streams in */}
+                <Suspense fallback={<AnalyticsSkeleton />}>
+                    <AnalyticsWrapper
+                        userId={session.user.id}
+                        groupId={activeGroupId}
+                    />
+                </Suspense>
             </div>
         </Dashboard>
+    );
+}
+
+function ActivitySkeleton() {
+    return (
+        <div className="space-y-4 sm:space-y-5 px-1 animate-pulse">
+            <div className="h-6 w-40 bg-muted rounded" />
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-7">
+                <div className="lg:col-span-4 h-[300px] bg-muted rounded-xl" />
+                <div className="lg:col-span-3 h-[300px] bg-muted rounded-xl" />
+            </div>
+        </div>
+    );
+}
+
+function AnalyticsSkeleton() {
+    return (
+        <div className="space-y-4 sm:space-y-6 animate-pulse">
+            <div className="h-7 w-48 bg-muted rounded" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="xl:col-span-2 h-[350px] bg-muted rounded-xl" />
+                <div className="h-[350px] bg-muted rounded-xl" />
+                <div className="h-[350px] bg-muted rounded-xl" />
+                <div className="xl:col-span-2 h-[350px] bg-muted rounded-xl" />
+            </div>
+        </div>
     );
 }

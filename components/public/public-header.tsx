@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -25,10 +25,41 @@ export function PublicHeader() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const isMobile = useIsMobile()
-  const [searchQuery, setSearchQuery] = useState('')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
+  const lastScrollY = useRef(0)
 
+  useEffect(() => {
+    let ticking = false
 
+    const updateNavbar = () => {
+      const currentScrollY = window.scrollY
+
+      // Responsive hide/show logic with low threshold for "no latency" feel
+      if (currentScrollY > lastScrollY.current && currentScrollY > 20) {
+        setIsVisible(false)
+      } else {
+        setIsVisible(true)
+      }
+
+      lastScrollY.current = currentScrollY
+      ticking = false
+    }
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateNavbar)
+        ticking = true
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', onScroll, { passive: true })
+      return () => {
+        window.removeEventListener('scroll', onScroll)
+      }
+    }
+  }, [])
 
   // Check if a link is active
   const isActive = (href: string) => {
@@ -40,12 +71,17 @@ export function PublicHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 backdrop-blur-md">
-      <div className="w-full flex h-16 items-center justify-between">
+    <header
+      style={{ willChange: 'transform' }}
+      className={cn(
+        "fixed top-0 left-0 right-0 z-40 w-full bg-background transition-transform duration-300 ease-in-out",
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      )}
+    >
+      <div className="max-w-[1440px] mx-auto flex h-16 items-center justify-between ">
         <div className="flex items-center">
           <button
             onClick={() => handleNavigation('/')}
-
             className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
           >
             <Utensils className="h-8 w-8" />
@@ -57,7 +93,6 @@ export function PublicHeader() {
                 key={link.name}
                 onClick={() => handleNavigation(link.href)}
                 variant={isActive(link.href) ? "secondary" : "ghost"}
-
                 className={cn(
                   "rounded-full transition-all px-3",
                   isActive(link.href)
@@ -110,7 +145,6 @@ export function PublicHeader() {
                           setIsMenuOpen(false)
                         }}
                         variant={isActive(link.href) ? "secondary" : "ghost"}
-
                         className={cn(
                           "w-full justify-start rounded-full transition-all",
                           isActive(link.href)
