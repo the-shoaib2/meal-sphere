@@ -28,7 +28,7 @@ interface GuestMealFormProps {
   date?: Date
   onSuccess?: () => void
   // Props lifted from parent
-  addGuestMeal: (date: Date, type: MealType, count: number) => Promise<void>
+  addGuestMeal: (date: Date, type: MealType, count: number, isUpdate?: boolean) => Promise<void>
   canEditGuestMeal: (date: Date, type: MealType) => boolean
   mealSettings: any
   autoMealSettings: any
@@ -73,21 +73,18 @@ function GuestMealForm({
   }, [date, form])
 
   const onSubmit = async (data: GuestMealFormData) => {
-    if (getUserGuestMealCount && getUserGuestMealCount(data.date, data.type) > 0) {
-      return; // Do nothing if already added (safety measure since UI button shouldn't allow it mostly)
-    }
+    const existingCount = getUserGuestMealCount ? getUserGuestMealCount(data.date, data.type) : 0;
+    const isUpdate = existingCount > 0;
 
     setIsSubmitting(true)
     try {
-      await addGuestMeal(data.date, data.type, guestCount)
+      await addGuestMeal(data.date, data.type, guestCount, isUpdate)
       form.reset()
       setGuestCount(1)
       setOpen(false)
       onSuccess?.()
     } catch (error: any) {
-      console.error("Error adding guest meal:", error)
-      // Note: The use-meal hook already fires toast.error internally for this action,
-      // so we simply catch it here to prevent the modal from closing.
+      console.error("Error adding/updating guest meal:", error)
     } finally {
       setIsSubmitting(false)
     }
@@ -177,7 +174,7 @@ function GuestMealForm({
                       {(["BREAKFAST", "LUNCH", "DINNER"] as const).map((type) => {
                         const isLocked = !canEditGuestMeal(form.watch("date"), type);
                         const isAlreadyAdded = getUserGuestMealCount ? getUserGuestMealCount(form.watch("date"), type) > 0 : false;
-                        const isDisabled = isLocked || isAlreadyAdded;
+                        const isDisabled = isLocked; // No longer disable if already added
                         const isSelected = field.value === type;
 
                         return (
@@ -185,10 +182,10 @@ function GuestMealForm({
                             <Button
                               type="button"
                               disabled={isDisabled}
-                              variant={isSelected ? "default" : "outline"}
+                              variant={isAlreadyAdded ? (isSelected ? "default" : "secondary") : (isSelected ? "default" : "outline")}
                               className={cn(
                                 "w-full h-11 cursor-pointer rounded-full sm:h-10 transition-all font-medium",
-                                isSelected ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm border-transparent" : "hover:bg-primary/10 hover:text-primary",
+                                isSelected ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm border-transparent" : (isAlreadyAdded ? "bg-primary/5 text-primary hover:bg-primary/20" : "hover:bg-primary/10 hover:text-primary"),
                                 isDisabled && "opacity-50 grayscale-[0.5]"
                               )}
                               onClick={() => field.onChange(type)}
@@ -199,7 +196,7 @@ function GuestMealForm({
                               {type === "BREAKFAST" ? "Breakfast" : type === "LUNCH" ? "Lunch" : "Dinner"}
                             </Button>
                             {(isLocked || isAlreadyAdded) && (
-                              <span className="text-[9px] text-red-500 font-bold text-center uppercase tracking-tighter">
+                              <span className={cn("text-[9px] font-bold text-center uppercase tracking-tighter", isAlreadyAdded ? "text-primary" : "text-red-500")}>
                                 {isAlreadyAdded ? "Already Added" : isPeriodLocked(currentPeriod) ? "Locked" : "Time Passed"}
                               </span>
                             )}
@@ -278,7 +275,7 @@ function GuestMealForm({
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !canEditGuestMeal(form.getValues("date"), form.getValues("type")) || (getUserGuestMealCount ? getUserGuestMealCount(form.getValues("date"), form.getValues("type")) > 0 : false)}
+                disabled={isSubmitting || !canEditGuestMeal(form.getValues("date"), form.getValues("type"))}
                 className="w-full sm:w-auto hover:bg-primary/90">
                 {isSubmitting ? (
                   <>
@@ -292,7 +289,10 @@ function GuestMealForm({
                     ) : (
                       <Plus className="mr-2 h-4 w-4" />
                     )}
-                    {`Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`}
+                    {getUserGuestMealCount && getUserGuestMealCount(form.getValues("date"), form.getValues("type")) > 0
+                      ? `Update ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`
+                      : `Add ${guestCount} Guest Meal${guestCount > 1 ? 's' : ''}`
+                    }
                   </>
                 )}
               </Button>

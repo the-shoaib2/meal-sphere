@@ -32,10 +32,16 @@ export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewP
             <DashboardSummaryCards
                 totalMeals={summaryData?.totalUserMeals}
                 currentRate={summaryData?.currentRate}
-                myBalance={summaryData?.currentBalance}
+                myBalance={summaryData?.availableBalance} // Change: currentBalance -> availableBalance
                 totalCost={summaryData?.totalCost}
                 totalAllMeals={summaryData?.totalAllMeals}
-                groupBalance={summaryData?.groupBalance}
+                groupBalance={summaryData?.groupBalance ? {
+                    groupTotalBalance: summaryData.groupBalance.netGroupBalance ?? 0,
+                    members: summaryData.groupBalance.members ?? [],
+                    totalExpenses: summaryData.groupBalance.totalExpenses,
+                    mealRate: summaryData.groupBalance.mealRate,
+                    totalMeals: summaryData.groupBalance.totalMeals,
+                } : null}
                 isLoading={isLoading}
             />
         </div>

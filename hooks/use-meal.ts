@@ -561,7 +561,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
                 }
             });
         }
-        await patchGuestMealMutation.mutateAsync({ date, type, count, isUpdate });
+        await patchGuestMealMutation.mutateAsync({ date, type, count, isUpdate: !!existing || isUpdate });
     });
   }, [patchGuestMealMutation, optimisticGuestMeals, session?.user?.id, roomId, startTransition, addOptimisticGuestMeal]);
 

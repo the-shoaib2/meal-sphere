@@ -290,7 +290,7 @@ export async function getGroupBalanceSummary(
           FROM "AccountTransaction" 
           WHERE "roomId" = ${roomId} 
           AND "periodId" = ${periodId} 
-          AND "userId" = "targetUserId"
+          AND "type" IN ('DEPOSIT', 'PAYMENT', 'ADD_BALANCE', 'INITIAL_BALANCE')
         `,
         prisma.meal.groupBy({
           by: ['userId'],

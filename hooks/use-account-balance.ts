@@ -49,7 +49,7 @@ export type GroupBalanceSummary = {
   totalExpenses: number;
   mealRate: number;
   totalMeals: number;
-  netGroupBalance: number;
+  netGroupBalance?: number;
 }
 
 export type AccountTransaction = {
