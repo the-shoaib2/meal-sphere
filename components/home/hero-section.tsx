@@ -134,14 +134,15 @@ const HeroSection = () => {
   return (
     <section
       id='home'
-      className='before:border-primary/20 relative flex-1 py-12 before:absolute before:inset-0 before:-z-10 before:-skew-y-3 before:border-b sm:py-16 lg:py-24'
+      className='relative flex-1 py-12 sm:py-16 lg:py-24'
     >
       <div className='mx-auto flex h-full max-w-7xl flex-col gap-16 px-4 sm:px-6 lg:px-8'>
         {/* Hero Header */}
         <div className='grid grid-cols-1 gap-6 gap-y-12 md:gap-y-16 lg:grid-cols-5'>
           <div className='flex w-full flex-col justify-center gap-5 max-lg:items-center lg:col-span-3 lg:h-95.5'>
-            <h1 className='text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
-              Welcome to MealSphere
+            <h1 className='flex flex-col gap-1 text-3xl leading-[1.29167] font-semibold text-balance max-lg:text-center sm:text-4xl lg:text-5xl'>
+              <span className="text-lg font-medium text-primary sm:text-lg lg:text-xl">Welcome to</span>
+              <span>MealSphere</span>
             </h1>
 
             <p className='text-muted-foreground max-w-xl text-xl max-lg:text-center'>
@@ -214,7 +215,15 @@ const HeroSection = () => {
                         />
                       </svg>
                     </div>
-                    <img src={item.img} alt={item.imgAlt} className='size-25' />
+                    <img src={item.img} alt={item.imgAlt} className='size-25 transition-transform duration-300 hover:scale-110' />
+                    <span
+                      className={cn(
+                        "absolute bottom-1 left-2 text-sm font-semibold tracking-wide drop-shadow-sm transition-colors duration-300",
+                        current === index ? "text-primary" : "text-muted-foreground/80"
+                      )}
+                    >
+                      {item.imgAlt}
+                    </span>
                   </div>
                 </CarouselItem>
               ))}
