@@ -11,6 +11,7 @@ import {
 
 export interface AnalyticsData {
   meals: MealData[];
+  guestMeals: any[];
   expenses: ExpenseData[];
   shoppingItems: ShoppingItemData[];
   calculations: CalculationData[];
@@ -111,7 +112,11 @@ export interface RoomStatsData {
   roomId: string;
   roomName: string;
   totalMeals: number;
+  regularMealsCount: number;
+  guestMealsCount: number;
   totalExpenses: number;
+  otherExpenses: number;
+  shoppingExpenses: number;
   averageMealRate: number;
   memberCount: number;
   activeDays: number;

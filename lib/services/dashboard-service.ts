@@ -44,7 +44,7 @@ export async function fetchDashboardSummary(userId: string, groupId?: string) {
 
   if (!resolvedGroupId) return null;
 
-  const cacheKey = `dashboard-summary-${userId}-${resolvedGroupId}`;
+  const cacheKey = `dashboard:${resolvedGroupId}:${userId}`;
 
   const cachedFn = unstable_cache(
     async () => {
@@ -215,11 +215,16 @@ export async function fetchDashboardCharts(userId: string, groupId?: string) {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-        const [mealsByDate, expensesByDate] = await Promise.all([
+        const [mealsByDate, guestMealsByDate, expensesByDate] = await Promise.all([
             prisma.meal.groupBy({
               by: ['date'],
               where: { roomId: resolvedGroupId, date: { gte: startOfMonth, lte: endOfMonth } },
               _count: { id: true }
+            }),
+            prisma.guestMeal.groupBy({
+              by: ['date'],
+              where: { roomId: resolvedGroupId, date: { gte: startOfMonth, lte: endOfMonth } },
+              _sum: { count: true }
             }),
             prisma.extraExpense.groupBy({
               by: ['date'],
@@ -229,6 +234,11 @@ export async function fetchDashboardCharts(userId: string, groupId?: string) {
         ]);
 
         const mealsMap = new Map(mealsByDate.map((m: any) => [m.date.toISOString().split('T')[0], m._count.id]));
+        guestMealsByDate.forEach((gm: any) => {
+            const dateStr = gm.date.toISOString().split('T')[0];
+            const currentCount = mealsMap.get(dateStr) || 0;
+            mealsMap.set(dateStr, currentCount + (gm._sum.count || 0));
+        });
         const expensesMap = new Map(expensesByDate.map((e: any) => [e.date.toISOString().split('T')[0], e._sum.amount]));
         
         const chartData: DashboardChartData[] = [];
@@ -329,18 +339,23 @@ export async function fetchDashboardAnalytics(userId: string, groupId?: string) 
         roomStats: []
     };
   
-    const cacheKey = `dashboard-analytics-${resolvedGroupId}`;
+    const cacheKey = `dashboard-analytics:${resolvedGroupId}`;
   
     const cachedFn = unstable_cache(
       async () => {
         const currentPeriod = await getCurrentPeriod(resolvedGroupId);
         const periodId = currentPeriod?.id;
 
-        const [mealDistributionRaw, expenseDistributionRaw, monthlyExpenses, mealRateTrend] = await Promise.all([
+        const [mealDistributionRaw, guestMealDistributionRaw, expenseDistributionRaw, monthlyExpenses, mealRateTrend] = await Promise.all([
             prisma.meal.groupBy({
               by: ['type'],
               where: { roomId: resolvedGroupId, periodId: periodId },
               _count: { type: true }
+            }),
+            prisma.guestMeal.groupBy({
+              by: ['type'],
+              where: { roomId: resolvedGroupId, periodId: periodId },
+              _sum: { count: true }
             }),
             prisma.extraExpense.groupBy({
               by: ['type'],
@@ -351,29 +366,47 @@ export async function fetchDashboardAnalytics(userId: string, groupId?: string) 
             fetchMealRateTrend(resolvedGroupId)
         ]);
 
-        const mealDistribution = mealDistributionRaw.map(m => ({
-            name: m.type,
-            value: m._count.type
-        }));
+        const mealMap = new Map(mealDistributionRaw.map(m => [m.type, m._count.type]));
+        guestMealDistributionRaw.forEach(gm => {
+            const current = mealMap.get(gm.type) || 0;
+            mealMap.set(gm.type, current + (gm._sum.count || 0));
+        });
+        const mealDistribution = Array.from(mealMap.entries()).map(([name, value]) => ({ name, value }));
     
         const expenseDistribution = expenseDistributionRaw.map(e => ({
             name: e.type,
             value: e._sum.amount || 0
         }));
 
-        const summary = await getGroupBalanceSummary(resolvedGroupId, true);
+        const [summary, roomData] = await Promise.all([
+            getGroupBalanceSummary(resolvedGroupId, true),
+            prisma.room.findUnique({
+                where: { id: resolvedGroupId },
+                select: { name: true }
+            })
+        ]);
+
+        // Use the summary from balance service to get aggregate stats
+        const aggregateRoomStats = [{
+            roomId: resolvedGroupId,
+            roomName: roomData?.name || 'Unknown Room',
+            totalMeals: summary.totalMeals,
+            regularMealsCount: summary.totalMeals - summary.guestMealsCount,
+            guestMealsCount: summary.guestMealsCount,
+            totalExpenses: summary.totalExpenses,
+            otherExpenses: summary.otherExpenses,
+            shoppingExpenses: summary.shoppingExpenses,
+            averageMealRate: summary.mealRate,
+            memberCount: summary.members.length,
+            activeDays: Math.max(...summary.members.map((m: any) => m.activeDays || 0), 0)
+        }];
 
         return encryptData({
             mealDistribution,
             expenseDistribution,
             monthlyExpenses,
             mealRateTrend,
-            roomStats: summary.members?.map((m: any) => ({
-                name: m.name,
-                meals: m.mealCount,
-                balance: m.balance,
-                spent: m.totalSpent
-            })) || []
+            roomStats: aggregateRoomStats
         });
       },
       [cacheKey],
@@ -415,11 +448,16 @@ export async function fetchDashboardPageData(userId: string, groupId?: string) {
                 fetchDashboardCharts(userId, resolvedGroupId),
                 // Optimized analytics: Reuse existing summary calculations
                 (async () => {
-                    const [mealDistributionRaw, expenseDistributionRaw] = await Promise.all([
+                    const [mealDistributionRaw, guestMealDistributionRaw, expenseDistributionRaw] = await Promise.all([
                         prisma.meal.groupBy({
                             by: ['type'],
                             where: { roomId: resolvedGroupId, periodId },
                             _count: { type: true }
+                        }),
+                        prisma.guestMeal.groupBy({
+                            by: ['type'],
+                            where: { roomId: resolvedGroupId, periodId },
+                            _sum: { count: true }
                         }),
                         prisma.extraExpense.groupBy({
                             by: ['type'],
@@ -428,12 +466,30 @@ export async function fetchDashboardPageData(userId: string, groupId?: string) {
                         })
                     ]);
 
+                    const mealMap = new Map(mealDistributionRaw.map(m => [m.type, m._count.type]));
+                    guestMealDistributionRaw.forEach(gm => {
+                        const current = mealMap.get(gm.type) || 0;
+                        mealMap.set(gm.type, current + (gm._sum.count || 0));
+                    });
+
                     return {
-                        mealDistribution: mealDistributionRaw.map(m => ({ name: m.type, value: m._count.type })),
+                        mealDistribution: Array.from(mealMap.entries()).map(([name, value]) => ({ name, value })),
                         expenseDistribution: expenseDistributionRaw.map(e => ({ name: e.type, value: e._sum.amount || 0 })),
                         mealRateTrend: [{ name: 'Current', value: summaryRaw?.currentRate || 0 }],
                         monthlyExpenses: [],
-                        roomStats: []
+                        roomStats: summaryRaw && summaryRaw.groupId ? [{
+                            roomId: summaryRaw.groupId,
+                            roomName: summaryRaw.groupName || 'Unknown Room',
+                            totalMeals: summaryRaw.totalAllMeals || 0,
+                            regularMealsCount: (summaryRaw.totalAllMeals || 0) - (summaryRaw.groupBalance?.guestMealsCount || 0),
+                            guestMealsCount: summaryRaw.groupBalance?.guestMealsCount || 0,
+                            totalExpenses: summaryRaw.groupBalance?.totalExpenses || 0,
+                            otherExpenses: summaryRaw.groupBalance?.otherExpenses || 0,
+                            shoppingExpenses: summaryRaw.groupBalance?.shoppingExpenses || 0,
+                            averageMealRate: summaryRaw.currentRate || 0,
+                            memberCount: summaryRaw.totalMembers || 0,
+                            activeDays: 1 // Placeholder unless we want to query it specifically
+                        }] : []
                     };
                 })()
             ]);

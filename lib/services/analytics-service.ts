@@ -11,6 +11,7 @@ import {
 
 export interface AnalyticsData {
   meals: any[];
+  guestMeals: any[];
   expenses: any[];
   shoppingItems: any[];
   calculations: any[];
@@ -64,10 +65,11 @@ export async function fetchAnalyticsData(
         targetRoomIds = requestedRoomIds;
       } else if (groupId && groupId !== 'all') {
         // Validate single group
-        if (!userRoomIds.includes(groupId)) {
+        const targetId = groupId;
+        if (!userRoomIds.includes(targetId)) {
            return encryptData({ error: 'Not a member of this group' });
         }
-        targetRoomIds = [groupId];
+        targetRoomIds = [targetId];
       } else {
         // All rooms
         targetRoomIds = userRoomIds;
@@ -100,14 +102,23 @@ export async function fetchAnalyticsData(
 
       // If no active periods, return mainly empty but with room list
       if (activePeriodIds.length === 0) {
-         // Should we return empty? Or just room stats with 0?
-         // Let's return empty stats but valid structure
          return encryptData(getEmptyAnalytics(validRooms));
       }
 
-      // 4. Batch fetch Data (Meals, Expenses, Shopping)
-      const [meals, expenses, shoppingItems, roomMembers] = await Promise.all([
+      // 4. Batch fetch Data (Meals, GuestMeals, Expenses, Shopping)
+      const [meals, guestMeals, expenses, shoppingItems, roomMembers] = await Promise.all([
         prisma.meal.findMany({
+          where: { 
+             roomId: { in: validRoomIds },
+             periodId: { in: activePeriodIds } 
+          },
+          include: {
+            room: { select: { id: true, name: true } },
+            user: { select: { id: true, name: true } }
+          },
+          orderBy: { date: 'desc' }
+        }),
+        prisma.guestMeal.findMany({
           where: { 
              roomId: { in: validRoomIds },
              periodId: { in: activePeriodIds } 
@@ -134,7 +145,17 @@ export async function fetchAnalyticsData(
              roomId: { in: validRoomIds },
              periodId: { in: activePeriodIds }
           },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+            description: true,
+            purchased: true,
+            quantity: true,
+            unit: true,
+            userId: true,
+            roomId: true,
+            periodId: true,
             room: { select: { id: true, name: true } },
             user: { select: { id: true, name: true } }
           },
@@ -155,12 +176,17 @@ export async function fetchAnalyticsData(
       // 5. Calculations
       const calculations = validRoomIds.map((roomId) => {
         const roomMeals = meals.filter(m => m.roomId === roomId);
+        const roomGuestMeals = guestMeals.filter(m => m.roomId === roomId);
         const roomExpenses = expenses.filter(e => e.roomId === roomId);
         const roomShopping = shoppingItems.filter(s => s.roomId === roomId);
 
-        const totalMeals = roomMeals.length;
-        const totalExpense = roomExpenses.reduce((sum, e) => sum + e.amount, 0) +
-          roomShopping.reduce((sum, s) => sum + (s.quantity || 0), 0);
+        const regularMealsCount = roomMeals.length;
+        const guestMealsCount = roomGuestMeals.reduce((sum, m) => sum + m.count, 0);
+        const totalMeals = regularMealsCount + guestMealsCount;
+
+        const otherExpenses = roomExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const shoppingExpenses = 0; // ShoppingItem no longer has 'amount' field
+        const totalExpense = otherExpenses + shoppingExpenses;
 
         const mealRate = totalMeals > 0 ? totalExpense / totalMeals : 0;
 
@@ -172,7 +198,7 @@ export async function fetchAnalyticsData(
           endDate = period.endDate ? new Date(period.endDate) : new Date();
         } else {
            // Fallback inferred
-           const dates = [...roomMeals, ...roomExpenses, ...roomShopping].map(item => item.date);
+           const dates = [...roomMeals, ...roomGuestMeals, ...roomExpenses, ...roomShopping].map(item => item.date);
            startDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => d.getTime()))) : new Date();
            endDate = dates.length > 0 ? new Date(Math.max(...dates.map(d => d.getTime()))) : new Date();
         }
@@ -184,7 +210,11 @@ export async function fetchAnalyticsData(
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           totalMeals,
+          regularMealsCount,
+          guestMealsCount,
           totalExpense,
+          otherExpenses,
+          shoppingExpenses,
           mealRate,
           memberCount: memberCounts[roomId] || 0,
         };
@@ -198,20 +228,30 @@ export async function fetchAnalyticsData(
 
       const roomStats = calculations.map(calc => {
          const roomMeals = meals.filter(meal => meal.roomId === calc.roomId);
-         const activeDays = new Set(roomMeals.map(meal => meal.date.toDateString())).size;
+         const roomGuestMeals = guestMeals.filter(meal => meal.roomId === calc.roomId);
+         const activeDays = new Set([
+           ...roomMeals.map(meal => meal.date.toDateString()),
+           ...roomGuestMeals.map(meal => meal.date.toDateString())
+         ]).size;
+
          return {
            roomId: calc.roomId,
            roomName: calc.roomName,
            totalMeals: calc.totalMeals,
+           regularMealsCount: calc.regularMealsCount,
+           guestMealsCount: calc.guestMealsCount,
            totalExpenses: calc.totalExpense,
+           otherExpenses: calc.otherExpenses,
+           shoppingExpenses: calc.shoppingExpenses,
            averageMealRate: calc.mealRate,
            memberCount: calc.memberCount,
-           activeDays
+           activeDays: activeDays || 1
          };
       });
 
       const result: AnalyticsData = {
         meals,
+        guestMeals,
         expenses,
         shoppingItems,
         calculations,
@@ -288,6 +328,7 @@ export async function fetchUserRoomsList(userId: string) {
 function getEmptyAnalytics(validRooms: {id: string, name: string | null}[] = []) {
   return {
     meals: [],
+    guestMeals: [],
     expenses: [],
     shoppingItems: [],
     calculations: validRooms.map(r => ({
@@ -297,7 +338,11 @@ function getEmptyAnalytics(validRooms: {id: string, name: string | null}[] = [])
         startDate: new Date().toISOString(),
         endDate: new Date().toISOString(),
         totalMeals: 0,
+        regularMealsCount: 0,
+        guestMealsCount: 0,
         totalExpense: 0,
+        otherExpenses: 0,
+        shoppingExpenses: 0,
         mealRate: 0,
         memberCount: 0
     })),

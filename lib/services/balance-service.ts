@@ -137,15 +137,14 @@ export async function calculateTotalExpenses(roomId: string, periodId: string | 
       return 0;
     }
 
-    const aggregated = await prisma.extraExpense.aggregate({
-      where: {
-        roomId,
-        periodId: periodId,
-      },
-      _sum: { amount: true },
-    });
+    const [extraExpenses] = await Promise.all([
+      prisma.extraExpense.aggregate({
+        where: { roomId, periodId },
+        _sum: { amount: true },
+      })
+    ]);
 
-    return aggregated._sum.amount || 0;
+    return (extraExpenses._sum.amount || 0);
   } catch (error) {
     console.error('Error calculating total expenses:', error);
     return 0;
@@ -163,13 +162,18 @@ export async function calculateMealRate(
       return { mealRate: 0, totalMeals: 0, totalExpenses: 0 };
     }
 
-    // Get total meals in the room for current period
-    const totalMeals = await prisma.meal.count({
-      where: {
-        roomId,
-        periodId: periodId, // Use direct ID filter
-      },
-    });
+    // Get total meals in the room for current period (User meals + Guest meals)
+    const [primaryMeals, guestMealsSum] = await Promise.all([
+      prisma.meal.count({
+        where: { roomId, periodId },
+      }),
+      prisma.guestMeal.aggregate({
+        where: { roomId, periodId },
+        _sum: { count: true }
+      })
+    ]);
+
+    const totalMeals = primaryMeals + (guestMealsSum._sum.count || 0);
 
     // Get total expenses (use pre-calculated if available)
     const totalExpenses = precalculatedTotalExpenses !== undefined
@@ -193,13 +197,17 @@ export async function calculateUserMealCount(userId: string, roomId: string, per
       return 0;
     }
 
-    return await prisma.meal.count({
-      where: {
-        userId,
-        roomId,
-        periodId: periodId,
-      },
-    });
+    const [primaryCount, guestCountSum] = await Promise.all([
+      prisma.meal.count({
+        where: { userId, roomId, periodId },
+      }),
+      prisma.guestMeal.aggregate({
+        where: { userId, roomId, periodId },
+        _sum: { count: true }
+      })
+    ]);
+
+    return primaryCount + (guestCountSum._sum.count || 0);
   } catch (error) {
     console.error('Error calculating user meal count:', error);
     return 0;
@@ -272,7 +280,7 @@ export async function getGroupBalanceSummary(
       const periodId = currentPeriod?.id;
 
       // Split into two smaller batches to avoid overwhelming connection pool in Session mode
-      const [members, balancesGrouped] = await Promise.all([
+      const [members, balancesGrouped, guestMealsGrouped] = await Promise.all([
         prisma.roomMember.findMany({
           where: { roomId },
           include: { user: { select: { id: true, name: true, image: true, email: true } } },
@@ -281,6 +289,11 @@ export async function getGroupBalanceSummary(
           by: ['targetUserId'],
           where: { roomId, periodId: periodId },
           _sum: { amount: true }
+        }),
+        prisma.guestMeal.groupBy({
+          by: ['userId'],
+          where: { roomId, periodId: periodId },
+          _sum: { count: true },
         }),
       ]);
 
@@ -310,18 +323,50 @@ export async function getGroupBalanceSummary(
       const groupTotalBalance = Number((groupTotalResult as any)?.[0]?.total || 0);
 
       const mealCountMap = new Map<string, number>();
+      const regularMealCountMap = new Map<string, number>();
+      const guestMealCountMap = new Map<string, number>();
+      const userActiveDaysMap = new Map<string, Set<string>>();
+      
       let totalMeals = prefetchedData?.totalMeals || 0;
       
+      // Initialize maps for all members
+      members.forEach(m => {
+        regularMealCountMap.set(m.userId, 0);
+        guestMealCountMap.set(m.userId, 0);
+        mealCountMap.set(m.userId, 0);
+        userActiveDaysMap.set(m.userId, new Set());
+      });
+
+      // Fetch all meals for active days calculation
+      const [allMeals, allGuestMeals] = await Promise.all([
+        prisma.meal.findMany({
+          where: { roomId, periodId: periodId },
+          select: { userId: true, date: true }
+        }),
+        prisma.guestMeal.findMany({
+          where: { roomId, periodId: periodId },
+          select: { userId: true, date: true, count: true }
+        })
+      ]);
+
+      allMeals.forEach(m => {
+        if (m.userId) {
+          regularMealCountMap.set(m.userId, (regularMealCountMap.get(m.userId) || 0) + 1);
+          mealCountMap.set(m.userId, (mealCountMap.get(m.userId) || 0) + 1);
+          userActiveDaysMap.get(m.userId)?.add(m.date.toDateString());
+        }
+      });
+
+      allGuestMeals.forEach(gm => {
+        if (gm.userId) {
+          guestMealCountMap.set(gm.userId, (guestMealCountMap.get(gm.userId) || 0) + gm.count);
+          mealCountMap.set(gm.userId, (mealCountMap.get(gm.userId) || 0) + gm.count);
+          userActiveDaysMap.get(gm.userId)?.add(gm.date.toDateString());
+        }
+      });
+
       if (prefetchedData?.totalMeals === undefined) {
-         mealsGrouped.forEach((m: any) => {
-            const count = m._count.id || 0;
-            if (m.userId) mealCountMap.set(m.userId, count);
-            totalMeals += count;
-         });
-      } else {
-         mealsGrouped.forEach((m: any) => {
-            if (m.userId) mealCountMap.set(m.userId, m._count.id || 0);
-         });
+        totalMeals = Array.from(mealCountMap.values()).reduce((sum, count) => sum + count, 0);
       }
 
       // 4. Calculate Totals
@@ -336,6 +381,9 @@ export async function getGroupBalanceSummary(
       const membersWithBalances = members.map((m: any) => {
         const basicBalance = balanceMap.get(m.userId) || 0;
         const userMealCount = mealCountMap.get(m.userId) || 0;
+        const regularMealsCount = regularMealCountMap.get(m.userId) || 0;
+        const guestMealsCount = guestMealCountMap.get(m.userId) || 0;
+        const activeDays = userActiveDaysMap.get(m.userId)?.size || 0;
 
         if (includeDetails) {
           const totalSpent = userMealCount * (mealRate || 0);
@@ -359,6 +407,9 @@ export async function getGroupBalanceSummary(
             availableBalance,
             totalSpent,
             mealCount: userMealCount,
+            regularMealsCount,
+            guestMealsCount,
+            activeDays,
             mealRate,
           };
         }
@@ -378,15 +429,33 @@ export async function getGroupBalanceSummary(
             image: m.user.image,
           },
           balance: basicBalance,
+          mealCount: userMealCount,
+          regularMealsCount,
+          guestMealsCount,
+          activeDays,
         };
       });
+
+      const guestMealsCount = guestMealsGrouped.reduce((sum, gm) => sum + (gm._sum.count || 0), 0);
+
+      // Fetch shopping vs extra split for details
+      const [sumExtra] = await Promise.all([
+          prisma.extraExpense.aggregate({
+              where: { roomId, periodId: periodId },
+              _sum: { amount: true }
+          })
+      ]);
+      const shoppingExpensesTotal = 0; // ShoppingItem doesn't have amount field in DB
 
       const result = {
         members: membersWithBalances,
         groupTotalBalance: groupTotalBalance,
         totalExpenses: Number(totalExpenses) || 0,
+        otherExpenses: Number(sumExtra._sum.amount || 0),
+        shoppingExpenses: shoppingExpensesTotal,
         mealRate: Number(mealRate) || 0,
         totalMeals: Number(totalMeals) || 0,
+        guestMealsCount: guestMealsCount,
         netGroupBalance: Number(groupTotalBalance - (totalExpenses || 0)) || 0,
         currentPeriod: currentPeriod ? {
           id: currentPeriod.id,

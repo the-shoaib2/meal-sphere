@@ -69,7 +69,6 @@ export async function createShoppingItemAction(formData: FormData) {
 
     const shoppingItem = await ShoppingService.createShoppingItem(userId, roomId, {
       description: description.substring(0, 50) || 'Shopping Item',
-      amount,
       date,
       receiptUrl,
       periodId: finalPeriodId
@@ -81,7 +80,7 @@ export async function createShoppingItemAction(formData: FormData) {
     await notifyRoomMembersBatch(
       roomId,
       NotificationType.PAYMENT_CREATED,
-      `${user?.name || 'Someone'} added a new shopping item of ${amount} for ${description} in ${room?.name || 'the group'}.`,
+      `${user?.name || 'Someone'} added a new shopping item for ${description} in ${room?.name || 'the group'}.`,
       userId
     );
 

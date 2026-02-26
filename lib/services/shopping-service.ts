@@ -89,14 +89,14 @@ export async function fetchShoppingData(userId: string, roomId: string, periodId
     return cachedData;
 }
 
-export async function createShoppingItem(userId: string, roomId: string, data: { description: string, amount: number, date: Date, receiptUrl?: string | null, periodId: string }) {
-    const { description, amount, date, receiptUrl, periodId } = data;
+export async function createShoppingItem(userId: string, roomId: string, data: { description: string, date: Date, receiptUrl?: string | null, periodId: string }) {
+    const { description, date, receiptUrl, periodId } = data;
 
     const item = await prisma.shoppingItem.create({
         data: {
             name: description.substring(0, 50) || 'Shopping Item',
             description,
-            quantity: amount,
+            quantity: 1,
             date,
             receiptUrl,
             userId,

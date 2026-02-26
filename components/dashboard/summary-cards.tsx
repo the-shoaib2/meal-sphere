@@ -36,6 +36,7 @@ interface SingleSummaryCardProps {
   icon: LucideIcon;
   iconColorClass: string;
   iconBgClass: string;
+  textColorClass?: string;
   children: React.ReactNode;
   className?: string;
   isLoading?: boolean;
@@ -46,6 +47,7 @@ const SingleSummaryCard = ({
   icon: Icon,
   iconColorClass,
   iconBgClass,
+  textColorClass,
   children,
   className,
   isLoading,
@@ -62,7 +64,7 @@ const SingleSummaryCard = ({
         </div>
       </CardHeader>
       <CardContent className="px-3 sm:px-4 pb-4 pt-0">
-        <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-1 h-8">
+        <div className={cn("text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-1 h-8", textColorClass || "text-foreground")}>
           {isLoading ? (
             <Skeleton className="h-7 w-16" />
           ) : (
@@ -99,6 +101,7 @@ export default function SummaryCards({
         icon={Utensils}
         iconBgClass="bg-amber-500/10 dark:bg-amber-500/20"
         iconColorClass="text-amber-600 dark:text-amber-500"
+        textColorClass="text-amber-600 dark:text-amber-500"
         isLoading={isLoading}
       >
         <NumberTicker value={totalMeals} className="text-xl sm:text-2xl font-bold" />
@@ -111,6 +114,7 @@ export default function SummaryCards({
         icon={Calculator}
         iconBgClass="bg-blue-500/10 dark:bg-blue-500/20"
         iconColorClass="text-blue-600 dark:text-blue-500"
+        textColorClass="text-blue-600 dark:text-blue-500"
         isLoading={isLoading}
       >
         <span className="text-blue-600 dark:text-blue-500">৳</span>
@@ -122,6 +126,7 @@ export default function SummaryCards({
         icon={Wallet}
         iconBgClass="bg-indigo-500/10 dark:bg-indigo-500/20"
         iconColorClass="text-indigo-600 dark:text-indigo-500"
+        textColorClass="text-indigo-600 dark:text-indigo-500"
         isLoading={isLoading}
       >
         <span className="text-indigo-600 dark:text-indigo-500">৳</span>
@@ -133,6 +138,7 @@ export default function SummaryCards({
         icon={Receipt}
         iconBgClass="bg-rose-500/10 dark:bg-rose-500/20"
         iconColorClass="text-rose-600 dark:text-rose-500"
+        textColorClass="text-rose-600 dark:text-rose-500"
         isLoading={isLoading}
       >
         <span className="text-rose-600 dark:text-rose-500">৳</span>
@@ -146,14 +152,15 @@ export default function SummaryCards({
             icon={DollarSign}
             iconBgClass="bg-emerald-500/10 dark:bg-emerald-500/20"
             iconColorClass="text-emerald-600 dark:text-emerald-500"
+            textColorClass={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}
             className={groupBalance && groupBalance.groupTotalBalance < 0 ? 'text-red-600 dark:text-red-500' : ''}
             isLoading={isLoading}
           >
-            <span className={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}>৳</span>
+            <span>৳</span>
             <NumberTicker
               value={groupBalance?.groupTotalBalance ?? 0}
               decimalPlaces={2}
-              className={cn("text-xl sm:text-2xl font-bold", groupBalance && groupBalance.groupTotalBalance < 0 && "text-red-600 dark:text-red-500")}
+              className="text-xl sm:text-2xl font-bold"
             />
           </SingleSummaryCard>
 
@@ -162,6 +169,7 @@ export default function SummaryCards({
             icon={Receipt}
             iconBgClass="bg-orange-500/10 dark:bg-orange-500/20"
             iconColorClass="text-orange-600 dark:text-orange-500"
+            textColorClass="text-orange-600 dark:text-orange-500"
             isLoading={isLoading}
           >
             <span className="text-orange-600 dark:text-orange-500">৳</span>

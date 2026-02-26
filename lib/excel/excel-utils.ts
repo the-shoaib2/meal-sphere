@@ -279,7 +279,7 @@ export async function exportShoppingToExcel(
     const rows: any[] = shoppingItems.map((item) => ({
       Date: item.date.toISOString().split("T")[0],
       Description: item.name,
-      Amount: item.quantity,
+      Quantity: item.quantity,
       AddedBy: item.user.name,
     }))
 

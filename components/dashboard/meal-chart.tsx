@@ -52,43 +52,43 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
 
   return (
     <TooltipProvider>
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card">
-        <CardHeader className="pb-3 sm:pb-4 px-6 sm:px-8 pt-6 sm:pt-8">
+      <Card className="h-[320px] sm:h-[360px] lg:h-[400px] xl:h-[440px] shadow-sm bg-card">
+        <CardHeader className="pb-2 sm:pb-3 px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-full bg-primary/10 text-primary">
-                <TrendingUp className="h-5 w-5" />
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <CardTitle className="text-base sm:text-lg font-bold tracking-tight text-foreground">Monthly Meal Summary</CardTitle>
+              <CardTitle className="text-sm sm:text-base font-bold tracking-tight text-foreground">Monthly Meal Summary</CardTitle>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="p-1.5 rounded-full hover:bg-muted/50 transition-colors cursor-help">
-                  <Info className="h-4 w-4 text-muted-foreground/50" />
+                  <Info className="h-4 w-4 text-muted-foreground/30" />
                 </div>
               </TooltipTrigger>
               <TooltipContent className="bg-popover text-popover-foreground border-border shadow-xl">
-                <p className="font-medium">Hover over bars to see detailed info</p>
+                <p className="font-medium text-xs">Hover over bars to see detailed info</p>
               </TooltipContent>
             </Tooltip>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
             {[
-              { label: 'Total', value: totalMeals, color: 'blue', icon: Utensils },
-              { label: 'Active', value: daysWithMeals, color: 'green', icon: Calendar },
-              { label: 'Avg', value: averageMealsPerDay, color: 'orange', icon: BarChart3 },
+              { label: 'Total', value: totalMeals, color: 'amber', icon: Utensils },
+              { label: 'Active', value: daysWithMeals, color: 'emerald', icon: Calendar },
+              { label: 'Avg', value: averageMealsPerDay, color: 'blue', icon: BarChart3 },
               { label: 'Exp', value: `৳${totalExpenses}`, color: 'rose', icon: DollarSign }
             ].map((stat, i) => (
-              <div key={i} className="p-3 sm:p-4 rounded-xl bg-muted/30 border border-border/50 flex items-center gap-3 group transition-all duration-300 hover:bg-muted/50">
-                <div className={`p-2 rounded-full bg-${stat.color}-500/10 text-${stat.color}-600 dark:text-${stat.color}-400`}>
-                  {React.createElement(stat.icon, { className: "h-4 w-4" })}
+              <div key={i} className="p-2 sm:p-3 rounded-lg bg-muted/30 border border-border/50 flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2.5 group transition-all duration-300 hover:bg-muted/50">
+                <div className={`p-1.5 rounded-full bg-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-500/10 text-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-600 dark:text-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-500`}>
+                  {React.createElement(stat.icon, { className: "h-3.5 w-3.5" })}
                 </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">{stat.label}</span>
-                  <span className="text-sm sm:text-base font-bold tracking-tight text-foreground">
+                <div className="flex flex-col flex-1 text-center sm:text-left">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">{stat.label}</span>
+                  <span className="text-xs sm:text-sm font-black tracking-tighter text-foreground leading-none mt-0.5">
                     {isLoading ? (
-                      <span className="text-muted-foreground/50">...</span>
+                      <span className="text-muted-foreground/30">...</span>
                     ) : (
                       <NumberTicker value={parseFloat(String(stat.value).replace('৳', '')) || 0} decimalPlaces={stat.label === 'Avg' || stat.label === 'Exp' ? 1 : 0} />
                     )}
@@ -100,12 +100,12 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
         </CardHeader>
         <CardContent className="p-4 pt-0 flex-grow">
           {isLoading ? (
-            <div className="h-[180px] sm:h-[220px] lg:h-[250px] xl:h-[280px] w-full flex items-center justify-center">
+            <div className="h-[140px] sm:h-[180px] lg:h-[200px] xl:h-[230px] w-full flex items-center justify-center">
               <Loader />
             </div>
           ) : chartData ? (
-            <div className="h-[160px] sm:h-[200px] lg:h-[230px] xl:h-[260px] w-full overflow-x-auto">
-              <div className="h-full flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-4 min-w-0">
+            <div className="h-[120px] sm:h-[160px] lg:h-[180px] xl:h-[210px] w-full overflow-x-auto scrollbar-none">
+              <div className="h-full flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-2 min-w-0">
                 {chartData.map((day, index) => {
                   const height = maxMeals > 0 ? (day.meals / maxMeals) * 100 : 0;
                   const isToday = new Date(day.date).toDateString() === new Date().toDateString();
@@ -117,16 +117,16 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
                         <div className="flex-1 flex flex-col items-center group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : day.date)}>
                           <div className="relative w-full flex flex-col justify-end" style={{ height: '100%' }}>
                             <div
-                              className={`w-full transition-all duration-300 rounded-t-md relative ${day.meals > 0
+                              className={`w-full transition-all duration-300 rounded-t-lg relative ${day.meals > 0
                                 ? (isToday
-                                  ? 'bg-primary shadow-[0_-4px_12px_rgba(var(--primary),0.3)] scale-x-110 z-10'
-                                  : 'bg-primary/40 hover:bg-primary/70 hover:scale-x-105')
-                                : 'bg-muted/30'
-                                } ${isSelected ? 'scale-x-125 bg-primary/90 ring-2 ring-primary/20 z-10' : ''}`}
-                              style={{ height: `${Math.max(height, 8)}%`, minHeight: '6px' }}
+                                  ? 'bg-primary shadow-[0_-4px_16px_rgba(var(--primary),0.4)] scale-x-110 z-10'
+                                  : 'bg-primary/30 hover:bg-primary/60 hover:scale-x-105')
+                                : 'bg-muted/20'
+                                } ${isSelected ? 'scale-x-110 bg-primary/80 ring-2 ring-primary/20 z-10' : ''}`}
+                              style={{ height: `${Math.max(height, 5)}%`, minHeight: '4px' }}
                             >
                               {isToday && (
-                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-background rounded-full shadow-sm animate-pulse" />
+                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-background rounded-full shadow-lg border border-primary animate-pulse" />
                               )}
                             </div>
                           </div>

@@ -36,7 +36,7 @@ export function generateExpenseData(expenses: any[], shoppingItems: any[]) {
     })),
     ...shoppingItems.map((item) => ({
       name: "SHOPPING",
-      value: item.amount,
+      value: 0,
       date: new Date(item.date),
     })),
   ]
@@ -100,7 +100,7 @@ export function generateMonthlyExpenseData(expenses: any[], shoppingItems: any[]
       date: new Date(expense.date),
     })),
     ...shoppingItems.map((item) => ({
-      amount: item.amount,
+      amount: 0,
       date: new Date(item.date),
     })),
   ]
