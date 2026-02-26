@@ -10,7 +10,7 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewProps) {
     return (
-        <div className="space-y-3 sm:space-y-5">
+        <div className="space-y-3 sm:space-y-5 w-full min-w-0">
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2.5">
                     <BarChart3 className="h-4 w-4 text-primary" />

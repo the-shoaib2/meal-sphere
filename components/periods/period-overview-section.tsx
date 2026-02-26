@@ -25,10 +25,10 @@ export function PeriodOverviewSection({
   return (
     <div className="space-y-4">
       {/* Period Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total Periods</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">Total Periods</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -40,7 +40,7 @@ export function PeriodOverviewSection({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Current Period Meals</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">Current Period Meals</CardTitle>
             <Utensils className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -54,7 +54,7 @@ export function PeriodOverviewSection({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Current Period Expenses</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">Current Period Expenses</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -68,7 +68,7 @@ export function PeriodOverviewSection({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Current Period Payments</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">Current Period Payments</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>

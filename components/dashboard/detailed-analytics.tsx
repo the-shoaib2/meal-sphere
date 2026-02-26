@@ -58,7 +58,7 @@ export default function DetailedAnalytics({
     // Always show the container, let individual cards handle empty states
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-6 w-full min-w-0">
             <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 <h2 className="text-lg sm:text-xl font-semibold">Premium Analytics</h2>
@@ -66,7 +66,7 @@ export default function DetailedAnalytics({
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                 {/* 1. Daily Performance (Composed Chart) */}
-                <div className="xl:col-span-2">
+                <div className="xl:col-span-2 min-w-0">
                     <AnalyticsCard title="Daily Performance" icon={Activity} isLoading={isLoading} description="Combined view of meals and expenses over the last 30 days.">
                         {chartData && chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
@@ -186,7 +186,7 @@ export default function DetailedAnalytics({
                 </AnalyticsCard>
 
                 {/* 4. Meal Rate Trend (Area Chart) */}
-                <div className="xl:col-span-2">
+                <div className="xl:col-span-2 min-w-0">
                     <AnalyticsCard title="Meal Rate Forecast" icon={TrendingUp} isLoading={isLoading} description="Estimated meal rate trend based on current data.">
                         {mealRateTrend && mealRateTrend.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
@@ -215,7 +215,7 @@ export default function DetailedAnalytics({
 
                 {/* 5. Room Statistics - Render during loading to prevent shift */}
                 {(isLoading || (roomStats && roomStats.length > 0)) && (
-                    <div className="xl:col-span-3">
+                    <div className="xl:col-span-3 min-w-0">
                         <AnalyticsCard title="Detailed Room Statistics" icon={Users} isLoading={isLoading} description="Comprehensive breakdown of performance by room.">
                             <RoomStatsTable data={roomStats} />
                         </AnalyticsCard>

@@ -28,7 +28,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
 
   if (!isLoading && hasNoData) {
     return (
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card border">
+      <Card className="h-[480px] sm:h-[450px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card border min-w-0 flex flex-col w-full overflow-hidden">
         <CardHeader className="pb-3 sm:pb-4 px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
@@ -40,7 +40,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-0 flex-grow">
-          <div className="h-[250px] sm:h-[300px] lg:h-[350px] w-full px-4 sm:px-6 flex items-center justify-center bg-muted/20 border border-dashed border-border rounded-xl m-2">
+          <div className="h-[340px] sm:h-[320px] lg:h-[350px] w-full px-4 sm:px-6 flex items-center justify-center bg-muted/20 border border-dashed border-border rounded-xl m-2">
             <div className="text-center space-y-2">
               <TrendingUp className="h-10 w-10 text-muted-foreground/30 mx-auto" />
               <p className="text-xs font-bold text-muted-foreground">Chart coming soon</p>
@@ -53,14 +53,14 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
 
   return (
     <TooltipProvider>
-      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card">
+      <Card className="h-[480px] sm:h-[450px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card min-w-0 flex flex-col w-full overflow-hidden">
         <CardHeader className="pb-2 sm:pb-3 px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-full bg-primary/10 text-primary">
                 <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <CardTitle className="text-sm sm:text-base font-bold tracking-tight text-foreground">Monthly Meal Summary</CardTitle>
+              <CardTitle className="text-sm sm:text-base font-bold tracking-tight text-foreground truncate">Monthly Meal Summary</CardTitle>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -74,39 +74,42 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
             </Tooltip>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 min-w-0 w-full overflow-hidden">
             {[
               { label: 'Total', value: totalMeals, color: 'amber', icon: Utensils },
               { label: 'Active', value: daysWithMeals, color: 'emerald', icon: Calendar },
               { label: 'Avg', value: averageMealsPerDay, color: 'blue', icon: BarChart3 },
-              { label: 'Exp', value: `৳${totalExpenses}`, color: 'rose', icon: DollarSign }
+              { label: 'Exp', value: totalExpenses, color: 'rose', icon: DollarSign }
             ].map((stat, i) => (
-              <div key={i} className="p-2 sm:p-3 rounded-lg bg-muted/30 border border-border/50 flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2.5 group transition-all duration-300 hover:bg-muted/50">
-                <div className={`p-1.5 rounded-full bg-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-500/10 text-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-600 dark:text-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-500`}>
+              <div key={i} className="p-2 sm:p-3 rounded-lg bg-muted/30 border border-border/50 flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2.5 group transition-all duration-300 hover:bg-muted/50 min-w-0 w-full">
+                <div className={`p-1.5 shrink-0 rounded-full bg-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-500/10 text-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-600 dark:text-${stat.color === 'emerald' ? 'emerald' : stat.color === 'amber' ? 'amber' : stat.color === 'blue' ? 'blue' : 'rose'}-500`}>
                   {React.createElement(stat.icon, { className: "h-3.5 w-3.5" })}
                 </div>
-                <div className="flex flex-col flex-1 text-center sm:text-left">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">{stat.label}</span>
-                  <span className="text-xs sm:text-sm font-black tracking-tighter text-foreground leading-none mt-0.5">
+                <div className="flex flex-col flex-1 text-center sm:text-left min-w-0 w-full">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70 truncate block">{stat.label}</span>
+                  <div className="text-xs sm:text-sm font-black tracking-tighter text-foreground leading-none mt-0.5 truncate block w-full flex items-baseline justify-center sm:justify-start">
                     {isLoading ? (
                       <span className="text-muted-foreground/30">...</span>
                     ) : (
-                      <NumberTicker value={parseFloat(String(stat.value).replace('৳', '')) || 0} decimalPlaces={stat.label === 'Avg' || stat.label === 'Exp' ? 1 : 0} />
+                      <>
+                        {stat.label === 'Exp' && <span className="text-[10px] mr-0.5">৳</span>}
+                        <NumberTicker value={Number(stat.value)} decimalPlaces={stat.label === 'Avg' || stat.label === 'Exp' ? 1 : 0} />
+                      </>
                     )}
-                  </span>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </CardHeader>
-        <CardContent className="p-4 pt-0 flex-grow">
+        <CardContent className="p-4 pt-0 flex-grow min-w-0 flex flex-col">
           {isLoading ? (
-            <div className="h-[160px] sm:h-[210px] lg:h-[240px] xl:h-[280px] w-full flex items-center justify-center">
+            <div className="h-[280px] sm:h-[260px] lg:h-[240px] xl:h-[280px] w-full flex items-center justify-center">
               <Loader />
             </div>
           ) : chartData ? (
-            <div className="h-[160px] sm:h-[210px] lg:h-[240px] xl:h-[280px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[280px] sm:h-[260px] lg:h-[240px] xl:h-[280px] w-full min-w-0 mt-4 overflow-hidden">
+              <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <XAxis

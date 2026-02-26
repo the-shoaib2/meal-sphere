@@ -58,18 +58,18 @@ const SingleSummaryCard = ({
 }: SingleSummaryCardProps) => {
   return (
     <Card className={cn(
-      "rounded-lg cursor-pointer transition-all",
+      "rounded-lg cursor-pointer transition-all min-w-0 flex flex-col",
       hoverBgClass || "hover:bg-accent/50",
       className
     )}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-3">
-        <CardTitle className="text-xs sm:text-lg font-semibold tracking-tight">{title}</CardTitle>
-        <div className={cn("p-1.5 rounded-full", iconBgClass)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 sm:p-3 min-w-0 gap-1.5">
+        <CardTitle className="text-xs sm:text-lg font-semibold tracking-tight truncate flex-1">{title}</CardTitle>
+        <div className={cn("p-1.5 rounded-full shrink-0", iconBgClass)}>
           <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", iconColorClass)} />
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-3 pb-1 pt-0">
-        <div className={cn("text-lg sm:text-xl font-bold tracking-tight flex items-center gap-1 h-5 sm:h-6", textColorClass || "text-foreground")}>
+      <CardContent className="px-2 sm:px-3 pb-1 pt-0 min-w-0">
+        <div className={cn("text-lg sm:text-xl font-bold tracking-tight flex items-center gap-1 h-5 sm:h-6 truncate", textColorClass || "text-foreground")}>
           {isLoading ? (
             <Skeleton className="h-5 w-14" />
           ) : (
@@ -77,9 +77,9 @@ const SingleSummaryCard = ({
           )}
         </div>
       </CardContent>
-      <CardFooter className="p-3 pt-1">
-        <div className="flex items-center gap-1.5">
-          <CardTitle className="text-[10px] sm:text-[12px] font-medium tracking-tight text-muted-foreground">{subtitle}</CardTitle>
+      <CardFooter className="p-3 pt-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 w-full">
+          <CardTitle className="text-[10px] sm:text-[12px] font-medium tracking-tight text-muted-foreground truncate">{subtitle}</CardTitle>
         </div>
       </CardFooter>
     </Card>

@@ -102,14 +102,14 @@ export function PeriodsListSection({
         <CardContent className="pt-0 px-0 sm:px-6 relative min-h-[200px]">
           <div className="overflow-x-auto w-full">
             {isLoading || (periods && periods.length > 0) ? (
-              <Table className="min-w-[700px] w-full text-xs sm:text-sm">
+              <Table className="w-full text-xs sm:text-sm">
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="font-bold text-muted-foreground h-11">Name</TableHead>
-                    <TableHead className="font-bold text-muted-foreground h-11">Date Span</TableHead>
-                    <TableHead className="font-bold text-muted-foreground h-11">Status</TableHead>
-                    <TableHead className="font-bold text-muted-foreground h-11 text-center">Members</TableHead>
-                    {isPrivileged && <TableHead className="font-bold text-muted-foreground h-11 text-right pr-6">Manage</TableHead>}
+                    <TableHead className="font-bold text-muted-foreground h-11 px-2 sm:px-4">Name</TableHead>
+                    <TableHead className="font-bold text-muted-foreground h-11 px-2 sm:px-4">Date Span</TableHead>
+                    <TableHead className="font-bold text-muted-foreground h-11 px-2 sm:px-4">Status</TableHead>
+                    <TableHead className="font-bold text-muted-foreground h-11 text-center hidden sm:table-cell px-2 sm:px-4">Members</TableHead>
+                    {isPrivileged && <TableHead className="font-bold text-muted-foreground h-11 text-right pr-2 sm:pr-6">Manage</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody className="relative">
@@ -124,46 +124,46 @@ export function PeriodsListSection({
                   ) : (
                     periods?.map((period: MealPeriod) => (
                       <TableRow key={period.id} className="group hover:bg-muted/20 transition-colors border-border/50">
-                        <TableCell className="font-semibold py-4">{period.name}</TableCell>
-                        <TableCell className="py-4">
+                        <TableCell className="font-semibold py-3 sm:py-4 px-2 sm:px-4">{period.name}</TableCell>
+                        <TableCell className="py-3 sm:py-4 px-2 sm:px-4">
                           <div className="flex flex-col">
-                            <span className="text-foreground/90 font-medium">
+                            <span className="text-foreground/90 font-medium whitespace-nowrap">
                               {format(new Date(period.startDate), 'MMM d, yyyy')}
                             </span>
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                               to {period.endDate ? format(new Date(period.endDate), 'MMM d, yyyy') : 'Ongoing'}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4">
+                        <TableCell className="py-3 sm:py-4 px-2 sm:px-4">
                           <div className="flex items-center gap-2">
                             {period.isLocked ? (
-                              <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
+                              <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 whitespace-nowrap">
                                 Locked
                               </Badge>
                             ) : (
                               <Badge
                                 variant="secondary"
                                 className={`
-                                border-none font-medium
+                                border-none font-medium whitespace-nowrap text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-0.5
                                 ${period.status === 'ACTIVE' ? 'bg-green-500/10 text-green-600' :
                                     period.status === 'ENDED' ? 'bg-amber-500/10 text-amber-600' :
                                       period.status === 'ARCHIVED' ? 'bg-slate-500/10 text-slate-500' :
                                         'bg-slate-500/10 text-slate-600'}
-                              `}
+                                `}
                               >
                                 {period.status}
                               </Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-center py-4">
+                        <TableCell className="text-center py-3 sm:py-4 px-2 sm:px-4 hidden sm:table-cell">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/5 text-primary border border-primary/10">
                             {activeGroup?.members?.length || 0}
                           </span>
                         </TableCell>
                         {isPrivileged && (
-                          <TableCell className="text-right py-4 pr-6">
+                          <TableCell className="text-right py-3 sm:py-4 pr-2 sm:pr-6">
                             <PeriodActions
                               period={period}
                               handleLockPeriod={handleLockPeriod}

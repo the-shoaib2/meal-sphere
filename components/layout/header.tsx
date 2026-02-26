@@ -44,7 +44,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center backdrop-blur-md px-2 md:px-4" suppressHydrationWarning>
+    <header className="sticky top-0 z-30 flex h-14 items-center bg-card border-b border-border/50 px-2 md:px-4" suppressHydrationWarning>
       <div className="w-full flex items-center gap-2 md:gap-4" suppressHydrationWarning>
         {/* Mobile Sidebar Trigger - Always visible but guarded for hydration */}
         <div className="lg:hidden flex-shrink-0">

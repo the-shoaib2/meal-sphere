@@ -51,11 +51,11 @@ export function QuickActionCard({ icon, color, title, desc, onClick, isLoading }
         >
             <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-row items-center gap-3 sm:gap-4">
-                    <div className={`p-2.5 sm:p-3 rounded-xl transition-all duration-300 group-hover:scale-110 ${style.icon}`}>
+                    <div className={`p-2.5 sm:p-3 rounded-xl transition-all duration-300 group-hover:scale-110 flex-shrink-0 ${style.icon}`}>
                         {icon}
                     </div>
-                    <div className="flex flex-col gap-0.5">
-                        <h3 className="font-semibold text-sm sm:text-base tracking-tight text-foreground">{title}</h3>
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm sm:text-base tracking-tight text-foreground truncate">{title}</h3>
                         <p className="text-[11px] sm:text-xs text-muted-foreground font-medium line-clamp-1">{desc}</p>
                     </div>
                 </div>

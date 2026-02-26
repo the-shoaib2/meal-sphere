@@ -73,7 +73,7 @@ export default async function DashboardPage() {
             heading="Dashboard"
             description="Overview of your group's meal activity and analytics."
         >
-            <div className="space-y-4 sm:space-y-2">
+            <div className="space-y-4 sm:space-y-2 w-full min-w-0 flex flex-col">
                 {/* Overview Section - Loaded Instantly */}
                 <DashboardOverview summaryData={summaryData} />
 

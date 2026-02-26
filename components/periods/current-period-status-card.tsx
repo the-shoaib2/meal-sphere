@@ -89,7 +89,7 @@ export function CurrentPeriodStatusCard({
 
 
         {/* Unified Bottom Row: Group Info & Actions */}
-        <div className="flex items-end justify-between pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between pt-2 gap-y-4">
           {/* Group Information (Left) */}
           <div className="space-y-1.5 px-6">
 
@@ -103,8 +103,7 @@ export function CurrentPeriodStatusCard({
             </h2>
           </div>
 
-          {/* Action Buttons (Right) */}
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2 px-6 sm:px-0">
             {isPrivileged && (
               <>
                 <EndPeriodDialog
@@ -116,7 +115,7 @@ export function CurrentPeriodStatusCard({
 
                 <Button
                   variant="outline"
-                  className='text-primary bg-background hover:bg-background/80 hover:text-primary'
+                  className='text-primary bg-background hover:bg-background/80 hover:text-primary flex-1 sm:flex-none'
                   onClick={() => {
                     if (currentPeriod.isLocked) {
                       setUnlockTargetPeriod(currentPeriod);

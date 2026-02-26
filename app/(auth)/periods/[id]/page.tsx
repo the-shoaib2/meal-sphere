@@ -88,7 +88,7 @@ export default async function PeriodDetailsPage({
     }
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-4 w-full min-w-0 flex flex-col">
             <PeriodDetails initialData={initialData} />
         </div>
     );

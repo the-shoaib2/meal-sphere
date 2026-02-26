@@ -217,44 +217,122 @@ export function ExpenseList({ initialData }: ExpenseListProps) {
                 </p>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Added By</TableHead>
-                      <TableHead>Receipt</TableHead>
-                      {canManageExpenses && <TableHead className="w-[50px]">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell className="font-medium">{expense.description}</TableCell>
-                        <TableCell>{getTypeBadge(expense.type)}</TableCell>
-                        <TableCell className="text-red-600" >৳ -{expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                        <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
-                        <TableCell className="flex items-center space-x-2">
+              <>
+                {/* Desktop View - Table */}
+                <div className="hidden md:block rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Added By</TableHead>
+                        <TableHead>Receipt</TableHead>
+                        {canManageExpenses && <TableHead className="w-[50px]">Actions</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredExpenses.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="font-medium">{expense.description}</TableCell>
+                          <TableCell>{getTypeBadge(expense.type)}</TableCell>
+                          <TableCell className="text-red-600" >৳ -{expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                          <TableCell>{format(new Date(expense.date), 'MMM d, yyyy')}</TableCell>
+                          <TableCell className="flex items-center space-x-2">
+                            {expense.user?.image && (
+                              <Image
+                                src={expense.user.image}
+                                alt={expense.user?.name || 'User'}
+                                width={20}
+                                height={20}
+                                className="rounded-full"
+                              />
+                            )}
+                            <span className="text-sm">{expense.user?.name || 'Unknown'}</span>
+                          </TableCell>
+                          <TableCell>
+                            {expense.receiptUrl ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-3xl">
+                                  <div className="relative aspect-video">
+                                    <Image
+                                      src={expense.receiptUrl}
+                                      alt="Receipt"
+                                      fill
+                                      className="object-contain"
+                                    />
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">None</span>
+                            )}
+                          </TableCell>
+                          {canManageExpenses && (
+                            <TableCell>
+                              <ExpenseActions
+                                expenseId={expense.id}
+                                expense={expense}
+                                onDelete={handleDeleteExpense}
+                                isDeleting={deleteMutation.isPending}
+                                onSuccess={handleEditSuccess}
+                              />
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile View - Cards List */}
+                <div className="block md:hidden space-y-3">
+                  {filteredExpenses.map((expense) => (
+                    <div key={expense.id} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm space-y-3">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="space-y-1 min-w-0">
+                          <h4 className="font-bold text-sm truncate uppercase tracking-tight">{expense.description}</h4>
+                          <div className="flex items-center gap-2">
+                            {getTypeBadge(expense.type)}
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(expense.date), 'MMM d, yyyy')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0">
+                          <span className="font-bold text-red-600 text-sm">
+                            ৳ -{expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        <div className="flex items-center gap-2">
                           {expense.user?.image && (
                             <Image
                               src={expense.user.image}
                               alt={expense.user?.name || 'User'}
-                              width={20}
-                              height={20}
+                              width={18}
+                              height={18}
                               className="rounded-full"
                             />
                           )}
-                          <span className="text-sm">{expense.user?.name || 'Unknown'}</span>
-                        </TableCell>
-                        <TableCell>
-                          {expense.receiptUrl ? (
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            {expense.user?.name || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {expense.receiptUrl && (
                             <Dialog>
                               <DialogTrigger asChild>
-                                <Button variant="ghost" >
-                                  <Eye className="h-4 w-4" />
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <Eye className="h-3.5 w-3.5" />
                                 </Button>
                               </DialogTrigger>
                               <DialogContent className="max-w-3xl">
@@ -268,26 +346,22 @@ export function ExpenseList({ initialData }: ExpenseListProps) {
                                 </div>
                               </DialogContent>
                             </Dialog>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">None</span>
                           )}
-                        </TableCell>
-                        {canManageExpenses && (
-                          <TableCell>
+                          {canManageExpenses && (
                             <ExpenseActions
                               expenseId={expense.id}
                               expense={expense}
                               onDelete={handleDeleteExpense}
-                              isDeleting={deleteExpense.isPending}
+                              isDeleting={deleteMutation.isPending}
                               onSuccess={handleEditSuccess}
                             />
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

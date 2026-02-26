@@ -13,14 +13,14 @@ interface AnalyticsCardProps {
 
 export function AnalyticsCard({ title, description, icon: Icon, children, isLoading }: AnalyticsCardProps) {
   return (
-    <Card className="h-full">
+    <Card className="h-full min-w-0 flex flex-col">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-primary" />
-          <CardTitle className="text-base sm:text-lg font-bold tracking-tight">{title}</CardTitle>
+          <Icon className="h-5 w-5 text-primary flex-shrink-0" />
+          <CardTitle className="text-base sm:text-lg font-bold tracking-tight truncate">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 min-h-0 min-w-0 flex flex-col">
         {isLoading ? (
           <div className="h-[300px] w-full bg-muted/40 rounded-xl animate-pulse flex items-center justify-center border border-dashed border-border">
             <Skeleton className="h-12 w-12 rounded-full opacity-20" />
