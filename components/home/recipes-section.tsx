@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Utensils, Clock, Users, Star, ChefHat, BookOpen, Search, ArrowRightIcon } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePublicData } from "@/hooks/use-public-data"
 
 interface RecipesData {
@@ -104,64 +105,108 @@ export function RecipesSection({ initialData }: { initialData?: RecipesData | nu
                 </div>
 
                 {/* Featured Recipes */}
-                <div className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/20 relative">
+                <div className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/5 relative">
                     {/* Fade Gradients similar to Hero */}
-                    <div className="from-background pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b to-transparent" />
-                    <div className="from-background pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t to-transparent" />
+                    <div className="from-background pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b to-transparent" />
+                    <div className="from-background pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t to-transparent" />
 
-                    <div className="max-w-7xl mx-auto">
-                        <div className="flex items-end justify-between mb-12">
+                    <div className="max-w-7xl mx-auto relative">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
                             <div className="space-y-4">
-                                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight">Our Favorites</h3>
-                                <div className="h-1 w-12 bg-primary rounded-full" />
+                                <span className="text-primary text-sm font-semibold tracking-wider uppercase bg-primary/10 px-4 py-1.5 rounded-full">
+                                    Chef's Choice
+                                </span>
+                                <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+                                    Our Favorites
+                                </h3>
+                                <p className="text-muted-foreground max-w-lg text-pretty">
+                                    A hand-picked selection of our most loved recipes, tried and tested by our community.
+                                </p>
                             </div>
+                            <Button variant="ghost" className="group/all w-fit rounded-full hover:bg-primary/5 text-primary font-semibold" asChild>
+                                <Link href="/recipes">
+                                    View All Recipes
+                                    <ArrowRightIcon className="ml-2 size-4 transition-transform group-hover/all:translate-x-1" />
+                                </Link>
+                            </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                             {data?.featuredRecipes?.map((recipe) => (
-                                <div key={recipe.id} className="group relative">
-                                    <Card className="overflow-hidden border-none bg-background hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 rounded-3xl">
-                                        <div className="relative aspect-[4/3] bg-muted overflow-hidden">
-                                            <div className="absolute inset-0 bg-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-700">
-                                                <Utensils className="w-16 h-16 text-primary/20" />
+                                <div key={recipe.id} className="group h-full">
+                                    <Card className="h-full flex flex-col overflow-hidden border-none bg-background/60 backdrop-blur-xl hover:bg-background transition-all duration-500 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] border border-white/20">
+                                        <div className="relative aspect-[16/11] overflow-hidden">
+                                            {recipe.image ? (
+                                                <Image
+                                                    src={recipe.image}
+                                                    alt={recipe.title}
+                                                    fill
+                                                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                                                />
+                                            ) : (
+                                                <div className="absolute inset-0 bg-primary/5 flex items-center justify-center">
+                                                    <Utensils className="w-16 h-16 text-primary/20" />
+                                                </div>
+                                            )}
+
+                                            {/* Rating Overlay */}
+                                            <div className="absolute top-5 left-5 z-20">
+                                                <div className="bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-sm border border-white/20">
+                                                    <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+                                                    <span className="text-xs font-bold">{recipe.rating}</span>
+                                                </div>
                                             </div>
-                                            <div className="absolute top-4 right-4 z-20">
-                                                <Badge className="bg-background/80 backdrop-blur-md text-foreground border-none px-3 py-1 rounded-full text-xs font-semibold">
+
+                                            {/* Difficulty Overlay */}
+                                            <div className="absolute top-5 right-5 z-20">
+                                                <Badge className="bg-primary/90 hover:bg-primary text-white border-none px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">
                                                     {recipe.difficulty}
                                                 </Badge>
                                             </div>
+
+                                            {/* Hover Gradient Overlay */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                         </div>
-                                        <CardHeader className="pb-2">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                                                    <Clock className="size-3.5" />
+
+                                        <CardHeader className="space-y-4 pt-8 px-8 pb-4">
+                                            <div className="flex items-center gap-6 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                                                <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/50">
+                                                    <Clock className="size-3.5 text-primary" />
                                                     {recipe.time}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                                    <Users className="size-3.5" />
+                                                <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-muted/50">
+                                                    <Users className="size-3.5 text-primary" />
                                                     {recipe.servings} Servings
                                                 </div>
                                             </div>
-                                            <CardTitle className="text-xl group-hover:text-primary transition-colors duration-300 line-clamp-1">
+                                            <CardTitle className="text-2xl font-bold group-hover:text-primary transition-colors duration-300">
                                                 {recipe.title}
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent>
-                                            <p className="text-sm text-muted-foreground line-clamp-2 mb-6 leading-relaxed">
+
+                                        <CardContent className="px-8 pb-8 flex-grow flex flex-col justify-between">
+                                            <p className="text-muted-foreground line-clamp-2 mb-8 text-sm leading-relaxed">
                                                 {recipe.description}
                                             </p>
-                                            <Button variant="outline" className="w-full rounded-2xl group/btn border-muted-foreground/20 hover:border-primary hover:bg-primary/5">
-                                                Details
-                                                <ArrowRightIcon className="ml-2 size-4 transition-transform group-hover/btn:translate-x-1" />
+                                            <Button className="w-full h-12 rounded-2xl bg-foreground text-background hover:bg-primary hover:text-white transition-all duration-300 font-semibold group/btn overflow-hidden relative" asChild>
+                                                <Link href={`/recipes/${recipe.id}`}>
+                                                    <span className="relative z-10 flex items-center justify-center gap-2">
+                                                        View Recipe
+                                                        <ArrowRightIcon className="size-4 transition-transform group-hover/btn:translate-x-1" />
+                                                    </span>
+                                                </Link>
                                             </Button>
                                         </CardContent>
                                     </Card>
                                 </div>
                             )) || Array.from({ length: 3 }).map((_, i) => (
                                 <div key={i} className="animate-pulse">
-                                    <div className="aspect-[4/3] bg-muted rounded-3xl mb-4" />
-                                    <div className="h-6 w-3/4 bg-muted rounded mb-2" />
-                                    <div className="h-4 w-1/2 bg-muted rounded" />
+                                    <div className="aspect-[16/11] bg-muted rounded-[2.5rem] mb-6 shadow-sm" />
+                                    <div className="space-y-3 px-4">
+                                        <div className="h-4 w-1/4 bg-muted rounded-full" />
+                                        <div className="h-8 w-3/4 bg-muted rounded-2xl" />
+                                        <div className="h-4 w-full bg-muted rounded-lg" />
+                                    </div>
                                 </div>
                             ))}
                         </div>

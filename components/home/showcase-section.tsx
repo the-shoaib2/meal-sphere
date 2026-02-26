@@ -37,7 +37,7 @@ export default function ShowcaseSection({ initialData }: { initialData?: Showcas
     subtitle: data?.subtitle || "Experience a seamless interface on both desktop and mobile. Designed for clarity, speed, and ease of use.",
     screenshots: {
       desktop: data?.screenshots?.desktop || {
-        image: "/Screenshot-desktop.png",
+        image: "/desktop-view.png",
         alt: "Desktop screenshot",
         label: "Desktop View",
       }

@@ -244,9 +244,11 @@ export async function fetchDashboardCharts(userId: string, groupId?: string) {
         const chartData: DashboardChartData[] = [];
         const currentDate = new Date(startOfMonth);
         
-        // Fix: Use local date strings to match map keys
         while (currentDate <= endOfMonth) {
-            const dateString = currentDate.toISOString().split('T')[0];
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
             chartData.push({
                 date: dateString,
                 meals: mealsMap.get(dateString) || 0,

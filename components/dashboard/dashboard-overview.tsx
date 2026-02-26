@@ -10,7 +10,7 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewProps) {
     return (
-        <div className="space-y-4 sm:space-y-5">
+        <div className="space-y-3 sm:space-y-5">
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2.5">
                     <BarChart3 className="h-4 w-4 text-primary" />
@@ -32,9 +32,10 @@ export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewP
             <DashboardSummaryCards
                 totalMeals={summaryData?.totalUserMeals}
                 currentRate={summaryData?.currentRate}
-                myBalance={summaryData?.availableBalance} // Change: currentBalance -> availableBalance
+                myBalance={summaryData?.availableBalance}
                 totalCost={summaryData?.totalCost}
                 totalAllMeals={summaryData?.totalAllMeals}
+                isLoading={isLoading}
                 groupBalance={summaryData?.groupBalance ? {
                     groupTotalBalance: summaryData.groupBalance.netGroupBalance ?? 0,
                     members: summaryData.groupBalance.members ?? [],
@@ -42,7 +43,6 @@ export function DashboardOverview({ summaryData, isLoading }: DashboardOverviewP
                     mealRate: summaryData.groupBalance.mealRate,
                     totalMeals: summaryData.groupBalance.totalMeals,
                 } : null}
-                isLoading={isLoading}
             />
         </div>
     );

@@ -357,29 +357,31 @@ export function ContactSection({ initialData }: { initialData?: ContactData | nu
 
                             {/* Info Column */}
                             <div className="space-y-16">
-                                <div className="space-y-8">
-                                    <div className="space-y-4">
-                                        <h3 className="text-3xl font-bold tracking-tight">Visit Us</h3>
-                                        <div className="h-1.5 w-12 bg-primary rounded-full" />
-                                    </div>
-                                    <div className="space-y-6">
-                                        {data?.officeLocations?.map((office) => (
-                                            <div key={office.city} className="flex gap-6 group">
-                                                <div className="size-12 rounded-2xl bg-background border border-border flex items-center justify-center text-primary group-hover:border-primary/30 transition-colors shrink-0">
-                                                    <MapPin className="size-5" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <h4 className="font-bold text-lg">{office.city}</h4>
-                                                    <p className="text-muted-foreground text-sm leading-relaxed">{office.address}</p>
-                                                    <div className="pt-2 flex flex-col gap-1 text-xs font-medium text-muted-foreground/80">
-                                                        <span>{office.phone}</span>
-                                                        <span>{office.hours}</span>
+                                {data?.officeLocations && data.officeLocations.length > 0 && (
+                                    <div className="space-y-8">
+                                        <div className="space-y-4">
+                                            <h3 className="text-3xl font-bold tracking-tight">Visit Us</h3>
+                                            <div className="h-1.5 w-12 bg-primary rounded-full" />
+                                        </div>
+                                        <div className="space-y-6">
+                                            {data.officeLocations.map((office) => (
+                                                <div key={office.city} className="flex gap-6 group">
+                                                    <div className="size-12 rounded-2xl bg-background border border-border flex items-center justify-center text-primary group-hover:border-primary/30 transition-colors shrink-0">
+                                                        <MapPin className="size-5" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <h4 className="font-bold text-lg">{office.city}</h4>
+                                                        <p className="text-muted-foreground text-sm leading-relaxed">{office.address}</p>
+                                                        <div className="pt-2 flex flex-col gap-1 text-xs font-medium text-muted-foreground/80">
+                                                            <span>{office.phone}</span>
+                                                            <span>{office.hours}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <div className="space-y-8">
                                     <div className="space-y-4">

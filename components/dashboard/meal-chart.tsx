@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { TrendingUp, Calendar, DollarSign, BarChart3, Info, Utensils } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { DashboardChartData } from '@/types/dashboard';
 import { useDashboardLoading } from '@/components/dashboard/dashboard';
@@ -15,7 +16,6 @@ interface MealChartProps {
 }
 
 export default function MealChart({ chartData, isLoading: propIsLoading }: MealChartProps) {
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const { isLoading: contextLoading } = useDashboardLoading();
   const isLoading = propIsLoading || contextLoading;
 
@@ -23,9 +23,10 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
   const totalExpenses = chartData?.reduce((sum, day) => sum + day.expenses, 0) || 0;
   const daysWithMeals = chartData?.filter(day => day.meals > 0).length || 0;
   const averageMealsPerDay = daysWithMeals > 0 ? (totalMeals / daysWithMeals).toFixed(1) : '0';
-  const maxMeals = chartData ? Math.max(...chartData.map(d => d.meals)) : 0;
 
-  if (!isLoading && (!chartData || chartData.length === 0)) {
+  const hasNoData = !chartData || chartData.length === 0 || (totalMeals === 0 && totalExpenses === 0);
+
+  if (!isLoading && hasNoData) {
     return (
       <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card border">
         <CardHeader className="pb-3 sm:pb-4 px-6 sm:px-8 pt-6 sm:pt-8">
@@ -52,7 +53,7 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
 
   return (
     <TooltipProvider>
-      <Card className="h-[320px] sm:h-[360px] lg:h-[400px] xl:h-[440px] shadow-sm bg-card">
+      <Card className="h-[350px] sm:h-[400px] lg:h-[450px] xl:h-[500px] shadow-sm bg-card">
         <CardHeader className="pb-2 sm:pb-3 px-6 sm:px-8 pt-6 sm:pt-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -100,62 +101,60 @@ export default function MealChart({ chartData, isLoading: propIsLoading }: MealC
         </CardHeader>
         <CardContent className="p-4 pt-0 flex-grow">
           {isLoading ? (
-            <div className="h-[140px] sm:h-[180px] lg:h-[200px] xl:h-[230px] w-full flex items-center justify-center">
+            <div className="h-[160px] sm:h-[210px] lg:h-[240px] xl:h-[280px] w-full flex items-center justify-center">
               <Loader />
             </div>
           ) : chartData ? (
-            <div className="h-[120px] sm:h-[160px] lg:h-[180px] xl:h-[210px] w-full overflow-x-auto scrollbar-none">
-              <div className="h-full flex items-end justify-between gap-1 sm:gap-1.5 px-1 py-2 min-w-0">
-                {chartData.map((day, index) => {
-                  const height = maxMeals > 0 ? (day.meals / maxMeals) * 100 : 0;
-                  const isToday = new Date(day.date).toDateString() === new Date().toDateString();
-                  const isSelected = selectedDay === day.date;
-
-                  return (
-                    <Tooltip key={index}>
-                      <TooltipTrigger asChild>
-                        <div className="flex-1 flex flex-col items-center group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : day.date)}>
-                          <div className="relative w-full flex flex-col justify-end" style={{ height: '100%' }}>
-                            <div
-                              className={`w-full transition-all duration-300 rounded-t-lg relative ${day.meals > 0
-                                ? (isToday
-                                  ? 'bg-primary shadow-[0_-4px_16px_rgba(var(--primary),0.4)] scale-x-110 z-10'
-                                  : 'bg-primary/30 hover:bg-primary/60 hover:scale-x-105')
-                                : 'bg-muted/20'
-                                } ${isSelected ? 'scale-x-110 bg-primary/80 ring-2 ring-primary/20 z-10' : ''}`}
-                              style={{ height: `${Math.max(height, 5)}%`, minHeight: '4px' }}
-                            >
-                              {isToday && (
-                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-background rounded-full shadow-lg border border-primary animate-pulse" />
+            <div className="h-[160px] sm:h-[210px] lg:h-[240px] xl:h-[280px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => new Date(value).getDate().toString()}
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}`}
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    allowDecimals={false}
+                  />
+                  <RechartsTooltip
+                    cursor={{ fill: 'hsl(var(--muted)/0.2)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload as DashboardChartData;
+                        return (
+                          <div className="bg-popover text-popover-foreground border border-border shadow-md rounded-lg p-3 transition-all duration-200">
+                            <div className="space-y-1.5">
+                              <p className="font-bold text-xs text-foreground border-b border-border pb-1 mb-1">
+                                {new Date(data.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-primary" />
+                                <p className="text-xs font-medium">Meals: <span className="font-bold">{data.meals}</span></p>
+                              </div>
+                              {data.expenses > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-rose-500" />
+                                  <p className="text-xs font-medium">Expenses: <span className="font-bold">৳{data.expenses}</span></p>
+                                </div>
                               )}
                             </div>
                           </div>
-                          <span className={`text-[8px] sm:text-[10px] font-bold mt-2 transition-colors ${isToday ? 'text-primary scale-110' : 'text-muted-foreground/60 group-hover:text-muted-foreground'}`}>
-                            {new Date(day.date).getDate()}
-                          </span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-popover text-popover-foreground border-border shadow-md rounded-lg p-3">
-                        <div className="space-y-1.5">
-                          <p className="font-bold text-xs text-foreground border-b border-border pb-1 mb-1">
-                            {new Date(day.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-primary" />
-                            <p className="text-xs font-medium">Meals: <span className="font-bold">{day.meals}</span></p>
-                          </div>
-                          {day.expenses > 0 && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-rose-500" />
-                              <p className="text-xs font-medium">Expenses: <span className="font-bold">৳{day.expenses}</span></p>
-                            </div>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="meals" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : null}
         </CardContent>

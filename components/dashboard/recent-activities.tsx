@@ -117,17 +117,15 @@ export default function RecentActivities({ activities, isLoading: propIsLoading 
             </div>
           ) : (
             <div className="px-4 sm:px-6 pb-6 space-y-3 mt-2">
-              {isLoading
-                ? [...Array(6)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl border border-border/50 bg-muted/10">
-                    <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-1/3" />
-                      <Skeleton className="h-3 w-2/3" />
-                    </div>
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 w-full">
+                  <div className="p-4 rounded-full bg-primary/5 mb-4 animate-pulse">
+                    <Activity className="h-8 w-8 text-primary/20" />
                   </div>
-                ))
-                : activities?.map((activity: DashboardActivity) => {
+                  <p className="text-sm font-bold text-muted-foreground animate-pulse">Loading activities...</p>
+                </div>
+              ) : (
+                activities?.map((activity: DashboardActivity) => {
                   const IconComponent = getActivityIcon(activity.type);
                   const iconColor = getActivityColor(activity.type);
                   const badge = getActivityBadge(activity.type);
@@ -141,24 +139,26 @@ export default function RecentActivities({ activities, isLoading: propIsLoading 
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-xs font-bold text-foreground truncate">{activity.title}</h4>
-                          <span className="text-[10px] whitespace-nowrap text-muted-foreground/60 font-medium">
-                            <SafeDate date={activity.timestamp} format={formatActivityTimestamp} />
-                          </span>
-                        </div>
+                        <h4 className="text-xs font-bold text-foreground truncate">{activity.title}</h4>
                         <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5 font-medium">
                           {activity.description}
                         </p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className={cn("text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full", badge.color)}>
-                            {badge.text}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] whitespace-nowrap text-muted-foreground/60 font-medium capitalize">
+                            <SafeDate date={activity.timestamp} format={formatActivityTimestamp} />
                           </span>
                         </div>
                       </div>
+
+                      <div className="flex-shrink-0">
+                        <span className={cn("text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full", badge.color)}>
+                          {badge.text}
+                        </span>
+                      </div>
                     </div>
                   );
-                })}
+                })
+              )}
             </div>
           )}
         </ScrollArea>

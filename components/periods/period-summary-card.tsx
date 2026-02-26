@@ -54,7 +54,7 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
               <span>{period.name}</span>
             </CardTitle>
             <CardDescription>
-              {format(new Date(period.startDate), 'MMM dd, yyyy')} - {format(new Date(period.endDate), 'MMM dd, yyyy')}
+              {format(new Date(period.startDate), 'MMM dd, yyyy')} - {period.endDate ? format(new Date(period.endDate), 'MMM dd, yyyy') : 'Ongoing'}
             </CardDescription>
           </div>
           {getStatusBadge()}
@@ -116,7 +116,7 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
                 <span>Net Balance:</span>
                 <span className={`flex items-center space-x-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                   {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                  <span>$<NumberTicker value={Math.abs(netBalance)} decimalPlaces={2} /></span>
+                  <span>{isPositive ? '' : '-'}$<NumberTicker value={Math.abs(netBalance)} decimalPlaces={2} /></span>
                 </span>
               </div>
             </div>
@@ -130,7 +130,7 @@ export function PeriodSummaryCard({ period, summary }: PeriodSummaryCardProps) {
             <div className="flex justify-between">
               <span>Duration:</span>
               <span>
-                {Math.ceil((new Date(period.endDate).getTime() - new Date(period.startDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                {Math.max(0, Math.ceil(((period.endDate ? new Date(period.endDate) : new Date()).getTime() - new Date(period.startDate).getTime()) / (1000 * 60 * 60 * 24)))} days
               </span>
             </div>
             <div className="flex justify-between">

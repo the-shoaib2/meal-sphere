@@ -71,14 +71,11 @@ export async function getPublicDataAction(endpoint: string) {
             subtitle: "Have questions, feedback, or need help? Our team is here to support you. Reach out and we'll get back to you as soon as possible.",
           },
           contactMethods: [
-            { title: "Email Support", description: "Get help via email within 24 hours", contact: "support@mealsphere.com", icon: "Mail" },
-            { title: "Phone Support", description: "Speak with our team directly", contact: "+1 (555) 123-4567", icon: "Phone" },
-            { title: "Live Chat", description: "Chat with us in real-time", contact: "Available 9AM-6PM EST", icon: "MessageCircle" },
+            { title: "Email Support", description: "Get help via email within 24 hours", contact: "hello@mealsphere.com", icon: "Mail" },
+            { title: "Member Support", description: "Direct assistance for active group members", contact: "support@mealsphere.com", icon: "Users" },
+            { title: "Live Chat", description: "Chat with our team in real-time", contact: "Available 10AM-8PM (GMT+6)", icon: "MessageCircle" },
           ],
-          officeLocations: [
-            { city: "San Francisco", address: "123 Innovation Drive, San Francisco, CA 94105", phone: "+1 (555) 123-4567", hours: "Mon-Fri 9AM-6PM PST" },
-            { city: "New York", address: "456 Tech Avenue, New York, NY 10001", phone: "+1 (555) 987-6543", hours: "Mon-Fri 9AM-6PM EST" },
-          ],
+          officeLocations: [],
           faqs: [
             { question: "How do I invite my roommates to join?", answer: "Simply create a group and share the invite link with your roommates. They can join using the link or by searching for your group name." },
             { question: "Can I use MealSphere for free?", answer: "Yes! We offer a free plan that supports up to 3 roommates with basic meal planning features. Upgrade to Pro for more features." },
@@ -104,12 +101,12 @@ export async function getPublicDataAction(endpoint: string) {
           title: "Key Features",
           subtitle: "Everything you need to manage meals and costs in shared living spaces",
           features: [
-            { id: 1, title: "Meal Tracking", description: "Track daily meals with ease. Mark your breakfast, lunch, and dinner with a simple click.", icon: "Utensils" },
-            { id: 2, title: "Room Management", description: "Create rooms, add members, and elect managers through a democratic voting system.", icon: "Users" },
-            { id: 3, title: "Payment Integration", description: "Integrated Bkash payment system for seamless meal cost settlements.", icon: "CreditCard" },
-            { id: 4, title: "Notifications", description: "Get timely reminders for meal inputs, voting, and payment deadlines.", icon: "Bell" },
-            { id: 5, title: "Cost Calculation", description: "Automatic calculation of meal rates, individual costs, and monthly summaries.", icon: "TrendingUp" },
-            { id: 6, title: "Role-Based Access", description: "Different access levels for admins, managers, and members with customizable permissions.", icon: "Shield" },
+            { id: 1, title: "Collaborative Planning", description: "Real-time meal coordination for shared living spaces. Plan, edit, and sync meals with all group members instantly.", icon: "Users" },
+            { id: 2, title: "Automated Tracking", description: "Our smart system auto-calculates meal counts based on your unique preferences and schedule.", icon: "Utensils" },
+            { id: 3, title: "Financial Clarity", description: "Comprehensive cost calculation with detailed individual balances and monthly period summaries.", icon: "TrendingUp" },
+            { id: 4, title: "Integrated Payments", description: "Seamless Bkash integration for secure and instant meal cost settlements within your group.", icon: "CreditCard" },
+            { id: 5, title: "Democratic Governance", description: "Elect managers and vote on household decisions through our transparent democratic voting system.", icon: "Shield" },
+            { id: 6, title: "Smart Notifications", description: "Stay updated with real-time alerts for meal inputs, important group votes, and payment deadlines.", icon: "Bell" },
           ],
         };
       case "meal-plans":
@@ -162,9 +159,9 @@ export async function getPublicDataAction(endpoint: string) {
             { name: "Special", icon: "/images/hero-section/Special.svg", count: 28 },
           ],
           featuredRecipes: [
-            { id: 1, title: "Spicy Chicken Biryani", description: "Aromatic rice dish with tender chicken and fragrant spices", time: "45 min", servings: 4, difficulty: "Medium", rating: 4.8, image: "/placeholder.jpg", tags: ["Indian", "Rice", "Spicy"] },
-            { id: 2, title: "Mediterranean Salad", description: "Fresh vegetables with olive oil and herbs", time: "15 min", servings: 2, difficulty: "Easy", rating: 4.6, image: "/placeholder.jpg", tags: ["Healthy", "Vegetarian", "Quick"] },
-            { id: 3, title: "Chocolate Lava Cake", description: "Decadent chocolate cake with molten center", time: "25 min", servings: 2, difficulty: "Hard", rating: 4.9, image: "/placeholder.jpg", tags: ["Dessert", "Chocolate", "Romantic"] },
+            { id: 1, title: "Spicy Chicken Biryani", description: "Aromatic rice dish with tender chicken and fragrant spices", time: "45 min", servings: 4, difficulty: "Medium", rating: 4.8, image: "/images/recipes/biryani.png", tags: ["Indian", "Rice", "Spicy"] },
+            { id: 2, title: "Mediterranean Salad", description: "Fresh vegetables with olive oil and herbs", time: "15 min", servings: 2, difficulty: "Easy", rating: 4.6, image: "/images/recipes/salad.png", tags: ["Healthy", "Vegetarian", "Quick"] },
+            { id: 3, title: "Chocolate Lava Cake", description: "Decadent chocolate cake with molten center", time: "25 min", servings: 2, difficulty: "Hard", rating: 4.9, image: "/images/recipes/lava-cake.png", tags: ["Dessert", "Chocolate", "Romantic"] },
           ],
           cta: {
             title: "Ready to Start Cooking?",
@@ -179,7 +176,7 @@ export async function getPublicDataAction(endpoint: string) {
           subtitle: "Experience a seamless interface on both desktop and mobile. Designed for clarity, speed, and ease of use.",
           screenshots: {
             desktop: {
-              image: "/Screenshot-desktop.png",
+              image: "/desktop-view.png",
               alt: "Desktop view screenshot",
               label: "Desktop View",
             },

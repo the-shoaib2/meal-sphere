@@ -512,14 +512,8 @@ export async function calculatePeriodSummary(periodId: string, roomId?: string):
       _sum: { count: true },
     }),
 
-    prisma.shoppingItem.aggregate({
-      where: {
-        periodId,
-        purchased: true,
-        roomId: activeRoomId,
-      },
-      _sum: { quantity: true },
-    }),
+    // ShoppingItem no longer has an amount field, so shopping expenses are 0 or tracked in ExtraExpenses
+    Promise.resolve({ _sum: { quantity: 0 } }),
 
     prisma.payment.aggregate({
       where: {

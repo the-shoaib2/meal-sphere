@@ -530,7 +530,7 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
         } else {
             addOptimisticMeal({ action: 'remove', userId, type, dateStr: dateStr });
         }
-        await toggleMealMutation.mutateAsync({ date, type, userId, action: isAdding ? 'add' : 'remove' });
+        await toggleMealMutation.mutateAsync({ date, type, userId, action: isAdding ? 'add' : 'remove' }).catch(console.error);
     });
   }, [addOptimisticMeal, meals, session, roomId, toggleMealMutation, mealSystem]);
 
@@ -561,14 +561,14 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
                 }
             });
         }
-        await patchGuestMealMutation.mutateAsync({ date, type, count, isUpdate: !!existing || isUpdate });
+        await patchGuestMealMutation.mutateAsync({ date, type, count, isUpdate: !!existing || isUpdate }).catch(console.error);
     });
   }, [patchGuestMealMutation, optimisticGuestMeals, session?.user?.id, roomId, startTransition, addOptimisticGuestMeal]);
 
   const deleteGuestMeal = useCallback(async (guestMealId: string, date?: Date) => {
     startTransition(async () => {
         addOptimisticGuestMeal({ action: 'remove', id: guestMealId });
-        await deleteGuestMealMutation.mutateAsync({ guestMealId, date });
+        await deleteGuestMealMutation.mutateAsync({ guestMealId, date }).catch(console.error);
     });
   }, [deleteGuestMealMutation, startTransition, addOptimisticGuestMeal]);
 

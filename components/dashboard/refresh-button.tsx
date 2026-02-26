@@ -20,7 +20,7 @@ export function RefreshButton({ refresh, isRefreshing }: RefreshButtonProps) {
         className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
       />
 
-      <span className="text-sm">
+      <span className="hidden sm:inline text-sm">
         {isRefreshing ? "Refreshing..." : "Refresh"}
       </span>
     </Button>
