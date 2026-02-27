@@ -40,7 +40,6 @@ export default function LoginForm() {
     }
 
     setIsLoading(true)
-    const toastId = toast.loading('Signing in...')
 
     try {
       const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard'
@@ -57,18 +56,18 @@ export default function LoginForm() {
       }
 
       if (result.error) {
-        toast.error('Invalid email or password', { id: toastId })
+        toast.error('Invalid email or password')
         return
       }
 
       // If we get here, login was successful
-      toast.success('Login successful!', { id: toastId })
+      toast.success('Login successful!')
 
       // Use router.push for proper navigation
       router.push(callbackUrl)
 
-    } catch (error) {
-      toast.error('An error occurred. Please try again.', { id: toastId })
+    } catch (error: any) {
+      toast.error(error?.message ?? 'An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -94,12 +93,10 @@ export default function LoginForm() {
 
   const handlePasskeySignIn = async () => {
     if (typeof window === "undefined" || !window.PublicKeyCredential) {
-      toast.error("Passkeys are not supported on this device/browser.")
       return
     }
 
     setIsPasskeyLoading(true)
-    const toastId = toast.loading("Authenticating with passkey…")
 
     try {
       // Step 1: Get authentication options
@@ -154,16 +151,16 @@ export default function LoginForm() {
           throw new Error(loginResult.error)
         }
 
-        toast.success("Passkey login successful!", { id: toastId })
+        toast.success("Passkey login successful!")
         router.push(callbackUrl)
       } else {
         throw new Error("Verification failed")
       }
     } catch (error: any) {
       if (error?.name === "NotAllowedError") {
-        toast.error("Authentication was cancelled.", { id: toastId })
+        toast.error("Authentication was cancelled.")
       } else {
-        toast.error(error?.message ?? "Passkey login failed.", { id: toastId })
+        toast.error(error?.message ?? "Passkey login failed.")
       }
     } finally {
       setIsPasskeyLoading(false)
