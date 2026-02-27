@@ -7,8 +7,8 @@ export interface StoredPasskey {
   counter: bigint
   credentialDeviceType: string
   credentialBackedUp: boolean
-  transports?: string
-  name?: string | null
+  transports: string | null
+  name: string | null
   userId: string
 }
 
