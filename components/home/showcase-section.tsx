@@ -48,7 +48,7 @@ export default function ShowcaseSection({ initialData }: { initialData?: Showcas
         label: "Desktop View",
       },
       mobile: data?.screenshots?.mobile || {
-        image: "/Screenshot-phone.png",
+        image: "/phone-view.png",
         alt: "Mobile screenshot",
         label: "Mobile View",
       }

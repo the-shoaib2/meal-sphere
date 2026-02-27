@@ -181,7 +181,7 @@ export async function getPublicDataAction(endpoint: string) {
               label: "Desktop View",
             },
             mobile: {
-              image: "/Screenshot-phone.png",
+              image: "/phone-view.png",
               alt: "Phone view screenshot",
               label: "Phone View",
             },
