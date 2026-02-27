@@ -10,6 +10,7 @@ import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
 import { NoGroupState } from "@/components/empty-states/no-group-state"
 import { useGroups } from "@/hooks/use-groups"
+import { cn } from "@/lib/utils"
 
 // Import separated components
 import { LoadingWrapper, Loader } from "@/components/ui/loader"
@@ -17,6 +18,10 @@ import UserTableRow from "@/components/calculations/user-table-row"
 import CalculationsHeader from "@/components/calculations/calculations-header"
 import SummaryCards from "@/components/calculations/summary-cards"
 import { PageHeader } from "@/components/shared/page-header"
+
+import { formatCurrency } from "@/lib/meal-calculations"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 
 interface CalculationsProps {
   roomId?: string;
@@ -158,23 +163,77 @@ const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
             <div className="space-y-4">
               <SummaryCards summary={summary} />
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-sm">Member</TableHead>
-                    <TableHead className="text-right text-sm">Meals</TableHead>
-                    <TableHead className="text-right text-sm">Cost</TableHead>
-                    <TableHead className="text-right text-sm">Paid</TableHead>
-                    <TableHead className="text-right text-sm">Balance</TableHead>
-                    <TableHead className="text-center text-sm">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {userSummaries.map((user: any) => (
-                    <UserTableRow key={user.userId} user={user} />
-                  ))}
-                </TableBody>
-              </Table>
+              {/* Desktop View - Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-sm">Member</TableHead>
+                      <TableHead className="text-right text-sm">Meals</TableHead>
+                      <TableHead className="text-right text-sm">Cost</TableHead>
+                      <TableHead className="text-right text-sm">Paid</TableHead>
+                      <TableHead className="text-right text-sm">Balance</TableHead>
+                      <TableHead className="text-center text-sm">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {userSummaries.map((user: any) => (
+                      <UserTableRow key={user.userId} user={user} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile View - Cards List */}
+              <div className="block md:hidden space-y-3">
+                {userSummaries.map((user: any) => {
+                  const initials = user.userName.split(" ").map((n: string) => n[0]).join("")
+                  const balanceColor = user.balance >= 0 ? "text-green-600" : "text-red-600"
+                  const badgeVariant = user.balance >= 0 ? "default" : "destructive"
+                  const badgeText = user.balance >= 0 ? "Paid" : "Due"
+
+                  return (
+                    <div key={user.userId} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={user.userImage || "/placeholder.svg"} />
+                            <AvatarFallback>{initials}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-bold text-sm truncate uppercase tracking-tight">{user.userName}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground font-semibold">
+                                {user.mealCount} MEALS
+                              </span>
+                              <Badge variant={badgeVariant} className="text-[9px] px-1.5 h-4 uppercase font-bold">
+                                {badgeText}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
+                        <div className="space-y-0.5 text-center px-1">
+                          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Cost</p>
+                          <p className="text-xs font-black">{formatCurrency(user.cost)}</p>
+                        </div>
+                        <div className="space-y-0.5 text-center border-x border-border/50 px-1">
+                          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Paid</p>
+                          <p className="text-xs font-black">{formatCurrency(user.paid)}</p>
+                        </div>
+                        <div className="space-y-0.5 text-center px-1">
+                          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider">Balance</p>
+                          <p className={cn("text-xs font-black", balanceColor)}>
+                            {formatCurrency(user.balance)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Facebook, Instagram, Twitter, Linkedin, Github } from "lucide-react"
+import { Utensils, Facebook, Instagram, Twitter, Linkedin, Github } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { handleNavigation } from "@/lib/utils"
 
@@ -55,16 +55,11 @@ export function PublicFooter() {
       <div className="container px-4 py-6 mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <svg
-                className="h-6 w-6 text-primary"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-              <span className="text-lg font-bold">MealSphere</span>
+            <div className="flex items-center gap-2">
+              <Utensils className="h-6 w-6 text-primary" />
+              <span className="text-lg font-bold">
+                Meal<span className="text-primary">Sphere</span>
+              </span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Simplify your meal management with our comprehensive solution for roommates and shared living spaces.

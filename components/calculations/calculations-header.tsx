@@ -40,30 +40,32 @@ const CalculationsHeader = memo(({
       collapsible={false}
     >
       {isAdmin && (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
             onClick={onPrevious}
             disabled={!hasPrevious}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          <div className="text-center px-3 py-1 bg-muted/50 rounded-md border shadow-sm min-w-[100px]">
-            <div className="text-muted-foreground font-semibold text-[10px] uppercase tracking-wider">
-              {isViewingCurrentPeriod ? "Current" : "Historical"}
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center px-2 py-0.5 sm:px-3 sm:py-1 bg-muted/50 rounded-md border shadow-sm min-w-[70px] sm:min-w-[100px]">
+            <span className="text-muted-foreground font-bold text-[8px] sm:text-[10px] uppercase tracking-tighter sm:tracking-wider">
+              {isViewingCurrentPeriod ? "Current" : "History"}
+            </span>
             {displayPeriod && (
-              <div className="text-xs font-bold text-foreground">
+              <span className="text-[10px] sm:text-xs font-black text-foreground truncate max-w-[60px] sm:max-w-none">
                 {displayPeriod.name}
-              </div>
+              </span>
             )}
           </div>
 
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
             onClick={onNext}
             disabled={!hasNext}
           >

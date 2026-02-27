@@ -25,7 +25,7 @@ export function PeriodOverviewSection({
   return (
     <div className="space-y-4">
       {/* Period Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium truncate pr-2">Total Periods</CardTitle>

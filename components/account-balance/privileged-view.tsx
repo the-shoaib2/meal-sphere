@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -148,88 +149,153 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
           <CardTitle>All Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[600px] w-full whitespace-nowrap rounded-md border">
-            <div className="w-full">
-              <Table className="min-w-[800px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                    <TableHead className="text-right">Meals</TableHead>
-                    <TableHead className="text-right">Spent</TableHead>
-                    <TableHead className="text-right">Available</TableHead>
-                    {userRole === 'ADMIN' && <TableHead className="text-right">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleMembers.map((member: any) => (
-                    <TableRow key={member.userId}>
-                      <TableCell className="max-w-xs overflow-hidden">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={member.user.image || ''} />
-                            <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{member.user.name}</p>
-                            <p className="text-sm text-muted-foreground">{member.user.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={getRoleBadgeVariant(member.role)}
-                          className={getRoleBadgeStyle(member.role)}
-                        >
-                          {member.role?.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        <span className={member.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          ৳{member.balance.toFixed(2)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {member.mealCount || 0}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ৳{(member.totalSpent || 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        <span className={(member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          ৳{(member.availableBalance || 0).toFixed(2)}
-                        </span>
-                      </TableCell>
-                      {userRole === 'ADMIN' && (
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-
-                            className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-primary hover:text-primary-foreground"
-                            onClick={() => handleViewDetails(member.userId)}
-                          >
-                            <span>Details</span>
-                            <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
-                          </Button>
-                        </TableCell>
-                      )}
-
-                    </TableRow>
-                  ))}
-                  {/* Sentinel element for infinite scroll */}
-                  {visibleCount < members.length && (
+          {/* Desktop View - Table */}
+          <div className="hidden md:block">
+            <ScrollArea className="h-[600px] w-full whitespace-nowrap rounded-md border">
+              <div className="w-full">
+                <Table className="min-w-[800px]">
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={userRole === 'ADMIN' ? 7 : 6} className="p-0 border-0">
-                        <div ref={observerTarget} className="h-4 w-full" />
-                      </TableCell>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-right">Balance</TableHead>
+                      <TableHead className="text-right">Meals</TableHead>
+                      <TableHead className="text-right">Spent</TableHead>
+                      <TableHead className="text-right">Available</TableHead>
+                      {userRole === 'ADMIN' && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleMembers.map((member: any) => (
+                      <TableRow key={member.userId}>
+                        <TableCell className="max-w-xs overflow-hidden">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={member.user.image || ''} />
+                              <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{member.user.name}</p>
+                              <p className="text-sm text-muted-foreground">{member.user.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={getRoleBadgeVariant(member.role)}
+                            className={getRoleBadgeStyle(member.role)}
+                          >
+                            {member.role?.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          <span className={member.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            ৳{member.balance.toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {member.mealCount || 0}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ৳{(member.totalSpent || 0).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          <span className={(member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            ৳{(member.availableBalance || 0).toFixed(2)}
+                          </span>
+                        </TableCell>
+                        {userRole === 'ADMIN' && (
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-primary hover:text-primary-foreground"
+                              onClick={() => handleViewDetails(member.userId)}
+                            >
+                              <span>Details</span>
+                              <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
+                            </Button>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                    {/* Sentinel element for infinite scroll */}
+                    {visibleCount < members.length && (
+                      <TableRow>
+                        <TableCell colSpan={userRole === 'ADMIN' ? 7 : 6} className="p-0 border-0">
+                          <div ref={observerTarget} className="h-4 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+
+          {/* Mobile View - Cards List */}
+          <div className="block md:hidden space-y-4">
+            {visibleMembers.map((member: any) => (
+              <div key={member.userId} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={member.user.image || ''} />
+                      <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm truncate uppercase tracking-tight">{member.user.name}</p>
+                      <Badge
+                        variant={getRoleBadgeVariant(member.role)}
+                        className={cn("text-[10px] h-4", getRoleBadgeStyle(member.role))}
+                      >
+                        {member.role?.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                  </div>
+                  {userRole === 'ADMIN' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-primary"
+                      onClick={() => handleViewDetails(member.userId)}
+                    >
+                      Details
+                    </Button>
                   )}
-                </TableBody>
-              </Table>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Balance</p>
+                    <p className={cn("text-xs font-bold", member.balance >= 0 ? 'text-green-600' : 'text-red-600')}>
+                      ৳{member.balance.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="space-y-0.5 text-right">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Meals</p>
+                    <p className="text-xs font-bold">{member.mealCount || 0}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Spent</p>
+                    <p className="text-xs font-bold">৳{(member.totalSpent || 0).toFixed(2)}</p>
+                  </div>
+                  <div className="space-y-0.5 text-right">
+                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Available</p>
+                    <p className={cn("text-xs font-bold", (member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600')}>
+                      ৳{(member.availableBalance || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {/* Infinite scroll sentinel for mobile */}
+            {visibleCount < members.length && (
+              <div ref={observerTarget} className="h-10 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div >
