@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(
     passkeys.map((pk: any) => ({
       id: pk.credentialID,
-      name: `Passkey (${pk.credentialDeviceType ?? "device"})`,
+      name: pk.name || `Passkey (${pk.credentialDeviceType ?? "device"})`,
       createdAt: pk.createdAt?.toISOString() ?? new Date().toISOString(),
       credentialDeviceType: pk.credentialDeviceType,
       credentialBackedUp: pk.credentialBackedUp,

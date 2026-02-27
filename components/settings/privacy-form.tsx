@@ -91,7 +91,7 @@ export function PrivacyForm({ user }: PrivacyFormProps) {
                             control={form.control}
                             name="isSearchable"
                             render={({ field }) => (
-                                <FormItem className="border-none flex flex-row items-center justify-between rounded-lg border p-2">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
                                     <div className="space-y-0.5">
                                         <FormLabel className="text-base">Search Visibility</FormLabel>
                                         <FormDescription>
@@ -111,7 +111,7 @@ export function PrivacyForm({ user }: PrivacyFormProps) {
                             control={form.control}
                             name="showEmail"
                             render={({ field }) => (
-                                <FormItem className="border-none flex flex-row items-center justify-between rounded-lg border p-2">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
                                     <div className="space-y-0.5">
                                         <FormLabel className="text-base">Show Email</FormLabel>
                                         <FormDescription>

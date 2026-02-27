@@ -25,13 +25,13 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { userId } = body
-
     // Find the passkey
     const passkey = await getPasskeyById(body.id)
-    if (!passkey || passkey.userId !== userId) {
+    if (!passkey) {
       return NextResponse.json({ error: "Passkey not found" }, { status: 404 })
     }
+
+    const { userId } = passkey
 
     const rpID = process.env.WEBAUTHN_RP_ID ?? new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000").hostname
 
@@ -40,9 +40,10 @@ export async function POST(req: NextRequest) {
       expectedChallenge,
       expectedOrigin: process.env.NEXTAUTH_URL ?? `http://localhost:3000`,
       expectedRPID: rpID,
-      credential: {
-        id: passkey.credentialID,
-        publicKey: Buffer.from(passkey.credentialPublicKey, "base64"),
+      requireUserVerification: false,
+      authenticator: {
+        credentialID: Buffer.from(passkey.credentialID, "base64url"),
+        credentialPublicKey: Buffer.from(passkey.credentialPublicKey, "base64"),
         counter: Number(passkey.counter),
         transports: (passkey.transports?.split(",") ?? []) as any,
       },

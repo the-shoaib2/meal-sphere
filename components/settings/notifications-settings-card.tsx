@@ -72,7 +72,7 @@ export function NotificationsSettingsCard() {
                 <CardDescription>Choose which notifications you want to receive across all groups</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                     <div className="space-y-0.5">
                         <Label htmlFor="meal-reminders">Meal Reminders</Label>
                         <p className="text-sm text-muted-foreground">Receive reminders to mark your daily meals</p>
@@ -83,7 +83,7 @@ export function NotificationsSettingsCard() {
                         onCheckedChange={() => handleGlobalToggle("mealReminders")}
                     />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                     <div className="space-y-0.5">
                         <Label htmlFor="payment-alerts">Payment Alerts</Label>
                         <p className="text-sm text-muted-foreground">Get notified about payment due dates and confirmations</p>
@@ -94,7 +94,7 @@ export function NotificationsSettingsCard() {
                         onCheckedChange={() => handleGlobalToggle("paymentAlerts")}
                     />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                     <div className="space-y-0.5">
                         <Label htmlFor="voting-notifications">Voting Notifications</Label>
                         <p className="text-sm text-muted-foreground">Receive updates about active votes and results</p>
@@ -105,7 +105,7 @@ export function NotificationsSettingsCard() {
                         onCheckedChange={() => handleGlobalToggle("votingNotifications")}
                     />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                     <div className="space-y-0.5">
                         <Label htmlFor="manager-updates">Manager Updates</Label>
                         <p className="text-sm text-muted-foreground">Get notified when room managers change</p>
@@ -116,7 +116,7 @@ export function NotificationsSettingsCard() {
                         onCheckedChange={() => handleGlobalToggle("managerUpdates")}
                     />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                     <div className="space-y-0.5">
                         <Label htmlFor="shopping-alerts">Shopping Alerts</Label>
                         <p className="text-sm text-muted-foreground">Receive notifications when new shopping items are added</p>
@@ -127,7 +127,7 @@ export function NotificationsSettingsCard() {
                         onCheckedChange={() => handleGlobalToggle("shoppingAlerts")}
                     />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
                     <div className="space-y-0.5">
                         <Label htmlFor="email-notifications">Email Notifications</Label>
                         <p className="text-sm text-muted-foreground">

@@ -1,11 +1,19 @@
 import { AuthOptions } from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 
-// Import configurations and utilities
-import { validateEnvironmentVariables, cookieConfig, sessionConfig, pagesConfig } from '@/lib/auth/config';
+import { 
+  validateEnvironmentVariables, 
+  cookieConfig, 
+  sessionConfig, 
+  pagesConfig 
+} from '@/lib/auth/config';
 import { providers } from '@/lib/auth/providers';
-import { sessionCallback, signInCallback, eventsCallbacks, jwtCallback } from '@/lib/auth/callbacks';
+import { 
+  sessionCallback,
+  signInCallback, 
+  eventsCallbacks, 
+  jwtCallback 
+} from '@/lib/auth/callbacks';
 
 // Import types
 import '@/lib/auth/types';

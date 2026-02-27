@@ -8,6 +8,7 @@ export interface StoredPasskey {
   credentialDeviceType: string
   credentialBackedUp: boolean
   transports?: string
+  name?: string | null
   userId: string
 }
 
@@ -34,6 +35,7 @@ export async function saveNewPasskey(
     credentialDeviceType: string
     credentialBackedUp: boolean
     transports?: string[]
+    name?: string
   }
 ): Promise<void> {
   await prisma.authenticator.create({
@@ -46,6 +48,7 @@ export async function saveNewPasskey(
       credentialDeviceType: passkey.credentialDeviceType,
       credentialBackedUp: passkey.credentialBackedUp,
       transports: passkey.transports?.join(","),
+      name: passkey.name,
     },
   })
 }

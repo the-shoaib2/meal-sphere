@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getUserPasskeys } from "@/lib/services/passkey-service"
 import { prisma } from "@/lib/services/prisma"
 
+// Version 1.0.1 - Forced Refresh
 async function getSimpleWebAuthn() {
   try {
     return await import("@simplewebauthn/server")
@@ -11,9 +12,14 @@ async function getSimpleWebAuthn() {
 }
 
 async function getUserByEmail(email: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
+  const user = await prisma.user.findFirst({
+    where: { 
+      email: {
+        equals: email,
+        mode: 'insensitive'
+      }
+    },
+    select: { id: true, email: true },
   })
   return user
 }
@@ -26,34 +32,31 @@ export async function POST(req: NextRequest) {
     }
 
     const { generateAuthenticationOptions } = lib
+    // Renamed to move away from any potential collisions
+    const appRpID = process.env.WEBAUTHN_RP_ID ?? new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000").hostname
     const { email } = await req.json()
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    let user = null
+    if (email) {
+      user = await getUserByEmail(email)
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 })
+      }
     }
 
-    const user = await getUserByEmail(email)
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    const passkeys = await getUserPasskeys(user.id)
-    if (passkeys.length === 0) {
-      return NextResponse.json({ error: "No passkeys registered for this account" }, { status: 404 })
-    }
-
-    const rpID = process.env.WEBAUTHN_RP_ID ?? new URL(process.env.NEXTAUTH_URL ?? "http://localhost:3000").hostname
-
+    const passkeys = user ? await getUserPasskeys(user.id) : []
+    
     const options = await generateAuthenticationOptions({
-      rpID,
+      rpID: appRpID,
       userVerification: "preferred",
       allowCredentials: passkeys.map((pk) => ({
-        id: pk.credentialID,
+        id: Buffer.from(pk.credentialID, 'base64url'),
+        type: 'public-key' as const,
         transports: (pk.transports?.split(",") ?? []) as any,
       })),
     })
 
-    const response = NextResponse.json({ ...options, userId: user.id })
+    const response = NextResponse.json({ ...options, userId: user?.id || null })
     response.cookies.set("passkey_challenge", options.challenge, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

@@ -48,7 +48,6 @@ export function AppearanceForm({ user }: AppearanceFormProps) {
   const handleThemeChange = (theme: string) => {
     setTheme(theme)
     form.setValue('theme', theme as any)
-    toast.success("Theme updated")
   }
 
   if (!mounted) {

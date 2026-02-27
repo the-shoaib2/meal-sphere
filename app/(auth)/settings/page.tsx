@@ -11,7 +11,8 @@ import { getAllActiveSessions } from "@/lib/auth/session-manager"
 import { PageHeader } from "@/components/shared/page-header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PasskeyManagement } from "@/components/settings/passkey-management"
-import { User, Settings, Shield, Bell, Key } from "lucide-react"
+import { ChangePasswordCard } from "@/components/settings/change-password-card"
+import { User, Settings, Shield, Bell, Key, ShieldCheck } from "lucide-react"
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions)
@@ -45,52 +46,31 @@ export default async function SettingsPage() {
         description="Manage your account settings, security and preferences"
       />
 
-      <Tabs defaultValue="profile" className="w-full">
-        {/* Tab bar: 5 columns on sm+, icon-only on mobile */}
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="profile" className="flex flex-row items-center gap-2">
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="general" className="flex flex-row items-center gap-2">
             <User className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline text-xs sm:text-sm">Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex flex-row items-center gap-2">
-            <Settings className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline text-xs sm:text-sm">Appearance</span>
-          </TabsTrigger>
-          <TabsTrigger value="privacy" className="flex flex-row items-center gap-2">
-            <Shield className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline text-xs sm:text-sm">Privacy</span>
+            <span className="text-xs sm:text-sm">General</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex flex-row items-center gap-2">
-            <Key className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline text-xs sm:text-sm">Security</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex flex-row items-center gap-2">
-            <Bell className="h-4 w-4 shrink-0" />
-            <span className="hidden sm:inline text-xs sm:text-sm">Notifications</span>
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            <span className="text-xs sm:text-sm">Security & Privacy</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile" className="mt-6">
+        <TabsContent value="general" className="mt-6 space-y-6">
           <ProfileForm user={user} isGoogleUser={isGoogleUser} />
-        </TabsContent>
-
-        <TabsContent value="appearance" className="mt-6">
           <AppearanceForm user={user} />
-        </TabsContent>
-
-        <TabsContent value="privacy" className="mt-6">
-          <PrivacyForm user={user} />
+          <NotificationsSettingsCard />
         </TabsContent>
 
         <TabsContent value="security" className="mt-6 space-y-6">
+          <PrivacyForm user={user} />
+          {!isGoogleUser && <ChangePasswordCard user={user} />}
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             <ActiveSessionsCard user={user} initialSessions={activeSessions} />
             <PasskeyManagement />
           </div>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="mt-6">
-          <NotificationsSettingsCard />
         </TabsContent>
       </Tabs>
     </div>

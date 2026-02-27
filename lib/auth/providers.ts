@@ -26,9 +26,40 @@ export const credentialsProvider = CredentialsProvider({
   name: 'credentials',
   credentials: {
     email: { label: "Email", type: "email" },
-    password: { label: "Password", type: "password" }
+    password: { label: "Password", type: "password" },
+    passkey: { label: "Passkey", type: "boolean" },
+    credentialID: { label: "Credential ID", type: "text" },
+    userId: { label: "User ID", type: "text" }
   },
   async authorize(credentials) {
+    if (credentials?.passkey === "true") {
+      const { credentialID, userId } = credentials;
+      if (!credentialID || !userId) {
+        throw new Error("Missing passkey authentication data");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId as string },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+        }
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.image
+      };
+    }
+
     if (!credentials?.email || !credentials?.password) {
       throw new Error('Please enter email and password');
     }

@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       credentialDeviceType,
       credentialBackedUp,
       transports: body.response?.transports ?? [],
+      name: body.name,
     })
 
     // Clear the challenge cookie

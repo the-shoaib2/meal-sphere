@@ -5,8 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Fingerprint, Trash2, Plus, Loader2, KeyRound, ShieldCheck } from "lucide-react"
+import { Fingerprint, Trash2, Plus, Loader2, KeyRound, ShieldCheck, Monitor, Smartphone, Tablet } from "lucide-react"
 import { toast } from "react-hot-toast"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface Passkey {
     id: string
@@ -21,6 +31,9 @@ export function PasskeyManagement() {
     const [isRegistering, setIsRegistering] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [passkeyName, setPasskeyName] = useState("")
+    const [defaultName, setDefaultName] = useState("")
 
     const loadPasskeys = useCallback(async () => {
         try {
@@ -40,7 +53,36 @@ export function PasskeyManagement() {
         loadPasskeys()
     }, [loadPasskeys])
 
+    const getDeviceName = () => {
+        const ua = window.navigator.userAgent
+        let os = "Unknown OS"
+        let browser = "Unknown Browser"
+
+        if (ua.indexOf("Win") !== -1) os = "Windows"
+        if (ua.indexOf("Mac") !== -1) os = "macOS"
+        if (ua.indexOf("X11") !== -1) os = "UNIX"
+        if (ua.indexOf("Linux") !== -1) os = "Linux"
+        if (ua.indexOf("Android") !== -1) os = "Android"
+        if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) os = "iOS"
+
+        if (ua.indexOf("Chrome") !== -1) browser = "Chrome"
+        else if (ua.indexOf("Safari") !== -1) browser = "Safari"
+        else if (ua.indexOf("Firefox") !== -1) browser = "Firefox"
+        else if (ua.indexOf("MSIE") !== -1 || !!(document as any).documentMode === true) browser = "IE"
+        else if (ua.indexOf("Edge") !== -1) browser = "Edge"
+
+        return `${browser} on ${os}`
+    }
+
+    const startRegistrationFlow = () => {
+        const name = getDeviceName()
+        setDefaultName(name)
+        setPasskeyName("")
+        setIsDialogOpen(true)
+    }
+
     const handleRegister = async () => {
+        setIsDialogOpen(false)
         if (typeof window === "undefined" || !window.PublicKeyCredential) {
             toast.error("Your device or browser doesn't support passkeys.")
             return
@@ -70,7 +112,7 @@ export function PasskeyManagement() {
             const verifyRes = await fetch("/api/auth/passkey/register-verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(credential),
+                body: JSON.stringify({ ...credential, name: passkeyName || defaultName }),
             })
 
             if (!verifyRes.ok) {
@@ -178,8 +220,47 @@ export function PasskeyManagement() {
 
                 <Separator />
 
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Name your Passkey</DialogTitle>
+                            <DialogDescription>
+                                Give your passkey a name to help you identify it later.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Passkey Name</Label>
+                                <Input
+                                    id="name"
+                                    placeholder={defaultName}
+                                    value={passkeyName}
+                                    onChange={(e) => setPasskeyName(e.target.value)}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            handleRegister()
+                                        }
+                                    }}
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                    If left empty, we&apos;ll use &quot;{defaultName}&quot;
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleRegister}>
+                                Register
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <Button
-                    onClick={handleRegister}
+                    onClick={startRegistrationFlow}
                     disabled={isRegistering || isLoading}
                     className="w-full"
                 >
