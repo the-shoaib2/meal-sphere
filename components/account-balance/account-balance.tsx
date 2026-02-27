@@ -41,6 +41,7 @@ import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 import { InsufficientPermissionsState } from '@/components/empty-states/insufficient-permissions-state';
 import { AccountTransactionDialog } from '@/components/account-balance/account-transaction-dialog';
 import { AddBalanceButton } from '@/components/account-balance/add-balance-button';
+import { AccountSummaryCards } from '@/components/account-balance/account-summary-cards';
 
 import { Role } from '@prisma/client';
 
@@ -70,7 +71,7 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   //   window.dispatchEvent(new CustomEvent('routeChangeStart'));
   //   router.push(`/account-balance/${userId}`);
   // };
-  const { data: groupData, isLoading: isLoadingBalances, error: balancesError } = useGroupBalances(activeGroup?.id!, hasPrivilege, true, initialData);
+  const { data: groupData, isLoading: isLoadingBalances, error: balancesError } = useGroupBalances(activeGroup?.id!, true, true, initialData);
   const { data: ownBalance, isLoading: isLoadingOwnBalance, error: ownBalanceError } = useGetBalance(activeGroup?.id!, session?.user?.id!, true, initialData);
   const {
     data: ownTransactionsData,
@@ -148,34 +149,38 @@ export function AccountBalancePanel({ initialData }: { initialData?: BalancePage
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <LoadingWrapper
         isLoading={
-          isLoadingBalances ||
           isLoadingOwnBalance ||
           isLoadingTransactions ||
           !activeGroup ||
-          (hasPrivilege ? !groupData : !ownBalance)
+          (!hasPrivilege && !ownBalance) ||
+          (hasPrivilege && (isLoadingBalances || !groupData))
         }
         minHeight="60vh"
       >
-        {hasPrivilege ? (
-          <PrivilegedView
-            groupData={groupData!}
-            userRole={userRole as Role}
-          />
-        ) : (
-          <MemberView
-            balance={ownBalance}
-            transactions={ownTransactions || []}
-            userRole={userRole as Role}
-            session={session}
-            groupId={activeGroup?.id}
-            onFetchNextPage={fetchNextOwn}
-            hasNextPage={hasNextOwn}
-            isFetchingNextPage={isFetchingNextOwn}
-          />
-        )}
+        <div className="space-y-6">
+          {groupData && hasPrivilege && <AccountSummaryCards groupData={groupData} />}
+
+          {hasPrivilege ? (
+            <PrivilegedView
+              groupData={groupData!}
+              userRole={userRole as Role}
+            />
+          ) : (
+            <MemberView
+              balance={ownBalance}
+              transactions={ownTransactions || []}
+              userRole={userRole as Role}
+              session={session}
+              groupId={activeGroup?.id}
+              onFetchNextPage={fetchNextOwn}
+              hasNextPage={hasNextOwn}
+              isFetchingNextPage={isFetchingNextOwn}
+            />
+          )}
+        </div>
       </LoadingWrapper>
       {hasPrivilege && (
         <AccountTransactionDialog

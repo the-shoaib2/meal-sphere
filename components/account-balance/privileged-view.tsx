@@ -17,6 +17,7 @@ import {
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { User, DollarSign, Users, TrendingUp, Calculator, Receipt, Utensils, ArrowRight } from 'lucide-react';
 import type { GroupBalanceSummary } from '@/hooks/use-account-balance';
+import { StatCard } from './stat-card';
 import { Button } from '@/components/ui/button';
 import { hasBalancePrivilege } from '@/lib/auth/balance-permissions';
 import { Role } from '@prisma/client';
@@ -102,152 +103,108 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
   return (
     <div className="space-y-6">
 
-      <div className="mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-          <StatCard icon={Users} title="Total Members" value={members.length} />
-          <StatCard icon={TrendingUp} title="Active Balances" value={activeBalancesCount} />
-          <StatCard
-            icon={DollarSign}
-            title="Group Total"
-            value={`৳${groupTotalBalance.toFixed(2)}`}
-            isCurrency
-            isPositive={groupTotalBalance >= 0}
-          />
-          <StatCard
-            icon={Calculator}
-            title="Balance Status"
-            value={netGroupBalance === 0 ? 'Balanced' : 'Unbalanced'}
-            isPositive={netGroupBalance === 0}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard
-          icon={Receipt}
-          title="Total Expenses"
-          value={`৳${totalExpenses.toFixed(2)}`}
-          isCurrency
-          isPositive={false}
-        />
-        <StatCard
-          icon={Utensils}
-          title="Total Meals"
-          value={totalMeals}
-        />
-        <StatCard
-          icon={Calculator}
-          title="Meal Rate"
-          value={`৳${mealRate.toFixed(2)}`}
-          isCurrency
-          isPositive={true}
-        />
-      </div>
-
-      <Card className="max-w-full">
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
+      <Card className="max-w-full shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-lg font-bold">All Members</CardTitle>
+          <Badge variant="secondary" className="font-bold">
+            {members.length} Users
+          </Badge>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {/* Desktop View - Table */}
           <div className="hidden md:block">
-            <ScrollArea className="h-[600px] w-full whitespace-nowrap rounded-md border">
-              <div className="w-full">
-                <Table className="min-w-[800px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                      <TableHead className="text-right">Meals</TableHead>
-                      <TableHead className="text-right">Spent</TableHead>
-                      <TableHead className="text-right">Available</TableHead>
-                      {userRole === 'ADMIN' && <TableHead className="text-right">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleMembers.map((member: any) => (
-                      <TableRow key={member.userId}>
-                        <TableCell className="max-w-xs overflow-hidden">
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={member.user.image || ''} />
-                              <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{member.user.name}</p>
-                              <p className="text-sm text-muted-foreground">{member.user.email}</p>
-                            </div>
+            <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="font-bold">User</TableHead>
+                    <TableHead className="font-bold text-center">Role</TableHead>
+                    <TableHead className="text-right font-bold">Balance</TableHead>
+                    <TableHead className="text-right font-bold">Meals</TableHead>
+                    <TableHead className="text-right font-bold">Spent</TableHead>
+                    <TableHead className="text-right font-bold">Available</TableHead>
+                    {userRole === 'ADMIN' && <TableHead className="text-right font-bold">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleMembers.map((member: any) => (
+                    <TableRow key={member.userId} className="hover:bg-muted/20 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 ring-1 ring-border">
+                            <AvatarImage src={member.user.image || ''} />
+                            <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm truncate">{member.user.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{member.user.email}</p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={getRoleBadgeVariant(member.role)}
-                            className={getRoleBadgeStyle(member.role)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={getRoleBadgeVariant(member.role)}
+                          className={cn("text-[10px] uppercase font-bold tracking-wider", getRoleBadgeStyle(member.role))}
+                        >
+                          {member.role?.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        <span className={member.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          ৳{member.balance.toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {member.mealCount || 0}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-muted-foreground text-xs">
+                        ৳{(member.totalSpent || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        <span className={(member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          ৳{(member.availableBalance || 0).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      {userRole === 'ADMIN' && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-primary hover:bg-primary hover:text-primary-foreground font-bold h-8"
+                            onClick={() => handleViewDetails(member.userId)}
                           >
-                            {member.role?.replace('_', ' ')}
-                          </Badge>
+                            Details
+                          </Button>
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          <span className={member.balance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            ৳{member.balance.toFixed(2)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {member.mealCount || 0}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ৳{(member.totalSpent || 0).toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          <span className={(member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            ৳{(member.availableBalance || 0).toFixed(2)}
-                          </span>
-                        </TableCell>
-                        {userRole === 'ADMIN' && (
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              className="text-primary flex items-center gap-1 group overflow-hidden transition-colors hover:bg-primary hover:text-primary-foreground"
-                              onClick={() => handleViewDetails(member.userId)}
-                            >
-                              <span>Details</span>
-                              <ArrowRight className="h-4 w-4 ml-1 transform transition-transform duration-200 group-hover:translate-x-1 group-focus-visible:translate-x-1" />
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                    {/* Sentinel element for infinite scroll */}
-                    {visibleCount < members.length && (
-                      <TableRow>
-                        <TableCell colSpan={userRole === 'ADMIN' ? 7 : 6} className="p-0 border-0">
-                          <div ref={observerTarget} className="h-4 w-full" />
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Infinite scrolling sentinel for desktop */}
+            {visibleCount < members.length && (
+              <div ref={observerTarget} className="h-10 flex items-center justify-center mt-4">
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            )}
           </div>
 
-          {/* Mobile View - Cards List */}
-          <div className="block md:hidden space-y-4">
+          {/* Mobile View - Polished Card List */}
+          <div className="md:hidden divide-y divide-border/50">
             {visibleMembers.map((member: any) => (
-              <div key={member.userId} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm space-y-4">
+              <div key={member.userId} className="p-4 bg-card hover:bg-muted/10 transition-colors space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-10 w-10 ring-1 ring-border shadow-sm">
                       <AvatarImage src={member.user.image || ''} />
                       <AvatarFallback>{member.user.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="font-bold text-sm truncate uppercase tracking-tight">{member.user.name}</p>
+                      <p className="font-bold text-sm tracking-tight">{member.user.name}</p>
                       <Badge
                         variant={getRoleBadgeVariant(member.role)}
-                        className={cn("text-[10px] h-4", getRoleBadgeStyle(member.role))}
+                        className={cn("text-[9px] h-4 uppercase font-bold tracking-tighter", getRoleBadgeStyle(member.role))}
                       >
                         {member.role?.replace('_', ' ')}
                       </Badge>
@@ -255,43 +212,45 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
                   </div>
                   {userRole === 'ADMIN' && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="h-8 text-primary"
+                      className="text-primary font-bold h-8 px-2"
                       onClick={() => handleViewDetails(member.userId)}
                     >
-                      Details
+                      View Detail <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="space-y-0.5">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Balance</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-lg bg-muted/20 border border-border/50">
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mb-0.5">Balance</p>
                     <p className={cn("text-xs font-bold", member.balance >= 0 ? 'text-green-600' : 'text-red-600')}>
                       ৳{member.balance.toFixed(2)}
                     </p>
                   </div>
-                  <div className="space-y-0.5 text-right">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Meals</p>
-                    <p className="text-xs font-bold">{member.mealCount || 0}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Spent</p>
-                    <p className="text-xs font-bold">৳{(member.totalSpent || 0).toFixed(2)}</p>
-                  </div>
-                  <div className="space-y-0.5 text-right">
-                    <p className="text-[10px] text-muted-foreground uppercase font-semibold">Available</p>
-                    <p className={cn("text-xs font-bold", (member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600')}>
+                  <div className="p-2.5 rounded-lg bg-muted/20 border border-border/50">
+                    <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mb-0.5 text-right">Available</p>
+                    <p className={cn("text-xs font-bold text-right", (member.availableBalance || 0) >= 0 ? 'text-green-600' : 'text-red-600')}>
                       ৳{(member.availableBalance || 0).toFixed(2)}
                     </p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-muted/20 border border-border/50 col-span-2 flex justify-between items-center">
+                    <div>
+                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Meals</p>
+                      <p className="text-xs font-bold">{member.mealCount || 0}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Total Spent</p>
+                      <p className="text-xs font-bold text-red-600/80">৳{(member.totalSpent || 0).toFixed(2)}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
             {/* Infinite scroll sentinel for mobile */}
             {visibleCount < members.length && (
-              <div ref={observerTarget} className="h-10 flex items-center justify-center">
+              <div ref={observerTarget} className="h-16 flex items-center justify-center p-4">
                 <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             )}
@@ -301,25 +260,3 @@ export function PrivilegedView({ groupData, userRole }: PrivilegedViewProps) {
     </div >
   );
 }
-
-const StatCard = ({ icon: Icon, title, value, isCurrency = false, isPositive }: {
-  icon: React.ElementType,
-  title: string,
-  value: string | number,
-  isCurrency?: boolean,
-  isPositive?: boolean,
-}) => (
-  <Card>
-    <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
-      <div className="p-1.5 sm:p-2 bg-muted rounded-md mb-1 sm:mb-0">
-        <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
-      </div>
-      <div>
-        <p className="text-[10px] sm:text-sm text-muted-foreground font-medium leading-tight">{title}</p>
-        <p className={`text-sm sm:text-xl font-bold truncate ${isCurrency ? (isPositive ? 'text-green-600' : 'text-red-600') : ''}`}>
-          {value}
-        </p>
-      </div>
-    </CardContent>
-  </Card>
-); 

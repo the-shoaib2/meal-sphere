@@ -64,39 +64,41 @@ export default async function AccountBalancePage() {
   // 4. Render client component with initial data
   return (
     <div className="space-y-2">
-      <PageHeader
-        heading="Account Balances"
-        description={
-          <div className="flex flex-col gap-1.5">
-            <div className="flex sm:hidden flex-wrap items-center gap-1.5 mb-1">
+      <div className={!hasPrivilege ? "hidden md:block" : ""}>
+        <PageHeader
+          heading="Account Balances"
+          description={
+            <div className="flex flex-col gap-1.5">
+              <div className="flex sm:hidden flex-wrap items-center gap-1.5 mb-1">
+                {currentPeriod && (
+                  <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm">
+                    {currentPeriod.name} {currentPeriod.isLocked ? " Locked" : " Active"}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-muted-foreground/90 font-medium text-sm">
+                Manage all user balances and transactions.
+              </span>
+            </div>
+          }
+          badgesNextToTitle={true}
+          collapsible={false}
+          badges={
+            <div className="flex items-center gap-2">
+              <RoleBadge role={activeMember.role} />
               {currentPeriod && (
-                <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm">
+                <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="hidden sm:flex text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm">
                   {currentPeriod.name} {currentPeriod.isLocked ? " Locked" : " Active"}
                 </Badge>
               )}
             </div>
-            <span className="text-muted-foreground/90 font-medium text-sm">
-              Manage all user balances and transactions.
-            </span>
-          </div>
-        }
-        badgesNextToTitle={true}
-        collapsible={false}
-        badges={  
-          <div className="flex items-center gap-2">
-            <RoleBadge role={activeMember.role} />
-            {currentPeriod && (
-              <Badge variant={currentPeriod.isLocked ? "destructive" : "default"} className="hidden sm:flex text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest shadow-sm">
-                {currentPeriod.name} {currentPeriod.isLocked ? " Locked" : " Active"}
-              </Badge>
-            )}
-          </div>
-        }
-      >
-        {hasPrivilege && (
-          <AddBalanceButton />
-        )}
-      </PageHeader>
+          }
+        >
+          {hasPrivilege && (
+            <AddBalanceButton />
+          )}
+        </PageHeader>
+      </div>
 
 
       <AccountBalancePanel

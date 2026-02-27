@@ -7,7 +7,7 @@ import { Role } from "@prisma/client";
  * @returns true if the role has privileged access, false otherwise
  */
 export function hasBalancePrivilege(role?: Role | null): boolean {
-  return hasPermission(role || null, Permission.VIEW_FINANCE);
+  return hasPermission(role || null, Permission.MANAGE_FINANCE);
 }
 
 /**

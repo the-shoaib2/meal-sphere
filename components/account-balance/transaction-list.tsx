@@ -28,6 +28,7 @@ import { Edit, Trash2, MoreHorizontal, InfoIcon, Eye, X } from 'lucide-react';
 import { type AccountTransaction } from '@/hooks/use-account-balance';
 import { SafeDate } from '@/components/shared/safe-date';
 import { LoadingWrapper, Loader } from '@/components/ui/loader';
+import { cn } from '@/lib/utils';
 
 import { useInView } from 'react-intersection-observer';
 import { useEffect } from 'react';
@@ -96,110 +97,160 @@ export function TransactionList({
             <CardContent>
                 <LoadingWrapper isLoading={isLoading} minHeight="200px">
                     {transactions && transactions.length > 0 ? (
-                        <div className="rounded-md border overflow-hidden">
-                            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                                <Table>
-                                    <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                                        <TableRow>
-                                            <TableHead className="min-w-[100px]">Amount</TableHead>
-                                            <TableHead className="min-w-[100px]">Type</TableHead>
-                                            <TableHead className="min-w-[150px] hidden sm:table-cell">Description</TableHead>
-                                            <TableHead className="min-w-[120px] hidden md:table-cell">Added By</TableHead>
-                                            <TableHead className="min-w-[140px]">Date</TableHead>
-                                            {isAdmin && <TableHead className="text-right min-w-[80px]">Actions</TableHead>}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {transactions.map((t) => {
-                                            const isEdited = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000;
-                                            return (
-                                                <TableRow key={t.id}>
-                                                    <TableCell>
-                                                        <span className={`font-medium ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                            {t.amount > 0 ? '+' : ''}৳{t.amount.toFixed(2)}
+                        <div className="space-y-4">
+                            {/* Desktop View - Table */}
+                            <div className="hidden md:block rounded-md border border-border/50 overflow-hidden">
+                                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                                    <Table>
+                                        <TableHeader className="sticky top-0 bg-muted/50 z-10 shadow-sm">
+                                            <TableRow className="hover:bg-transparent">
+                                                <TableHead className="min-w-[120px] font-bold">Amount</TableHead>
+                                                <TableHead className="min-w-[100px] font-bold">Type</TableHead>
+                                                <TableHead className="min-w-[150px] hidden sm:table-cell font-bold">Description</TableHead>
+                                                <TableHead className="min-w-[120px] hidden lg:table-cell font-bold">Added By</TableHead>
+                                                <TableHead className="min-w-[140px] font-bold">Date</TableHead>
+                                                {isAdmin && <TableHead className="text-right min-w-[80px] font-bold">Actions</TableHead>}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {transactions.map((t) => {
+                                                const isEdited = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000;
+                                                return (
+                                                    <TableRow key={t.id} className="hover:bg-muted/20 transition-colors">
+                                                        <TableCell className="font-bold">
+                                                            <span className={t.amount > 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                {t.amount > 0 ? '+' : ''}৳{t.amount.toFixed(2)}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="text-[10px] uppercase font-bold tracking-wider bg-background/50"
+                                                            >
+                                                                {t.type}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="hidden sm:table-cell">
+                                                            <div className="max-w-[200px] truncate text-sm text-muted-foreground font-medium" title={t.description || ''}>
+                                                                {t.description || "No description"}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="hidden lg:table-cell">
+                                                            <div className="text-sm text-muted-foreground truncate max-w-[120px] font-medium" title={t.creator?.name || 'System'}>
+                                                                {t.creator?.name || 'System'}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="whitespace-nowrap">
+                                                            <div className="text-xs text-muted-foreground font-medium">
+                                                                <SafeDate date={t.createdAt} />
+                                                                {isEdited && <span className="ml-1 text-[10px] text-primary">(Edited)</span>}
+                                                            </div>
+                                                        </TableCell>
+                                                        {isAdmin && (
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted" suppressHydrationWarning>
+                                                                            <MoreHorizontal className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end" className="w-44">
+                                                                        <DropdownMenuItem onClick={() => onViewHistory(t.id)} className="font-medium">
+                                                                            <Eye className="mr-2 h-4 w-4 text-primary" />
+                                                                            <span>View History</span>
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => onEdit(t)} className="font-medium">
+                                                                            <Edit className="mr-2 h-4 w-4 text-blue-600" />
+                                                                            <span>Edit Entry</span>
+                                                                        </DropdownMenuItem>
+                                                                        {isAdmin && (
+                                                                            <DropdownMenuItem onClick={() => onDelete(t.id)} className="text-red-600 focus:text-red-600 font-medium">
+                                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                                <span>Delete</span>
+                                                                            </DropdownMenuItem>
+                                                                        )}
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        )}
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+
+                            {/* Mobile View - Polished Card List */}
+                            <div className="md:hidden space-y-3">
+                                {transactions.map((t) => {
+                                    const isEdited = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000;
+                                    return (
+                                        <Card key={t.id} className="bg-card/50 shadow-sm border-border/50 overflow-hidden hover:border-primary/30 transition-colors">
+                                            <CardContent className="p-4 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="text-[10px] uppercase font-bold tracking-widest bg-background/50"
+                                                    >
+                                                        {t.type}
+                                                    </Badge>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] text-muted-foreground font-medium">
+                                                            <SafeDate date={t.createdAt} format={(d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} />
                                                         </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className="text-xs">{t.type}</Badge>
-                                                    </TableCell>
-                                                    <TableCell className="hidden sm:table-cell">
-                                                        <div className="max-w-[200px] truncate text-sm text-muted-foreground" title={t.description || ''}>
-                                                            {t.description}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="hidden md:table-cell">
-                                                        <div className="text-sm text-muted-foreground truncate max-w-[120px]" title={t.creator?.name || 'System'}>
-                                                            {t.creator?.name || 'System'}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap">
-                                                        <div className="text-sm text-muted-foreground">
-                                                            <TooltipProvider>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger>
-                                                                        <span className="block sm:hidden">
-                                                                            <SafeDate date={t.createdAt} format={(d) => d.toLocaleDateString('en-US')} />
-                                                                        </span>
-                                                                        <span className="hidden sm:block">
-                                                                            <SafeDate date={t.createdAt} />
-                                                                        </span>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        <p>Created: <SafeDate date={t.createdAt} /></p>
-                                                                        {isEdited && <p>Updated: <SafeDate date={t.updatedAt} /></p>}
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            </TooltipProvider>
-                                                        </div>
-                                                    </TableCell>
-                                                    {isAdmin && (
-                                                        <TableCell className="text-right">
+                                                        {isAdmin && (
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" className="h-8 w-8 p-0" suppressHydrationWarning>
-                                                                        <span className="sr-only">Open menu</span>
-                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                                                        <MoreHorizontal className="h-3 w-3" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
+                                                                <DropdownMenuContent align="end" className="w-40">
                                                                     <DropdownMenuItem onClick={() => onViewHistory(t.id)}>
-                                                                        <Eye className="mr-2 h-4 w-4" />
-                                                                        <span>View History</span>
+                                                                        <Eye className="mr-2 h-4 w-4" /> View History
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem onClick={() => onEdit(t)}>
-                                                                        <Edit className="mr-2 h-4 w-4" />
-                                                                        <span>Edit</span>
+                                                                        <Edit className="mr-2 h-4 w-4" /> Edit
                                                                     </DropdownMenuItem>
-                                                                    {isAdmin && (
-                                                                        <DropdownMenuItem onClick={() => onDelete(t.id)} className="text-red-500 focus:text-red-500">
-                                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                                            <span>Delete</span>
-                                                                        </DropdownMenuItem>
-                                                                    )}
+                                                                    <DropdownMenuItem onClick={() => onDelete(t.id)} className="text-red-600 focus:text-red-600">
+                                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                                    </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
-                                                        </TableCell>
-                                                    )}
-                                                </TableRow>
-                                            );
-                                        })}
-                                        {/* Loading Indicator / Intersection Sentinel */}
-                                        {(hasNextPage || isFetchingNextPage) && (
-                                            <TableRow>
-                                                <TableCell colSpan={isAdmin ? 6 : 5} className="p-0 border-0">
-                                                    <div ref={ref} className="flex justify-center p-4">
-                                                        {isFetchingNextPage ? (
-                                                            <Loader />
-                                                        ) : (
-                                                            <span className="h-4 w-full block" />
                                                         )}
                                                     </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                                </div>
+
+                                                <div className="flex items-end justify-between">
+                                                    <div className="min-w-0 pr-4">
+                                                        <p className="text-xs font-bold text-foreground line-clamp-1">{t.description || "Credit/Debit entry"}</p>
+                                                        <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                                                            By: {t.creator?.name || 'System'} {isEdited && <span className="text-primary font-bold ml-1">(Edited)</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className={cn("text-sm font-bold tracking-tight", t.amount > 0 ? 'text-green-600' : 'text-red-600')}>
+                                                            {t.amount > 0 ? '+' : ''}৳{t.amount.toFixed(2)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
                             </div>
+
+                            {/* Sentinel element for infinite scroll */}
+                            {(hasNextPage || isFetchingNextPage) && (
+                                <div ref={ref} className="flex justify-center p-4">
+                                    {isFetchingNextPage ? (
+                                        <Loader />
+                                    ) : (
+                                        <span className="h-4 w-full block" />
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="text-center py-8">

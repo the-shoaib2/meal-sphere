@@ -98,15 +98,15 @@ export async function getPublicDataAction(endpoint: string) {
         };
       case "features":
         return {
-          title: "Key Features",
-          subtitle: "Everything you need to manage meals and costs in shared living spaces",
+          title: "Premium Living Experience",
+          subtitle: "Everything you need to manage meals and costs in shared living spaces with absolute clarity and ease.",
           features: [
-            { id: 1, title: "Collaborative Planning", description: "Real-time meal coordination for shared living spaces. Plan, edit, and sync meals with all group members instantly.", icon: "Users" },
-            { id: 2, title: "Automated Tracking", description: "Our smart system auto-calculates meal counts based on your unique preferences and schedule.", icon: "Utensils" },
-            { id: 3, title: "Financial Clarity", description: "Comprehensive cost calculation with detailed individual balances and monthly period summaries.", icon: "TrendingUp" },
-            { id: 4, title: "Integrated Payments", description: "Seamless Bkash integration for secure and instant meal cost settlements within your group.", icon: "CreditCard" },
-            { id: 5, title: "Democratic Governance", description: "Elect managers and vote on household decisions through our transparent democratic voting system.", icon: "Shield" },
-            { id: 6, title: "Smart Notifications", description: "Stay updated with real-time alerts for meal inputs, important group votes, and payment deadlines.", icon: "Bell" },
+            { id: 1, title: "Collaborative Meal Tracking", description: "Real-time multi-user meal logging for breakfast, lunch, and dinner. Coordinate with your group effortlessly.", icon: "Utensils" },
+            { id: 2, title: "Dynamic Rate Calculation", description: "Smart automated meal rate calculations based on current period expenses and accurate meal counts.", icon: "TrendingUp" },
+            { id: 3, title: "Smart Expense Management", description: "Track shopping and extra expenses with digital receipt storage and automated cost distribution.", icon: "CreditCard" },
+            { id: 4, title: "Instant Balance Overview", description: "Live tracking of personal and group balances. Clear visibility on who owes what at any moment.", icon: "DollarSign" },
+            { id: 5, title: "Period Lifecycle Control", description: "Professional management of meal periods. Lock, archive, and settle accounts for financial stability.", icon: "Shield" },
+            { id: 6, title: "Full Mobile Optimization", description: "High-performance dashboard optimized for all devices. Manage your home on the go with zero friction.", icon: "Zap" },
           ],
         };
       case "meal-plans":
@@ -137,7 +137,7 @@ export async function getPublicDataAction(endpoint: string) {
           ],
           cta: {
             title: "Ready to Transform Your Meal Planning?",
-            subtitle: "Join thousands of roommates who are already saving time and money with collaborative meal planning",
+            subtitle: "Join over 5,000+ roommates who are already saving time and money with collaborative meal planning",
             ctaPrimary: { text: "Start Free Trial", href: "/register" },
             ctaSecondary: { text: "Schedule Demo", href: "/contact" },
           },
@@ -151,12 +151,12 @@ export async function getPublicDataAction(endpoint: string) {
             ctaSecondary: { text: "View Meal Plans", href: "/meal-plans" },
           },
           recipeCategories: [
-            { name: "Breakfast", icon: "/images/hero-section/Breakfast.svg", count: 45 },
-            { name: "Lunch", icon: "/images/hero-section/Lunch.svg", count: 67 },
-            { name: "Dinner", icon: "/images/hero-section/Dinner.svg", count: 89 },
-            { name: "Snacks", icon: "/images/hero-section/Snacks.svg", count: 34 },
-            { name: "Desserts", icon: "/images/hero-section/Desserts.svg", count: 23 },
-            { name: "Special", icon: "/images/hero-section/Special.svg", count: 28 },
+            { name: "Breakfast", icon: "/images/hero-section/Breakfast.svg", count: 124 },
+            { name: "Lunch", icon: "/images/hero-section/Lunch.svg", count: 356 },
+            { name: "Dinner", icon: "/images/hero-section/Dinner.svg", count: 428 },
+            { name: "Snacks", icon: "/images/hero-section/Snacks.svg", count: 89 },
+            { name: "Desserts", icon: "/images/hero-section/Desserts.svg", count: 67 },
+            { name: "Special", icon: "/images/hero-section/Special.svg", count: 112 },
           ],
           featuredRecipes: [
             { id: 1, title: "Spicy Chicken Biryani", description: "Aromatic rice dish with tender chicken and fragrant spices", time: "45 min", servings: 4, difficulty: "Medium", rating: 4.8, image: "/images/recipes/biryani.png", tags: ["Indian", "Rice", "Spicy"] },
@@ -202,7 +202,7 @@ export async function getLegalDataAction(type: string) {
       case "terms":
         return {
           title: "Terms of Service",
-          lastUpdated: "January 15, 2025",
+          lastUpdated: "February 27, 2026",
           sections: [
             { id: 1, title: "Introduction", icon: "Shield", content: ["Welcome to MealSphere (\"we,\" \"our,\" or \"us\"). These Terms of Service (\"Terms\") govern your use of our meal planning and shared living management platform, including our website, mobile applications, and related services (collectively, the \"Service\").", "By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of these terms, then you may not access the Service."] },
             { id: 2, title: "Service Description", content: ["MealSphere provides a platform for roommates and shared living communities to:", ["Plan and coordinate meals together", "Manage shared expenses and payments", "Track grocery shopping and meal preparation", "Access recipes and meal suggestions", "Communicate and collaborate on household management"], "We reserve the right to modify, suspend, or discontinue any part of the Service at any time with reasonable notice."] },
@@ -213,7 +213,7 @@ export async function getLegalDataAction(type: string) {
             { id: 7, title: "Payment Terms", content: ["Some features of the Service may require payment. All payments are processed securely through third-party payment processors.", "Subscription fees are billed in advance on a recurring basis. You may cancel your subscription at any time, but no refunds will be provided for partial billing periods.", "We reserve the right to change our pricing with 30 days' notice to existing customers."] },
             { id: 8, title: "Limitation of Liability", content: ["To the maximum extent permitted by law, MealSphere shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.", "Our total liability to you for any claims arising from these Terms or your use of the Service shall not exceed the amount you paid us in the 12 months preceding the claim."] },
             { id: 9, title: "Termination", content: ["You may terminate your account at any time by contacting us or using the account deletion feature in your settings.", "We may terminate or suspend your account immediately, without prior notice, for conduct that we believe violates these Terms or is harmful to other users, us, or third parties.", "Upon termination, your right to use the Service will cease immediately, and we may delete your account and data."] },
-            { id: 10, title: "Contact Us", content: ["If you have any questions about these Terms of Service, please contact us:", { email: "legal@mealsphere.com", address: "123 Innovation Drive, San Francisco, CA 94105", phone: "+1 (555) 123-4567" }, "We will respond to your inquiry within 30 days of receipt."] }
+            { id: 10, title: "Contact Us", content: ["If you have any questions about these Terms of Service, please contact us:", { email: "legal@mealsphere.com", address: "MealSphere Solutions, Digital Nomad Hub", phone: "+1 (888) MEAL-SYNC" }, "We will respond to your inquiry within 30 days of receipt."] }
           ]
         };
       case "privacy":
@@ -225,7 +225,7 @@ export async function getLegalDataAction(type: string) {
             { id: 2, title: "Information We Collect", content: ["We collect several types of information from and about users of our platform:", { personalInfo: ["Name and email address", "Profile information and preferences", "Payment information (processed securely by third parties)", "Communication preferences"], usageInfo: ["Meal plans and recipes you create or save", "Shopping lists and expense tracking data", "Group membership and collaboration activities", "App usage patterns and preferences"], technicalInfo: ["Device information and IP addresses", "Browser type and version", "Operating system", "Usage analytics and performance data"] }] },
             { id: 3, title: "How We Use Your Information", content: ["We use the information we collect to:", ["Provide and maintain our meal planning services", "Process payments and manage subscriptions", "Enable collaboration between roommates and group members", "Personalize your experience and provide relevant content", "Send important updates and notifications", "Improve our platform and develop new features", "Ensure security and prevent fraud", "Comply with legal obligations"]] },
             { id: 5, title: "Data Security", content: ["We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.", "Our security measures include:", ["Encryption of data in transit and at rest", "Regular security assessments and updates", "Access controls and authentication", "Secure data centers and infrastructure", "Employee training on data protection"], "However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security."] },
-            { id: 8, title: "Contact Us", content: ["If you have any questions about this Privacy Policy or our data practices, please contact us:", { email: "privacy@mealsphere.com", address: "123 Innovation Drive, San Francisco, CA 94105", phone: "+1 (555) 123-4567" }, "We will respond to your inquiry within 30 days of receipt."] }
+            { id: 8, title: "Contact Us", content: ["If you have any questions about this Privacy Policy or our data practices, please contact us:", { email: "privacy@mealsphere.com", address: "MealSphere Solutions, Digital Nomad Hub", phone: "+1 (888) MEAL-SYNC" }, "We will respond to your inquiry within 30 days of receipt."] }
           ]
         };
       case "cookies":
@@ -235,7 +235,7 @@ export async function getLegalDataAction(type: string) {
           sections: [
             { id: 1, title: "What Are Cookies?", icon: "Shield", content: ["Cookies are small text files that are stored on your device (computer, tablet, or mobile) when you visit our website. They help us provide you with a better experience by remembering your preferences and analyzing how you use our platform.", "Cookies can be set by us (first-party cookies) or by third-party services we use (third-party cookies)."] },
             { id: 2, title: "Types of Cookies We Use", content: [{ essential: { title: "Essential Cookies", description: "These cookies are necessary for the website to function properly. They enable basic functions like:", items: ["User authentication and login sessions", "Security features and fraud prevention", "Basic website functionality", "Remembering your language preferences"], note: "These cookies cannot be disabled as they are essential for the website to work." }, analytics: { title: "Analytics Cookies", description: "These cookies help us understand how visitors interact with our website by collecting and reporting information anonymously:", items: ["Pages visited and time spent on each page", "Navigation patterns and user journeys", "Performance and error monitoring", "Feature usage and popularity"], note: "This information helps us improve our platform and user experience." }, preference: { title: "Preference Cookies", description: "These cookies remember your choices and preferences to provide a personalized experience:", items: ["Theme and appearance settings", "Dietary preferences and restrictions", "Meal planning preferences", "Notification settings"] }, marketing: { title: "Marketing Cookies", description: "These cookies are used to deliver relevant advertisements and track marketing campaign performance:", items: ["Ad personalization and targeting", "Campaign effectiveness measurement", "Cross-site tracking for advertising", "Social media integration"], note: "These cookies are only set with your explicit consent." } }] },
-            { id: 5, title: "Contact Us", content: ["If you have any questions about our use of cookies or this Cookie Policy, please contact us:", { email: "privacy@mealsphere.com", address: "123 Innovation Drive, San Francisco, CA 94105", phone: "+1 (555) 123-4567" }, "We will respond to your inquiry within 30 days of receipt."] }
+            { id: 5, title: "Contact Us", content: ["If you have any questions about our use of cookies or this Cookie Policy, please contact us:", { email: "privacy@mealsphere.com", address: "MealSphere Solutions, Digital Nomad Hub", phone: "+1 (888) MEAL-SYNC" }, "We will respond to your inquiry within 30 days of receipt."] }
           ]
         };
       default:

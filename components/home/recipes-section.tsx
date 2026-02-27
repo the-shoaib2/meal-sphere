@@ -77,27 +77,27 @@ export function RecipesSection({ initialData }: { initialData?: RecipesData | nu
                 {/* Categories - Minimalist */}
                 <div className="pb-16 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-7xl mx-auto">
-                        <div className="flex flex-wrap justify-center gap-3 sm:gap-6">
+                        <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
                             {data?.recipeCategories?.map((category) => (
                                 <button
                                     key={category.name}
-                                    className="group flex flex-col items-center gap-4 p-6 rounded-[2rem] hover:bg-muted/50 transition-all border border-transparent hover:border-border min-w-[140px]"
+                                    className="group flex flex-col items-center gap-6 p-8 rounded-[2.5rem] hover:bg-muted/50 transition-all border border-transparent hover:border-border min-w-[180px]"
                                 >
-                                    <div className="size-20 rounded-2xl bg-primary/5 flex items-center justify-center p-3 group-active:scale-95 transition-transform overflow-hidden">
+                                    <div className="size-24 rounded-3xl bg-primary/5 flex items-center justify-center p-4 group-active:scale-95 transition-transform overflow-hidden shadow-sm">
                                         {category.icon.startsWith('/') ? (
                                             <img src={category.icon} alt={category.name} className="size-full object-contain transition-transform duration-300 group-hover:scale-110" />
                                         ) : (
-                                            <span className="text-3xl">{category.icon}</span>
+                                            <span className="text-4xl">{category.icon}</span>
                                         )}
                                     </div>
-                                    <span className="text-base font-semibold text-muted-foreground group-hover:text-primary transition-colors">
+                                    <span className="text-lg font-bold text-muted-foreground group-hover:text-primary transition-colors uppercase tracking-tight">
                                         {category.name}
                                     </span>
                                 </button>
                             )) || Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="animate-pulse flex flex-col items-center gap-3">
-                                    <div className="size-12 rounded-xl bg-muted" />
-                                    <div className="h-3 w-16 bg-muted rounded" />
+                                <div key={i} className="animate-pulse flex flex-col items-center gap-4">
+                                    <div className="size-24 rounded-3xl bg-muted" />
+                                    <div className="h-4 w-20 bg-muted rounded" />
                                 </div>
                             ))}
                         </div>
