@@ -52,6 +52,7 @@ model User {
   shoppingItems               ShoppingItem[]
   transactionHistories        TransactionHistory[]
   votes                       Vote[]
+  authenticators              Authenticator[]
 
   @@index([resetToken])
   @@index([emailVerified, isActive])
@@ -739,4 +740,20 @@ enum PeriodStatus {
   ENDED
   LOCKED
   ARCHIVED
+}
+
+model Authenticator {
+  credentialID         String   @id
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              BigInt
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  createdAt            DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, credentialID])
 }

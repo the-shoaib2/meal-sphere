@@ -33,10 +33,11 @@ export default function ShowcaseSection({ initialData }: { initialData?: Showcas
     offset: ["start end", "center center"],
   })
 
-  const maxWidth = useTransform(scrollYProgress, [0, 1], ["600px", "1200px"])
-  const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [0.3, 0.7, 1])
-  const scale = useTransform(scrollYProgress, [0, 1], [0.9, 1])
-  const mobileY = useTransform(scrollYProgress, [0, 1], [40, 0])
+  // We map the expansion to happen between 10% and 80% of the entry scroll
+  const maxWidth = useTransform(scrollYProgress, [0.1, 0.8], ["600px", "1400px"])
+  const opacity = useTransform(scrollYProgress, [0.1, 0.4, 0.9], [0, 1, 1])
+  const scale = useTransform(scrollYProgress, [0.1, 0.8], [0.8, 1])
+  const mobileY = useTransform(scrollYProgress, [0.1, 0.9], [100, 0])
 
   const displayData: ShowcaseData = {
     title: data?.title || "See MealSphere in Action",

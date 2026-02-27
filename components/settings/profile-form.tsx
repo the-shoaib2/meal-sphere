@@ -7,13 +7,14 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import type { User } from "@prisma/client"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "react-hot-toast"
 import { useProfileImage } from "@/hooks/use-profile-image"
-import { Pencil, X, Check, Camera, Info } from "lucide-react"
+import { Pencil, X, Check, Camera, Info, CheckCircle2, AlertCircle } from "lucide-react"
 import { ImagePicker } from "@/components/shared/image-picker"
 import { ImageViewDialog } from "@/components/shared/image-view-dialog"
 import { cn } from "@/lib/utils"
@@ -23,7 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { updateUserProfile } from "@/lib/actions/user.actions"
+import { updateUserProfile, sendUserVerificationEmail } from "@/lib/actions/user.actions"
 
 const profileFormSchema = z.object({
   name: z.string().min(2, {
@@ -46,6 +47,21 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [isSendingVerification, setIsSendingVerification] = useState(false)
+
+  async function sendVerificationEmail() {
+    setIsSendingVerification(true)
+    try {
+      const result = await sendUserVerificationEmail()
+      if (!result.success) throw new Error(result.message || "Failed to send verification email")
+      toast.success("Verification email sent successfully")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to send verification email")
+    } finally {
+      setIsSendingVerification(false)
+    }
+  }
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [viewOpen, setViewOpen] = useState(false)
 
@@ -227,7 +243,22 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Email</FormLabel>
+                    {!isEditing && (
+                      user.emailVerified ? (
+                        <Badge variant="outline" className="gap-1 border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-950 dark:text-green-400">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Verified · {new Date(user.emailVerified).toLocaleDateString()}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                          <AlertCircle className="h-3 w-3" />
+                          Not Verified
+                        </Badge>
+                      )
+                    )}
+                  </div>
                   <FormControl>
                     <Input
                       placeholder="Your email"
@@ -236,11 +267,23 @@ export function ProfileForm({ user, isGoogleUser = false }: ProfileFormProps) {
                       className={!isEditing ? "bg-muted" : ""}
                     />
                   </FormControl>
-                  {isEditing && (
+                  {isEditing ? (
                     <FormDescription className="text-xs">
                       Changing your email will require verification.
                     </FormDescription>
-                  )}
+                  ) : !user.emailVerified ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-1 h-7 gap-1.5 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950"
+                      onClick={sendVerificationEmail}
+                      disabled={isSendingVerification}
+                    >
+                      <AlertCircle className="h-3 w-3" />
+                      {isSendingVerification ? "Sending..." : "Send Verification Email"}
+                    </Button>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
