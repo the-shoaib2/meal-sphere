@@ -4,28 +4,17 @@ import {
     PieChart,
     Pie,
     Cell,
-    Bar,
-    BarChart,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
     Legend,
     ResponsiveContainer,
-    LineChart,
-    Line,
-    AreaChart,
     Area,
-    Radar,
-    RadarChart,
-    PolarGrid,
-    PolarAngleAxis,
-    PolarRadiusAxis,
     ComposedChart,
-    RadialBar,
-    RadialBarChart
+    Bar
 } from "recharts"
-import { Users, TrendingUp, PieChart as PieChartIcon, AreaChart as AreaChartIcon, BarChart3, Target, Activity } from "lucide-react"
+import { Users, PieChart as PieChartIcon, BarChart3, Activity } from "lucide-react"
 import { AnalyticsCard } from "@/components/analytics/analytics-card"
 import { RoomStatsTable } from "@/components/analytics/room-stats-table"
 import { DashboardChartData } from "@/types/dashboard"
@@ -65,11 +54,11 @@ export default function DetailedAnalytics({
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                {/* 1. Daily Performance (Composed Chart) */}
-                <div className="xl:col-span-2 min-w-0">
+                {/* 1. Daily Performance (Composed Chart) - Now more prominent */}
+                <div className="xl:col-span-2 lg:col-span-2 min-w-0">
                     <AnalyticsCard title="Daily Performance" icon={Activity} isLoading={isLoading} description="Combined view of meals and expenses over the last 30 days.">
                         {chartData && chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
+                            <ResponsiveContainer width="100%" height={350}>
                                 <ComposedChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorMeals" x1="0" y1="0" x2="0" y2="1">
@@ -110,7 +99,7 @@ export default function DetailedAnalytics({
                                     <Bar
                                         dataKey="expenses"
                                         fill="#10b981"
-                                        barSize={8}
+                                        barSize={12}
                                         radius={[4, 4, 0, 0]}
                                         name="Expenses"
                                         animationDuration={1500}
@@ -119,7 +108,7 @@ export default function DetailedAnalytics({
                                 </ComposedChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed">
+                            <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed">
                                 <Activity className="h-8 w-8 mb-2 opacity-20" />
                                 <p className="text-sm">No activity data for this period</p>
                             </div>
@@ -127,36 +116,10 @@ export default function DetailedAnalytics({
                     </AnalyticsCard>
                 </div>
 
-                {/* 2. Meal Patterns (Radar Chart) */}
-                <AnalyticsCard title="Meal Patterns" icon={Target} isLoading={isLoading} description="Comparative analysis of meal types.">
-                    {mealDistribution && mealDistribution.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={mealDistribution}>
-                                <PolarGrid stroke="#f0f0f0" />
-                                <PolarAngleAxis dataKey="name" />
-                                <PolarRadiusAxis angle={30} domain={[0, 'auto']} />
-                                <Radar
-                                    name="Consumption"
-                                    dataKey="value"
-                                    stroke="#8b5cf6"
-                                    fill="#8b5cf6"
-                                    fillOpacity={0.5}
-                                />
-                                <Tooltip />
-                            </RadarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed">
-                            <Target className="h-8 w-8 mb-2 opacity-20" />
-                            <p className="text-sm">No meal pattern data</p>
-                        </div>
-                    )}
-                </AnalyticsCard>
-
-                {/* 3. Expense Distribution (Pie Chart with Donut style) */}
+                {/* 2. Expense Distribution (Pie Chart with Donut style) */}
                 <AnalyticsCard title="Expense Breakdown" icon={PieChartIcon} isLoading={isLoading} description="Contribution of each expense category.">
                     {expenseDistribution && expenseDistribution.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ResponsiveContainer width="100%" height={350}>
                             <PieChart>
                                 <Pie
                                     data={expenseDistribution}
@@ -164,59 +127,34 @@ export default function DetailedAnalytics({
                                     nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={70}
-                                    outerRadius={90}
+                                    innerRadius={80}
+                                    outerRadius={100}
                                     fill="#8884d8"
                                     labelLine={false}
+                                    paddingAngle={5}
                                 >
                                     {expenseDistribution.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip />
-                                <Legend />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                />
+                                <Legend verticalAlign="bottom" align="center" layout="horizontal" />
                             </PieChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed">
+                        <div className="h-[350px] flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed">
                             <PieChartIcon className="h-8 w-8 mb-2 opacity-20" />
                             <p className="text-sm">No expense breakdown data</p>
                         </div>
                     )}
                 </AnalyticsCard>
 
-                {/* 4. Meal Rate Trend (Area Chart) */}
-                <div className="xl:col-span-2 min-w-0">
-                    <AnalyticsCard title="Meal Rate Forecast" icon={TrendingUp} isLoading={isLoading} description="Estimated meal rate trend based on current data.">
-                        {mealRateTrend && mealRateTrend.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <AreaChart data={mealRateTrend}>
-                                    <defs>
-                                        <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                                    <YAxis axisLine={false} tickLine={false} />
-                                    <Tooltip />
-                                    <Area type="monotone" dataKey="value" stroke="#f59e0b" fillOpacity={1} fill="url(#colorRate)" name="Rate (৳)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground bg-muted/5 rounded-lg border border-dashed">
-                                <TrendingUp className="h-8 w-8 mb-2 opacity-20" />
-                                <p className="text-sm">No meal rate trend data</p>
-                            </div>
-                        )}
-                    </AnalyticsCard>
-                </div>
-
-                {/* 5. Room Statistics - Render during loading to prevent shift */}
+                {/* 3. Room Statistics - Now in its own row below for full visibility */}
                 {(isLoading || (roomStats && roomStats.length > 0)) && (
-                    <div className="xl:col-span-3 min-w-0">
-                        <AnalyticsCard title="Detailed Room Statistics" icon={Users} isLoading={isLoading} description="Comprehensive breakdown of performance by room.">
+                    <div className="xl:col-span-3 lg:col-span-2 min-w-0">
+                        <AnalyticsCard title="Room Performance Report" icon={Users} isLoading={isLoading} description="Comprehensive breakdown of performance metrics and activity stats.">
                             <RoomStatsTable data={roomStats} />
                         </AnalyticsCard>
                     </div>

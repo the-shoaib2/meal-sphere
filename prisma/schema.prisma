@@ -208,6 +208,7 @@ model Meal {
   @@index([periodId, date])
   @@index([userId, date])
   @@index([userId, roomId, date, type, periodId])
+  @@index([roomId, userId, date])
 }
 
 /// GUEST MEAL MODEL
@@ -230,6 +231,7 @@ model GuestMeal {
   @@index([roomId, date])
   @@index([userId, date])
   @@index([periodId])
+  @@index([roomId, userId, date])
 }
 
 /// SHOPPING ITEM MODEL
@@ -354,6 +356,7 @@ model ExtraExpense {
   @@index([description])
   @@index([roomId, userId, date])
   @@index([roomId, type, date])
+  @@index([roomId, periodId, type])
 }
 
 model Invitation {

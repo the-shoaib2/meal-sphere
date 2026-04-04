@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState, useOptimistic, useTransition } from 'react';
+import { useCallback, useRef, useEffect, useState, useOptimistic, useTransition, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { 
@@ -469,39 +469,66 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
     }
   });
 
-  // Utility functions
+  // Memoized indexing for O(1) lookups during rendering
+  const mealsByDateIndex = useMemo(() => {
+    const map: Record<string, Meal[]> = {};
+    (optimisticMeals as Meal[]).forEach((meal: Meal) => {
+      const dateStr = normalizeDateStr(meal.date);
+      if (!map[dateStr]) map[dateStr] = [];
+      map[dateStr].push(meal);
+    });
+    return map;
+  }, [optimisticMeals]);
+
+  const guestMealsByDateIndex = useMemo(() => {
+    const map: Record<string, GuestMeal[]> = {};
+    (optimisticGuestMeals as GuestMeal[]).forEach((meal: GuestMeal) => {
+      const dateStr = normalizeDateStr(meal.date);
+      if (!map[dateStr]) map[dateStr] = [];
+      map[dateStr].push(meal);
+    });
+    return map;
+  }, [optimisticGuestMeals]);
+
+  // Utility functions (O(1) lookup now)
   const useMealsByDate = useCallback((date: Date): Meal[] => {
     const dateStr = formatDateSafe(date);
-    return (optimisticMeals as Meal[]).filter(meal => normalizeDateStr(meal?.date) === dateStr);
-  }, [optimisticMeals]);
+    return mealsByDateIndex[dateStr] || [];
+  }, [mealsByDateIndex]);
+
+  const useGuestMealsByDate = useCallback((date: Date): GuestMeal[] => {
+    const dateStr = formatDateSafe(date);
+    return guestMealsByDateIndex[dateStr] || [];
+  }, [guestMealsByDateIndex]);
+
+  const useMealCount = useCallback((date: Date, type: MealType): number => {
+    const dateStr = formatDateSafe(date);
+    const dayMeals = mealsByDateIndex[dateStr] || [];
+    const dayGuestMeals = guestMealsByDateIndex[dateStr] || [];
+    
+    const regularCount = dayMeals.filter((m: Meal) => m.type === type).length;
+    const guestMealsCount = dayGuestMeals.filter((m: GuestMeal) => m.type === type).reduce((sum: number, m: GuestMeal) => sum + m.count, 0);
+    return regularCount + guestMealsCount;
+  }, [mealsByDateIndex, guestMealsByDateIndex]);
 
   const stateRef = useRef({ meals, optimisticMeals, guestMeals, optimisticGuestMeals });
   useEffect(() => {
     stateRef.current = { meals, optimisticMeals, guestMeals, optimisticGuestMeals };
   }, [meals, optimisticMeals, guestMeals, optimisticGuestMeals]);
 
-  const useGuestMealsByDate = useCallback((date: Date): GuestMeal[] => {
-    const dateStr = formatDateSafe(date);
-    return (optimisticGuestMeals as GuestMeal[]).filter(meal => normalizeDateStr(meal?.date) === dateStr);
-  }, [optimisticGuestMeals]);
-
-  const useMealCount = useCallback((date: Date, type: MealType): number => {
-    const dateStr = formatDateSafe(date);
-    const regularCount = (optimisticMeals || []).filter((meal: Meal) => normalizeDateStr(meal?.date) === dateStr && meal.type === type).length;
-    const guestMealsCount = (optimisticGuestMeals || []).filter((meal: GuestMeal) => normalizeDateStr(meal?.date) === dateStr && meal.type === type).reduce((sum, meal) => sum + meal.count, 0);
-    return regularCount + guestMealsCount;
-  }, [optimisticMeals, optimisticGuestMeals]);
-
   const useMealSummary = useCallback((startDate: Date, endDate: Date): MealSummary[] => {
     const dates = eachDayOfInterval({ start: startOfDay(startDate), end: endOfDay(endDate) });
     return dates.map(date => {
         const dateStr = formatDateSafe(date);
+        const breakfast = useMealCount(date, 'BREAKFAST');
+        const lunch = useMealCount(date, 'LUNCH');
+        const dinner = useMealCount(date, 'DINNER');
         return {
             date: dateStr,
-            breakfast: useMealCount(date, 'BREAKFAST'),
-            lunch: useMealCount(date, 'LUNCH'),
-            dinner: useMealCount(date, 'DINNER'),
-            total: useMealCount(date, 'BREAKFAST') + useMealCount(date, 'LUNCH') + useMealCount(date, 'DINNER')
+            breakfast,
+            lunch,
+            dinner,
+            total: breakfast + lunch + dinner
         };
     });
   }, [useMealCount]);
@@ -587,8 +614,9 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
   const hasMeal = useCallback((date: Date, type: MealType, userId?: string): boolean => {
     const dateStr = formatDateSafe(date);
     const targetUserId = userId || session?.user?.id;
-    return (optimisticMeals as Meal[]).some(m => normalizeDateStr(m.date) === dateStr && m.type === type && m.userId === targetUserId);
-  }, [optimisticMeals, session?.user?.id]);
+    const dayMeals = mealsByDateIndex[dateStr] || [];
+    return dayMeals.some((m: Meal) => m.type === type && m.userId === targetUserId);
+  }, [mealsByDateIndex, session?.user?.id]);
 
   const canAddMeal = useCallback((date: Date, type: MealType) => canUserEditMeal(date, type, userRole, mealSettings, currentPeriod), [userRole, mealSettings, currentPeriod]);
   const canEditGuestMeal = useCallback((date: Date, type: MealType) => canUserEditMeal(date, type, userRole, mealSettings, currentPeriod), [userRole, mealSettings, currentPeriod]);
@@ -609,10 +637,12 @@ export function useMeal(roomId?: string, selectedDate?: Date, initialData?: Meal
 
   const getUserGuestMeals = useCallback((date: Date, userId?: string) => {
     const dateStr = formatDateSafe(date);
-    return (optimisticGuestMeals as GuestMeal[]).filter(m => normalizeDateStr(m.date) === dateStr && m.userId === (userId || session?.user?.id));
-  }, [optimisticGuestMeals, session?.user?.id]);
+    const dayGuestMeals = guestMealsByDateIndex[dateStr] || [];
+    const targetUserId = userId || session?.user?.id;
+    return dayGuestMeals.filter((m: GuestMeal) => m.userId === targetUserId);
+  }, [guestMealsByDateIndex, session?.user?.id]);
 
-  const getUserGuestMealCount = useCallback((date: Date, type: MealType, userId?: string) => getUserGuestMeals(date, userId).filter(m => m.type === type).reduce((s, m) => s + m.count, 0), [getUserGuestMeals]);
+  const getUserGuestMealCount = useCallback((date: Date, type: MealType, userId?: string) => getUserGuestMeals(date, userId).filter((m: GuestMeal) => m.type === type).reduce((s: number, m: GuestMeal) => s + m.count, 0), [getUserGuestMeals]);
   const getUserMealCount = useCallback((date: Date, type: MealType, userId?: string) => (hasMeal(date, type, userId) ? 1 : 0) + getUserGuestMealCount(date, type, userId), [hasMeal, getUserGuestMealCount]);
 
   // Effects for auto-trigger
