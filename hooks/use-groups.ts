@@ -103,16 +103,14 @@ export function useGroups(): UseGroupsReturn {
   const router = useRouter();
 
   // Get user's groups - always define the query, but use enabled to control execution
+  // Unified query key to ['groups', 'my'] to prevent double fetching
   const { data: userGroups = [], isLoading: isLoadingGroups, error } = useQuery<Group[], Error>({
-    queryKey: ['user-groups', session?.user?.id],
+    queryKey: ['groups', 'my'],
     queryFn: async () => {
       if (!session?.user?.id) return [];
       try {
         const result = await getGroupsListAction('my');
         if (!result.success || !result.groups) throw new Error(result.message || 'Failed to fetch groups');
-        
-        // Set the data in React Query cache for future use
-        queryClient.setQueryData(['user-groups', session.user.id], result.groups);
         return result.groups as Group[];
       } catch (error: unknown) {
         console.error('Error fetching user groups:', error);
@@ -120,18 +118,11 @@ export function useGroups(): UseGroupsReturn {
       }
     },
     enabled: !!session?.user?.id && status === 'authenticated',
-    staleTime: 5 * 60 * 1000, // 5 minutes (changed from Infinity)
+    staleTime: 60 * 1000, // 1 minute
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: false,
-    retry: (failureCount, error) => {
-      if (failureCount >= 1) return false;
-      if (error?.message?.includes('Unauthorized') || error?.message?.includes('Forbidden')) {
-        return false;
-      }
-      return true;
-    }
+    refetchOnReconnect: false
   });
 
   // Determine if we should show loading state
@@ -139,7 +130,7 @@ export function useGroups(): UseGroupsReturn {
 
   // Get groups list based on filter
   const useGroupsList = ({ filter, initialData }: { filter: 'my' | 'public' | 'all'; initialData?: Group[] }) => {
-    const { data: groupsList = [], isLoading: listLoading, error: listError } = useQuery<Group[], Error>({
+    const query = useQuery<Group[], Error>({
       queryKey: ['groups', filter],
       queryFn: async () => {
         if (!session?.user?.id) return [];
@@ -153,18 +144,17 @@ export function useGroups(): UseGroupsReturn {
         }
       },
       enabled: !!session?.user?.id && !!filter,
-      // Use placeholderData instead of initialData so React Query always
-      // refetches fresh data on mount, while showing server data as placeholder
-      placeholderData: initialData,
-      staleTime: 0, // Always consider data stale so it refetches on mount
-      refetchOnMount: 'always', // Force refetch every time component mounts
+      // Use initialData properly to avoid immediate refetch
+      initialData: initialData,
+      staleTime: 60 * 1000, // 1 minute (TRUST initial data for a while)
+      refetchOnMount: false, // Don't refetch on mount if data is already in cache
       refetchOnWindowFocus: false
     });
 
     return {
-      data: groupsList,
-      isLoading: listLoading,
-      error: listError || null,
+      data: query.data || [],
+      isLoading: query.isLoading,
+      error: query.error || null
     };
   };
 
@@ -203,8 +193,6 @@ export function useGroups(): UseGroupsReturn {
       if (error?.code === 'PRIVATE_GROUP' || error?.code === 'INVALID_PASSWORD') {
         throw error;
       }
-
-      // Removed legacy axios error formatting since we are using server actions
       
       // For any other errors, rethrow with a generic message
       throw new Error(error?.message || 'Failed to fetch group details');

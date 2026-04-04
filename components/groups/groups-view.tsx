@@ -51,14 +51,19 @@ export function GroupsView({ initialData, initialTab = 'my-groups' }: GroupsView
     // Initialize state directly from the server-passed prop to avoid hydration flicker
     const [activeTab, setActiveTab] = useState(initialTab);
 
-    // Keep this to sync tab if user manually changes URL without a full reload, 
-    // or if they use browser back/forward buttons.
+    // Keep this to sync tab if user manually uses browser back/forward buttons.
     useEffect(() => {
-        const tabFromUrl = searchParams?.get('tab');
-        if (tabFromUrl && ['my-groups', 'discover'].includes(tabFromUrl) && tabFromUrl !== activeTab) {
-            setActiveTab(tabFromUrl);
-        }
-    }, [searchParams, activeTab]);
+        const handlePopState = () => {
+            const params = new URLSearchParams(window.location.search);
+            const tabFromUrl = params.get('tab');
+            if (tabFromUrl && ['my-groups', 'discover'].includes(tabFromUrl)) {
+                setActiveTab(tabFromUrl);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     // Determine which groups to show based on active tab
     // For 'my-groups', show owned groups first
@@ -72,13 +77,15 @@ export function GroupsView({ initialData, initialTab = 'my-groups' }: GroupsView
         })
         : publicGroupsData;
 
-    // Update URL when tab changes
+    // Update URL when tab changes without triggering RSC fetch
     const handleTabChange = (value: string) => {
-        window.dispatchEvent(new Event('routeChangeStart'));
         setActiveTab(value);
         const params = new URLSearchParams(searchParams?.toString() || '');
         params.set('tab', value);
-        router.push(`/groups?${params.toString()}`, { scroll: false });
+        
+        // Use window.history.replaceState instead of router.push to avoid RSC fetch
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     };
 
     // Apply search filter

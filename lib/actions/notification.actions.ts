@@ -37,18 +37,17 @@ export async function getNotificationsAction() {
             }
           },
           orderBy: { createdAt: 'desc' },
-          take: 50,
+          take: 20, // Reduced from 50 to 20 for faster initial load
           select: {
             id: true,
             type: true,
             message: true,
             read: true,
-            createdAt: true,
-            userId: true
+            createdAt: true
           }
         });
       },
-      { ttl: 30 }
+      { ttl: 60 } // Increased TTL to 60 seconds
     );
 
     return { success: true, notifications };

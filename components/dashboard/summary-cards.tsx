@@ -149,55 +149,25 @@ export default function SummaryCards({
         <NumberTicker value={myBalance} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
       </SingleSummaryCard>
 
-      <SingleSummaryCard
-        title="Total Spent"
-        subtitle="Total Spent on meals"
-        icon={Receipt}
-        iconBgClass="bg-rose-500/10 dark:bg-rose-500/20"
-        hoverBgClass="hover:bg-rose-500/5 dark:hover:bg-rose-500/10"
-        iconColorClass="text-rose-600 dark:text-rose-500"
-        textColorClass="text-rose-600 dark:text-rose-500"
-        isLoading={isLoading}
-      >
-        <span className="text-rose-600 dark:text-rose-500">৳</span>
-        <NumberTicker value={totalCost} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
-      </SingleSummaryCard>
-
       {(groupBalance || isLoading) && (
-        <>
-          <SingleSummaryCard
-            title="Group Balance"
-            subtitle="Group Total Balance"
-            icon={DollarSign}
-            iconBgClass="bg-emerald-500/10 dark:bg-emerald-500/20"
-            hoverBgClass={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10' : 'hover:bg-red-500/5 dark:hover:bg-red-500/10'}
-            iconColorClass="text-emerald-600 dark:text-emerald-500"
-            textColorClass={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}
-            className={groupBalance && groupBalance.groupTotalBalance < 0 ? 'text-red-600 dark:text-red-500' : ''}
-            isLoading={isLoading}
-          >
-            <span>৳</span>
-            <NumberTicker
-              value={groupBalance?.groupTotalBalance ?? 0}
-              decimalPlaces={2}
-              className="text-xl sm:text-2xl font-bold"
-            />
-          </SingleSummaryCard>
-
-          <SingleSummaryCard
-            title="Group Exp."
-            subtitle="Group Total Expenses"
-            icon={Receipt}
-            iconBgClass="bg-orange-500/10 dark:bg-orange-500/20"
-            hoverBgClass="hover:bg-orange-500/5 dark:hover:bg-orange-500/10"
-            iconColorClass="text-orange-600 dark:text-orange-500"
-            textColorClass="text-orange-600 dark:text-orange-500"
-            isLoading={isLoading}
-          >
-            <span className="text-orange-600 dark:text-orange-500">৳</span>
-            <NumberTicker value={groupBalance?.totalExpenses ?? 0} decimalPlaces={2} className="text-xl sm:text-2xl font-bold" />
-          </SingleSummaryCard>
-        </>
+        <SingleSummaryCard
+          title="Group Balance"
+          subtitle="Group Total Balance"
+          icon={DollarSign}
+          iconBgClass="bg-emerald-500/10 dark:bg-emerald-500/20"
+          hoverBgClass={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'hover:bg-emerald-500/5 dark:hover:bg-emerald-500/10' : 'hover:bg-red-500/5 dark:hover:bg-red-500/10'}
+          iconColorClass="text-emerald-600 dark:text-emerald-500"
+          textColorClass={groupBalance && groupBalance.groupTotalBalance >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}
+          className={groupBalance && groupBalance.groupTotalBalance < 0 ? 'text-red-600 dark:text-red-500' : ''}
+          isLoading={isLoading}
+        >
+          <span>৳</span>
+          <NumberTicker
+            value={groupBalance?.groupTotalBalance ?? 0}
+            decimalPlaces={2}
+            className="text-xl sm:text-2xl font-bold"
+          />
+        </SingleSummaryCard>
       )}
     </div>
   );
