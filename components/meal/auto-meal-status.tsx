@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from "react-hot-toast"
 import { Clock, Zap, Settings, Check, AlertCircle, Loader2 } from "lucide-react"
 import { format } from "date-fns"
-import { useMeal, type MealType } from "@/hooks/use-meal"
+import { useMeal, type MealType } from "@/hooks/meals/use-meal"
 
 interface AutoMealStatusProps {
   roomId: string;

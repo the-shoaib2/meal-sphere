@@ -24,7 +24,7 @@ import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
 import { toast } from "react-hot-toast"
 import { LoadingWrapper, Loader } from "@/components/ui/loader"
-import { useCurrentPeriod } from "@/hooks/use-periods";
+import { useCurrentPeriod } from "@/hooks/periods/use-periods";
 import { useGroupAccess } from "@/hooks/use-group-access";
 import { PageHeader } from "@/components/shared/page-header";
 import { RoleBadge } from "@/components/shared/role-badge";

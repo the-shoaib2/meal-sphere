@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { PeriodsPageData } from '@/hooks/use-periods';
+import { PeriodsPageData } from '@/hooks/periods/use-periods';
 
 interface PeriodContextType {
     periodsData: PeriodsPageData | null;

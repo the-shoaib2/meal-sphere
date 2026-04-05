@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupBalances, useGetBalance, useGetTransactions, type BalancePageData } from '@/hooks/use-account-balance';
-import { useCurrentPeriod } from '@/hooks/use-periods';
+import { useCurrentPeriod } from '@/hooks/periods/use-periods';
 import { PrivilegedView } from '@/components/account-balance/privileged-view';
 import { MemberView } from '@/components/account-balance/member-view';
 import { LoadingWrapper, PageLoader } from '@/components/ui/loader';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PeriodNotFoundCard } from "@/components/periods/period-not-found-card"
 import { NoGroupState } from '@/components/empty-states/no-group-state';
-import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/groups/use-groups';
 import { PageHeader } from '@/components/shared/page-header';
 import { toast } from 'react-hot-toast';
 import { Separator } from '@/components/ui/separator';

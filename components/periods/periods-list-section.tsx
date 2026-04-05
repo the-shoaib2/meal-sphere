@@ -11,7 +11,7 @@ import { Loader } from '@/components/ui/loader';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { EditPeriodDialog } from './edit-period-dialog';
-import { useUpdatePeriod } from '@/hooks/use-periods';
+import { useUpdatePeriod } from '@/hooks/periods/use-periods';
 import {
   AlertDialog,
   AlertDialogAction,

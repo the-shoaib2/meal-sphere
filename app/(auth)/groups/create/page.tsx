@@ -15,7 +15,7 @@ import { toast } from 'react-hot-toast';
 import { Loader2, Lock, Users, LockKeyhole, Hash, Info, Eye, EyeOff, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from "@/lib/utils";
-import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/groups/use-groups';
 
 import { GroupImageSelection } from '@/components/groups/group-image-selection';
 import { PageHeader } from '@/components/shared/page-header';

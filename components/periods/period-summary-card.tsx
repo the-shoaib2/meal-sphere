@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Calendar, Users, DollarSign, Utensils, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PeriodSummary } from '@/hooks/use-periods';
+import { PeriodSummary } from '@/hooks/periods/use-periods';
 import { PeriodStatus } from '@prisma/client';
 import { NumberTicker } from '@/components/ui/number-ticker';
 

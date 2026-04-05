@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { PeriodCalendar } from './period-calendar';
 import { cn } from '@/lib/utils';
-import { CreatePeriodData } from '@/hooks/use-periods';
+import { CreatePeriodData } from '@/hooks/periods/use-periods';
 import { MealPeriod } from '@prisma/client';
 
 interface EditPeriodDialogProps {

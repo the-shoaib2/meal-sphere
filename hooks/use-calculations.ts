@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
-import { useCurrentPeriod } from '@/hooks/use-periods';
+import { useCurrentPeriod } from '@/hooks/periods/use-periods';
 
 export interface UserMealSummary {
   userId: string;

@@ -120,7 +120,7 @@ const EXPIRATION_OPTIONS = [
   { value: 0, label: 'Never expire' }
 ];
 
-import { useGroups } from "@/hooks/use-groups";
+import { useGroups } from "@/hooks/groups/use-groups";
 
 export function InviteCard({ groupId, group: initialGroup, className = '', initialTokens = [], canInvite = true }: InviteCardProps) {
   const { useGroupDetails } = useGroups();

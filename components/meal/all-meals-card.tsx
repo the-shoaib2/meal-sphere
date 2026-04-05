@@ -6,7 +6,7 @@ import { Users } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import MealList from "./meal-list"
-import type { MealType } from "@/hooks/use-meal"
+import type { MealType } from "@/hooks/meals/use-meal"
 
 interface AllMealsCardProps {
     selectedDate: Date

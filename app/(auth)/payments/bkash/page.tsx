@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useCurrentPeriod } from "@/hooks/use-periods"
+import { useCurrentPeriod } from "@/hooks/periods/use-periods"
 import { NoPeriodState } from "@/components/empty-states/no-period-state"
 
 export default function BkashPaymentPage() {

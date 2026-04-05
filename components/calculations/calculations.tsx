@@ -3,13 +3,13 @@
 import { useMemo, useCallback, memo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useCurrentPeriod, usePeriods, usePeriod } from "@/hooks/use-periods"
+import { useCurrentPeriod, usePeriods, usePeriod } from "@/hooks/periods/use-periods"
 import { useRoomCalculations, type CalculationsPageData } from "@/hooks/use-calculations"
 import PeriodNotFoundCard from "@/components/periods/period-not-found-card"
 import { useSession } from "next-auth/react"
 import { useActiveGroup } from "@/contexts/group-context"
 import { NoGroupState } from "@/components/empty-states/no-group-state"
-import { useGroups } from "@/hooks/use-groups"
+import { useGroups } from "@/hooks/groups/use-groups"
 import { cn } from "@/lib/utils"
 
 // Import separated components

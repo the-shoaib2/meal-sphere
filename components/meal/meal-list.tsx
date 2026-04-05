@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Utensils, Minus, Trash2 } from "lucide-react";
-import type { MealType } from "@/hooks/use-meal";
+import type { MealType } from "@/hooks/meals/use-meal";
 
 interface MealWithUser {
   id: string;

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Plus, Minus, Trash2, Users } from "lucide-react"
 import { format } from "date-fns"
-import type { MealType, GuestMeal, MealSettings } from "@/hooks/use-meal"
+import type { MealType, GuestMeal, MealSettings } from "@/hooks/meals/use-meal"
 import { toast } from "react-hot-toast"
 
 interface GuestMealManagerProps {

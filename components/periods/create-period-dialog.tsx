@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { PeriodCalendar } from './period-calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { CreatePeriodData } from '@/hooks/use-periods';
+import { CreatePeriodData } from '@/hooks/periods/use-periods';
 
 interface CreatePeriodDialogProps {
   open: boolean;

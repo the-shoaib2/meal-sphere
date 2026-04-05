@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EditPeriodDialog } from './edit-period-dialog';
 import { MealPeriod } from '@prisma/client';
-import { CreatePeriodData } from '@/hooks/use-periods';
+import { CreatePeriodData } from '@/hooks/periods/use-periods';
 
 interface PeriodActionsProps {
     period: MealPeriod;

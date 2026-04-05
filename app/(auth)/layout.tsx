@@ -10,7 +10,7 @@ import { fetchGroupsData } from "@/lib/services/groups-service"
 import { Group } from "@/types/group";
 import { PeriodProvider } from "@/contexts/period-context"
 import { fetchPeriodsData } from "@/lib/services/period-service"
-import { PeriodsPageData } from "@/hooks/use-periods"
+import { PeriodsPageData } from "@/hooks/periods/use-periods"
 import { GroupSwitchLoader } from "@/components/layout/group-switch-loader"
 
 export default async function AuthLayout({

@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { useMeal, type MealType } from "@/hooks/use-meal"
+import { useMeal, type MealType } from "@/hooks/meals/use-meal"
 import { isPeriodLocked } from "@/lib/utils/period-utils-shared"
 
 const guestMealSchema = z.object({

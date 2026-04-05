@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { usePeriodManagement } from '@/hooks/use-periods';
+import { usePeriodManagement } from '@/hooks/periods/use-periods';
 import { MealPeriod, PeriodStatus } from '@prisma/client';
 import { CreatePeriodDialog } from '@/components/periods/create-period-dialog';
 import { PeriodArchiveDialog } from '@/components/periods/period-archive-dialog';
@@ -15,7 +15,7 @@ import { PeriodOverviewSection } from '@/components/periods/period-overview-sect
 import { useSession } from 'next-auth/react';
 import { CurrentPeriodStatusCard } from '@/components/periods/current-period-status-card';
 import { LoadingWrapper, Loader } from '@/components/ui/loader';
-import { usePeriodMode } from '@/hooks/use-periods';
+import { usePeriodMode } from '@/hooks/periods/use-periods';
 import { NoGroupState } from '@/components/empty-states/no-group-state';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useGroupAccess } from '@/hooks/use-group-access';

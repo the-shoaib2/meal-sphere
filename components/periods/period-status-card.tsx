@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useCurrentPeriod, useStartPeriod } from '@/hooks/use-periods';
+import { useCurrentPeriod, useStartPeriod } from '@/hooks/periods/use-periods';
 import { useActiveGroup } from '@/contexts/group-context';
 import { useSession } from 'next-auth/react';
 import { CreatePeriodDialog } from './create-period-dialog';
@@ -78,7 +78,7 @@ export function PeriodStatusCard() {
               A meal period needs to be created to start tracking meals, expenses, and payments.
             </AlertDescription>
           </Alert>
-          
+
           {hasPrivilege ? (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
@@ -161,14 +161,14 @@ export function PeriodStatusCard() {
               {Math.ceil((new Date(currentPeriod.endDate || new Date()).getTime() - new Date(currentPeriod.startDate).getTime()) / (1000 * 60 * 60 * 24))} days
             </div>
           </div>
-          
+
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               This period has ended. No new meals, expenses, or payments can be added.
             </AlertDescription>
           </Alert>
-          
+
           {hasPrivilege ? (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">

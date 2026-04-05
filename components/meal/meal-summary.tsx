@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Utensils } from "lucide-react";
 import React from "react";
-import type { MealType } from "@/hooks/use-meal";
+import type { MealType } from "@/hooks/meals/use-meal";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface MealSummaryProps {

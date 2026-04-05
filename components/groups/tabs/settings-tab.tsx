@@ -17,7 +17,7 @@ import { Trash2, Save, Loader2, AlertCircle, UserPlus, Users, LogOut, X, Plus, T
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/groups/use-groups';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ExcelImportExport from '@/components/excel/excel-import-export';

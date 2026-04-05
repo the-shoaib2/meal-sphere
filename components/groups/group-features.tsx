@@ -10,7 +10,7 @@ import { X, Plus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { GROUP_FEATURES, GROUP_CATEGORIES, GROUP_TAGS, type GroupCategory, type GroupTag } from '@/lib/utils/features';
 import { updateGroupAction } from '@/lib/actions/group.actions';
-import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/groups/use-groups';
 
 interface GroupFeaturesProps {
   groupId: string;

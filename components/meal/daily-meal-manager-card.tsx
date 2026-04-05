@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
-import type { MealType } from "@/hooks/use-meal"
+import type { MealType } from "@/hooks/meals/use-meal"
 import GuestMealForm from "@/components/meal/guest-meal-form"
 
 interface DailyMealManagerCardProps {

@@ -30,7 +30,7 @@ interface GroupPageContentProps {
 
 import { VotingTab } from '@/components/groups/tabs/voting-tab';
 
-import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/groups/use-groups';
 
 export function GroupPageContent(
     {

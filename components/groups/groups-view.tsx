@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useGroups } from '@/hooks/use-groups';
+import { useGroups } from '@/hooks/groups/use-groups';
 import { Search, Plus, Users, Compass, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -82,7 +82,7 @@ export function GroupsView({ initialData, initialTab = 'my-groups' }: GroupsView
         setActiveTab(value);
         const params = new URLSearchParams(searchParams?.toString() || '');
         params.set('tab', value);
-        
+
         // Use window.history.replaceState instead of router.push to avoid RSC fetch
         const newUrl = `${window.location.pathname}?${params.toString()}`;
         window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { usePeriodManagement } from '@/hooks/use-periods';
+import { usePeriodManagement } from '@/hooks/periods/use-periods';
 // Use any for types if Prisma client is still generating
 type PeriodStatus = any;
 type MealPeriod = any;

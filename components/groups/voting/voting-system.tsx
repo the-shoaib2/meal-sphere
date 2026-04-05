@@ -6,7 +6,7 @@ import { Loader2, RotateCcw, Plus } from "lucide-react"
 
 import { useRouter } from "next/navigation"
 import { useVoting } from "@/hooks/use-voting"
-import { useGroups } from "@/hooks/use-groups"
+import { useGroups } from "@/hooks/groups/use-groups"
 import { useActiveGroup } from "@/contexts/group-context"
 import { useSession } from "next-auth/react"
 import { format, addDays, isAfter, isBefore, startOfDay } from "date-fns"
