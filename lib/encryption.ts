@@ -2,7 +2,7 @@ import crypto from 'crypto';
 
 // Dedicated encryption key (NOT NEXTAUTH_SECRET)
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET;
-const APP_SALT = 'mealsphere-encryption-v1'; // App-specific salt
+const APP_SALT = 'mealsphere-encryption'; // App-specific salt
 const ALGORITHM = 'aes-256-gcm'; // Authenticated encryption
 
 if (!ENCRYPTION_KEY) {

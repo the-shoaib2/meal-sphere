@@ -31,7 +31,7 @@ interface CalculationsProps {
 const MealCalculations = memo(({ roomId, initialData }: CalculationsProps) => {
   const { data: session } = useSession()
   const { activeGroup } = useActiveGroup()
-  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+  const { groups: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const { data: currentPeriodFromHook, isLoading: periodLoading } = useCurrentPeriod()
   const currentPeriod = (initialData && initialData.groupId === roomId) ? initialData.currentPeriod : currentPeriodFromHook;
   const { data: allPeriods = [] } = usePeriods(true) // Include archived periods for admin navigation

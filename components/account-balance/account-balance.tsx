@@ -52,7 +52,7 @@ function isPrivileged(role?: Role | null) {
 export function AccountBalancePanel({ initialData }: { initialData?: BalancePageData }) {
   const { data: session } = useSession();
   const { activeGroup } = useActiveGroup();
-  const { data: userGroups = [], isLoading: isLoadingGroups } = useGroups();
+  const { groups: userGroups = [], isLoading: isLoadingGroups } = useGroups();
   const router = useRouter(); // Added useRouter initialization
 
   const userRoleFromHook = (activeGroup as any)?.userRole || activeGroup?.members?.find(m => m.userId === session?.user?.id)?.role;

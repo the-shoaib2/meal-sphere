@@ -19,6 +19,7 @@ export function useGroups() {
 
   return {
     // Data
+    data: myGroups.data || [], 
     groups: myGroups.data || [],
     isLoading: myGroups.isLoading,
     error: myGroups.error,

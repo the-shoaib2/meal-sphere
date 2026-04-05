@@ -81,7 +81,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
     userId: user?.id
   })
 
-  const { data: groups = [] } = useGroups()
+  const { groups = [], isLoading: groupsLoading } = useGroups()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedVoteType, setSelectedVoteType] = useState("manager")
   const [customVoteType, setCustomVoteType] = useState("")
@@ -130,7 +130,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
   }, [activeGroup, selectedRoom])
 
   // Check if user has no groups - show empty state
-  if (groups.length === 0 && !initialLoading) {
+  if (groups.length === 0 && !initialLoading && !groupsLoading) {
     return (
       <div className="space-y-6">
         <NoGroupState />
@@ -287,7 +287,7 @@ export default function VotingSystem({ activeGroup: propGroup, initialVotes, cur
 
 
   return (
-    <LoadingWrapper isLoading={initialLoading || !activeGroup} minHeight="70vh">
+    <LoadingWrapper isLoading={initialLoading || groupsLoading || !activeGroup} minHeight="70vh">
       <div className="space-y-4">
         <PageHeader
           heading="Voting System"
